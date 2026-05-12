@@ -10,23 +10,30 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !key) {
+    return NextResponse.json({ error: 'Env vars faltantes', url: !!url, key: !!key }, { status: 500 })
+  }
+
+  const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 
   const USER_ID = '093b709c-58cb-41a4-bd1a-4ed1f3938d8d'
 
-  const { data, error } = await supabase.auth.admin.updateUserById(USER_ID, {
-    email: 'admin@gmail.com',
-    password: 'auto12345',
-    email_confirm: true,
-  })
+  try {
+    const { data, error } = await supabase.auth.admin.updateUserById(USER_ID, {
+      email: 'admin@gmail.com',
+      password: 'auto12345',
+      email_confirm: true,
+    })
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      return NextResponse.json({ error: error.message, status: error.status }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, email: data.user?.email, id: data.user?.id })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message, raw: String(e) }, { status: 500 })
   }
-
-  return NextResponse.json({ ok: true, email: data.user?.email, id: data.user?.id })
 }
