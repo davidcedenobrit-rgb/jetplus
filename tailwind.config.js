@@ -8,9 +8,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        navy:  { DEFAULT: '#1A2E55', 50: '#EEF1F8', 100: '#C5CEEA', 600: '#1A2E55', 700: '#142446' },
-        brand: { DEFAULT: '#175CAD', 50: '#EFF6FF', 100: '#DBEAFE', 600: '#175CAD' },
-        gold:  { DEFAULT: '#CA8A04', 50: '#FFFBEB', 600: '#CA8A04' },
+        oriental: {
+          black:  '#111111',
+          red:    '#E8001D',
+          white:  '#FFFFFF',
+          gray:   '#6B7280',
+          bg:     '#F5F5F5',
+          'red-dark': '#C4001A',
+          'red-light': '#FEF2F2',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

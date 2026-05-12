@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -24,8 +24,8 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Rutas protegidas — redirige al login si no hay sesión
-  const protectedPaths = ['/dashboard', '/clientes', '/vehiculos', '/ingresos', '/egresos', '/reportes']
-  const isProtected = protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
+  const protectedPaths = ['/dashboard', '/clientes', '/vehiculos', '/ingresos', '/egresos', '/reportes', '/creditos']
+  const isProtected = request.nextUrl.pathname === '/' || protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
   if (isProtected && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
 
   // Si ya está autenticado y va al login, redirige al dashboard
   if (request.nextUrl.pathname === '/login' && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL('/ingresos', request.url))
   }
 
   return supabaseResponse

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
-  CreditCard, BarChart2, LogOut, Building2
+  CreditCard, BarChart2, LogOut
 } from 'lucide-react'
 
 const navItems = [
@@ -31,32 +31,32 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
   }
 
   return (
-    <aside className="w-64 bg-navy-600 flex flex-col h-full flex-shrink-0">
+    <aside className="w-64 bg-oriental-black flex flex-col h-full flex-shrink-0 border-r border-gray-800">
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-blue-900">
+      <div className="px-5 py-5 border-b border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center">
-            <Building2 size={18} className="text-white" />
+          <div className="w-9 h-9 bg-oriental-red rounded-lg flex items-center justify-center">
+            <Car size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-tight">La Oriental</p>
-            <p className="text-blue-300 text-xs">Finanzas</p>
+            <p className="text-white font-bold text-sm leading-tight tracking-tight">LA ORIENTAL</p>
+            <p className="text-oriental-gray text-[11px] tracking-widest uppercase">Finanzas</p>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-0.5">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                 active
-                  ? 'bg-brand-600 text-white font-medium'
-                  : 'text-blue-200 hover:bg-blue-900 hover:text-white'
+                  ? 'bg-oriental-red text-white font-semibold'
+                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
               }`}
             >
               <Icon size={18} />
@@ -67,11 +67,11 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
       </nav>
 
       {/* User */}
-      <div className="px-4 py-4 border-t border-blue-900">
-        <p className="text-blue-300 text-xs truncate mb-3">{userEmail}</p>
+      <div className="px-4 py-4 border-t border-gray-800">
+        <p className="text-gray-500 text-xs truncate mb-3">{userEmail}</p>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 text-blue-200 hover:text-white text-sm transition-colors w-full"
+          className="flex items-center gap-2 text-gray-400 hover:text-oriental-red text-sm transition-colors w-full"
         >
           <LogOut size={16} />
           Cerrar sesión

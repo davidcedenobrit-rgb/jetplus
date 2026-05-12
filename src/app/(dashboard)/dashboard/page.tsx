@@ -1,0 +1,72 @@
+import { createClient } from '@/lib/supabase/server'
+import { formatCurrency } from '@/lib/utils'
+import { TrendingUp, TrendingDown, Wallet, Clock, AlertCircle } from 'lucide-react'
+
+export default async function DashboardPage() {
+  const supabase = await createClient()
+
+  const hoy = new Date()
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]
+
+  const [{ data: ingresosMes }, { data: egresosMes }, { data: pendientesAprobacion }, { data: pendientesEgresos }] =
+    await Promise.all([
+      supabase.from('ingresos').select('monto').gte('fecha_pago', inicioMes).eq('estado', 'aprobado'),
+      supabase.from('egresos').select('monto').gte('fecha_egreso', inicioMes).eq('estado', 'aprobado'),
+      supabase.from('ingresos').select('id').eq('estado', 'pendiente_aprobacion'),
+      supabase.from('egresos').select('id').eq('estado', 'pendiente_aprobacion'),
+    ])
+
+  const totalIngresos = ingresosMes?.reduce((s, i) => s + Number(i.monto), 0) ?? 0
+  const totalEgresos = egresosMes?.reduce((s, e) => s + Number(e.monto), 0) ?? 0
+  const balance = totalIngresos - totalEgresos
+
+  const stats = [
+    { label: 'Ingresos del mes', value: formatCurrency(totalIngresos), icon: TrendingUp, color: 'text-green-600', iconBg: 'bg-green-50' },
+    { label: 'Egresos del mes', value: formatCurrency(totalEgresos), icon: TrendingDown, color: 'text-oriental-red', iconBg: 'bg-red-50' },
+    { label: 'Balance neto', value: formatCurrency(balance), icon: Wallet, color: balance >= 0 ? 'text-oriental-black' : 'text-oriental-red', iconBg: 'bg-gray-100' },
+    { label: 'Ingresos por aprobar', value: String(pendientesAprobacion?.length ?? 0), icon: Clock, color: 'text-yellow-600', iconBg: 'bg-yellow-50' },
+    { label: 'Egresos por aprobar', value: String(pendientesEgresos?.length ?? 0), icon: AlertCircle, color: 'text-orange-600', iconBg: 'bg-orange-50' },
+  ]
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-oriental-black">Dashboard</h1>
+        <p className="text-oriental-gray text-sm mt-1">
+          {hoy.toLocaleDateString('es-VE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        {stats.map(stat => (
+          <div key={stat.label} className="card p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-8 h-8 ${stat.iconBg} rounded-lg flex items-center justify-center`}>
+                <stat.icon size={16} className={stat.color} />
+              </div>
+            </div>
+            <p className="text-xs text-oriental-gray mb-1">{stat.label}</p>
+            <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Accesos rápidos */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <QuickCard title="Registrar ingreso" desc="Nuevo pago de cliente" href="/ingresos/nuevo" color="bg-oriental-red" />
+        <QuickCard title="Registrar egreso" desc="Nuevo gasto operativo" href="/egresos/nuevo" color="bg-oriental-black" />
+        <QuickCard title="Ver bandeja" desc="Aprobar pendientes" href="/ingresos?estado=pendiente_aprobacion" color="bg-gray-700" />
+      </div>
+    </div>
+  )
+}
+
+function QuickCard({ title, desc, href, color }: { title: string; desc: string; href: string; color: string }) {
+  return (
+    <a href={href} className={`${color} rounded-xl p-6 text-white hover:opacity-90 transition-opacity`}>
+      <p className="font-semibold text-lg">{title}</p>
+      <p className="text-sm opacity-75 mt-1">{desc}</p>
+    </a>
+  )
+}
