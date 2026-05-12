@@ -52,9 +52,8 @@ export default function NuevoCreditoPage() {
 
   const [plan, setPlan] = useState<Plan>('credito_40_60')
 
-  // Precio desglosado
-  const [precioBase, setPrecioBase] = useState('')
-  const [gastosAdmin, setGastosAdmin] = useState('')
+  // 40/60: valor total del vehículo
+  const [valorAuto, setValorAuto] = useState('')
 
   // AC500
   const [cuotasAsegurate, setCuotasAsegurate] = useState<6 | 9>(6)
@@ -82,14 +81,8 @@ export default function NuevoCreditoPage() {
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
   const [observaciones, setObservaciones] = useState('')
 
-  // Cálculo del precio total (para 40/60)
-  const precioCalc = useMemo(() => {
-    const base = parseFloat(precioBase) || 0
-    const iva = base * 0.16
-    const admin = parseFloat(gastosAdmin) || 0
-    const total = base + iva + admin
-    return { base, iva, admin, total }
-  }, [precioBase, gastosAdmin])
+  // Valor del vehículo para 40/60
+  const valorAutoNum = useMemo(() => parseFloat(valorAuto) || 0, [valorAuto])
 
   // Buscar clientes
   useEffect(() => {
@@ -138,12 +131,12 @@ export default function NuevoCreditoPage() {
 
   // Cálculo plan 40/60
   const calc4060 = useMemo(() => {
-    if (precioCalc.total <= 0) return null
-    const inicial = precioCalc.total * 0.40
-    const saldo = precioCalc.total * 0.60
+    if (valorAutoNum <= 0) return null
+    const inicial = valorAutoNum * 0.40
+    const saldo = valorAutoNum * 0.60
     const cuota = saldo / 24
     return { inicial, saldo, numCuotas: 24, cuota }
-  }, [precioCalc.total])
+  }, [valorAutoNum])
 
   // Cuotas AC500 del plan seleccionado
   const cuotasAC500 = useMemo(() => {
@@ -172,7 +165,7 @@ export default function NuevoCreditoPage() {
       inicial = calc4060.inicial
       saldo = calc4060.saldo
       numCuotas = 24
-      montoFinanciado = precioCalc.total
+      montoFinanciado = valorAutoNum
     } else if (plan === 'asegurate_500' && planAC500Sel) {
       inicial = planAC500Sel.cuota_0
       saldo = planAC500Sel.total - planAC500Sel.cuota_0
@@ -209,9 +202,7 @@ export default function NuevoCreditoPage() {
       : plan === 'asegurate_500' ? `Asegúrate $500 (${cuotasAsegurate}m) — ${planAC500Sel?.modelo}`
       : 'Personalizado'
 
-    const obsCompleta = plan === 'credito_40_60'
-      ? [`Plan: ${planLabel}`, `Base: ${formatUSD(precioCalc.base)} | IVA: ${formatUSD(precioCalc.iva)} | Admin: ${formatUSD(precioCalc.admin)}`, observaciones].filter(Boolean).join('. ')
-      : [`Plan: ${planLabel}`, observaciones].filter(Boolean).join('. ')
+    const obsCompleta = [`Plan: ${planLabel}`, observaciones].filter(Boolean).join('. ')
 
     const { data: creditoCreado, error: creditoError } = await supabase
       .from('creditos')
@@ -415,33 +406,11 @@ export default function NuevoCreditoPage() {
           {/* ── PLAN 40/60 ── */}
           {plan === 'credito_40_60' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="label">Precio base (USD) *</label>
-                  <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
-                    placeholder="0.00" value={precioBase} onChange={e => setPrecioBase(e.target.value)} required />
-                </div>
-                <div>
-                  <label className="label">IVA 16% (auto)</label>
-                  <div className="input bg-gray-50 text-oriental-gray font-semibold text-lg cursor-not-allowed">
-                    {formatUSD(precioCalc.iva)}
-                  </div>
-                </div>
-                <div>
-                  <label className="label">Gastos administrativos</label>
-                  <input type="number" step="0.01" min="0" className="input font-semibold"
-                    placeholder="0.00" value={gastosAdmin} onChange={e => setGastosAdmin(e.target.value)} />
-                </div>
+              <div>
+                <label className="label">Valor del vehículo (USD) *</label>
+                <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
+                  placeholder="0.00" value={valorAuto} onChange={e => setValorAuto(e.target.value)} required />
               </div>
-
-              {precioCalc.total > 0 && (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between">
-                  <p className="text-sm text-oriental-gray">
-                    Base {formatUSD(precioCalc.base)} + IVA {formatUSD(precioCalc.iva)} + Admin {formatUSD(precioCalc.admin)}
-                  </p>
-                  <p className="text-xl font-extrabold text-oriental-black">Total: {formatUSD(precioCalc.total)}</p>
-                </div>
-              )}
 
               {calc4060 && (
                 <div className="bg-oriental-black rounded-xl p-5 grid grid-cols-3 gap-4">
