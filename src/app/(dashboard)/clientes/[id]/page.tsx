@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, Edit } from 'lucide-react'
+import DeleteButton from '@/components/DeleteButton'
 
 export default async function ClienteDetallePage({
   params,
@@ -88,6 +89,8 @@ export default async function ClienteDetallePage({
             )}
             <p className="text-xs text-gray-400 mt-4">Registrado el {formatDate(cliente.created_at)}</p>
           </div>
+
+          <DeleteButton table="clientes" id={id} redirectTo="/clientes" label="Eliminar cliente" />
         </div>
 
         {/* Vehículos e Ingresos */}

@@ -378,6 +378,10 @@ export default function NuevoCreditoPage() {
                       </span>
                     </button>
                   ))}
+                  <Link href={`/vehiculos/nuevo?cliente_id=${clienteSeleccionado.id}`}
+                    className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-gray-300 text-oriental-red text-sm font-semibold hover:border-oriental-red hover:bg-oriental-red/5 transition-all">
+                    <Car size={16} /> + Registrar otro vehículo
+                  </Link>
                 </div>
               )}
             </div>

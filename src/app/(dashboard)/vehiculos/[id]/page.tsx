@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, Car, User, Calendar, Hash, CreditCard, TrendingUp } from 'lucide-react'
+import DeleteButton from '@/components/DeleteButton'
 
 export default async function VehiculoDetallePage({
   params,
@@ -89,6 +90,8 @@ export default async function VehiculoDetallePage({
               <p className="text-sm text-gray-700">{vehiculo.observaciones}</p>
             </div>
           )}
+
+          <DeleteButton table="vehiculos" id={id} redirectTo="/vehiculos" label="Eliminar vehículo" />
         </div>
 
         {/* Ingresos asociados */}

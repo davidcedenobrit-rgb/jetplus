@@ -7,6 +7,7 @@ import {
   CheckCircle2, XCircle, AlertTriangle,
   Send, Landmark, Building2, Printer
 } from 'lucide-react'
+import DeleteButton from '@/components/DeleteButton'
 
 interface Props {
   ingresoId: string
@@ -105,7 +106,7 @@ export default function ActionButtons({ ingresoId, estado }: Props) {
         </div>
       )}
 
-      <div className="border-t border-gray-100 mt-4 pt-4">
+      <div className="border-t border-gray-100 mt-4 pt-4 space-y-2">
         <button
           onClick={() => window.print()}
           className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-oriental-gray hover:bg-gray-50 transition-colors"
@@ -113,6 +114,7 @@ export default function ActionButtons({ ingresoId, estado }: Props) {
           <Printer size={16} />
           Imprimir recibo
         </button>
+        <DeleteButton table="ingresos" id={ingresoId} redirectTo="/ingresos" label="Eliminar ingreso" />
       </div>
     </div>
   )

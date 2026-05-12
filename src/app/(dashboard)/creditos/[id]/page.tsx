@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, CreditCard, User, Car, Calendar, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import DeleteButton from '@/components/DeleteButton'
 
 export default async function CreditoDetallePage({
   params,
@@ -143,6 +144,8 @@ export default async function CreditoDetallePage({
               </Link>
             </div>
           )}
+
+          <DeleteButton table="creditos" id={id} redirectTo="/creditos" label="Eliminar crédito" />
         </div>
 
         {/* Right: Cuotas */}
