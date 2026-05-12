@@ -7,6 +7,7 @@ import {
   Send, Landmark, Building2, Printer, FileText
 } from 'lucide-react'
 import ActionButtons from './ActionButtons'
+import ComprobantesGallery from '@/components/ComprobantesGallery'
 
 export default async function IngresoDetallePage({
   params,
@@ -23,6 +24,12 @@ export default async function IngresoDetallePage({
     .single()
 
   if (!ingreso) notFound()
+
+  const { data: archivos } = await supabase
+    .from('archivos')
+    .select('*')
+    .eq('ingreso_id', id)
+    .order('created_at', { ascending: true })
 
   const cliente = (ingreso as any).clientes
 
@@ -198,6 +205,8 @@ export default async function IngresoDetallePage({
               <TimelineItem label="Reportado Vehimotors" date={ingreso.vehimotors_at} active={!!ingreso.vehimotors_at} />
             </div>
           </div>
+
+          <ComprobantesGallery archivos={archivos ?? []} />
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
 import { IngresoSchema } from '@/lib/validations'
 import { ArrowLeft, Save, Search, X, Car, Hash } from 'lucide-react'
 import Link from 'next/link'
+import FileUpload from '@/components/FileUpload'
 import type { Cliente, Vehiculo } from '@/types/database'
 
 const CONCEPTOS = [
@@ -58,6 +59,7 @@ export default function NuevoIngresoPage() {
   const [referencia, setReferencia] = useState('')
   const [fechaPago, setFechaPago] = useState(new Date().toISOString().split('T')[0])
   const [observaciones, setObservaciones] = useState('')
+  const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
 
   // ── Buscar por placa ──
   async function buscarPorPlaca() {
@@ -153,7 +155,7 @@ export default function NuevoIngresoPage() {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { error: insertError } = await supabase.from('ingresos').insert({
+    const { data: inserted, error: insertError } = await supabase.from('ingresos').insert({
       numero_recibo,
       cliente_id: clienteSeleccionado.id,
       vehiculo_id: vehiculoSeleccionado?.id ?? null,
@@ -169,9 +171,22 @@ export default function NuevoIngresoPage() {
       observaciones: observaciones || null,
       estado: 'pendiente_aprobacion',
       registrado_por: user?.id ?? '',
-    })
+    }).select('id').single()
 
-    if (insertError) { setError(insertError.message); setLoading(false); return }
+    if (insertError || !inserted) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
+
+    if (comprobantes.length > 0) {
+      await supabase.from('archivos').insert(
+        comprobantes.map(c => ({
+          tipo: 'comprobante',
+          url: c.url,
+          nombre: c.nombre,
+          ingreso_id: inserted.id,
+          subido_por: user?.id ?? '',
+        }))
+      )
+    }
+
     router.push('/ingresos')
     router.refresh()
   }
@@ -406,6 +421,15 @@ export default function NuevoIngresoPage() {
                 value={observaciones} onChange={e => setObservaciones(e.target.value)} />
             </div>
           </div>
+        </div>
+
+        {/* ── COMPROBANTES ── */}
+        <div className="card p-6">
+          <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="w-1 h-4 bg-oriental-red rounded-full" />
+            Comprobantes
+          </h2>
+          <FileUpload files={comprobantes} onFilesChange={setComprobantes} />
         </div>
 
         {error && (

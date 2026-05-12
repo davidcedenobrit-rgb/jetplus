@@ -4,6 +4,7 @@ import { formatCurrency, formatDate, ESTADOS_EGRESO_LABEL, CATEGORIAS_EGRESO_LAB
 import Link from 'next/link'
 import { ArrowLeft, Building2 } from 'lucide-react'
 import EgresoActionButtons from './EgresoActionButtons'
+import ComprobantesGallery from '@/components/ComprobantesGallery'
 
 export default async function EgresoDetallePage({
   params,
@@ -20,6 +21,12 @@ export default async function EgresoDetallePage({
     .single()
 
   if (!egreso) notFound()
+
+  const { data: archivos } = await supabase
+    .from('archivos')
+    .select('*')
+    .eq('egreso_id', id)
+    .order('created_at', { ascending: true })
 
   const estadoColors: Record<string, string> = {
     registrado: 'bg-gray-100 text-gray-700',
@@ -172,6 +179,8 @@ export default async function EgresoDetallePage({
               <TimelineItem label="Reportado Vehimotors" date={egreso.vehimotors_at} active={!!egreso.vehimotors_at} />
             </div>
           </div>
+
+          <ComprobantesGallery archivos={archivos ?? []} />
         </div>
       </div>
     </div>

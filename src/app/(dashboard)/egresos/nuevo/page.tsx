@@ -7,6 +7,7 @@ import { METODOS_PAGO, BANCOS_VE, CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
 import { EgresoSchema } from '@/lib/validations'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
+import FileUpload from '@/components/FileUpload'
 
 export default function NuevoEgresoPage() {
   const router = useRouter()
@@ -27,6 +28,7 @@ export default function NuevoEgresoPage() {
   const [fechaEgreso, setFechaEgreso] = useState(new Date().toISOString().split('T')[0])
   const [areaResponsable, setAreaResponsable] = useState('')
   const [observaciones, setObservaciones] = useState('')
+  const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -62,7 +64,7 @@ export default function NuevoEgresoPage() {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { error: insertError } = await supabase.from('egresos').insert({
+    const { data: inserted, error: insertError } = await supabase.from('egresos').insert({
       numero_egreso,
       categoria,
       concepto,
@@ -79,9 +81,22 @@ export default function NuevoEgresoPage() {
       observaciones: observaciones || null,
       estado: 'pendiente_aprobacion',
       registrado_por: user?.id ?? '',
-    })
+    }).select('id').single()
 
-    if (insertError) { setError(insertError.message); setLoading(false); return }
+    if (insertError || !inserted) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
+
+    if (comprobantes.length > 0) {
+      await supabase.from('archivos').insert(
+        comprobantes.map(c => ({
+          tipo: 'comprobante',
+          url: c.url,
+          nombre: c.nombre,
+          egreso_id: inserted.id,
+          subido_por: user?.id ?? '',
+        }))
+      )
+    }
+
     router.push('/egresos')
     router.refresh()
   }
@@ -199,6 +214,15 @@ export default function NuevoEgresoPage() {
               <textarea className="textarea" rows={3} placeholder="Notas adicionales..." value={observaciones} onChange={e => setObservaciones(e.target.value)} />
             </div>
           </div>
+        </div>
+
+        {/* ── COMPROBANTES ── */}
+        <div className="card p-6">
+          <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="w-1 h-4 bg-oriental-red rounded-full" />
+            Comprobantes
+          </h2>
+          <FileUpload files={comprobantes} onFilesChange={setComprobantes} />
         </div>
 
         {error && (
