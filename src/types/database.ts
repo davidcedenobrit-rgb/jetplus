@@ -14,7 +14,7 @@ export type EstadoEgreso =
   | 'correccion_requerida' | 'pagado' | 'reportado_carla'
   | 'reportado_vehimotors' | 'anulado'
 export type TipoCliente = 'natural' | 'juridico'
-export type TipoCompra = 'contado' | 'credito' | 'financiamiento'
+export type TipoCompra = 'contado' | 'financiado'
 export type MarcaVehiculo = 'MG' | 'MAXUS'
 export type Moneda = 'USD' | 'VES'
 export type CategoriaEgreso =

@@ -30,7 +30,7 @@ export default function NuevoVehiculoPage() {
   const [color, setColor] = useState('')
   const [placa, setPlaca] = useState('')
   const [vin, setVin] = useState('')
-  const [tipoCompra, setTipoCompra] = useState<'contado' | 'credito' | 'financiamiento'>('contado')
+  const [tipoCompra, setTipoCompra] = useState<'contado' | 'financiado'>('contado')
   const [fechaEntrega, setFechaEntrega] = useState('')
   const [observaciones, setObservaciones] = useState('')
 
@@ -207,7 +207,7 @@ export default function NuevoVehiculoPage() {
             Tipo de compra
           </h2>
           <div className="flex gap-2">
-            {(['contado', 'credito', 'financiamiento'] as const).map(t => (
+            {(['contado', 'financiado'] as const).map(t => (
               <button key={t} type="button" onClick={() => setTipoCompra(t)}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border transition-colors capitalize ${
                   tipoCompra === t ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'

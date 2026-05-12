@@ -9,7 +9,7 @@ const CATEGORIAS_EGRESO = [
 const MONEDA = ['USD', 'VES'] as const
 const TIPO_CLIENTE = ['natural', 'juridico'] as const
 const MARCA_VEHICULO = ['MG', 'MAXUS'] as const
-const TIPO_COMPRA = ['contado', 'credito', 'financiamiento'] as const
+const TIPO_COMPRA = ['contado', 'financiado'] as const
 const FRECUENCIA_PAGO = ['mensual', 'quincenal', 'semanal'] as const
 
 export const LoginSchema = z.object({
