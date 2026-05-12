@@ -17,23 +17,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Env vars faltantes', url: !!url, key: !!key }, { status: 500 })
   }
 
-  const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-
   const USER_ID = '093b709c-58cb-41a4-bd1a-4ed1f3938d8d'
+  const endpoint = `${url}/auth/v1/admin/users/${USER_ID}`
 
   try {
-    const { data, error } = await supabase.auth.admin.updateUserById(USER_ID, {
-      email: 'admin@gmail.com',
-      password: 'auto12345',
-      email_confirm: true,
+    const res = await fetch(endpoint, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'apikey': key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password: 'auto12345', email_confirm: true }),
     })
 
-    if (error) {
-      return NextResponse.json({ error: error.message, status: error.status }, { status: 500 })
-    }
+    const text = await res.text()
+    let parsed: any
+    try { parsed = JSON.parse(text) } catch { parsed = text.slice(0, 300) }
 
-    return NextResponse.json({ ok: true, email: data.user?.email, id: data.user?.id })
+    return NextResponse.json({
+      httpStatus: res.status,
+      urlCalled: endpoint.replace(USER_ID, '[uid]'),
+      keyPrefix: key.slice(0, 20) + '...',
+      response: parsed,
+    })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message, raw: String(e) }, { status: 500 })
+    return NextResponse.json({ fetchError: e.message }, { status: 500 })
   }
 }
