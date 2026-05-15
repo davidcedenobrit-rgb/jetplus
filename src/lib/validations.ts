@@ -3,7 +3,7 @@ import { z } from 'zod'
 const CATEGORIAS_EGRESO = [
   'gastos_administrativos', 'proveedores', 'tramites_vehiculares',
   'impuestos', 'seguro', 'logistica', 'mantenimiento', 'comisiones',
-  'servicios', 'vehimotors', 'bancos_comisiones', 'otros',
+  'servicios', 'vehimotors', 'bancos_comisiones', 'taller', 'repuestos', 'otros',
 ] as const
 
 const MONEDA = ['USD', 'VES'] as const
@@ -49,6 +49,7 @@ export const EgresoSchema = z.object({
   fecha_egreso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida'),
   area_responsable: z.string().max(100).optional().nullable(),
   observaciones: z.string().max(500).optional().nullable(),
+  tasa_cambio: z.number().positive().optional().nullable(),
 })
 
 export const ClienteSchema = z.object({

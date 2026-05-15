@@ -57,6 +57,8 @@ export const CATEGORIAS_EGRESO_LABEL: Record<string, string> = {
   servicios: 'Servicios',
   vehimotors: 'Vehimotors',
   bancos_comisiones: 'Bancos / Comisiones',
+  taller: 'Taller',
+  repuestos: 'Repuestos',
   otros: 'Otros',
 }
 

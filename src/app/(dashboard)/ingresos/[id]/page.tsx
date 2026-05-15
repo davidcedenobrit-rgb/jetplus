@@ -132,6 +132,17 @@ export default async function IngresoDetallePage({
                 <p className="text-3xl font-extrabold text-oriental-black">{formatCurrency(ingreso.monto, ingreso.moneda)}</p>
               </div>
 
+              {/* Tasa de cambio (solo VES) */}
+              {ingreso.moneda === 'VES' && ingreso.tasa_cambio && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] text-blue-600 uppercase tracking-wider font-semibold">Tasa de cambio</p>
+                    <p className="text-sm text-blue-700 mt-0.5">Equivalente en USD: ~{formatCurrency(ingreso.monto / ingreso.tasa_cambio, 'USD')}</p>
+                  </div>
+                  <p className="text-2xl font-extrabold text-blue-800">{Number(ingreso.tasa_cambio).toFixed(2)} Bs/$</p>
+                </div>
+              )}
+
               {/* Pago */}
               <div className="grid grid-cols-2 gap-4">
                 <div>

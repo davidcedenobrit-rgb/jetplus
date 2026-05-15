@@ -205,9 +205,9 @@ export default function NuevoCreditoPage() {
     setLoading(true)
     setError('')
 
-    const planLabel = plan === 'credito_40_60' ? 'Crédito 40/60'
+    const planLabel = plan === 'credito_40_60' ? 'Vehimotors (Planta)'
       : plan === 'asegurate_500' ? `Asegúrate $500 (${cuotasAsegurate}m) — ${planAC500Sel?.modelo}`
-      : 'Personalizado'
+      : 'Personalizado "La Oriental"'
 
     const desglose = plan !== 'personalizado'
       ? `Base: ${formatUSD(precioCalc.base)} | IVA: ${formatUSD(precioCalc.iva)} | Admin: ${formatUSD(precioCalc.admin)}`
@@ -397,9 +397,9 @@ export default function NuevoCreditoPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
             {[
-              { value: 'credito_40_60', title: 'Crédito 40/60', desc: '40% inicial + 24 cuotas mensuales' },
+              { value: 'credito_40_60', title: 'Vehimotors (Planta)', desc: '40% inicial + 24 cuotas mensuales' },
               { value: 'asegurate_500', title: 'Asegúrate con $500', desc: '$500 reserva + cuotas según modelo' },
-              { value: 'personalizado', title: 'Personalizado', desc: 'Define el plan libremente' },
+              { value: 'personalizado', title: 'Personalizado "La Oriental"', desc: 'Define el plan libremente' },
             ].map(p => (
               <button
                 key={p.value}

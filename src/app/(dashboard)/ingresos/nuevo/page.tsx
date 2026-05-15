@@ -59,6 +59,7 @@ export default function NuevoIngresoPage() {
   const [referencia, setReferencia] = useState('')
   const [fechaPago, setFechaPago] = useState(new Date().toISOString().split('T')[0])
   const [observaciones, setObservaciones] = useState('')
+  const [tasaCambio, setTasaCambio] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
 
   // ── Buscar por placa ──
@@ -138,6 +139,7 @@ export default function NuevoIngresoPage() {
       referencia: referencia || null,
       fecha_pago: fechaPago,
       observaciones: observaciones || null,
+      tasa_cambio: moneda === 'VES' && tasaCambio ? parseFloat(tasaCambio) : null,
     })
     if (!parsed.success) {
       setError(parsed.error.errors[0]?.message ?? 'Datos inválidos')
@@ -169,6 +171,7 @@ export default function NuevoIngresoPage() {
       referencia: referencia || null,
       fecha_pago: fechaPago,
       observaciones: observaciones || null,
+      tasa_cambio: moneda === 'VES' && tasaCambio ? parseFloat(tasaCambio) : null,
       estado: 'pendiente_aprobacion',
       registrado_por: user?.id ?? '',
     }).select('id').single()
@@ -385,6 +388,18 @@ export default function NuevoIngresoPage() {
                 ))}
               </div>
             </div>
+            {moneda === 'VES' && (
+              <div>
+                <label className="label">Tasa del día (Bs/$) *</label>
+                <input type="number" step="0.01" min="0" className="input font-semibold"
+                  placeholder="Ej: 36.50" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} required />
+                {tasaCambio && parseFloat(monto) > 0 && (
+                  <p className="text-xs text-oriental-gray mt-1">
+                    Equivale a ~${(parseFloat(monto) / parseFloat(tasaCambio)).toFixed(2)} USD
+                  </p>
+                )}
+              </div>
+            )}
             <div>
               <label className="label">Método de pago *</label>
               <select className="select" value={metodoPago} onChange={e => setMetodoPago(e.target.value)} required>
