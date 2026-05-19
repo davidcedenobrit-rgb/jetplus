@@ -71,6 +71,19 @@ export default function NuevoVehiculoPage() {
   const [frecuencia, setFrecuencia] = useState('mensual')
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
 
+  // Sub-plan La Oriental (Crédito Inicial)
+  const [orMonto, setOrMonto] = useState('')
+  const [orCuotas, setOrCuotas] = useState('12')
+  const [orMontoCuota, setOrMontoCuota] = useState('')
+  const [orFrecuencia, setOrFrecuencia] = useState('mensual')
+  const [orFecha, setOrFecha] = useState(new Date().toISOString().split('T')[0])
+  // Sub-plan Vehimotors (Crédito Financiamiento)
+  const [vhMonto, setVhMonto] = useState('')
+  const [vhCuotas, setVhCuotas] = useState('12')
+  const [vhMontoCuota, setVhMontoCuota] = useState('')
+  const [vhFrecuencia, setVhFrecuencia] = useState('mensual')
+  const [vhFecha, setVhFecha] = useState(new Date().toISOString().split('T')[0])
+
   useEffect(() => {
     const cid = searchParams.get('cliente_id')
     if (cid) {
@@ -137,6 +150,20 @@ export default function NuevoVehiculoPage() {
     return { inicial, saldo, numCuotas, montoCuota, total: inicial + saldo }
   }, [inicialCustom, numCuotasCustom, montoCuotaCustom])
 
+  const calcInicialOriental = useMemo(() => {
+    const monto = parseFloat(orMonto) || 0
+    const cuotas = parseInt(orCuotas) || 0
+    const montoCuota = parseFloat(orMontoCuota) || 0
+    return { monto, cuotas, montoCuota, total: monto + cuotas * montoCuota }
+  }, [orMonto, orCuotas, orMontoCuota])
+
+  const calcVehimotors = useMemo(() => {
+    const monto = parseFloat(vhMonto) || 0
+    const cuotas = parseInt(vhCuotas) || 0
+    const montoCuota = parseFloat(vhMontoCuota) || 0
+    return { monto, cuotas, montoCuota, total: monto + cuotas * montoCuota }
+  }, [vhMonto, vhCuotas, vhMontoCuota])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!clienteSeleccionado) { setError('Selecciona un cliente'); return }
@@ -161,6 +188,58 @@ export default function NuevoVehiculoPage() {
 
     // Si es financiado, crear crédito automáticamente
     if (tipoCompra === 'financiado') {
+
+      // --- Plan Personalizado: crear DOS créditos ---
+      if (plan === 'personalizado') {
+        if (calcInicialOriental.cuotas < 1 || calcInicialOriental.montoCuota <= 0) {
+          setError('Completa los datos del Crédito de Inicial (La Oriental)'); setLoading(false); return
+        }
+        if (calcVehimotors.cuotas < 1 || calcVehimotors.montoCuota <= 0) {
+          setError('Completa los datos del Crédito Financiamiento (Vehimotors)'); setLoading(false); return
+        }
+
+        function buildCuotas(creditoId: string, cuotas: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string) {
+          return Array.from({ length: cuotas }, (_, i) => {
+            const f = new Date(fechaBase)
+            if (frecuencia === 'semanal') f.setDate(f.getDate() + 7 * (i + 1))
+            else if (frecuencia === 'quincenal') f.setDate(f.getDate() + 15 * (i + 1))
+            else f.setMonth(f.getMonth() + (i + 1))
+            return { credito_id: creditoId, numero_cuota: i + 1, fecha_vencimiento: f.toISOString().split('T')[0], monto: montoCuota, estado: 'pendiente', mora: 0, concepto }
+          })
+        }
+
+        const obsOr = `Plan: Crédito de Inicial (La Oriental). ${observaciones ?? ''}`.trim()
+        const { data: creditoOr, error: errOr } = await supabase.from('creditos').insert({
+          cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
+          monto_financiado: calcInicialOriental.total,
+          inicial: calcInicialOriental.monto,
+          saldo: calcInicialOriental.cuotas * calcInicialOriental.montoCuota,
+          num_cuotas: calcInicialOriental.cuotas,
+          frecuencia_pago: orFrecuencia, fecha_inicio: orFecha,
+          moneda: 'USD', estado: 'activo', plan_tipo: 'inicial_la_oriental', observaciones: obsOr,
+        }).select().single()
+        if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
+        await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial (La Oriental)'))
+
+        const obsVh = `Plan: Crédito Financiamiento (Vehimotors). ${observaciones ?? ''}`.trim()
+        const { data: creditoVh, error: errVh } = await supabase.from('creditos').insert({
+          cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
+          monto_financiado: calcVehimotors.total,
+          inicial: calcVehimotors.monto,
+          saldo: calcVehimotors.cuotas * calcVehimotors.montoCuota,
+          num_cuotas: calcVehimotors.cuotas,
+          frecuencia_pago: vhFrecuencia, fecha_inicio: vhFecha,
+          moneda: 'USD', estado: 'activo', plan_tipo: 'financiamiento_vehimotors', observaciones: obsVh,
+        }).select().single()
+        if (errVh || !creditoVh) { setError(errVh?.message ?? 'Error creando crédito Vehimotors'); setLoading(false); return }
+        await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento (Vehimotors)'))
+
+        router.push(`/creditos/${creditoOr.id}`)
+        router.refresh()
+        return
+      }
+
+      // --- Planes estándar (un solo crédito) ---
       let inicial = 0, saldo = 0, numCuotas = 0, montoFinanciado = 0
 
       if (plan === 'credito_40_60' && calc4060) {
@@ -168,34 +247,28 @@ export default function NuevoVehiculoPage() {
       } else if (plan === 'asegurate_500' && planAC500Sel) {
         inicial = planAC500Sel.cuota_0; saldo = planAC500Sel.total - planAC500Sel.cuota_0
         numCuotas = cuotasAsegurate; montoFinanciado = planAC500Sel.total
-      } else if (plan === 'personalizado') {
-        inicial = calcPersonalizado.inicial; saldo = calcPersonalizado.saldo
-        numCuotas = calcPersonalizado.numCuotas; montoFinanciado = inicial + saldo
       } else {
         setError('Completa los datos del financiamiento'); setLoading(false); return
       }
 
       const creditoParsed = CreditoSchema.safeParse({
         monto_financiado: montoFinanciado, inicial, num_cuotas: numCuotas,
-        frecuencia_pago: plan === 'personalizado' ? frecuencia : 'mensual',
+        frecuencia_pago: 'mensual',
         fecha_inicio: fechaInicio, moneda: 'USD', observaciones: null,
       })
       if (!creditoParsed.success) { setError(creditoParsed.error.errors[0]?.message ?? 'Datos del crédito inválidos'); setLoading(false); return }
 
       const planLabel = plan === 'credito_40_60' ? 'Vehimotors (Planta)'
-        : plan === 'asegurate_500' ? `Asegúrate $500 (${cuotasAsegurate}m) — ${planAC500Sel?.modelo}`
-        : 'Personalizado "La Oriental"'
+        : `Asegúrate $500 (${cuotasAsegurate}m) — ${planAC500Sel?.modelo}`
 
-      const desglose = plan !== 'personalizado'
-        ? `Base: ${formatUSD(precioCalc.base)} | IVA: ${formatUSD(precioCalc.iva)} | Admin: ${formatUSD(precioCalc.admin)}`
-        : null
+      const desglose = `Base: ${formatUSD(precioCalc.base)} | IVA: ${formatUSD(precioCalc.iva)} | Admin: ${formatUSD(precioCalc.admin)}`
       const obsCompleta = [`Plan: ${planLabel}`, desglose, observaciones].filter(Boolean).join('. ')
 
       const { data: creditoCreado, error: creditoError } = await supabase.from('creditos').insert({
         cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id,
         placa: vehiculo.placa, monto_financiado: montoFinanciado,
         inicial, saldo, num_cuotas: numCuotas,
-        frecuencia_pago: plan === 'personalizado' ? frecuencia : 'mensual',
+        frecuencia_pago: 'mensual',
         fecha_inicio: fechaInicio, moneda: 'USD', estado: 'activo', observaciones: obsCompleta,
       }).select().single()
 
@@ -209,15 +282,10 @@ export default function NuevoVehiculoPage() {
           const fecha = new Date(fechaInicio); fecha.setDate(fecha.getDate() + (i * 30))
           return { credito_id: creditoCreado.id, numero_cuota: c.numero, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: c.monto, estado: 'pendiente', mora: 0 }
         })
-      } else if (plan === 'credito_40_60' && calc4060) {
+      } else {
         cuotasData = Array.from({ length: 24 }, (_, i) => {
           const fecha = new Date(fechaInicio); fecha.setMonth(fecha.getMonth() + (i + 1))
-          return { credito_id: creditoCreado.id, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: calc4060.cuota, estado: 'pendiente', mora: 0 }
-        })
-      } else {
-        cuotasData = Array.from({ length: numCuotas }, (_, i) => {
-          const fecha = new Date(fechaInicio); fecha.setMonth(fecha.getMonth() + (i + 1))
-          return { credito_id: creditoCreado.id, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: calcPersonalizado.montoCuota, estado: 'pendiente', mora: 0 }
+          return { credito_id: creditoCreado.id, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: calc4060!.cuota, estado: 'pendiente', mora: 0 }
         })
       }
 
@@ -497,69 +565,143 @@ export default function NuevoVehiculoPage() {
               </div>
             )}
 
-            {/* Plan Personalizado */}
+            {/* Plan Personalizado — Dos sub-créditos */}
             {plan === 'personalizado' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="label">Inicial (USD) *</label>
-                    <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
-                      value={inicialCustom} onChange={e => setInicialCustom(e.target.value)} required />
+              <div className="space-y-5">
+                {/* Sub-plan La Oriental */}
+                <div className="border-2 border-purple-200 rounded-xl p-5 bg-purple-50/40">
+                  <p className="font-bold text-purple-800 text-sm mb-4">Crédito de Inicial — La Oriental</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                    <div>
+                      <label className="label">Monto inicial (USD)</label>
+                      <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                        value={orMonto} onChange={e => setOrMonto(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="label">N° de cuotas *</label>
+                      <input type="number" min="1" max="120" className="input" placeholder="12"
+                        value={orCuotas} onChange={e => setOrCuotas(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="label">Monto por cuota (USD) *</label>
+                      <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                        value={orMontoCuota} onChange={e => setOrMontoCuota(e.target.value)} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="label">N° de cuotas *</label>
-                    <input type="number" min="1" max="120" className="input" placeholder="12"
-                      value={numCuotasCustom} onChange={e => setNumCuotasCustom(e.target.value)} required />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Frecuencia</label>
+                      <div className="flex gap-2">
+                        {['semanal', 'quincenal', 'mensual'].map(f => (
+                          <button key={f} type="button" onClick={() => setOrFrecuencia(f)}
+                            className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
+                              orFrecuencia === f ? 'bg-purple-700 text-white border-purple-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                            }`}>{f}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Fecha inicio *</label>
+                      <input type="date" className="input" value={orFecha} onChange={e => setOrFecha(e.target.value)} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="label">Monto por cuota (USD) *</label>
-                    <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
-                      value={montoCuotaCustom} onChange={e => setMontoCuotaCustom(e.target.value)} required />
-                  </div>
+                  {calcInicialOriental.cuotas > 0 && calcInicialOriental.montoCuota > 0 && (
+                    <div className="mt-3 bg-purple-700 rounded-lg p-4 grid grid-cols-3 gap-3">
+                      <div className="text-center">
+                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Inicial</p>
+                        <p className="text-white font-extrabold text-lg">{formatUSD(calcInicialOriental.monto)}</p>
+                      </div>
+                      <div className="text-center border-x border-purple-500">
+                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Cuota {orFrecuencia}</p>
+                        <p className="text-white font-extrabold text-lg">{formatUSD(calcInicialOriental.montoCuota)}</p>
+                        <p className="text-purple-300 text-[10px]">{calcInicialOriental.cuotas} cuotas</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Total</p>
+                        <p className="text-white font-extrabold text-lg">{formatUSD(calcInicialOriental.total)}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Sub-plan Vehimotors */}
+                <div className="border-2 border-indigo-200 rounded-xl p-5 bg-indigo-50/40">
+                  <p className="font-bold text-indigo-800 text-sm mb-4">Crédito Financiamiento — Vehimotors</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                    <div>
+                      <label className="label">Monto inicial (USD)</label>
+                      <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                        value={vhMonto} onChange={e => setVhMonto(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="label">N° de cuotas *</label>
+                      <input type="number" min="1" max="120" className="input" placeholder="12"
+                        value={vhCuotas} onChange={e => setVhCuotas(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="label">Monto por cuota (USD) *</label>
+                      <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                        value={vhMontoCuota} onChange={e => setVhMontoCuota(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Frecuencia</label>
+                      <div className="flex gap-2">
+                        {['semanal', 'quincenal', 'mensual'].map(f => (
+                          <button key={f} type="button" onClick={() => setVhFrecuencia(f)}
+                            className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
+                              vhFrecuencia === f ? 'bg-indigo-700 text-white border-indigo-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                            }`}>{f}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Fecha inicio *</label>
+                      <input type="date" className="input" value={vhFecha} onChange={e => setVhFecha(e.target.value)} />
+                    </div>
+                  </div>
+                  {calcVehimotors.cuotas > 0 && calcVehimotors.montoCuota > 0 && (
+                    <div className="mt-3 bg-indigo-700 rounded-lg p-4 grid grid-cols-3 gap-3">
+                      <div className="text-center">
+                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Inicial</p>
+                        <p className="text-white font-extrabold text-lg">{formatUSD(calcVehimotors.monto)}</p>
+                      </div>
+                      <div className="text-center border-x border-indigo-500">
+                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Cuota {vhFrecuencia}</p>
+                        <p className="text-white font-extrabold text-lg">{formatUSD(calcVehimotors.montoCuota)}</p>
+                        <p className="text-indigo-300 text-[10px]">{calcVehimotors.cuotas} cuotas</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Total</p>
+                        <p className="text-white font-extrabold text-lg">{formatUSD(calcVehimotors.total)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div>
-                  <label className="label">Frecuencia de pago</label>
-                  <div className="flex gap-2">
-                    {['semanal', 'quincenal', 'mensual'].map(f => (
-                      <button key={f} type="button" onClick={() => setFrecuencia(f)}
-                        className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border capitalize transition-colors ${
-                          frecuencia === f ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
-                        }`}>{f}</button>
-                    ))}
-                  </div>
+                  <label className="label">Observaciones</label>
+                  <textarea className="textarea" rows={2} placeholder="Notas del financiamiento..."
+                    value={observaciones} onChange={e => setObservaciones(e.target.value)} />
                 </div>
-                {calcPersonalizado.numCuotas > 0 && calcPersonalizado.montoCuota > 0 && (
-                  <div className="bg-oriental-black rounded-xl p-5 grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Inicial</p>
-                      <p className="text-white font-extrabold text-xl">{formatUSD(calcPersonalizado.inicial)}</p>
-                    </div>
-                    <div className="text-center border-x border-gray-700">
-                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Cuota {frecuencia}</p>
-                      <p className="text-oriental-red font-extrabold text-xl">{formatUSD(calcPersonalizado.montoCuota)}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">{calcPersonalizado.numCuotas} cuotas</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Total a pagar</p>
-                      <p className="text-white font-extrabold text-xl">{formatUSD(calcPersonalizado.total)}</p>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* Fecha inicio */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Fecha inicio del crédito *</label>
-                <input type="date" className="input" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required />
+            {/* Fecha inicio (solo para planes estándar) */}
+            {plan !== 'personalizado' && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Fecha inicio del crédito *</label>
+                  <input type="date" className="input" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required />
+                </div>
+                <div>
+                  <label className="label">Observaciones</label>
+                  <textarea className="textarea" rows={2} placeholder="Notas del financiamiento..."
+                    value={observaciones} onChange={e => setObservaciones(e.target.value)} />
+                </div>
               </div>
-              <div>
-                <label className="label">Observaciones</label>
-                <textarea className="textarea" rows={2} placeholder="Notas del financiamiento..."
-                  value={observaciones} onChange={e => setObservaciones(e.target.value)} />
-              </div>
-            </div>
+            )}
           </div>
         )}
 
