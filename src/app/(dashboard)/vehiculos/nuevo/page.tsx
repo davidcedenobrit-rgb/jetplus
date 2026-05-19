@@ -77,12 +77,17 @@ export default function NuevoVehiculoPage() {
   const [orMontoCuota, setOrMontoCuota] = useState('')
   const [orFrecuencia, setOrFrecuencia] = useState('mensual')
   const [orFecha, setOrFecha] = useState(new Date().toISOString().split('T')[0])
+  const [orObs, setOrObs] = useState('')
   // Sub-plan Vehimotors (Crédito Financiamiento)
   const [vhMonto, setVhMonto] = useState('')
   const [vhCuotas, setVhCuotas] = useState('12')
   const [vhMontoCuota, setVhMontoCuota] = useState('')
   const [vhFrecuencia, setVhFrecuencia] = useState('mensual')
   const [vhFecha, setVhFecha] = useState(new Date().toISOString().split('T')[0])
+  const [vhObs, setVhObs] = useState('')
+  // Resumen financiero del vehículo (plan personalizado)
+  const [precioTotalVehiculo, setPrecioTotalVehiculo] = useState('')
+  const [montoContado, setMontoContado] = useState('')
 
   useEffect(() => {
     const cid = searchParams.get('cliente_id')
@@ -154,15 +159,31 @@ export default function NuevoVehiculoPage() {
     const monto = parseFloat(orMonto) || 0
     const cuotas = parseInt(orCuotas) || 0
     const montoCuota = parseFloat(orMontoCuota) || 0
-    return { monto, cuotas, montoCuota, total: monto + cuotas * montoCuota }
+    const totalCuotas = cuotas * montoCuota
+    const showWarning = monto > 0 && cuotas > 0 && montoCuota > 0 && Math.abs(totalCuotas - monto) > 0.01
+    return { monto, cuotas, montoCuota, totalCuotas, showWarning }
   }, [orMonto, orCuotas, orMontoCuota])
 
   const calcVehimotors = useMemo(() => {
     const monto = parseFloat(vhMonto) || 0
     const cuotas = parseInt(vhCuotas) || 0
     const montoCuota = parseFloat(vhMontoCuota) || 0
-    return { monto, cuotas, montoCuota, total: monto + cuotas * montoCuota }
+    const totalCuotas = cuotas * montoCuota
+    const showWarning = monto > 0 && cuotas > 0 && montoCuota > 0 && Math.abs(totalCuotas - monto) > 0.01
+    return { monto, cuotas, montoCuota, totalCuotas, showWarning }
   }, [vhMonto, vhCuotas, vhMontoCuota])
+
+  const resumenFinanciero = useMemo(() => {
+    const precio = parseFloat(precioTotalVehiculo) || 0
+    const contado = parseFloat(montoContado) || 0
+    const totalOr = calcInicialOriental.totalCuotas
+    const totalVh = calcVehimotors.totalCuotas
+    const totalFinanciado = totalOr + totalVh
+    const totalComprometido = contado + totalFinanciado
+    const saldo = precio - totalComprometido
+    const showVehicleWarning = precio > 0 && Math.abs(saldo) > 0.01
+    return { precio, contado, totalOr, totalVh, totalFinanciado, totalComprometido, saldo, showVehicleWarning }
+  }, [precioTotalVehiculo, montoContado, calcInicialOriental.totalCuotas, calcVehimotors.totalCuotas])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -181,7 +202,10 @@ export default function NuevoVehiculoPage() {
     setError('')
 
     const { data: vehiculo, error: insertError } = await supabase.from('vehiculos').insert({
-      cliente_id: clienteSeleccionado.id, ...parsed.data,
+      cliente_id: clienteSeleccionado.id,
+      ...parsed.data,
+      precio_total: parseFloat(precioTotalVehiculo) || null,
+      monto_contado: parseFloat(montoContado) || null,
     }).select().single()
 
     if (insertError || !vehiculo) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
@@ -189,13 +213,12 @@ export default function NuevoVehiculoPage() {
     // Si es financiado, crear crédito automáticamente
     if (tipoCompra === 'financiado') {
 
-      // --- Plan Personalizado: crear DOS créditos ---
+      // --- Plan Personalizado: crear DOS créditos (uno o ambos activos) ---
       if (plan === 'personalizado') {
-        if (calcInicialOriental.cuotas < 1 || calcInicialOriental.montoCuota <= 0) {
-          setError('Completa los datos del Crédito de Inicial (La Oriental)'); setLoading(false); return
-        }
-        if (calcVehimotors.cuotas < 1 || calcVehimotors.montoCuota <= 0) {
-          setError('Completa los datos del Crédito Financiamiento (Vehimotors)'); setLoading(false); return
+        const orActivo = calcInicialOriental.cuotas > 0
+        const vhActivo = calcVehimotors.cuotas > 0
+        if (!orActivo && !vhActivo) {
+          setError('Completa al menos un bloque de crédito'); setLoading(false); return
         }
 
         function buildCuotas(creditoId: string, cuotas: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string) {
@@ -208,33 +231,41 @@ export default function NuevoVehiculoPage() {
           })
         }
 
-        const obsOr = `Plan: Crédito de Inicial (La Oriental). ${observaciones ?? ''}`.trim()
-        const { data: creditoOr, error: errOr } = await supabase.from('creditos').insert({
-          cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
-          monto_financiado: calcInicialOriental.total,
-          inicial: calcInicialOriental.monto,
-          saldo: calcInicialOriental.cuotas * calcInicialOriental.montoCuota,
-          num_cuotas: calcInicialOriental.cuotas,
-          frecuencia_pago: orFrecuencia, fecha_inicio: orFecha,
-          moneda: 'USD', estado: 'activo', plan_tipo: 'inicial_la_oriental', observaciones: obsOr,
-        }).select().single()
-        if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
-        await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial (La Oriental)'))
+        let primerCreditoId = ''
 
-        const obsVh = `Plan: Crédito Financiamiento (Vehimotors). ${observaciones ?? ''}`.trim()
-        const { data: creditoVh, error: errVh } = await supabase.from('creditos').insert({
-          cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
-          monto_financiado: calcVehimotors.total,
-          inicial: calcVehimotors.monto,
-          saldo: calcVehimotors.cuotas * calcVehimotors.montoCuota,
-          num_cuotas: calcVehimotors.cuotas,
-          frecuencia_pago: vhFrecuencia, fecha_inicio: vhFecha,
-          moneda: 'USD', estado: 'activo', plan_tipo: 'financiamiento_vehimotors', observaciones: obsVh,
-        }).select().single()
-        if (errVh || !creditoVh) { setError(errVh?.message ?? 'Error creando crédito Vehimotors'); setLoading(false); return }
-        await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento (Vehimotors)'))
+        if (orActivo) {
+          const { data: creditoOr, error: errOr } = await supabase.from('creditos').insert({
+            cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
+            monto_financiado: calcInicialOriental.monto,
+            inicial: calcInicialOriental.monto,
+            saldo: calcInicialOriental.totalCuotas,
+            num_cuotas: calcInicialOriental.cuotas,
+            frecuencia_pago: orFrecuencia, fecha_inicio: orFecha,
+            moneda: 'USD', estado: 'activo', plan_tipo: 'inicial_la_oriental',
+            observaciones: orObs || 'Crédito de Inicial — La Oriental',
+          }).select().single()
+          if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
+          await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental'))
+          primerCreditoId = creditoOr.id
+        }
 
-        router.push(`/creditos/${creditoOr.id}`)
+        if (vhActivo) {
+          const { data: creditoVh, error: errVh } = await supabase.from('creditos').insert({
+            cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
+            monto_financiado: calcVehimotors.monto,
+            inicial: calcVehimotors.monto,
+            saldo: calcVehimotors.totalCuotas,
+            num_cuotas: calcVehimotors.cuotas,
+            frecuencia_pago: vhFrecuencia, fecha_inicio: vhFecha,
+            moneda: 'USD', estado: 'activo', plan_tipo: 'financiamiento_vehimotors',
+            observaciones: vhObs || 'Crédito Financiamiento — Vehimotors',
+          }).select().single()
+          if (errVh || !creditoVh) { setError(errVh?.message ?? 'Error creando crédito Vehimotors'); setLoading(false); return }
+          await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento — Vehimotors'))
+          if (!primerCreditoId) primerCreditoId = creditoVh.id
+        }
+
+        router.push(`/creditos/${primerCreditoId}`)
         router.refresh()
         return
       }
@@ -568,27 +599,48 @@ export default function NuevoVehiculoPage() {
             {/* Plan Personalizado — Dos sub-créditos */}
             {plan === 'personalizado' && (
               <div className="space-y-5">
+
+                {/* Precio del vehículo */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                  <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider mb-3">Precio del vehículo</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Precio total del vehículo (USD)</label>
+                      <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
+                        placeholder="0.00" value={precioTotalVehiculo} onChange={e => setPrecioTotalVehiculo(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="label">Monto pagado de contado (USD)</label>
+                      <input type="number" step="0.01" min="0" className="input"
+                        placeholder="0.00" value={montoContado} onChange={e => setMontoContado(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Sub-plan La Oriental */}
                 <div className="border-2 border-purple-200 rounded-xl p-5 bg-purple-50/40">
-                  <p className="font-bold text-purple-800 text-sm mb-4">Crédito de Inicial — La Oriental</p>
+                  <p className="font-bold text-purple-800 text-sm mb-4 flex items-center gap-2">
+                    <span className="w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">1</span>
+                    Crédito de Inicial — La Oriental
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                     <div>
-                      <label className="label">Monto inicial (USD)</label>
+                      <label className="label">Monto inicial financiado (USD)</label>
                       <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
                         value={orMonto} onChange={e => setOrMonto(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label">N° de cuotas *</label>
+                      <label className="label">N° de cuotas</label>
                       <input type="number" min="1" max="120" className="input" placeholder="12"
                         value={orCuotas} onChange={e => setOrCuotas(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label">Monto por cuota (USD) *</label>
+                      <label className="label">Monto por cuota (USD)</label>
                       <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
                         value={orMontoCuota} onChange={e => setOrMontoCuota(e.target.value)} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                     <div>
                       <label className="label">Frecuencia</label>
                       <div className="flex gap-2">
@@ -601,50 +653,64 @@ export default function NuevoVehiculoPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="label">Fecha inicio *</label>
+                      <label className="label">Fecha inicio</label>
                       <input type="date" className="input" value={orFecha} onChange={e => setOrFecha(e.target.value)} />
                     </div>
+                  </div>
+                  <div>
+                    <label className="label">Observaciones</label>
+                    <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este crédito..."
+                      value={orObs} onChange={e => setOrObs(e.target.value)} />
                   </div>
                   {calcInicialOriental.cuotas > 0 && calcInicialOriental.montoCuota > 0 && (
                     <div className="mt-3 bg-purple-700 rounded-lg p-4 grid grid-cols-3 gap-3">
                       <div className="text-center">
-                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Inicial</p>
-                        <p className="text-white font-extrabold text-lg">{formatUSD(calcInicialOriental.monto)}</p>
+                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Monto financiado</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcInicialOriental.monto)}</p>
                       </div>
                       <div className="text-center border-x border-purple-500">
                         <p className="text-purple-200 text-[10px] uppercase tracking-wider">Cuota {orFrecuencia}</p>
-                        <p className="text-white font-extrabold text-lg">{formatUSD(calcInicialOriental.montoCuota)}</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcInicialOriental.montoCuota)}</p>
                         <p className="text-purple-300 text-[10px]">{calcInicialOriental.cuotas} cuotas</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Total</p>
-                        <p className="text-white font-extrabold text-lg">{formatUSD(calcInicialOriental.total)}</p>
+                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Total cuotas</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcInicialOriental.totalCuotas)}</p>
                       </div>
+                    </div>
+                  )}
+                  {calcInicialOriental.showWarning && (
+                    <div className="mt-2 flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                      <AlertCircle size={14} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcInicialOriental.totalCuotas)}) no coincide con el monto financiado ({formatUSD(calcInicialOriental.monto)}). Verifica si es una condición especial.</p>
                     </div>
                   )}
                 </div>
 
                 {/* Sub-plan Vehimotors */}
                 <div className="border-2 border-indigo-200 rounded-xl p-5 bg-indigo-50/40">
-                  <p className="font-bold text-indigo-800 text-sm mb-4">Crédito Financiamiento — Vehimotors</p>
+                  <p className="font-bold text-indigo-800 text-sm mb-4 flex items-center gap-2">
+                    <span className="w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs">2</span>
+                    Crédito Financiamiento — Vehimotors
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                     <div>
-                      <label className="label">Monto inicial (USD)</label>
+                      <label className="label">Monto financiado Vehimotors (USD)</label>
                       <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
                         value={vhMonto} onChange={e => setVhMonto(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label">N° de cuotas *</label>
+                      <label className="label">N° de cuotas</label>
                       <input type="number" min="1" max="120" className="input" placeholder="12"
                         value={vhCuotas} onChange={e => setVhCuotas(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label">Monto por cuota (USD) *</label>
+                      <label className="label">Monto por cuota (USD)</label>
                       <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
                         value={vhMontoCuota} onChange={e => setVhMontoCuota(e.target.value)} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                     <div>
                       <label className="label">Frecuencia</label>
                       <div className="flex gap-2">
@@ -657,34 +723,94 @@ export default function NuevoVehiculoPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="label">Fecha inicio *</label>
+                      <label className="label">Fecha inicio</label>
                       <input type="date" className="input" value={vhFecha} onChange={e => setVhFecha(e.target.value)} />
                     </div>
+                  </div>
+                  <div>
+                    <label className="label">Observaciones</label>
+                    <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este financiamiento..."
+                      value={vhObs} onChange={e => setVhObs(e.target.value)} />
                   </div>
                   {calcVehimotors.cuotas > 0 && calcVehimotors.montoCuota > 0 && (
                     <div className="mt-3 bg-indigo-700 rounded-lg p-4 grid grid-cols-3 gap-3">
                       <div className="text-center">
-                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Inicial</p>
-                        <p className="text-white font-extrabold text-lg">{formatUSD(calcVehimotors.monto)}</p>
+                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Monto financiado</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.monto)}</p>
                       </div>
                       <div className="text-center border-x border-indigo-500">
                         <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Cuota {vhFrecuencia}</p>
-                        <p className="text-white font-extrabold text-lg">{formatUSD(calcVehimotors.montoCuota)}</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.montoCuota)}</p>
                         <p className="text-indigo-300 text-[10px]">{calcVehimotors.cuotas} cuotas</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Total</p>
-                        <p className="text-white font-extrabold text-lg">{formatUSD(calcVehimotors.total)}</p>
+                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Total cuotas</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.totalCuotas)}</p>
                       </div>
+                    </div>
+                  )}
+                  {calcVehimotors.showWarning && (
+                    <div className="mt-2 flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                      <AlertCircle size={14} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcVehimotors.totalCuotas)}) no coincide con el monto financiado ({formatUSD(calcVehimotors.monto)}). Verifica si es una condición especial.</p>
                     </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="label">Observaciones</label>
-                  <textarea className="textarea" rows={2} placeholder="Notas del financiamiento..."
-                    value={observaciones} onChange={e => setObservaciones(e.target.value)} />
-                </div>
+                {/* Resumen financiero del vehículo */}
+                {(resumenFinanciero.totalOr > 0 || resumenFinanciero.totalVh > 0 || resumenFinanciero.contado > 0) && (
+                  <div className="bg-oriental-black rounded-xl p-5">
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Resumen financiero del vehículo</p>
+                    <div className="space-y-2 mb-4">
+                      {resumenFinanciero.precio > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">Precio total del vehículo</span>
+                          <span className="text-white font-bold">{formatUSD(resumenFinanciero.precio)}</span>
+                        </div>
+                      )}
+                      {resumenFinanciero.contado > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">Pagado de contado</span>
+                          <span className="text-green-400 font-semibold">{formatUSD(resumenFinanciero.contado)}</span>
+                        </div>
+                      )}
+                      {resumenFinanciero.totalOr > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-purple-300">Crédito de Inicial — La Oriental</span>
+                          <span className="text-purple-300 font-semibold">{formatUSD(resumenFinanciero.totalOr)}</span>
+                        </div>
+                      )}
+                      {resumenFinanciero.totalVh > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-indigo-300">Crédito Financiamiento — Vehimotors</span>
+                          <span className="text-indigo-300 font-semibold">{formatUSD(resumenFinanciero.totalVh)}</span>
+                        </div>
+                      )}
+                      <div className="border-t border-gray-700 pt-2 flex justify-between text-sm">
+                        <span className="text-gray-300 font-semibold">Total financiado</span>
+                        <span className="text-white font-bold">{formatUSD(resumenFinanciero.totalFinanciado)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300 font-semibold">Total comprometido</span>
+                        <span className="text-oriental-red font-extrabold text-base">{formatUSD(resumenFinanciero.totalComprometido)}</span>
+                      </div>
+                      {resumenFinanciero.precio > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">Saldo pendiente</span>
+                          <span className={`font-bold ${resumenFinanciero.saldo < 0 ? 'text-red-400' : resumenFinanciero.saldo === 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                            {formatUSD(resumenFinanciero.saldo)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {resumenFinanciero.showVehicleWarning && (
+                      <div className="flex items-start gap-2 bg-yellow-900/40 border border-yellow-600/40 rounded-lg px-3 py-2">
+                        <AlertCircle size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-yellow-300">El total comprometido no coincide con el precio del vehículo. Verifica si existe un pago adicional, descuento, ajuste especial o condición personalizada autorizada.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
