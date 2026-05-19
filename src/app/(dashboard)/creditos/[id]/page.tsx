@@ -151,10 +151,16 @@ export default async function CreditoDetallePage({
         {/* Right: Cuotas */}
         <div className="lg:col-span-2">
           <div className="card p-6">
-            <h2 className="font-bold text-oriental-black mb-4 flex items-center gap-2">
+            <h2 className="font-bold text-oriental-black mb-4 flex items-center gap-2 flex-wrap">
               <Calendar size={18} className="text-oriental-gray" />
               Plan de cuotas
               <span className="text-xs text-oriental-gray font-normal ml-1">({credito.num_cuotas} cuotas · {credito.frecuencia_pago})</span>
+              {credito.plan_tipo === 'inicial_la_oriental' && (
+                <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-semibold">Crédito Inicial — La Oriental</span>
+              )}
+              {credito.plan_tipo === 'financiamiento_vehimotors' && (
+                <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-semibold">Financiamiento Vehimotors</span>
+              )}
             </h2>
 
             {cuotas && cuotas.length > 0 ? (
@@ -163,6 +169,9 @@ export default async function CreditoDetallePage({
                   <thead className="bg-oriental-bg border-b border-gray-200">
                     <tr>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">N°</th>
+                      {cuotas.some((c: any) => c.concepto) && (
+                        <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Concepto</th>
+                      )}
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Vencimiento</th>
                       <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Monto</th>
                       <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Mora</th>
@@ -171,9 +180,12 @@ export default async function CreditoDetallePage({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {cuotas.map(cuota => (
+                    {cuotas.map((cuota: any) => (
                       <tr key={cuota.id} className="hover:bg-oriental-bg/50 transition-colors">
                         <td className="px-3 py-2.5 font-bold text-oriental-black">{cuota.numero_cuota}</td>
+                        {cuotas.some((c: any) => c.concepto) && (
+                          <td className="px-3 py-2.5 text-xs text-oriental-gray">{cuota.concepto ?? '—'}</td>
+                        )}
                         <td className="px-3 py-2.5 text-oriental-gray">{formatDate(cuota.fecha_vencimiento)}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-oriental-black">{formatCurrency(cuota.monto, credito.moneda)}</td>
                         <td className="px-3 py-2.5 text-right">

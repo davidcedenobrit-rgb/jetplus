@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__list_projects",
+      "mcp__claude_ai_Vercel__list_deployments",
+      "mcp__claude_ai_Vercel__get_deployment_build_logs",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Vercel__get_project",
+      "mcp__claude_ai_Vercel__get_runtime_logs",
+      "mcp__claude_ai_Supabase__get_publishable_keys",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "mcp__claude_ai_Vercel__get_deployment",
+      "Bash(curl *)",
+      "mcp__claude_ai_Vercel__deploy_to_vercel",
+      "Bash(timeout 90 cmd /c \"echo Esperando build...\")",
+      "Bash(ping -n 75 127.0.0.1)",
+      "Bash(ping -n 90 127.0.0.1)"
+    ]
+  }
+}

@@ -62,11 +62,18 @@ export default function NuevoCreditoPage() {
   const [planAC500Sel, setPlanAC500Sel] = useState<PlanAC500 | null>(null)
   const [loadingPlanes, setLoadingPlanes] = useState(false)
 
-  // Plan personalizado
-  const [inicialCustom, setInicialCustom] = useState('')
-  const [numCuotasCustom, setNumCuotasCustom] = useState('12')
-  const [montoCuotaCustom, setMontoCuotaCustom] = useState('')
-  const [frecuencia, setFrecuencia] = useState('mensual')
+  // Plan personalizado — Crédito Inicial La Oriental
+  const [inicialOrientalMonto, setInicialOrientalMonto] = useState('')
+  const [inicialOrientalCuotas, setInicialOrientalCuotas] = useState('12')
+  const [inicialOrientalMontoCuota, setInicialOrientalMontoCuota] = useState('')
+  const [inicialOrientalFrecuencia, setInicialOrientalFrecuencia] = useState('mensual')
+  const [inicialOrientalFecha, setInicialOrientalFecha] = useState(new Date().toISOString().split('T')[0])
+  // Plan personalizado — Crédito Financiamiento Vehimotors
+  const [vehimotorsMonto, setVehimotorsMonto] = useState('')
+  const [vehimotorsCuotas, setVehimotorsCuotas] = useState('24')
+  const [vehimotorsMontoCuota, setVehimotorsMontoCuota] = useState('')
+  const [vehimotorsFrecuencia, setVehimotorsFrecuencia] = useState('mensual')
+  const [vehimotorsFecha, setVehimotorsFecha] = useState(new Date().toISOString().split('T')[0])
 
   // Cliente
   const [clienteQuery, setClienteQuery] = useState('')
@@ -151,15 +158,20 @@ export default function NuevoCreditoPage() {
     return getCuotasFromPlan(planAC500Sel)
   }, [planAC500Sel])
 
-  // Plan personalizado
-  const calcPersonalizado = useMemo(() => {
-    const inicial = parseFloat(inicialCustom) || 0
-    const numCuotas = parseInt(numCuotasCustom) || 0
-    const montoCuota = parseFloat(montoCuotaCustom) || 0
-    const saldo = numCuotas * montoCuota
-    const total = inicial + saldo
-    return { inicial, saldo, numCuotas, montoCuota, total }
-  }, [inicialCustom, numCuotasCustom, montoCuotaCustom])
+  // Plan personalizado — cálculos
+  const calcInicialOriental = useMemo(() => {
+    const montoTotal = parseFloat(inicialOrientalMonto) || 0
+    const numCuotas = parseInt(inicialOrientalCuotas) || 0
+    const montoCuota = parseFloat(inicialOrientalMontoCuota) || 0
+    return { montoTotal, numCuotas, montoCuota }
+  }, [inicialOrientalMonto, inicialOrientalCuotas, inicialOrientalMontoCuota])
+
+  const calcVehimotors = useMemo(() => {
+    const montoTotal = parseFloat(vehimotorsMonto) || 0
+    const numCuotas = parseInt(vehimotorsCuotas) || 0
+    const montoCuota = parseFloat(vehimotorsMontoCuota) || 0
+    return { montoTotal, numCuotas, montoCuota }
+  }, [vehimotorsMonto, vehimotorsCuotas, vehimotorsMontoCuota])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -179,40 +191,88 @@ export default function NuevoCreditoPage() {
       numCuotas = cuotasAsegurate
       montoFinanciado = planAC500Sel.total
     } else if (plan === 'personalizado') {
-      inicial = calcPersonalizado.inicial
-      saldo = calcPersonalizado.saldo
-      numCuotas = calcPersonalizado.numCuotas
-      montoFinanciado = inicial + saldo
+      // Plan personalizado: dos créditos separados — se manejan más abajo
     } else {
       setError('Selecciona un plan válido'); return
     }
+
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) { setError('Sesión expirada'); return }
+    setLoading(true)
+    setError('')
+
+    // ── PLAN PERSONALIZADO: crear DOS créditos ──
+    if (plan === 'personalizado') {
+      const { montoTotal: montoO, numCuotas: ncO, montoCuota: mcO } = calcInicialOriental
+      const { montoTotal: montoV, numCuotas: ncV, montoCuota: mcV } = calcVehimotors
+      if (ncO < 1 || mcO <= 0 || ncV < 1 || mcV <= 0) {
+        setError('Completa los datos de ambos créditos')
+        setLoading(false)
+        return
+      }
+
+      function buildCuotas(creditoId: string, n: number, monto: number, frecuencia: string, fechaBase: string, concepto: string) {
+        return Array.from({ length: n }, (_, i) => {
+          const fecha = new Date(fechaBase)
+          if (frecuencia === 'semanal') fecha.setDate(fecha.getDate() + (i + 1) * 7)
+          else if (frecuencia === 'quincenal') fecha.setDate(fecha.getDate() + (i + 1) * 15)
+          else fecha.setMonth(fecha.getMonth() + (i + 1))
+          return { credito_id: creditoId, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto, estado: 'pendiente', mora: 0, concepto }
+        })
+      }
+
+      const [resO, resV] = await Promise.all([
+        supabase.from('creditos').insert({
+          cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculoSeleccionado.id,
+          placa: vehiculoSeleccionado.placa, monto_financiado: montoO, inicial: 0,
+          saldo: ncO * mcO, num_cuotas: ncO, frecuencia_pago: inicialOrientalFrecuencia,
+          fecha_inicio: inicialOrientalFecha, moneda: 'USD', estado: 'activo',
+          plan_tipo: 'inicial_la_oriental',
+          observaciones: `Crédito de Inicial — La Oriental. ${observaciones || ''}`.trim(),
+        }).select().single(),
+        supabase.from('creditos').insert({
+          cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculoSeleccionado.id,
+          placa: vehiculoSeleccionado.placa, monto_financiado: montoV, inicial: 0,
+          saldo: ncV * mcV, num_cuotas: ncV, frecuencia_pago: vehimotorsFrecuencia,
+          fecha_inicio: vehimotorsFecha, moneda: 'USD', estado: 'activo',
+          plan_tipo: 'financiamiento_vehimotors',
+          observaciones: `Crédito Financiamiento Vehimotors. ${observaciones || ''}`.trim(),
+        }).select().single(),
+      ])
+
+      if (resO.error || !resO.data) { setError(resO.error?.message ?? 'Error crédito inicial'); setLoading(false); return }
+      if (resV.error || !resV.data) { setError(resV.error?.message ?? 'Error crédito Vehimotors'); setLoading(false); return }
+
+      await Promise.all([
+        supabase.from('cuotas').insert(buildCuotas(resO.data.id, ncO, mcO, inicialOrientalFrecuencia, inicialOrientalFecha, 'Crédito de Inicial — La Oriental')),
+        supabase.from('cuotas').insert(buildCuotas(resV.data.id, ncV, mcV, vehimotorsFrecuencia, vehimotorsFecha, 'Crédito Financiamiento Vehimotors')),
+      ])
+
+      router.push(`/creditos/${resO.data.id}`)
+      router.refresh()
+      return
+    }
+
+    const planLabel = plan === 'credito_40_60' ? 'Vehimotors (Planta)'
+      : `Asegúrate $500 (${cuotasAsegurate}m) — ${planAC500Sel?.modelo}`
+
+    const desglose = `Base: ${formatUSD(precioCalc.base)} | IVA: ${formatUSD(precioCalc.iva)} | Admin: ${formatUSD(precioCalc.admin)}`
+    const obsCompleta = [`Plan: ${planLabel}`, desglose, observaciones].filter(Boolean).join('. ')
 
     const parsed = CreditoSchema.safeParse({
       monto_financiado: montoFinanciado,
       inicial,
       num_cuotas: numCuotas,
-      frecuencia_pago: plan === 'personalizado' ? frecuencia : 'mensual',
+      frecuencia_pago: 'mensual',
       fecha_inicio: fechaInicio,
       moneda: 'USD',
-      observaciones: observaciones || null,
+      observaciones: obsCompleta || null,
     })
     if (!parsed.success) {
       setError(parsed.error.errors[0]?.message ?? 'Datos del crédito inválidos')
+      setLoading(false)
       return
     }
-
-    const { data: { user } } = await supabase.auth.getUser()
-    setLoading(true)
-    setError('')
-
-    const planLabel = plan === 'credito_40_60' ? 'Vehimotors (Planta)'
-      : plan === 'asegurate_500' ? `Asegúrate $500 (${cuotasAsegurate}m) — ${planAC500Sel?.modelo}`
-      : 'Personalizado "La Oriental"'
-
-    const desglose = plan !== 'personalizado'
-      ? `Base: ${formatUSD(precioCalc.base)} | IVA: ${formatUSD(precioCalc.iva)} | Admin: ${formatUSD(precioCalc.admin)}`
-      : null
-    const obsCompleta = [`Plan: ${planLabel}`, desglose, observaciones].filter(Boolean).join('. ')
 
     const { data: creditoCreado, error: creditoError } = await supabase
       .from('creditos')
@@ -242,40 +302,13 @@ export default function NuevoCreditoPage() {
       cuotasData = cuotasAC500.map((c, i) => {
         const fecha = new Date(fechaInicio)
         fecha.setDate(fecha.getDate() + (i * 30))
-        return {
-          credito_id: creditoCreado.id,
-          numero_cuota: c.numero,
-          fecha_vencimiento: fecha.toISOString().split('T')[0],
-          monto: c.monto,
-          estado: 'pendiente',
-          mora: 0,
-        }
+        return { credito_id: creditoCreado.id, numero_cuota: c.numero, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: c.monto, estado: 'pendiente', mora: 0 }
       })
     } else if (plan === 'credito_40_60' && calc4060) {
       cuotasData = Array.from({ length: 24 }, (_, i) => {
         const fecha = new Date(fechaInicio)
         fecha.setMonth(fecha.getMonth() + (i + 1))
-        return {
-          credito_id: creditoCreado.id,
-          numero_cuota: i + 1,
-          fecha_vencimiento: fecha.toISOString().split('T')[0],
-          monto: calc4060.cuota,
-          estado: 'pendiente',
-          mora: 0,
-        }
-      })
-    } else {
-      cuotasData = Array.from({ length: numCuotas }, (_, i) => {
-        const fecha = new Date(fechaInicio)
-        fecha.setMonth(fecha.getMonth() + (i + 1))
-        return {
-          credito_id: creditoCreado.id,
-          numero_cuota: i + 1,
-          fecha_vencimiento: fecha.toISOString().split('T')[0],
-          monto: calcPersonalizado.montoCuota,
-          estado: 'pendiente',
-          mora: 0,
-        }
+        return { credito_id: creditoCreado.id, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: calc4060.cuota, estado: 'pendiente', mora: 0 }
       })
     }
 
@@ -550,54 +583,115 @@ export default function NuevoCreditoPage() {
             </div>
           )}
 
-          {/* ── PLAN PERSONALIZADO ── */}
+          {/* ── PLAN PERSONALIZADO LA ORIENTAL ── */}
           {plan === 'personalizado' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="label">Inicial (USD) *</label>
-                  <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
-                    value={inicialCustom} onChange={e => setInicialCustom(e.target.value)} required />
+            <div className="space-y-6">
+              {/* Sub-crédito 1: Inicial La Oriental */}
+              <div className="border border-purple-200 bg-purple-50/40 rounded-xl p-5">
+                <p className="text-sm font-bold text-purple-800 mb-4 flex items-center gap-2">
+                  <span className="w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                  Crédito de Inicial — La Oriental
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="label">Monto total (USD) *</label>
+                    <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                      value={inicialOrientalMonto} onChange={e => setInicialOrientalMonto(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">N° de cuotas *</label>
+                    <input type="number" min="1" max="120" className="input" placeholder="12"
+                      value={inicialOrientalCuotas} onChange={e => setInicialOrientalCuotas(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Monto por cuota (USD) *</label>
+                    <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                      value={inicialOrientalMontoCuota} onChange={e => setInicialOrientalMontoCuota(e.target.value)} />
+                  </div>
                 </div>
-                <div>
-                  <label className="label">N° de cuotas *</label>
-                  <input type="number" min="1" max="120" className="input" placeholder="12"
-                    value={numCuotasCustom} onChange={e => setNumCuotasCustom(e.target.value)} required />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="label">Frecuencia de pago</label>
+                    <div className="flex gap-2">
+                      {['semanal', 'quincenal', 'mensual'].map(f => (
+                        <button key={f} type="button" onClick={() => setInicialOrientalFrecuencia(f)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
+                            inicialOrientalFrecuencia === f ? 'bg-purple-700 text-white border-purple-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                          }`}>{f}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Fecha inicio *</label>
+                    <input type="date" className="input" value={inicialOrientalFecha} onChange={e => setInicialOrientalFecha(e.target.value)} />
+                  </div>
                 </div>
-                <div>
-                  <label className="label">Monto por cuota (USD) *</label>
-                  <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
-                    value={montoCuotaCustom} onChange={e => setMontoCuotaCustom(e.target.value)} required />
-                </div>
-              </div>
-              <div>
-                <label className="label">Frecuencia de pago</label>
-                <div className="flex gap-2">
-                  {['semanal', 'quincenal', 'mensual'].map(f => (
-                    <button key={f} type="button" onClick={() => setFrecuencia(f)}
-                      className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border capitalize transition-colors ${
-                        frecuencia === f ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
-                      }`}>
-                      {f}
-                    </button>
-                  ))}
-                </div>
+                {calcInicialOriental.numCuotas > 0 && calcInicialOriental.montoCuota > 0 && (
+                  <div className="mt-3 bg-purple-700 rounded-lg p-3 flex items-center justify-between">
+                    <p className="text-purple-200 text-xs">{calcInicialOriental.numCuotas} cuotas {inicialOrientalFrecuencia}es de</p>
+                    <p className="text-white font-extrabold">{formatUSD(calcInicialOriental.montoCuota)} / cuota</p>
+                  </div>
+                )}
               </div>
 
-              {calcPersonalizado.numCuotas > 0 && calcPersonalizado.montoCuota > 0 && (
-                <div className="bg-oriental-black rounded-xl p-5 grid grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Inicial</p>
-                    <p className="text-white font-extrabold text-xl">{formatUSD(calcPersonalizado.inicial)}</p>
+              {/* Sub-crédito 2: Financiamiento Vehimotors */}
+              <div className="border border-indigo-200 bg-indigo-50/40 rounded-xl p-5">
+                <p className="text-sm font-bold text-indigo-800 mb-4 flex items-center gap-2">
+                  <span className="w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                  Crédito Financiamiento — Vehimotors
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="label">Monto a financiar (USD) *</label>
+                    <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                      value={vehimotorsMonto} onChange={e => setVehimotorsMonto(e.target.value)} />
                   </div>
-                  <div className="text-center border-x border-gray-700">
-                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Cuota {frecuencia}</p>
-                    <p className="text-oriental-red font-extrabold text-xl">{formatUSD(calcPersonalizado.montoCuota)}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{calcPersonalizado.numCuotas} cuotas</p>
+                  <div>
+                    <label className="label">N° de cuotas *</label>
+                    <input type="number" min="1" max="120" className="input" placeholder="24"
+                      value={vehimotorsCuotas} onChange={e => setVehimotorsCuotas(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Monto por cuota (USD) *</label>
+                    <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                      value={vehimotorsMontoCuota} onChange={e => setVehimotorsMontoCuota(e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="label">Frecuencia de pago</label>
+                    <div className="flex gap-2">
+                      {['semanal', 'quincenal', 'mensual'].map(f => (
+                        <button key={f} type="button" onClick={() => setVehimotorsFrecuencia(f)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
+                            vehimotorsFrecuencia === f ? 'bg-indigo-700 text-white border-indigo-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                          }`}>{f}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Fecha inicio *</label>
+                    <input type="date" className="input" value={vehimotorsFecha} onChange={e => setVehimotorsFecha(e.target.value)} />
+                  </div>
+                </div>
+                {calcVehimotors.numCuotas > 0 && calcVehimotors.montoCuota > 0 && (
+                  <div className="mt-3 bg-indigo-700 rounded-lg p-3 flex items-center justify-between">
+                    <p className="text-indigo-200 text-xs">{calcVehimotors.numCuotas} cuotas {vehimotorsFrecuencia}es de</p>
+                    <p className="text-white font-extrabold">{formatUSD(calcVehimotors.montoCuota)} / cuota</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Resumen total */}
+              {calcInicialOriental.numCuotas > 0 && calcVehimotors.numCuotas > 0 && (
+                <div className="bg-oriental-black rounded-xl p-5 grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Total Crédito Oriental</p>
+                    <p className="text-purple-300 font-extrabold text-lg">{formatUSD(calcInicialOriental.numCuotas * calcInicialOriental.montoCuota)}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Total a pagar</p>
-                    <p className="text-white font-extrabold text-xl">{formatUSD(calcPersonalizado.total)}</p>
+                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Total Financiamiento</p>
+                    <p className="text-indigo-300 font-extrabold text-lg">{formatUSD(calcVehimotors.numCuotas * calcVehimotors.montoCuota)}</p>
                   </div>
                 </div>
               )}
@@ -612,11 +706,13 @@ export default function NuevoCreditoPage() {
             Datos del contrato
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Fecha de inicio *</label>
-              <input type="date" className="input" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required />
-            </div>
-            <div className="md:col-span-2">
+            {plan !== 'personalizado' && (
+              <div>
+                <label className="label">Fecha de inicio *</label>
+                <input type="date" className="input" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required />
+              </div>
+            )}
+            <div className={plan !== 'personalizado' ? '' : 'md:col-span-2'}>
               <label className="label">Observaciones</label>
               <textarea className="textarea" rows={2} placeholder="Condiciones especiales, notas del contrato..."
                 value={observaciones} onChange={e => setObservaciones(e.target.value)} />

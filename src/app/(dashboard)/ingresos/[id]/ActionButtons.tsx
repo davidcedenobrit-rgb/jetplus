@@ -12,9 +12,12 @@ import DeleteButton from '@/components/DeleteButton'
 interface Props {
   ingresoId: string
   estado: string
+  monto: number
+  moneda: string
+  numeroRecibo: string
 }
 
-export default function ActionButtons({ ingresoId, estado }: Props) {
+export default function ActionButtons({ ingresoId, estado, monto, moneda, numeroRecibo }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState('')
@@ -31,6 +34,27 @@ export default function ActionButtons({ ingresoId, estado }: Props) {
     }
 
     await supabase.from('ingresos').update(update).eq('id', ingresoId)
+
+    // Al mandar a depositar, crear egreso automático a Vehimotors
+    if (nuevoEstado === 'enviado_deposito') {
+      const { data: { user } } = await supabase.auth.getUser()
+      const year = new Date().getFullYear()
+      const buf = new Uint32Array(1)
+      crypto.getRandomValues(buf)
+      const seq = String(buf[0] % 1_000_000).padStart(6, '0')
+      await supabase.from('egresos').insert({
+        numero_egreso: `LOA-EGR-${year}-${seq}`,
+        categoria: 'vehimotors',
+        concepto: `Depósito a Vehimotors — ${numeroRecibo}`,
+        monto,
+        moneda,
+        ingreso_id: ingresoId,
+        estado: 'registrado',
+        fecha_egreso: new Date().toISOString().split('T')[0],
+        registrado_por: user?.id ?? '',
+      })
+    }
+
     setLoading('')
     router.refresh()
   }
@@ -58,7 +82,7 @@ export default function ActionButtons({ ingresoId, estado }: Props) {
       style: 'bg-orange-500 hover:bg-orange-600 text-white',
     },
     {
-      label: 'Enviar a Carla',
+      label: 'Reportar a Carla',
       icon: Send,
       estado: 'enviado_carla',
       timestamp: 'enviado_carla_at',
@@ -95,7 +119,7 @@ export default function ActionButtons({ ingresoId, estado }: Props) {
           {visibleActions.map(action => (
             <button
               key={action.estado}
-              onClick={() => updateEstado(action.estado, action.timestamp)}
+              onClick={() => updateEstado(action.estado, (action as any).timestamp)}
               disabled={loading !== ''}
               className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${action.style}`}
             >

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
-  CreditCard, BarChart2, LogOut, ArrowLeftRight
+  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen
 } from 'lucide-react'
 
 const navItems = [
@@ -18,6 +18,7 @@ const navItems = [
   { href: '/creditos', label: 'Créditos', icon: CreditCard },
   { href: '/tasas', label: 'Tasas', icon: ArrowLeftRight },
   { href: '/reportes', label: 'Reportes', icon: BarChart2 },
+  { href: '/documentos-empresa', label: 'Docs. Empresa', icon: FolderOpen },
 ]
 
 export default function Sidebar({ userEmail }: { userEmail: string }) {

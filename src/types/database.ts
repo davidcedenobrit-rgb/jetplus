@@ -20,7 +20,7 @@ export type Moneda = 'USD' | 'VES'
 export type CategoriaEgreso =
   | 'gastos_administrativos' | 'proveedores' | 'tramites_vehiculares'
   | 'impuestos' | 'seguro' | 'logistica' | 'mantenimiento' | 'comisiones'
-  | 'servicios' | 'vehimotors' | 'bancos_comisiones' | 'otros'
+  | 'servicios' | 'vehimotors' | 'bancos_comisiones' | 'alquiler' | 'taller' | 'repuestos' | 'otros'
 
 export interface Usuario {
   id: string
@@ -58,6 +58,7 @@ export interface Vehiculo {
   color: string | null
   placa: string | null
   vin: string | null
+  serial_motor: string | null
   fecha_entrega: string | null
   tipo_compra: TipoCompra
   estado: string
@@ -79,6 +80,7 @@ export interface Credito {
   fecha_inicio: string
   moneda: Moneda
   estado: string
+  plan_tipo: string | null
   observaciones: string | null
   created_at: string
   updated_at: string
@@ -93,6 +95,7 @@ export interface Cuota {
   estado: string
   fecha_pago: string | null
   mora: number
+  concepto: string | null
   observaciones: string | null
   created_at: string
 }
@@ -114,6 +117,7 @@ export interface Ingreso {
   banco_receptor: string | null
   estado: EstadoRecibo
   observaciones: string | null
+  tasa_cambio: number | null
   registrado_por: string
   aprobado_por: string | null
   fecha_registro: string
@@ -161,6 +165,9 @@ export interface Archivo {
   nombre: string | null
   ingreso_id: string | null
   egreso_id: string | null
+  cliente_id: string | null
+  tipo_documento: string | null
+  es_empresa: boolean
   subido_por: string
   created_at: string
 }

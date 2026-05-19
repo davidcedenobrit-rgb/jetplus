@@ -203,7 +203,13 @@ export default async function IngresoDetallePage({
 
         {/* Right: Actions */}
         <div className="space-y-4">
-          <ActionButtons ingresoId={ingreso.id} estado={ingreso.estado} />
+          <ActionButtons
+            ingresoId={ingreso.id}
+            estado={ingreso.estado}
+            monto={ingreso.monto}
+            moneda={ingreso.moneda}
+            numeroRecibo={ingreso.numero_recibo}
+          />
 
           {/* Timeline */}
           <div className="card p-5">

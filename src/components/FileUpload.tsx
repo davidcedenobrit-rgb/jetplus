@@ -17,7 +17,7 @@ interface FileUploadProps {
   disabled?: boolean
 }
 
-export default function FileUpload({ files, onFilesChange, maxFiles = 5, disabled }: FileUploadProps) {
+export default function FileUpload({ files, onFilesChange, maxFiles = 10, disabled }: FileUploadProps) {
   const supabase = createClient()
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)

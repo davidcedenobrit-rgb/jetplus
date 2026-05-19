@@ -52,6 +52,7 @@ export default function NuevoVehiculoPage() {
   const [color, setColor] = useState('')
   const [placa, setPlaca] = useState('')
   const [vin, setVin] = useState('')
+  const [serialMotor, setSerialMotor] = useState('')
   const [tipoCompra, setTipoCompra] = useState<'contado' | 'financiado'>('contado')
   const [fechaEntrega, setFechaEntrega] = useState('')
   const [observaciones, setObservaciones] = useState('')
@@ -143,6 +144,7 @@ export default function NuevoVehiculoPage() {
     const parsed = VehiculoSchema.safeParse({
       marca, modelo, version: version || null, anio: parseInt(anio) || null,
       color: color || null, placa: placa.toUpperCase() || null, vin: vin.toUpperCase() || null,
+      serial_motor: serialMotor.toUpperCase() || null,
       tipo_compra: tipoCompra, fecha_entrega: fechaEntrega || null, estado: 'activo',
       observaciones: observaciones || null,
     })
@@ -328,6 +330,10 @@ export default function NuevoVehiculoPage() {
             <div>
               <label className="label">VIN / Chasis</label>
               <input type="text" className="input font-mono uppercase" placeholder="VIN de 17 caracteres" value={vin} onChange={e => setVin(e.target.value.toUpperCase())} maxLength={17} />
+            </div>
+            <div>
+              <label className="label">Serial del motor</label>
+              <input type="text" className="input font-mono uppercase" placeholder="Serial del motor" value={serialMotor} onChange={e => setSerialMotor(e.target.value.toUpperCase())} />
             </div>
             <div>
               <label className="label">Fecha de entrega</label>

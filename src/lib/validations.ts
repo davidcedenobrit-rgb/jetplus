@@ -3,7 +3,7 @@ import { z } from 'zod'
 const CATEGORIAS_EGRESO = [
   'gastos_administrativos', 'proveedores', 'tramites_vehiculares',
   'impuestos', 'seguro', 'logistica', 'mantenimiento', 'comisiones',
-  'servicios', 'vehimotors', 'bancos_comisiones', 'taller', 'repuestos', 'otros',
+  'servicios', 'vehimotors', 'bancos_comisiones', 'alquiler', 'taller', 'repuestos', 'otros',
 ] as const
 
 const MONEDA = ['USD', 'VES'] as const
@@ -30,6 +30,7 @@ export const IngresoSchema = z.object({
   referencia: z.string().max(100).optional().nullable(),
   fecha_pago: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida'),
   observaciones: z.string().max(500).optional().nullable(),
+  tasa_cambio: z.number().positive().optional().nullable(),
 })
 
 export const EgresoSchema = z.object({
@@ -83,6 +84,7 @@ export const VehiculoSchema = z.object({
   color: z.string().max(50).optional().nullable(),
   placa: z.string().max(10).optional().nullable(),
   vin: z.string().max(50).optional().nullable(),
+  serial_motor: z.string().max(50).optional().nullable(),
   tipo_compra: z.enum(TIPO_COMPRA),
   fecha_entrega: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   estado: z.string().max(50).default('disponible'),

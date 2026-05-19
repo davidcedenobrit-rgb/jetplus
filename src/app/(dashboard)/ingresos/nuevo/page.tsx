@@ -149,13 +149,18 @@ export default function NuevoIngresoPage() {
     setLoading(true)
     setError('')
 
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      setError('Sesión expirada. Recarga la página e inicia sesión nuevamente.')
+      setLoading(false)
+      return
+    }
+
     const year = new Date().getFullYear()
     const buf = new Uint32Array(1)
     crypto.getRandomValues(buf)
     const seq = String(buf[0] % 1_000_000).padStart(6, '0')
     const numero_recibo = `LOA-REC-${year}-${seq}`
-
-    const { data: { user } } = await supabase.auth.getUser()
 
     const { data: inserted, error: insertError } = await supabase.from('ingresos').insert({
       numero_recibo,
@@ -173,7 +178,7 @@ export default function NuevoIngresoPage() {
       observaciones: observaciones || null,
       tasa_cambio: moneda === 'VES' && tasaCambio ? parseFloat(tasaCambio) : null,
       estado: 'pendiente_aprobacion',
-      registrado_por: user?.id ?? '',
+      registrado_por: user.id,
     }).select('id').single()
 
     if (insertError || !inserted) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
@@ -185,7 +190,7 @@ export default function NuevoIngresoPage() {
           url: c.url,
           nombre: c.nombre,
           ingreso_id: inserted.id,
-          subido_por: user?.id ?? '',
+          subido_por: user.id,
         }))
       )
     }

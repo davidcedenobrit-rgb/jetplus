@@ -64,7 +64,8 @@ export default async function VehiculoDetallePage({
             <h2 className="font-bold text-oriental-black mb-4">Datos del vehículo</h2>
             <div className="space-y-3">
               <InfoRow icon={Hash} label="Placa" value={vehiculo.placa ?? 'Sin placa'} mono />
-              <InfoRow icon={Hash} label="VIN" value={vehiculo.vin ?? '—'} mono />
+              <InfoRow icon={Hash} label="VIN / Chasis" value={vehiculo.vin ?? '—'} mono />
+              <InfoRow icon={Hash} label="Serial motor" value={vehiculo.serial_motor ?? '—'} mono />
               <InfoRow icon={CreditCard} label="Tipo compra" value={vehiculo.tipo_compra} capitalize />
               <InfoRow icon={Calendar} label="Entrega" value={vehiculo.fecha_entrega ? formatDate(vehiculo.fecha_entrega) : 'Pendiente'} />
             </div>
