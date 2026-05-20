@@ -116,6 +116,15 @@ export default function NuevoVehiculoPage() {
   const [precioTotalVehiculo, setPrecioTotalVehiculo] = useState('')
   const [montoContado, setMontoContado] = useState('')
 
+  // Cuota especial (tercer bloque opcional — corre en paralelo a los mensuales)
+  const [ceActivo, setCeActivo] = useState(false)
+  const [ceMonto, setCeMonto] = useState('')
+  const [ceCuotas, setCeCuotas] = useState('8')
+  const [ceMontoCuota, setCeMontoCuota] = useState('')
+  const [ceFrecuencia, setCeFrecuencia] = useState('trimestral')
+  const [ceFecha, setCeFecha] = useState(new Date().toISOString().split('T')[0])
+  const [ceObs, setCeObs] = useState('')
+
   // ── Calculadora de precio (Plan Personalizado) ──
   const [calcBase, setCalcBase] = useState('')
   const [calcIvaPct, setCalcIvaPct] = useState('16')
@@ -209,17 +218,31 @@ export default function NuevoVehiculoPage() {
     return { monto, cuotas, montoCuota, totalCuotas, showWarning }
   }, [vhMonto, vhCuotas, vhMontoCuota])
 
+  const calcCuotaEspecial = useMemo(() => {
+    const monto = parseFloat(ceMonto) || 0
+    const cuotas = parseInt(ceCuotas) || 0
+    const montoCuota = parseFloat(ceMontoCuota) || 0
+    const totalCuotas = cuotas * montoCuota
+    const showWarning = monto > 0 && cuotas > 0 && montoCuota > 0 && Math.abs(totalCuotas - monto) > 0.01
+    return { monto, cuotas, montoCuota, totalCuotas, showWarning }
+  }, [ceMonto, ceCuotas, ceMontoCuota])
+
   const resumenFinanciero = useMemo(() => {
-    const precio = parseFloat(precioTotalVehiculo) || 0
-    const contado = parseFloat(montoContado) || 0
-    const totalOr = calcInicialOriental.totalCuotas
-    const totalVh = calcVehimotors.totalCuotas
-    const totalFinanciado = totalOr + totalVh
-    const totalComprometido = contado + totalFinanciado
-    const saldo = precio - totalComprometido
-    const showVehicleWarning = precio > 0 && Math.abs(saldo) > 0.01
-    return { precio, contado, totalOr, totalVh, totalFinanciado, totalComprometido, saldo, showVehicleWarning }
-  }, [precioTotalVehiculo, montoContado, calcInicialOriental.totalCuotas, calcVehimotors.totalCuotas])
+    const precioBase = parseFloat(precioTotalVehiculo) || 0
+
+    // La Oriental: usar monto directo (el total que cobra La Oriental, independiente de cuántas cuotas)
+    const totalOr = calcInicialOriental.monto
+
+    // Vehimotors: total de cuotas (incluye interés si hay); si no hay montoCuota, usar monto base
+    const totalVh = calcVehimotors.totalCuotas > 0 ? calcVehimotors.totalCuotas : calcVehimotors.monto
+
+    // Cuota especial (paralela)
+    const totalCe = ceActivo ? (calcCuotaEspecial.totalCuotas > 0 ? calcCuotaEspecial.totalCuotas : calcCuotaEspecial.monto) : 0
+
+    const totalComprometido = totalOr + totalVh + totalCe
+
+    return { precioBase, totalOr, totalVh, totalCe, totalComprometido }
+  }, [precioTotalVehiculo, calcInicialOriental.monto, calcVehimotors.totalCuotas, calcVehimotors.monto, calcCuotaEspecial, ceActivo])
 
   // ── Calculadora de precio (live) ──
   const calculadora = useMemo(() => {
@@ -253,9 +276,13 @@ export default function NuevoVehiculoPage() {
 
   function aplicarCalculadora() {
     if (!calculadora) return
-    // La Oriental: precarga el monto total que debe cubrir (la admin define cuántas cuotas)
+    // La Oriental: monto total + calcular montoCuota si ya hay cuotas definidas
     setOrMonto(calculadora.totalInicialLaOriental.toFixed(2))
-    // Vehimotors: precarga monto financiado, cuotas y cuota calculada
+    const cuotasOrActual = parseInt(orCuotas) || 0
+    if (cuotasOrActual > 0) {
+      setOrMontoCuota((calculadora.totalInicialLaOriental / cuotasOrActual).toFixed(2))
+    }
+    // Vehimotors: monto financiado, cuotas y cuota calculada
     setVhMonto(calculadora.financiamientoVh.toFixed(2))
     setVhCuotas(String(calculadora.n))
     setVhMontoCuota(calculadora.cuotaVh.toFixed(2))
@@ -343,6 +370,24 @@ export default function NuevoVehiculoPage() {
           if (errVh || !creditoVh) { setError(errVh?.message ?? 'Error creando crédito Vehimotors'); setLoading(false); return }
           await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento — Vehimotors'))
           if (!primerCreditoId) primerCreditoId = creditoVh.id
+        }
+
+        // Cuota especial (tercer bloque paralelo — ej: trimestral simultánea)
+        const ceActivo2 = ceActivo && calcCuotaEspecial.cuotas > 0 && calcCuotaEspecial.montoCuota > 0
+        if (ceActivo2) {
+          const { data: creditoCe, error: errCe } = await supabase.from('creditos').insert({
+            cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
+            monto_financiado: calcCuotaEspecial.monto || calcCuotaEspecial.totalCuotas,
+            inicial: 0,
+            saldo: calcCuotaEspecial.totalCuotas,
+            num_cuotas: calcCuotaEspecial.cuotas,
+            frecuencia_pago: ceFrecuencia, fecha_inicio: ceFecha,
+            moneda: 'USD', estado: 'activo', plan_tipo: 'cuota_especial',
+            observaciones: ceObs || `Cuota especial ${ceFrecuencia}`,
+          }).select().single()
+          if (errCe || !creditoCe) { setError(errCe?.message ?? 'Error creando cuota especial'); setLoading(false); return }
+          await supabase.from('cuotas').insert(buildCuotas(creditoCe.id, calcCuotaEspecial.cuotas, calcCuotaEspecial.montoCuota, ceFrecuencia, ceFecha, `Cuota especial ${ceFrecuencia}`))
+          if (!primerCreditoId) primerCreditoId = creditoCe.id
         }
 
         router.push(`/creditos/${primerCreditoId}`)
@@ -971,58 +1016,131 @@ export default function NuevoVehiculoPage() {
                   )}
                 </div>
 
+                {/* Cuota Especial (paralela a las mensuales) */}
+                <div className="border border-dashed border-teal-400/40 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setCeActivo(!ceActivo)}
+                    className={`w-full flex items-center justify-between px-5 py-3 transition-colors ${ceActivo ? 'bg-teal-900/40' : 'bg-teal-950/20 hover:bg-teal-900/20'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full border-2 ${ceActivo ? 'bg-teal-400 border-teal-400' : 'border-teal-500'}`} />
+                      <span className="text-teal-300 font-semibold text-sm">Cuotas Especiales (paralelas)</span>
+                      <span className="text-teal-500 text-xs">— Corren simultáneamente con las cuotas mensuales</span>
+                    </div>
+                    <span className="text-teal-400 text-xs font-semibold">{ceActivo ? 'Quitar' : '+ Agregar'}</span>
+                  </button>
+
+                  {ceActivo && (
+                    <div className="px-5 pb-5 pt-4 space-y-4 bg-teal-950/10">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="label">Monto total *</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray text-sm">$</span>
+                            <input type="number" step="0.01" className="input pl-7" placeholder="0.00"
+                              value={ceMonto} onChange={e => setCeMonto(e.target.value)} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="label">N° cuotas *</label>
+                          <input type="number" className="input" placeholder="ej: 4"
+                            value={ceCuotas} onChange={e => setCeCuotas(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="label">Monto por cuota *</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray text-sm">$</span>
+                            <input type="number" step="0.01" className="input pl-7" placeholder="0.00"
+                              value={ceMontoCuota} onChange={e => setCeMontoCuota(e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="label">Frecuencia</label>
+                          <div className="flex gap-2 flex-wrap">
+                            {(['mensual', 'trimestral', 'semestral', 'anual'] as const).map(f => (
+                              <button key={f} type="button"
+                                onClick={() => setCeFrecuencia(f)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all capitalize ${ceFrecuencia === f
+                                  ? 'bg-teal-600 border-teal-600 text-white'
+                                  : 'border-teal-700 text-teal-400 hover:border-teal-500'
+                                }`}>{f}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="label">Fecha inicio</label>
+                          <input type="date" className="input" value={ceFecha} onChange={e => setCeFecha(e.target.value)} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="label">Observaciones</label>
+                        <textarea className="textarea" rows={2} placeholder="Condiciones especiales de esta cuota paralela..."
+                          value={ceObs} onChange={e => setCeObs(e.target.value)} />
+                      </div>
+                      {calcCuotaEspecial.cuotas > 0 && calcCuotaEspecial.montoCuota > 0 && (
+                        <div className="bg-teal-800/50 rounded-lg p-4 grid grid-cols-3 gap-3">
+                          <div className="text-center">
+                            <p className="text-teal-300 text-[10px] uppercase tracking-wider">Monto total</p>
+                            <p className="text-white font-extrabold text-base">{formatUSD(calcCuotaEspecial.monto)}</p>
+                          </div>
+                          <div className="text-center border-x border-teal-700">
+                            <p className="text-teal-300 text-[10px] uppercase tracking-wider">Cuota {ceFrecuencia}</p>
+                            <p className="text-white font-extrabold text-base">{formatUSD(calcCuotaEspecial.montoCuota)}</p>
+                            <p className="text-teal-400 text-[10px]">{calcCuotaEspecial.cuotas} cuotas</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-teal-300 text-[10px] uppercase tracking-wider">Total cuotas</p>
+                            <p className="text-white font-extrabold text-base">{formatUSD(calcCuotaEspecial.totalCuotas)}</p>
+                          </div>
+                        </div>
+                      )}
+                      {calcCuotaEspecial.showWarning && (
+                        <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                          <AlertCircle size={14} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcCuotaEspecial.totalCuotas)}) no coincide con el monto total ({formatUSD(calcCuotaEspecial.monto)}). Verifica las condiciones.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Resumen financiero del vehículo */}
-                {(resumenFinanciero.totalOr > 0 || resumenFinanciero.totalVh > 0 || resumenFinanciero.contado > 0) && (
+                {(resumenFinanciero.totalOr > 0 || resumenFinanciero.totalVh > 0 || resumenFinanciero.totalCe > 0) && (
                   <div className="bg-oriental-black rounded-xl p-5">
                     <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Resumen financiero del vehículo</p>
                     <div className="space-y-2 mb-4">
-                      {resumenFinanciero.precio > 0 && (
+                      {resumenFinanciero.precioBase > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Precio total del vehículo</span>
-                          <span className="text-white font-bold">{formatUSD(resumenFinanciero.precio)}</span>
-                        </div>
-                      )}
-                      {resumenFinanciero.contado > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Pagado de contado</span>
-                          <span className="text-green-400 font-semibold">{formatUSD(resumenFinanciero.contado)}</span>
+                          <span className="text-gray-400">Precio base del vehículo</span>
+                          <span className="text-gray-300 font-semibold">{formatUSD(resumenFinanciero.precioBase)}</span>
                         </div>
                       )}
                       {resumenFinanciero.totalOr > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-purple-300">Crédito de Inicial — La Oriental</span>
+                          <span className="text-purple-300">Inicial — La Oriental (incl. IVA + gastos)</span>
                           <span className="text-purple-300 font-semibold">{formatUSD(resumenFinanciero.totalOr)}</span>
                         </div>
                       )}
                       {resumenFinanciero.totalVh > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-indigo-300">Crédito Financiamiento — Vehimotors</span>
+                          <span className="text-indigo-300">Financiamiento Vehimotors</span>
                           <span className="text-indigo-300 font-semibold">{formatUSD(resumenFinanciero.totalVh)}</span>
                         </div>
                       )}
-                      <div className="border-t border-gray-700 pt-2 flex justify-between text-sm">
-                        <span className="text-gray-300 font-semibold">Total financiado</span>
-                        <span className="text-white font-bold">{formatUSD(resumenFinanciero.totalFinanciado)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-300 font-semibold">Total comprometido</span>
-                        <span className="text-oriental-red font-extrabold text-base">{formatUSD(resumenFinanciero.totalComprometido)}</span>
-                      </div>
-                      {resumenFinanciero.precio > 0 && (
+                      {resumenFinanciero.totalCe > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Saldo pendiente</span>
-                          <span className={`font-bold ${resumenFinanciero.saldo < 0 ? 'text-red-400' : resumenFinanciero.saldo === 0 ? 'text-green-400' : 'text-yellow-400'}`}>
-                            {formatUSD(resumenFinanciero.saldo)}
-                          </span>
+                          <span className="text-teal-300">Cuotas Especiales (paralelas)</span>
+                          <span className="text-teal-300 font-semibold">{formatUSD(resumenFinanciero.totalCe)}</span>
                         </div>
                       )}
-                    </div>
-                    {resumenFinanciero.showVehicleWarning && (
-                      <div className="flex items-start gap-2 bg-yellow-900/40 border border-yellow-600/40 rounded-lg px-3 py-2">
-                        <AlertCircle size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-yellow-300">El total comprometido no coincide con el precio del vehículo. Verifica si existe un pago adicional, descuento, ajuste especial o condición personalizada autorizada.</p>
+                      <div className="border-t border-gray-700 pt-2 flex justify-between text-sm">
+                        <span className="text-white font-bold">Total comprometido por el cliente</span>
+                        <span className="text-oriental-red font-extrabold text-base">{formatUSD(resumenFinanciero.totalComprometido)}</span>
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
