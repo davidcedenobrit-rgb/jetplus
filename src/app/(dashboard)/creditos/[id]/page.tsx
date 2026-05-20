@@ -171,16 +171,24 @@ export default async function CreditoDetallePage({
             </h2>
 
             {cuotas && cuotas.length > 0 ? (() => {
-              // Concepto: desde cuota.concepto o derivado del plan_tipo del crédito
+              // Etiqueta del tipo derivada del plan_tipo del crédito o del campo concepto de la cuota
               const planLabel =
-                credito.plan_tipo === 'inicial_la_oriental' ? 'Crédito Inicial — La Oriental' :
-                credito.plan_tipo === 'financiamiento_vehimotors' ? 'Financiamiento Vehimotors' : null
+                credito.plan_tipo === 'inicial_la_oriental' ? 'La Oriental' :
+                credito.plan_tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
+                credito.plan_tipo === 'cuota_especial' ? 'Cuota Especial' : null
               const planBadgeColor =
                 credito.plan_tipo === 'inicial_la_oriental' ? 'bg-purple-50 text-purple-700' :
                 credito.plan_tipo === 'financiamiento_vehimotors' ? 'bg-indigo-50 text-indigo-700' :
-                'bg-gray-50 text-oriental-gray'
-              const showConcepto = cuotas.some((c: any) => c.concepto) || !!planLabel
+                credito.plan_tipo === 'cuota_especial' ? 'bg-teal-50 text-teal-700' :
+                'bg-gray-100 text-gray-500'
               const getConcepto = (cuota: any) => cuota.concepto ?? planLabel
+              const getBadgeColor = (cuota: any) => {
+                const c = cuota.concepto ?? ''
+                if (c.toLowerCase().includes('oriental') || credito.plan_tipo === 'inicial_la_oriental') return 'bg-purple-50 text-purple-700'
+                if (c.toLowerCase().includes('vehimotors') || credito.plan_tipo === 'financiamiento_vehimotors') return 'bg-indigo-50 text-indigo-700'
+                if (c.toLowerCase().includes('especial') || credito.plan_tipo === 'cuota_especial') return 'bg-teal-50 text-teal-700'
+                return planBadgeColor
+              }
 
               return (
               <div className="overflow-x-auto">
@@ -188,9 +196,7 @@ export default async function CreditoDetallePage({
                   <thead className="bg-oriental-bg border-b border-gray-200">
                     <tr>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">N°</th>
-                      {showConcepto && (
-                        <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Tipo de cuota</th>
-                      )}
+                      <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Tipo</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Vencimiento</th>
                       <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Monto</th>
                       <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Mora</th>
@@ -202,14 +208,12 @@ export default async function CreditoDetallePage({
                     {cuotas.map((cuota: any) => (
                       <tr key={cuota.id} className="hover:bg-oriental-bg/50 transition-colors">
                         <td className="px-3 py-2.5 font-bold text-oriental-black">{cuota.numero_cuota}</td>
-                        {showConcepto && (
-                          <td className="px-3 py-2.5">
-                            {getConcepto(cuota)
-                              ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${planBadgeColor}`}>{getConcepto(cuota)}</span>
-                              : <span className="text-xs text-oriental-gray">—</span>
-                            }
-                          </td>
-                        )}
+                        <td className="px-3 py-2.5">
+                          {getConcepto(cuota)
+                            ? <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getBadgeColor(cuota)}`}>{getConcepto(cuota)}</span>
+                            : <span className="text-xs text-gray-300 italic">Sin clasificar</span>
+                          }
+                        </td>
                         <td className="px-3 py-2.5 text-oriental-gray">{formatDate(cuota.fecha_vencimiento)}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-oriental-black">{formatCurrency(cuota.monto, credito.moneda)}</td>
                         <td className="px-3 py-2.5 text-right">
