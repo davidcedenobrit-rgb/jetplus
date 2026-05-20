@@ -47,8 +47,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             <Car size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-tight tracking-tight">LA ORIENTAL</p>
-            <p className="text-oriental-gray text-[11px] tracking-widest uppercase">Finanzas</p>
+            <p className="text-white font-bold text-sm leading-tight tracking-tight">CENTRO DE MANDO</p>
+            <p className="text-oriental-gray text-[11px] tracking-widest uppercase">La Oriental Automotors</p>
           </div>
         </div>
       </div>

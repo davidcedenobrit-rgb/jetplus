@@ -113,6 +113,15 @@ export default function NuevoVehiculoPage() {
   const [precioTotalVehiculo, setPrecioTotalVehiculo] = useState('')
   const [montoContado, setMontoContado] = useState('')
 
+  // ── Calculadora de precio (Plan Personalizado) ──
+  const [calcBase, setCalcBase] = useState('')
+  const [calcIvaPct, setCalcIvaPct] = useState('16')
+  const [calcGastosContado, setCalcGastosContado] = useState('')
+  const [calcGastosCredito, setCalcGastosCredito] = useState('')
+  const [calcPctInicial, setCalcPctInicial] = useState('40')
+  const [calcTasaAnual, setCalcTasaAnual] = useState('')
+  const [calcNumCuotasVh, setCalcNumCuotasVh] = useState('24')
+
   useEffect(() => {
     const cid = searchParams.get('cliente_id')
     if (cid) {
@@ -209,6 +218,48 @@ export default function NuevoVehiculoPage() {
     return { precio, contado, totalOr, totalVh, totalFinanciado, totalComprometido, saldo, showVehicleWarning }
   }, [precioTotalVehiculo, montoContado, calcInicialOriental.totalCuotas, calcVehimotors.totalCuotas])
 
+  // ── Calculadora de precio (live) ──
+  const calculadora = useMemo(() => {
+    const base = parseFloat(calcBase) || 0
+    if (base <= 0) return null
+    const ivaPct = parseFloat(calcIvaPct) || 16
+    const iva = base * ivaPct / 100
+    const pctInicial = (parseFloat(calcPctInicial) || 40) / 100
+    const gastosContado = parseFloat(calcGastosContado) || 0
+    const gastosCredito = parseFloat(calcGastosCredito) || 0
+
+    // Modalidad contado
+    const contadoTotal = base + iva + gastosContado
+
+    // Modalidad crédito
+    const inicialBase = base * pctInicial            // ej: 40% precio base
+    const totalInicialLaOriental = inicialBase + iva + gastosCredito  // total inicial a pagar
+    const financiamientoVh = base * (1 - pctInicial) // 60% precio base → Vehimotors
+    const n = parseInt(calcNumCuotasVh) || 24
+    const tasaAnual = parseFloat(calcTasaAnual) || 0
+    let cuotaVh: number
+    if (tasaAnual > 0) {
+      const r = tasaAnual / 100 / 12  // tasa mensual
+      cuotaVh = financiamientoVh * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1)
+    } else {
+      cuotaVh = financiamientoVh / n  // sin interés
+    }
+
+    return { base, iva, ivaPct, pctInicial, gastosContado, gastosCredito, contadoTotal, inicialBase, totalInicialLaOriental, financiamientoVh, cuotaVh, n, tasaAnual }
+  }, [calcBase, calcIvaPct, calcGastosContado, calcGastosCredito, calcPctInicial, calcTasaAnual, calcNumCuotasVh])
+
+  function aplicarCalculadora() {
+    if (!calculadora) return
+    // La Oriental: precarga el monto total que debe cubrir (la admin define cuántas cuotas)
+    setOrMonto(calculadora.totalInicialLaOriental.toFixed(2))
+    // Vehimotors: precarga monto financiado, cuotas y cuota calculada
+    setVhMonto(calculadora.financiamientoVh.toFixed(2))
+    setVhCuotas(String(calculadora.n))
+    setVhMontoCuota(calculadora.cuotaVh.toFixed(2))
+    // Precio de referencia del vehículo
+    setPrecioTotalVehiculo(calculadora.base.toFixed(2))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!clienteSeleccionado) { setError('Selecciona un cliente'); return }
@@ -228,6 +279,7 @@ export default function NuevoVehiculoPage() {
     const { data: vehiculo, error: insertError } = await supabase.from('vehiculos').insert({
       cliente_id: clienteSeleccionado.id,
       ...parsed.data,
+      precio_base: calculadora ? parseFloat(calcBase) || null : parseFloat(precioBase) || null,
       precio_total: parseFloat(precioTotalVehiculo) || null,
       monto_contado: parseFloat(montoContado) || null,
     }).select().single()
@@ -625,14 +677,148 @@ export default function NuevoVehiculoPage() {
             {plan === 'personalizado' && (
               <div className="space-y-5">
 
+                {/* ── CALCULADORA DE PRECIO ── */}
+                <div className="border-2 border-amber-200 rounded-xl bg-amber-50/30">
+                  <div className="px-5 pt-4 pb-3 border-b border-amber-200">
+                    <p className="text-sm font-bold text-amber-900 flex items-center gap-2">
+                      <span className="text-base">🧮</span>
+                      Calculadora de precio
+                      <span className="text-xs font-normal text-amber-700 ml-1">— Los resultados precargan los campos automáticamente</span>
+                    </p>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    {/* Inputs principales */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="md:col-span-2">
+                        <label className="label">Precio base (USD) *</label>
+                        <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
+                          placeholder="52,000.00" value={calcBase} onChange={e => setCalcBase(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="label">IVA (%)</label>
+                        <input type="number" step="0.01" min="0" max="100" className="input"
+                          placeholder="16" value={calcIvaPct} onChange={e => setCalcIvaPct(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="label">% Inicial (La Oriental)</label>
+                        <input type="number" step="1" min="1" max="99" className="input"
+                          placeholder="40" value={calcPctInicial} onChange={e => setCalcPctInicial(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="label">Gastos (contado)</label>
+                        <input type="number" step="0.01" min="0" className="input"
+                          placeholder="4,600.00" value={calcGastosContado} onChange={e => setCalcGastosContado(e.target.value)} />
+                        <p className="text-[10px] text-oriental-gray mt-0.5">Póliza + Traslado + INTT + Notaría + Honorarios</p>
+                      </div>
+                      <div>
+                        <label className="label">Gastos (crédito)</label>
+                        <input type="number" step="0.01" min="0" className="input"
+                          placeholder="7,332.00" value={calcGastosCredito} onChange={e => setCalcGastosCredito(e.target.value)} />
+                        <p className="text-[10px] text-oriental-gray mt-0.5">Póliza + Traslado + INTT + Notaría + Honorarios</p>
+                      </div>
+                      <div>
+                        <label className="label">Tasa Vehimotors (% anual)</label>
+                        <input type="number" step="0.01" min="0" className="input"
+                          placeholder="Ej: 15.6" value={calcTasaAnual} onChange={e => setCalcTasaAnual(e.target.value)} />
+                        <p className="text-[10px] text-oriental-gray mt-0.5">Vacío = sin interés (monto ÷ cuotas)</p>
+                      </div>
+                      <div>
+                        <label className="label">N° cuotas Vehimotors</label>
+                        <input type="number" step="1" min="1" max="120" className="input"
+                          placeholder="24" value={calcNumCuotasVh} onChange={e => setCalcNumCuotasVh(e.target.value)} />
+                      </div>
+                    </div>
+
+                    {/* Resultados en dos columnas */}
+                    {calculadora && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        {/* Columna CONTADO */}
+                        <div className="bg-white border border-amber-200 rounded-xl overflow-hidden">
+                          <div className="bg-amber-100 px-4 py-2">
+                            <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Modalidad Contado</p>
+                          </div>
+                          <div className="px-4 py-3 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-oriental-gray">100% Precio base</span>
+                              <span className="font-semibold text-oriental-black">{formatUSD(calculadora.base)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-oriental-gray">I.V.A. ({calculadora.ivaPct}%)</span>
+                              <span className="font-semibold text-oriental-black">{formatUSD(calculadora.iva)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-oriental-gray">Gastos</span>
+                              <span className="font-semibold text-oriental-black">{formatUSD(calculadora.gastosContado)}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-amber-200 pt-2 mt-1">
+                              <span className="font-bold text-oriental-black uppercase text-xs tracking-wide">Total a pagar</span>
+                              <span className="font-extrabold text-amber-800 text-base">{formatUSD(calculadora.contadoTotal)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Columna CRÉDITO */}
+                        <div className="bg-white border border-amber-200 rounded-xl overflow-hidden">
+                          <div className="bg-amber-100 px-4 py-2">
+                            <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Modalidad Crédito ({Math.round(calculadora.pctInicial * 100)}% Inicial)</p>
+                          </div>
+                          <div className="px-4 py-3 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-oriental-gray">{Math.round(calculadora.pctInicial * 100)}% Precio base</span>
+                              <span className="font-semibold text-oriental-black">{formatUSD(calculadora.inicialBase)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-oriental-gray">I.V.A. ({calculadora.ivaPct}%)</span>
+                              <span className="font-semibold text-oriental-black">{formatUSD(calculadora.iva)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-oriental-gray">Gastos crédito</span>
+                              <span className="font-semibold text-oriental-black">{formatUSD(calculadora.gastosCredito)}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-amber-200 pt-2">
+                              <span className="font-bold text-purple-800 text-xs uppercase tracking-wide">Total Inicial (La Oriental)</span>
+                              <span className="font-extrabold text-purple-700 text-base">{formatUSD(calculadora.totalInicialLaOriental)}</span>
+                            </div>
+                            <div className="flex justify-between bg-indigo-50 rounded-lg px-3 py-2 mt-1">
+                              <span className="text-indigo-700 font-semibold text-xs">Financiamiento {Math.round((1 - calculadora.pctInicial) * 100)}% — Vehimotors</span>
+                              <span className="font-bold text-indigo-800">{formatUSD(calculadora.financiamientoVh)}</span>
+                            </div>
+                            <div className="flex justify-between bg-indigo-50 rounded-lg px-3 py-2">
+                              <span className="text-indigo-700 font-semibold text-xs">{calculadora.n} cuotas {calculadora.tasaAnual > 0 ? `(${calculadora.tasaAnual}% anual)` : '(sin interés)'}</span>
+                              <span className="font-extrabold text-indigo-800">{formatUSD(calculadora.cuotaVh)} / cuota</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botón aplicar */}
+                    {calculadora && (
+                      <button
+                        type="button"
+                        onClick={aplicarCalculadora}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-colors text-sm"
+                      >
+                        ↓ Aplicar al Plan Personalizado
+                      </button>
+                    )}
+                    {!calculadora && (
+                      <p className="text-xs text-amber-700 text-center py-2">Ingresa el precio base para ver los cálculos</p>
+                    )}
+                  </div>
+                </div>
+
                 {/* Precio del vehículo */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                   <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider mb-3">Precio del vehículo</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="label">Precio total del vehículo (USD)</label>
+                      <label className="label">Precio base del vehículo (USD)</label>
                       <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
                         placeholder="0.00" value={precioTotalVehiculo} onChange={e => setPrecioTotalVehiculo(e.target.value)} />
+                      <p className="text-xs text-oriental-gray mt-1">Se precarga con la calculadora. Referencia para el resumen financiero.</p>
                     </div>
                     <div>
                       <label className="label">Monto pagado de contado (USD)</label>
