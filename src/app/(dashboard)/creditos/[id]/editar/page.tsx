@@ -31,6 +31,7 @@ export default function EditarCreditoPage() {
   // Campos editables del crédito
   const [observaciones, setObservaciones] = useState('')
   const [estadoCredito, setEstadoCredito] = useState('')
+  const [planTipo, setPlanTipo] = useState('')
 
   // Ediciones de cuotas (mapa: cuota_id → { estado, monto, fecha_vencimiento })
   const [edicionesCuotas, setEdicionesCuotas] = useState<Record<string, Partial<{ estado: EstadoCuota; monto: string; fecha_vencimiento: string }>>>({})
@@ -57,6 +58,7 @@ export default function EditarCreditoPage() {
       setCredito(cred)
       setObservaciones(cred.observaciones ?? '')
       setEstadoCredito(cred.estado)
+      setPlanTipo(cred.plan_tipo ?? '')
 
       // Cargar cuotas
       const { data: cs } = await supabase
@@ -83,7 +85,7 @@ export default function EditarCreditoPage() {
     return campo === 'monto' ? String(cuota.monto) : campo === 'fecha_vencimiento' ? cuota.fecha_vencimiento : cuota.estado
   }
 
-  const hayCambiosCredito = observaciones !== (credito?.observaciones ?? '') || estadoCredito !== credito?.estado
+  const hayCambiosCredito = observaciones !== (credito?.observaciones ?? '') || estadoCredito !== credito?.estado || planTipo !== (credito?.plan_tipo ?? '')
   const hayCambiosCuotas = Object.keys(edicionesCuotas).length > 0
   const hayCambios = hayCambiosCredito || hayCambiosCuotas
 
@@ -100,7 +102,12 @@ export default function EditarCreditoPage() {
         if (hayCambiosCredito) {
           const { error: err } = await supabase
             .from('creditos')
-            .update({ observaciones: observaciones || null, estado: estadoCredito, updated_at: new Date().toISOString() })
+            .update({
+              observaciones: observaciones || null,
+              estado: estadoCredito,
+              plan_tipo: planTipo || null,
+              updated_at: new Date().toISOString()
+            })
             .eq('id', id)
           if (err) throw new Error(err.message)
         }
@@ -139,6 +146,9 @@ export default function EditarCreditoPage() {
           }
           if (estadoCredito !== credito?.estado) {
             cambiosDetalle.push({ tipo: 'credito', campo: 'estado', anterior: credito.estado, nuevo: estadoCredito })
+          }
+          if (planTipo !== (credito?.plan_tipo ?? '')) {
+            cambiosDetalle.push({ tipo: 'credito', campo: 'plan_tipo', anterior: credito.plan_tipo, nuevo: planTipo || null })
           }
         }
 
@@ -270,6 +280,21 @@ export default function EditarCreditoPage() {
                 <option value="mora">En mora</option>
                 <option value="cancelado">Cancelado</option>
               </select>
+            </div>
+            <div>
+              <label className="label">Tipo de crédito (concepto de cuotas)</label>
+              <select
+                className="select"
+                value={planTipo}
+                onChange={e => setPlanTipo(e.target.value)}
+              >
+                <option value="">Sin clasificar</option>
+                <option value="inicial_la_oriental">Crédito Inicial — La Oriental</option>
+                <option value="financiamiento_vehimotors">Financiamiento Vehimotors</option>
+              </select>
+              <p className="text-xs text-oriental-gray mt-1">
+                Clasifica el crédito para que las cuotas muestren su tipo automáticamente
+              </p>
             </div>
             <div className="md:col-span-2">
               <label className="label">Observaciones</label>

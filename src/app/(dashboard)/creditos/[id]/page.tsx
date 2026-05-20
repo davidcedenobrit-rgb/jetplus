@@ -170,14 +170,26 @@ export default async function CreditoDetallePage({
               )}
             </h2>
 
-            {cuotas && cuotas.length > 0 ? (
+            {cuotas && cuotas.length > 0 ? (() => {
+              // Concepto: desde cuota.concepto o derivado del plan_tipo del crédito
+              const planLabel =
+                credito.plan_tipo === 'inicial_la_oriental' ? 'Crédito Inicial — La Oriental' :
+                credito.plan_tipo === 'financiamiento_vehimotors' ? 'Financiamiento Vehimotors' : null
+              const planBadgeColor =
+                credito.plan_tipo === 'inicial_la_oriental' ? 'bg-purple-50 text-purple-700' :
+                credito.plan_tipo === 'financiamiento_vehimotors' ? 'bg-indigo-50 text-indigo-700' :
+                'bg-gray-50 text-oriental-gray'
+              const showConcepto = cuotas.some((c: any) => c.concepto) || !!planLabel
+              const getConcepto = (cuota: any) => cuota.concepto ?? planLabel
+
+              return (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-oriental-bg border-b border-gray-200">
                     <tr>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">N°</th>
-                      {cuotas.some((c: any) => c.concepto) && (
-                        <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Concepto</th>
+                      {showConcepto && (
+                        <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Tipo de cuota</th>
                       )}
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Vencimiento</th>
                       <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Monto</th>
@@ -190,8 +202,13 @@ export default async function CreditoDetallePage({
                     {cuotas.map((cuota: any) => (
                       <tr key={cuota.id} className="hover:bg-oriental-bg/50 transition-colors">
                         <td className="px-3 py-2.5 font-bold text-oriental-black">{cuota.numero_cuota}</td>
-                        {cuotas.some((c: any) => c.concepto) && (
-                          <td className="px-3 py-2.5 text-xs text-oriental-gray">{cuota.concepto ?? '—'}</td>
+                        {showConcepto && (
+                          <td className="px-3 py-2.5">
+                            {getConcepto(cuota)
+                              ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${planBadgeColor}`}>{getConcepto(cuota)}</span>
+                              : <span className="text-xs text-oriental-gray">—</span>
+                            }
+                          </td>
                         )}
                         <td className="px-3 py-2.5 text-oriental-gray">{formatDate(cuota.fecha_vencimiento)}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-oriental-black">{formatCurrency(cuota.monto, credito.moneda)}</td>
@@ -213,7 +230,8 @@ export default async function CreditoDetallePage({
                   </tbody>
                 </table>
               </div>
-            ) : (
+              )
+            })() : (
               <p className="text-oriental-gray text-sm py-8 text-center">No hay cuotas generadas para este crédito</p>
             )}
           </div>
