@@ -18,14 +18,17 @@ const MODELOS_MG = [
   'MG ZS Sincrónica Clasica',
   'MG ZS AT Clasica',
   'RX5 1.5T Automatica',
+  'RX8',
   'RX9 COM 4x2',
   'RX9 LUX 4x4',
   'MC Cybester',
   'MG4 URBAN COM',
 ]
 const MODELOS_MAXUS = [
-  'D90 4X4 AT LUX',
+  'D60',
   'D60 LUX',
+  'D90',
+  'D90 4X4 AT LUX',
   'T60 Comfort 4x4 GASOLINA',
   'T60 Comfort 4x2 GASOLINA',
   'T90 4X4 AT Double Exe. Lux Gasolina',
