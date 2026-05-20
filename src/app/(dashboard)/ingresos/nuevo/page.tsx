@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
@@ -52,6 +52,7 @@ export default function NuevoIngresoPage() {
   // ── Cuotas del vehículo ──
   const [cuotasVencidas, setCuotasVencidas] = useState<any[]>([])
   const [proximasCuotas, setProximasCuotas] = useState<any[]>([])
+  const [todasCuotasPendientes, setTodasCuotasPendientes] = useState<any[]>([])
   const [loadingCuotas, setLoadingCuotas] = useState(false)
 
   // ── Campos del pago ──
@@ -120,10 +121,13 @@ export default function NuevoIngresoPage() {
 
   // ── Cargar cuotas del vehículo seleccionado ──
   useEffect(() => {
-    if (!vehiculoSeleccionado) { setCuotasVencidas([]); setProximasCuotas([]); return }
+    if (!vehiculoSeleccionado) {
+      setCuotasVencidas([]); setProximasCuotas([]); setTodasCuotasPendientes([])
+      return
+    }
     setLoadingCuotas(true)
     const hoy = new Date().toISOString().split('T')[0]
-    supabase.from('creditos').select('id, plan_tipo, frecuencia_pago, moneda')
+    supabase.from('creditos').select('id, plan_tipo, frecuencia_pago, moneda, saldo')
       .eq('vehiculo_id', vehiculoSeleccionado.id)
       .eq('estado', 'activo')
       .then(async ({ data: creditos }) => {
@@ -137,20 +141,54 @@ export default function NuevoIngresoPage() {
           .in('estado', ['pendiente', 'vencida'])
           .order('fecha_vencimiento')
         const todas = (cuotas ?? []).map((c: any) => ({ ...c, _credito: creditoMap[c.credito_id] }))
-        // Vencidas: todas las pendientes/vencidas anteriores a hoy
+
+        // Vencidas: anteriores a hoy
         setCuotasVencidas(todas.filter((c: any) => c.fecha_vencimiento < hoy))
-        // Próximas: la siguiente cuota pendiente de CADA crédito activo (pueden ser varias simultáneas)
+
+        // Próximas: la siguiente por cada crédito activo
         const proximas: any[] = []
         ids.forEach((cid: string) => {
           const proxima = todas.find((c: any) => c.credito_id === cid && c.fecha_vencimiento >= hoy)
           if (proxima) proximas.push(proxima)
         })
-        // Ordenar por fecha para mostrar primero la más próxima
         proximas.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
         setProximasCuotas(proximas)
+
+        // ── Todas ordenadas por prioridad de pago ──
+        // 1. La Oriental primero, luego Vehimotors (o sin clasificar)
+        // 2. Dentro de cada crédito: vencidas primero, luego por fecha
+        const ordenadas = [...todas].sort((a, b) => {
+          const prioA = a._credito?.plan_tipo === 'inicial_la_oriental' ? 0 : 1
+          const prioB = b._credito?.plan_tipo === 'inicial_la_oriental' ? 0 : 1
+          if (prioA !== prioB) return prioA - prioB
+          return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
+        })
+        setTodasCuotasPendientes(ordenadas)
         setLoadingCuotas(false)
       })
   }, [vehiculoSeleccionado])
+
+  // ── Calcular cuotas que cubre este pago (en tiempo real) ──
+  const montoUSD = useMemo(() => {
+    const m = parseFloat(monto) || 0
+    if (moneda === 'USD') return m
+    const tasa = parseFloat(tasaCambio) || 0
+    return tasa > 0 ? m / tasa : 0
+  }, [monto, moneda, tasaCambio])
+
+  const { cuotasAplicar, sobrante } = useMemo(() => {
+    if (!vehiculoSeleccionado || montoUSD <= 0 || todasCuotasPendientes.length === 0) {
+      return { cuotasAplicar: [], sobrante: 0 }
+    }
+    const aplicar: any[] = []
+    let restante = montoUSD
+    for (const cuota of todasCuotasPendientes) {
+      if (restante < Number(cuota.monto) - 0.005) break // no alcanza para esta cuota
+      aplicar.push(cuota)
+      restante -= Number(cuota.monto)
+    }
+    return { cuotasAplicar: aplicar, sobrante: Math.max(0, restante) }
+  }, [montoUSD, todasCuotasPendientes, vehiculoSeleccionado])
 
   function resetBusqueda() {
     setClienteSeleccionado(null)
@@ -162,6 +200,7 @@ export default function NuevoIngresoPage() {
     setShowVehiculoDropdown(false)
     setCuotasVencidas([])
     setProximasCuotas([])
+    setTodasCuotasPendientes([])
     setError('')
   }
 
@@ -234,6 +273,36 @@ export default function NuevoIngresoPage() {
           subido_por: user.id,
         }))
       )
+    }
+
+    // ── Aplicar cuotas automáticamente ──
+    if (cuotasAplicar.length > 0) {
+      // 1. Marcar cada cuota como pagada
+      for (const cuota of cuotasAplicar) {
+        await supabase.from('cuotas').update({
+          estado: 'pagada',
+          fecha_pago: fechaPago,
+          updated_at: new Date().toISOString(),
+        }).eq('id', cuota.id)
+      }
+
+      // 2. Actualizar saldo de cada crédito afectado
+      const creditosAfectados = [...new Set(cuotasAplicar.map((c: any) => c.credito_id))]
+      for (const creditoId of creditosAfectados) {
+        const cuotasDeCred = cuotasAplicar.filter((c: any) => c.credito_id === creditoId)
+        const totalPagado = cuotasDeCred.reduce((s: number, c: any) => s + Number(c.monto), 0)
+
+        const { data: cred } = await supabase
+          .from('creditos').select('saldo, num_cuotas').eq('id', creditoId).single()
+        if (cred) {
+          const nuevoSaldo = Math.max(0, Number(cred.saldo) - totalPagado)
+          await supabase.from('creditos').update({
+            saldo: nuevoSaldo,
+            estado: nuevoSaldo <= 0.01 ? 'pagado' : 'activo',
+            updated_at: new Date().toISOString(),
+          }).eq('id', creditoId)
+        }
+      }
     }
 
     router.push('/ingresos')
@@ -489,6 +558,75 @@ export default function NuevoIngresoPage() {
           </div>
         )}
 
+        {/* ── CUOTAS QUE CUBRE ESTE PAGO ── */}
+        {vehiculoSeleccionado && todasCuotasPendientes.length > 0 && montoUSD > 0 && (
+          <div className="card p-5">
+            <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
+              <div className="w-1 h-4 bg-green-500 rounded-full" />
+              Cuotas que cubre este pago
+            </h2>
+
+            {cuotasAplicar.length > 0 ? (
+              <div className="space-y-2">
+                {cuotasAplicar.map((c: any) => {
+                  const planLabel = c._credito?.plan_tipo === 'inicial_la_oriental'
+                    ? 'La Oriental' : c._credito?.plan_tipo === 'financiamiento_vehimotors'
+                    ? 'Vehimotors' : c.concepto ?? 'Crédito'
+                  const planColor = c._credito?.plan_tipo === 'inicial_la_oriental'
+                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                  return (
+                    <div key={c.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
+                      <div className="flex items-center gap-3">
+                        <CheckMark />
+                        <div>
+                          <p className="text-sm font-semibold text-green-800">
+                            Cuota #{c.numero_cuota}
+                            <span className={`ml-2 text-xs px-1.5 py-0.5 rounded border ${planColor}`}>{planLabel}</span>
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {c.fecha_vencimiento < new Date().toISOString().split('T')[0] ? '⚠ Vencida — ' : ''}
+                            Vence: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-extrabold text-green-700">${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                  )
+                })}
+
+                {/* Resumen total */}
+                <div className="flex items-center justify-between bg-green-700 rounded-lg px-4 py-3 mt-1">
+                  <p className="text-sm font-bold text-white">
+                    {cuotasAplicar.length} cuota{cuotasAplicar.length > 1 ? 's' : ''} se marcarán como <span className="underline">Pagadas</span>
+                  </p>
+                  <p className="font-extrabold text-white">
+                    ${cuotasAplicar.reduce((s: number, c: any) => s + Number(c.monto), 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+
+                {sobrante > 0.01 && (
+                  <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2.5">
+                    <AlertCircle size={15} className="text-yellow-600 flex-shrink-0" />
+                    <p className="text-sm text-yellow-800">
+                      Sobrante de <span className="font-bold">${sobrante.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span> — no alcanza para la siguiente cuota
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+                <AlertCircle size={15} className="text-yellow-600 flex-shrink-0" />
+                <p className="text-sm text-yellow-800">
+                  El monto ingresado (${montoUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })}) no alcanza para cubrir la próxima cuota
+                  {todasCuotasPendientes[0] && <span className="font-semibold"> de ${Number(todasCuotasPendientes[0].monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>}.
+                  El ingreso se registrará como pago parcial.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── DETALLE DEL PAGO ── */}
         <div className="card p-6">
           <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -589,11 +727,25 @@ export default function NuevoIngresoPage() {
 
         <div className="flex items-center gap-3">
           <button type="submit" className="btn-primary flex items-center gap-2 py-3 px-6" disabled={loading}>
-            <Save size={16} /> {loading ? 'Guardando...' : 'Registrar ingreso'}
+            <Save size={16} />
+            {loading ? 'Guardando...' : cuotasAplicar.length > 0
+              ? `Registrar y marcar ${cuotasAplicar.length} cuota${cuotasAplicar.length > 1 ? 's' : ''} como pagada${cuotasAplicar.length > 1 ? 's' : ''}`
+              : 'Registrar ingreso'
+            }
           </button>
           <Link href="/ingresos" className="btn-secondary py-3 px-6">Cancelar</Link>
         </div>
       </form>
+    </div>
+  )
+}
+
+function CheckMark() {
+  return (
+    <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
     </div>
   )
 }
