@@ -116,6 +116,11 @@ export default function NuevoVehiculoPage() {
   const [precioTotalVehiculo, setPrecioTotalVehiculo] = useState('')
   const [montoContado, setMontoContado] = useState('')
 
+  // Plan Vehimotors (40/60) — campos manuales editables
+  const [vh4060Inicial, setVh4060Inicial] = useState('')
+  const [vh4060NumCuotas, setVh4060NumCuotas] = useState('24')
+  const [vh4060MontoCuota, setVh4060MontoCuota] = useState('')
+
   // Cuota especial (tercer bloque opcional — corre en paralelo a los mensuales)
   const [ceActivo, setCeActivo] = useState(false)
   const [ceMonto, setCeMonto] = useState('')
@@ -398,8 +403,13 @@ export default function NuevoVehiculoPage() {
       // --- Planes estándar (un solo crédito) ---
       let inicial = 0, saldo = 0, numCuotas = 0, montoFinanciado = 0
 
-      if (plan === 'credito_40_60' && calc4060) {
-        inicial = calc4060.inicial; saldo = calc4060.saldo; numCuotas = 24; montoFinanciado = precioCalc.total
+      if (plan === 'credito_40_60' && (calc4060 || vh4060Inicial || vh4060MontoCuota)) {
+        const inicialFinal = parseFloat(vh4060Inicial) || calc4060?.inicial || 0
+        numCuotas = parseInt(vh4060NumCuotas) || 24
+        const cuotaFinal = parseFloat(vh4060MontoCuota) || calc4060?.cuota || 0
+        saldo = cuotaFinal * numCuotas
+        inicial = inicialFinal
+        montoFinanciado = inicialFinal + saldo
       } else if (plan === 'asegurate_500' && planAC500Sel) {
         inicial = planAC500Sel.cuota_0; saldo = planAC500Sel.total - planAC500Sel.cuota_0
         numCuotas = cuotasAsegurate; montoFinanciado = planAC500Sel.total
@@ -439,9 +449,10 @@ export default function NuevoVehiculoPage() {
           return { credito_id: creditoCreado.id, numero_cuota: c.numero, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: c.monto, estado: 'pendiente', mora: 0 }
         })
       } else {
-        cuotasData = Array.from({ length: 24 }, (_, i) => {
+        const cuotaUsada = parseFloat(vh4060MontoCuota) || calc4060?.cuota || (saldo / numCuotas)
+        cuotasData = Array.from({ length: numCuotas }, (_, i) => {
           const fecha = new Date(fechaInicio); fecha.setMonth(fecha.getMonth() + (i + 1))
-          return { credito_id: creditoCreado.id, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: calc4060!.cuota, estado: 'pendiente', mora: 0 }
+          return { credito_id: creditoCreado.id, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: cuotaUsada, estado: 'pendiente', mora: 0 }
         })
       }
 
@@ -641,23 +652,59 @@ export default function NuevoVehiculoPage() {
                     <p className="text-xl font-extrabold text-oriental-black">Total: {formatUSD(precioCalc.total)}</p>
                   </div>
                 )}
-                {calc4060 && (
-                  <div className="bg-oriental-black rounded-xl p-5 grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Inicial (40%)</p>
-                      <p className="text-white font-extrabold text-xl">{formatUSD(calc4060.inicial)}</p>
+                <div className="bg-oriental-black rounded-xl p-5">
+                  <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-4">Condiciones del crédito — edita si los valores difieren</p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-gray-400 text-[10px] uppercase tracking-wider block mb-1.5">Inicial ($)</label>
+                      <input
+                        type="number" step="0.01" min="0"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold text-lg focus:outline-none focus:border-oriental-red"
+                        placeholder={calc4060 ? calc4060.inicial.toFixed(2) : '0.00'}
+                        value={vh4060Inicial}
+                        onChange={e => setVh4060Inicial(e.target.value)}
+                      />
+                      {calc4060 && !vh4060Inicial && (
+                        <p className="text-gray-500 text-[10px] mt-1">Auto: 40% = {formatUSD(calc4060.inicial)}</p>
+                      )}
                     </div>
-                    <div className="text-center border-x border-gray-700">
-                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Cuota mensual</p>
-                      <p className="text-oriental-red font-extrabold text-xl">{formatUSD(calc4060.cuota)}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">24 cuotas</p>
+                    <div>
+                      <label className="text-gray-400 text-[10px] uppercase tracking-wider block mb-1.5">Cuota mensual ($)</label>
+                      <input
+                        type="number" step="0.01" min="0"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-oriental-red font-bold text-lg focus:outline-none focus:border-oriental-red"
+                        placeholder={calc4060 ? calc4060.cuota.toFixed(2) : '0.00'}
+                        value={vh4060MontoCuota}
+                        onChange={e => setVh4060MontoCuota(e.target.value)}
+                      />
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="number" min="1"
+                          className="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 text-xs focus:outline-none focus:border-gray-500"
+                          value={vh4060NumCuotas}
+                          onChange={e => setVh4060NumCuotas(e.target.value)}
+                        />
+                        <span className="text-gray-500 text-[10px]">cuotas</span>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Saldo (60%)</p>
-                      <p className="text-white font-extrabold text-xl">{formatUSD(calc4060.saldo)}</p>
+                    <div>
+                      <label className="text-gray-400 text-[10px] uppercase tracking-wider block mb-1.5">Saldo a financiar ($)</label>
+                      <div className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2">
+                        <p className="text-white font-bold text-lg">
+                          {(() => {
+                            const ini = parseFloat(vh4060Inicial) || (calc4060?.inicial ?? 0)
+                            const total = precioCalc.total || (parseFloat(precioBase) + (parseFloat(precioBase) * 0.16) + (parseFloat(gastosAdmin) || 0))
+                            const saldo = Math.max(0, total - ini)
+                            return formatUSD(saldo)
+                          })()}
+                        </p>
+                      </div>
+                      {calc4060 && (
+                        <p className="text-gray-500 text-[10px] mt-1">Auto: 60% = {formatUSD(calc4060.saldo)}</p>
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             )}
 
