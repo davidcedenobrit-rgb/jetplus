@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, CreditCard, User, Car, Calendar, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, User, Car, Calendar, CheckCircle2, Clock, AlertCircle, Edit3 } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 
 export default async function CreditoDetallePage({
@@ -66,6 +66,13 @@ export default async function CreditoDetallePage({
           </div>
           <p className="text-oriental-gray text-sm mt-0.5">{cliente?.nombre} · {credito.placa ?? 'Sin placa'}</p>
         </div>
+        <Link
+          href={`/creditos/${id}/editar`}
+          className="flex items-center gap-2 px-4 py-2 bg-oriental-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+        >
+          <Edit3 size={15} />
+          Editar
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

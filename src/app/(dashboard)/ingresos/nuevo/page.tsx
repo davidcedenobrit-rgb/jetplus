@@ -51,7 +51,7 @@ export default function NuevoIngresoPage() {
 
   // ── Cuotas del vehículo ──
   const [cuotasVencidas, setCuotasVencidas] = useState<any[]>([])
-  const [proximaCuota, setProximaCuota] = useState<any>(null)
+  const [proximasCuotas, setProximasCuotas] = useState<any[]>([])
   const [loadingCuotas, setLoadingCuotas] = useState(false)
 
   // ── Campos del pago ──
@@ -120,10 +120,10 @@ export default function NuevoIngresoPage() {
 
   // ── Cargar cuotas del vehículo seleccionado ──
   useEffect(() => {
-    if (!vehiculoSeleccionado) { setCuotasVencidas([]); setProximaCuota(null); return }
+    if (!vehiculoSeleccionado) { setCuotasVencidas([]); setProximasCuotas([]); return }
     setLoadingCuotas(true)
     const hoy = new Date().toISOString().split('T')[0]
-    supabase.from('creditos').select('id, plan_tipo, frecuencia_pago')
+    supabase.from('creditos').select('id, plan_tipo, frecuencia_pago, moneda')
       .eq('vehiculo_id', vehiculoSeleccionado.id)
       .eq('estado', 'activo')
       .then(async ({ data: creditos }) => {
@@ -134,11 +134,20 @@ export default function NuevoIngresoPage() {
         const { data: cuotas } = await supabase.from('cuotas')
           .select('*')
           .in('credito_id', ids)
-          .eq('estado', 'pendiente')
+          .in('estado', ['pendiente', 'vencida'])
           .order('fecha_vencimiento')
         const todas = (cuotas ?? []).map((c: any) => ({ ...c, _credito: creditoMap[c.credito_id] }))
+        // Vencidas: todas las pendientes/vencidas anteriores a hoy
         setCuotasVencidas(todas.filter((c: any) => c.fecha_vencimiento < hoy))
-        setProximaCuota(todas.find((c: any) => c.fecha_vencimiento >= hoy) ?? null)
+        // Próximas: la siguiente cuota pendiente de CADA crédito activo (pueden ser varias simultáneas)
+        const proximas: any[] = []
+        ids.forEach((cid: string) => {
+          const proxima = todas.find((c: any) => c.credito_id === cid && c.fecha_vencimiento >= hoy)
+          if (proxima) proximas.push(proxima)
+        })
+        // Ordenar por fecha para mostrar primero la más próxima
+        proximas.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
+        setProximasCuotas(proximas)
         setLoadingCuotas(false)
       })
   }, [vehiculoSeleccionado])
@@ -152,7 +161,7 @@ export default function NuevoIngresoPage() {
     setShowClienteDropdown(false)
     setShowVehiculoDropdown(false)
     setCuotasVencidas([])
-    setProximaCuota(null)
+    setProximasCuotas([])
     setError('')
   }
 
@@ -393,8 +402,8 @@ export default function NuevoIngresoPage() {
           )}
         </div>
 
-        {/* ── CUOTAS VENCIDAS / PRÓXIMA CUOTA ── */}
-        {vehiculoSeleccionado && (loadingCuotas || cuotasVencidas.length > 0 || proximaCuota) && (
+        {/* ── CUOTAS VENCIDAS / PRÓXIMAS CUOTAS ── */}
+        {vehiculoSeleccionado && (loadingCuotas || cuotasVencidas.length > 0 || proximasCuotas.length > 0) && (
           <div className="card p-5">
             <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
               <div className="w-1 h-4 bg-oriental-red rounded-full" />
@@ -419,7 +428,10 @@ export default function NuevoIngresoPage() {
                               Cuota #{c.numero_cuota}
                               {c.concepto && <span className="ml-2 text-xs font-normal text-red-600">{c.concepto}</span>}
                             </p>
-                            <p className="text-xs text-red-500">Venció: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            <p className="text-xs text-red-500">
+                              Venció: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {c._credito?.frecuencia_pago && <span className="ml-2 capitalize">· {c._credito.frecuencia_pago}</span>}
+                            </p>
                           </div>
                           <p className="font-extrabold text-red-700 text-base">${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
                         </div>
@@ -428,22 +440,47 @@ export default function NuevoIngresoPage() {
                   </div>
                 )}
 
-                {/* Próxima cuota */}
-                {proximaCuota && (
+                {/* Próximas cuotas — una por cada crédito activo */}
+                {proximasCuotas.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Calendar size={15} className="text-oriental-gray" />
-                      <p className="text-sm font-bold text-oriental-black">Próxima cuota a pagar</p>
+                      <p className="text-sm font-bold text-oriental-black">
+                        Próxima{proximasCuotas.length > 1 ? 's' : ''} cuota{proximasCuotas.length > 1 ? 's' : ''} a pagar
+                        {proximasCuotas.length > 1 && <span className="ml-1 text-xs font-normal text-oriental-gray">({proximasCuotas.length} créditos activos)</span>}
+                      </p>
                     </div>
-                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
-                      <div>
-                        <p className="text-sm font-semibold text-blue-800">
-                          Cuota #{proximaCuota.numero_cuota}
-                          {proximaCuota.concepto && <span className="ml-2 text-xs font-normal text-blue-600">{proximaCuota.concepto}</span>}
-                        </p>
-                        <p className="text-xs text-blue-500">Vence: {new Date(proximaCuota.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                      </div>
-                      <p className="font-extrabold text-blue-700 text-base">${Number(proximaCuota.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                    <div className="space-y-1.5">
+                      {proximasCuotas.map((c: any) => {
+                        const planLabel = c._credito?.plan_tipo === 'inicial_la_oriental'
+                          ? 'Inicial La Oriental'
+                          : c._credito?.plan_tipo === 'financiamiento_vehimotors'
+                          ? 'Vehimotors'
+                          : c.concepto ?? null
+                        return (
+                          <div key={c.id} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+                            <div>
+                              <p className="text-sm font-semibold text-blue-800">
+                                Cuota #{c.numero_cuota}
+                                {planLabel && <span className="ml-2 text-xs font-normal text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">{planLabel}</span>}
+                              </p>
+                              <p className="text-xs text-blue-500">
+                                Vence: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {c._credito?.frecuencia_pago && <span className="ml-2 capitalize">· {c._credito.frecuencia_pago}</span>}
+                              </p>
+                            </div>
+                            <p className="font-extrabold text-blue-700 text-base">${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                          </div>
+                        )
+                      })}
+                      {proximasCuotas.length > 1 && (
+                        <div className="flex items-center justify-between bg-blue-100 rounded-lg px-4 py-2 mt-1">
+                          <p className="text-sm font-bold text-blue-900">Total a pagar este período</p>
+                          <p className="font-extrabold text-blue-900 text-base">
+                            ${proximasCuotas.reduce((s, c) => s + Number(c.monto), 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
