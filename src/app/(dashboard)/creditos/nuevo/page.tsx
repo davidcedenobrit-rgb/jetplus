@@ -229,6 +229,7 @@ export default function NuevoCreditoPage() {
           const fecha = new Date(fechaBase)
           if (frecuencia === 'semanal') fecha.setDate(fecha.getDate() + (i + 1) * 7)
           else if (frecuencia === 'quincenal') fecha.setDate(fecha.getDate() + (i + 1) * 15)
+          else if (frecuencia === 'trimestral') fecha.setMonth(fecha.getMonth() + 3 * (i + 1))
           else fecha.setMonth(fecha.getMonth() + (i + 1))
           return { credito_id: creditoId, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto, estado: 'pendiente', mora: 0, concepto }
         })
@@ -637,7 +638,7 @@ export default function NuevoCreditoPage() {
                   <div>
                     <label className="label">Frecuencia</label>
                     <div className="flex gap-2">
-                      {['semanal', 'quincenal', 'mensual'].map(f => (
+                      {['semanal', 'quincenal', 'mensual', 'trimestral'].map(f => (
                         <button key={f} type="button" onClick={() => setInicialOrientalFrecuencia(f)}
                           className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
                             inicialOrientalFrecuencia === f ? 'bg-purple-700 text-white border-purple-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
@@ -707,7 +708,7 @@ export default function NuevoCreditoPage() {
                   <div>
                     <label className="label">Frecuencia</label>
                     <div className="flex gap-2">
-                      {['semanal', 'quincenal', 'mensual'].map(f => (
+                      {['semanal', 'quincenal', 'mensual', 'trimestral'].map(f => (
                         <button key={f} type="button" onClick={() => setVehimotorsFrecuencia(f)}
                           className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
                             vehimotorsFrecuencia === f ? 'bg-indigo-700 text-white border-indigo-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'

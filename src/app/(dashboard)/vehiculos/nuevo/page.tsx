@@ -8,8 +8,32 @@ import Link from 'next/link'
 import type { Cliente } from '@/types/database'
 import { VehiculoSchema, CreditoSchema } from '@/lib/validations'
 
-const MODELOS_MG = ['ZS', 'ZS EV', 'HS', 'MG5', 'MG4', 'MG7', 'GT', 'RX5', 'RX8', 'Marvel R', 'Cyberster']
-const MODELOS_MAXUS = ['T60', 'T90', 'D60', 'D90 Pro', 'G50', 'G90', 'MIFA 9', 'eDeliver 3', 'eDeliver 7', 'eT20', 'V90 EV']
+const MODELOS_MG = [
+  'MG5 1.5L Sincronico',
+  'MG5 1.5L Automatico',
+  'MG3 1.5L Sincronico',
+  'MG3 1.5L AT STD',
+  'NEW MG ZS AT LUX',
+  'NEW MG ZS AT STD',
+  'MG ZS Sincrónica Clasica',
+  'MG ZS AT Clasica',
+  'RX5 1.5T Automatica',
+  'RX9 COM 4x2',
+  'RX9 LUX 4x4',
+  'MC Cybester',
+  'MG4 URBAN COM',
+]
+const MODELOS_MAXUS = [
+  'D90 4X4 AT LUX',
+  'D60 LUX',
+  'T60 Comfort 4x4 GASOLINA',
+  'T60 Comfort 4x2 GASOLINA',
+  'T90 4X4 AT Double Exe. Lux Gasolina',
+  'S80 1.9L Diesel/Chasis',
+  'C30 Chasis',
+  'G10 Van Gasolina',
+  'G10 Pasajero Gasolina',
+]
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
@@ -226,6 +250,7 @@ export default function NuevoVehiculoPage() {
             const f = new Date(fechaBase)
             if (frecuencia === 'semanal') f.setDate(f.getDate() + 7 * (i + 1))
             else if (frecuencia === 'quincenal') f.setDate(f.getDate() + 15 * (i + 1))
+            else if (frecuencia === 'trimestral') f.setMonth(f.getMonth() + 3 * (i + 1))
             else f.setMonth(f.getMonth() + (i + 1))
             return { credito_id: creditoId, numero_cuota: i + 1, fecha_vencimiento: f.toISOString().split('T')[0], monto: montoCuota, estado: 'pendiente', mora: 0, concepto }
           })
@@ -644,7 +669,7 @@ export default function NuevoVehiculoPage() {
                     <div>
                       <label className="label">Frecuencia</label>
                       <div className="flex gap-2">
-                        {['semanal', 'quincenal', 'mensual'].map(f => (
+                        {['semanal', 'quincenal', 'mensual', 'trimestral'].map(f => (
                           <button key={f} type="button" onClick={() => setOrFrecuencia(f)}
                             className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
                               orFrecuencia === f ? 'bg-purple-700 text-white border-purple-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
@@ -714,7 +739,7 @@ export default function NuevoVehiculoPage() {
                     <div>
                       <label className="label">Frecuencia</label>
                       <div className="flex gap-2">
-                        {['semanal', 'quincenal', 'mensual'].map(f => (
+                        {['semanal', 'quincenal', 'mensual', 'trimestral'].map(f => (
                           <button key={f} type="button" onClick={() => setVhFrecuencia(f)}
                             className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
                               vhFrecuencia === f ? 'bg-indigo-700 text-white border-indigo-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'

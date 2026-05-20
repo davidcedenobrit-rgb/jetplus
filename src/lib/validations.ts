@@ -10,7 +10,7 @@ const MONEDA = ['USD', 'VES'] as const
 const TIPO_CLIENTE = ['natural', 'juridico'] as const
 const MARCA_VEHICULO = ['MG', 'MAXUS'] as const
 const TIPO_COMPRA = ['contado', 'financiado'] as const
-const FRECUENCIA_PAGO = ['mensual', 'quincenal', 'semanal'] as const
+const FRECUENCIA_PAGO = ['mensual', 'quincenal', 'semanal', 'trimestral'] as const
 
 export const LoginSchema = z.object({
   email: z.string().email('Correo inválido').max(254),
