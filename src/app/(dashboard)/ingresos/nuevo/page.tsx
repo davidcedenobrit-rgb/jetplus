@@ -82,6 +82,9 @@ function NuevoIngresoPageInner() {
   // ── Selección manual de cuotas ──
   const [cuotasSeleccionadas, setCuotasSeleccionadas] = useState<Set<string>>(new Set())
 
+  // ── Confirmación explícita de registrar sin cuota ──
+  const [sinCuotaConfirmado, setSinCuotaConfirmado] = useState(false)
+
   // ── Campos del pago ──
   const [concepto, setConcepto] = useState('')
   const [monto, setMonto] = useState('')
@@ -253,7 +256,10 @@ function NuevoIngresoPageInner() {
     setCuotasSeleccionadas(prev => {
       const next = new Set(prev)
       if (next.has(cuotaId)) next.delete(cuotaId)
-      else next.add(cuotaId)
+      else {
+        next.add(cuotaId)
+        setSinCuotaConfirmado(false) // al seleccionar una cuota, limpiar confirmación previa
+      }
       return next
     })
   }
@@ -331,6 +337,7 @@ function NuevoIngresoPageInner() {
     setGruposVehiculo([])
     setTodasLasCuotas([])
     setCuotasSeleccionadas(new Set())
+    setSinCuotaConfirmado(false)
     setError('')
   }
 
@@ -353,6 +360,12 @@ function NuevoIngresoPageInner() {
     })
     if (!parsed.success) {
       setError(parsed.error.errors[0]?.message ?? 'Datos inválidos')
+      return
+    }
+
+    // Bloquear si hay cuotas pendientes y el usuario no seleccionó ninguna ni lo confirmó
+    if (gruposVehiculo.length > 0 && cuotasSeleccionadas.size === 0 && !sinCuotaConfirmado) {
+      setError('⚠ Este cliente tiene cuotas pendientes. Selecciona al menos una cuota, o confirma que este ingreso no aplica al plan de crédito.')
       return
     }
 
@@ -964,6 +977,38 @@ function NuevoIngresoPageInner() {
           </h2>
           <FileUpload files={comprobantes} onFilesChange={setComprobantes} />
         </div>
+
+        {/* ── ADVERTENCIA: cuotas pendientes sin seleccionar ── */}
+        {hayClienteResuelto && gruposVehiculo.length > 0 && cuotasSeleccionadas.size === 0 && (
+          <div className={`rounded-xl border-2 px-5 py-4 transition-all ${
+            sinCuotaConfirmado
+              ? 'bg-gray-50 border-gray-300'
+              : 'bg-amber-50 border-amber-400'
+          }`}>
+            <div className="flex items-start gap-3">
+              <AlertCircle size={18} className={`flex-shrink-0 mt-0.5 ${sinCuotaConfirmado ? 'text-gray-400' : 'text-amber-600'}`} />
+              <div className="flex-1">
+                <p className={`text-sm font-bold ${sinCuotaConfirmado ? 'text-gray-500' : 'text-amber-800'}`}>
+                  No seleccionaste ninguna cuota
+                </p>
+                <p className={`text-xs mt-0.5 ${sinCuotaConfirmado ? 'text-gray-400' : 'text-amber-700'}`}>
+                  Este cliente tiene cuotas pendientes. Si no seleccionas una, el ingreso <strong>no se descontará del plan de crédito</strong>.
+                </p>
+                <label className="flex items-center gap-2 mt-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sinCuotaConfirmado}
+                    onChange={e => setSinCuotaConfirmado(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-400 text-oriental-red cursor-pointer"
+                  />
+                  <span className={`text-xs font-semibold ${sinCuotaConfirmado ? 'text-gray-600' : 'text-amber-900'}`}>
+                    Entendido — registrar este ingreso <em>sin aplicar</em> a ninguna cuota
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
