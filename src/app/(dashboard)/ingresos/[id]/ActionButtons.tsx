@@ -9,15 +9,18 @@ import {
 } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 
+const ROL_DIRECTOR = ['jose', 'admin', 'director']
+
 interface Props {
   ingresoId: string
   estado: string
   monto: number
   moneda: string
   numeroRecibo: string
+  rol?: string
 }
 
-export default function ActionButtons({ ingresoId, estado, monto, moneda, numeroRecibo }: Props) {
+export default function ActionButtons({ ingresoId, estado, monto, moneda, numeroRecibo, rol = 'editor' }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState('')
@@ -102,12 +105,24 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
       icon: Building2,
       estado: 'reportado_vehimotors',
       timestamp: 'vehimotors_at',
-      show: ['depositado', 'enviado_deposito'],
+      show: ['depositado', 'enviado_deposito', 'entregado_carla'],
       style: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+    },
+    {
+      label: 'Entregado a Carla',
+      icon: Send,
+      estado: 'entregado_carla',
+      timestamp: 'entregado_carla_at',
+      show: ['depositado'],
+      onlyRoles: ROL_DIRECTOR,
+      style: 'bg-teal-600 hover:bg-teal-700 text-white',
     },
   ]
 
-  const visibleActions = actions.filter(a => a.show.includes(estado))
+  const visibleActions = actions.filter(a =>
+    a.show.includes(estado) &&
+    (!('onlyRoles' in a) || (a as any).onlyRoles.includes(rol))
+  )
 
   return (
     <div className="card p-5">

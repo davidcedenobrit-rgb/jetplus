@@ -29,6 +29,7 @@ export const ESTADOS_RECIBO_LABEL: Record<string, string> = {
   listo_depositar: 'Listo depositar',
   enviado_deposito: 'En depósito',
   depositado: 'Depositado',
+  entregado_carla: 'Entregado a Carla',
   reportado_vehimotors: 'Vehimotors',
   anulado: 'Anulado',
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL } from '@/lib/utils'
 import Link from 'next/link'
 import {
@@ -16,6 +17,9 @@ export default async function IngresoDetallePage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const rol = (user?.user_metadata?.rol as string) ?? 'editor'
 
   const { data: ingreso } = await supabase
     .from('ingresos')
@@ -43,6 +47,7 @@ export default async function IngresoDetallePage({
     listo_depositar: 'bg-cyan-100 text-cyan-800',
     enviado_deposito: 'bg-blue-100 text-blue-800',
     depositado: 'bg-emerald-100 text-emerald-800',
+    entregado_carla: 'bg-teal-100 text-teal-800',
     reportado_vehimotors: 'bg-indigo-100 text-indigo-800',
     anulado: 'bg-gray-200 text-gray-400',
   }
@@ -209,6 +214,7 @@ export default async function IngresoDetallePage({
             monto={ingreso.monto}
             moneda={ingreso.moneda}
             numeroRecibo={ingreso.numero_recibo}
+            rol={rol}
           />
 
           {/* Timeline */}
@@ -219,6 +225,7 @@ export default async function IngresoDetallePage({
               <TimelineItem label="Aprobado" date={ingreso.fecha_aprobacion} active={!!ingreso.fecha_aprobacion} />
               <TimelineItem label="Enviado a Carla" date={ingreso.enviado_carla_at} active={!!ingreso.enviado_carla_at} />
               <TimelineItem label="Depositado" date={ingreso.deposito_at} active={!!ingreso.deposito_at} />
+              <TimelineItem label="Entregado a Carla" date={(ingreso as any).entregado_carla_at} active={!!(ingreso as any).entregado_carla_at} highlight />
               <TimelineItem label="Reportado Vehimotors" date={ingreso.vehimotors_at} active={!!ingreso.vehimotors_at} />
             </div>
           </div>
@@ -230,12 +237,12 @@ export default async function IngresoDetallePage({
   )
 }
 
-function TimelineItem({ label, date, active }: { label: string; date?: string | null; active: boolean }) {
+function TimelineItem({ label, date, active, highlight }: { label: string; date?: string | null; active: boolean; highlight?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${active ? 'bg-oriental-red' : 'bg-gray-200'}`} />
+      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${active ? (highlight ? 'bg-teal-500' : 'bg-oriental-red') : 'bg-gray-200'}`} />
       <div className="flex-1">
-        <p className={`text-sm ${active ? 'text-oriental-black font-medium' : 'text-gray-400'}`}>{label}</p>
+        <p className={`text-sm ${active ? (highlight ? 'text-teal-700 font-semibold' : 'text-oriental-black font-medium') : 'text-gray-400'}`}>{label}</p>
       </div>
       {date && <p className="text-[11px] text-oriental-gray">{formatDate(date)}</p>}
     </div>

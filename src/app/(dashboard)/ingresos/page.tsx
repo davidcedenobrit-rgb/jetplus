@@ -32,11 +32,12 @@ export default async function IngresosPage({
     listo_depositar: 'bg-cyan-100 text-cyan-800',
     enviado_deposito: 'bg-blue-100 text-blue-800',
     depositado: 'bg-emerald-100 text-emerald-800',
+    entregado_carla: 'bg-teal-100 text-teal-800',
     reportado_vehimotors: 'bg-indigo-100 text-indigo-800',
     anulado: 'bg-gray-200 text-gray-400',
   }
 
-  const filtros = ['', 'pendiente_aprobacion', 'aprobado', 'listo_depositar', 'depositado', 'rechazado']
+  const filtros = ['', 'pendiente_aprobacion', 'aprobado', 'listo_depositar', 'depositado', 'entregado_carla', 'rechazado']
 
   return (
     <div className="p-8">

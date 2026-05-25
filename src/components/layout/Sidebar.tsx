@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
-  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck
+  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck
 } from 'lucide-react'
 
 const navItems = [
@@ -21,13 +21,16 @@ const navItems = [
   { href: '/documentos-empresa', label: 'Docs. Empresa', icon: FolderOpen },
 ]
 
+const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
+
 interface SidebarProps {
   userEmail: string
   rol?: string
   aprobacionesPendientes?: number
+  depositosPendientesCarla?: number
 }
 
-export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0 }: SidebarProps) {
+export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0 }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -95,14 +98,40 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             </Link>
           )
         })()}
+
+        {/* Carla — visible solo para carla/jose/admin */}
+        {ROL_CARLA_VISIBLE.includes(rol) && (() => {
+          const active = pathname === '/carla' || pathname.startsWith('/carla/')
+          return (
+            <Link
+              href="/carla"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                active
+                  ? 'bg-oriental-red text-white font-semibold'
+                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
+              }`}
+            >
+              <PackageCheck size={18} />
+              <span className="flex-1">Carla</span>
+              {depositosPendientesCarla > 0 && (
+                <span className="bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                  {depositosPendientesCarla > 99 ? '99+' : depositosPendientesCarla}
+                </span>
+              )}
+            </Link>
+          )
+        })()}
       </nav>
 
       {/* User */}
       <div className="px-4 py-4 border-t border-gray-800">
         <div className="flex items-center gap-2 mb-1">
           <p className="text-gray-500 text-xs truncate flex-1">{userEmail}</p>
-          {rol === 'director' && (
+          {(rol === 'director' || rol === 'jose') && (
             <span className="text-[10px] bg-oriental-red/20 text-oriental-red font-semibold px-1.5 py-0.5 rounded">DIR</span>
+          )}
+          {rol === 'carla' && (
+            <span className="text-[10px] bg-teal-600/20 text-teal-600 font-semibold px-1.5 py-0.5 rounded">CARLA</span>
           )}
         </div>
         <button
