@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
 import { IngresoSchema } from '@/lib/validations'
@@ -48,11 +48,15 @@ interface GrupoVehiculo {
   }[]
 }
 
-export default function NuevoIngresoPage() {
+function NuevoIngresoPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Ref para cuota pre-seleccionada desde query params (no causa re-render)
+  const preselectedCuotaIdRef = useRef<string | null>(null)
 
   // Modo de búsqueda
   const [modo, setModo] = useState<ModosBusqueda>('placa')
@@ -90,6 +94,29 @@ export default function NuevoIngresoPage() {
   const [observaciones, setObservaciones] = useState('')
   const [tasaCambio, setTasaCambio] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
+
+  // ── Auto-carga desde query params (cuando llega desde el botón "Registrar pago" del crédito) ──
+  useEffect(() => {
+    const placaParam = searchParams.get('placa')
+    const cuotaIdParam = searchParams.get('cuota_id')
+    const montoParam = searchParams.get('monto')
+
+    if (cuotaIdParam) {
+      preselectedCuotaIdRef.current = cuotaIdParam
+    }
+    if (montoParam && parseFloat(montoParam) > 0) {
+      setMonto(parseFloat(montoParam).toFixed(2))
+    }
+    if (placaParam) {
+      setPlacaQuery(placaParam.toUpperCase())
+      buscarPorPlaca(placaParam.toUpperCase())
+    }
+    // Si viene concepto de cuota, pre-seleccionar
+    if (cuotaIdParam) {
+      setConcepto('Cuota de vehículo')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Cargar TODOS los créditos y cuotas del cliente ──
   async function loadCuotasCliente(cliente: Cliente) {
@@ -170,12 +197,22 @@ export default function NuevoIngresoPage() {
       .filter((g: GrupoVehiculo) => g.creditos.length > 0)
 
     setGruposVehiculo(grupos)
+
+    // Auto-seleccionar cuota si viene desde el plan de crédito
+    if (preselectedCuotaIdRef.current) {
+      const cuotaExiste = cuotasEnriquecidas.find((c: any) => c.id === preselectedCuotaIdRef.current)
+      if (cuotaExiste) {
+        setCuotasSeleccionadas(new Set([preselectedCuotaIdRef.current!]))
+      }
+      preselectedCuotaIdRef.current = null // limpiar para no re-seleccionar en recargas
+    }
+
     setLoadingCuotas(false)
   }
 
-  // ── Buscar por placa ──
-  async function buscarPorPlaca() {
-    const placa = placaQuery.trim().toUpperCase()
+  // ── Buscar por placa — acepta placa directa (desde query params) o usa el estado ──
+  async function buscarPorPlaca(placaDirecta?: string) {
+    const placa = (placaDirecta ?? placaQuery).trim().toUpperCase()
     if (!placa) return
     setBuscandoPlaca(true)
     const { data: vehiculo } = await supabase
@@ -434,6 +471,9 @@ export default function NuevoIngresoPage() {
   const hayClienteResuelto = !!clienteSeleccionado
   const hoy = new Date().toISOString().split('T')[0]
 
+  // Banner informativo cuando se llega desde el plan de crédito
+  const vieneDeCuota = !!searchParams.get('cuota_id')
+
   return (
     <div className="p-8 max-w-4xl">
       <div className="flex items-center gap-4 mb-8">
@@ -445,6 +485,15 @@ export default function NuevoIngresoPage() {
           <p className="text-oriental-gray text-sm mt-0.5">Nuevo pago de cliente</p>
         </div>
       </div>
+
+      {vieneDeCuota && (
+        <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-xl">
+          <Check size={16} className="text-green-600 flex-shrink-0" />
+          <p className="text-sm text-green-800 font-medium">
+            Cuota pre-seleccionada desde el plan de crédito. Agrega el método de pago y guarda.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -489,7 +538,7 @@ export default function NuevoIngresoPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={buscarPorPlaca}
+                  onClick={() => buscarPorPlaca()}
                   disabled={buscandoPlaca || !placaQuery}
                   className="btn-primary px-5 disabled:opacity-50"
                 >
@@ -925,5 +974,18 @@ export default function NuevoIngresoPage() {
         </div>
       </form>
     </div>
+  )
+}
+
+// Wrapper con Suspense requerido por useSearchParams en Next.js App Router
+export default function NuevoIngresoPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-8 flex items-center justify-center">
+        <div className="text-oriental-gray text-sm">Cargando...</div>
+      </div>
+    }>
+      <NuevoIngresoPageInner />
+    </Suspense>
   )
 }

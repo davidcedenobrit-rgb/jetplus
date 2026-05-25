@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3 } from 'lucide-react'
+import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, Receipt } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 
 const planLabel = (tipo: string | null) =>
@@ -300,12 +300,18 @@ export default async function CreditoDetallePage({
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Fecha pago</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Estado</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Recibos</th>
+                      <th className="px-3 py-2"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {cuotasEnriquecidas.map((cuota: any) => {
                       const recibos = recibosMap[cuota.id] ?? []
                       const esAbonoParcial = cuota.estado === 'abono_parcial'
+                      const faltante = Math.max(0, Number(cuota.monto) - Number(cuota.monto_pagado ?? 0))
+                      const placaCuota = vehiculo?.placa ?? ''
+                      const pagoUrl = placaCuota
+                        ? `/ingresos/nuevo?placa=${encodeURIComponent(placaCuota)}&cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
+                        : `/ingresos/nuevo?cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
                       return (
                       <tr key={cuota.id} className={`transition-colors ${esAbonoParcial ? 'bg-orange-50/40' : 'hover:bg-oriental-bg/50'}`}>
                         <td className="px-3 py-2.5 text-oriental-gray font-normal text-xs">{cuota.numero_cuota}</td>
@@ -355,6 +361,18 @@ export default async function CreditoDetallePage({
                                 </Link>
                               ))}
                             </div>
+                          )}
+                        </td>
+                        {/* Botón Registrar pago */}
+                        <td className="px-3 py-2.5">
+                          {cuota.estado !== 'pagada' && faltante > 0 && (
+                            <Link
+                              href={pagoUrl}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-red text-white text-xs font-semibold hover:bg-oriental-red-dark transition-colors whitespace-nowrap"
+                            >
+                              <Receipt size={12} />
+                              Registrar pago
+                            </Link>
                           )}
                         </td>
                       </tr>
