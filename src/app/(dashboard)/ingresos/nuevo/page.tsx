@@ -430,20 +430,30 @@ function NuevoIngresoPageInner() {
         const nuevoMontoPagado = montoPagadoPrev + montoAplicar
         const esPagadaCompleta = (montoCuota - nuevoMontoPagado) < 0.005
 
-        // Actualizar cuota
-        await supabase.from('cuotas').update({
+        // Actualizar cuota — cuotas NO tiene columna updated_at
+        const { error: cuotaUpdateErr } = await supabase.from('cuotas').update({
           monto_pagado: nuevoMontoPagado,
           estado: esPagadaCompleta ? 'pagada' : 'abono_parcial',
-          ...(esPagadaCompleta ? { fecha_pago: fechaPago } : {}),
-          updated_at: new Date().toISOString(),
+          fecha_pago: esPagadaCompleta ? fechaPago : null,
         }).eq('id', cuota.id)
 
+        if (cuotaUpdateErr) {
+          console.error('Error al actualizar cuota', cuota.id, cuotaUpdateErr)
+          setError(`Error actualizando cuota N°${cuota.numero_cuota}: ${cuotaUpdateErr.message}`)
+          setLoading(false)
+          return
+        }
+
         // Vincular recibo ↔ cuota con el monto aplicado
-        await supabase.from('cuota_ingresos').insert({
+        const { error: ciErr } = await supabase.from('cuota_ingresos').insert({
           cuota_id: cuota.id,
           ingreso_id: inserted.id,
           monto_aplicado: montoAplicar,
         })
+
+        if (ciErr) {
+          console.error('Error al insertar cuota_ingresos', ciErr)
+        }
 
         deltasPorCredito[cuota.credito_id] = (deltasPorCredito[cuota.credito_id] ?? 0) + montoAplicar
         restante -= montoAplicar
