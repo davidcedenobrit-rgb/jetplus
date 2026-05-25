@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, Receipt } from 'lucide-react'
+import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, CircleDot, PlusCircle } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 
 const planLabel = (tipo: string | null) =>
@@ -300,49 +300,122 @@ export default async function CreditoDetallePage({
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Fecha pago</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Estado</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Recibos</th>
-                      <th className="px-3 py-2"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-100">
                     {cuotasEnriquecidas.map((cuota: any) => {
                       const recibos = recibosMap[cuota.id] ?? []
-                      const esAbonoParcial = cuota.estado === 'abono_parcial'
-                      const faltante = Math.max(0, Number(cuota.monto) - Number(cuota.monto_pagado ?? 0))
-                      const placaCuota = vehiculo?.placa ?? ''
-                      const pagoUrl = placaCuota
+                      const montoPagado = Number(cuota.monto_pagado ?? 0)
+                      const montoTotal  = Number(cuota.monto)
+                      const faltante    = Math.max(0, montoTotal - montoPagado)
+                      const pct         = montoTotal > 0 ? Math.min(100, (montoPagado / montoTotal) * 100) : 0
+                      const placaCuota  = vehiculo?.placa ?? ''
+                      const pagoUrl     = placaCuota
                         ? `/ingresos/nuevo?placa=${encodeURIComponent(placaCuota)}&cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
                         : `/ingresos/nuevo?cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
+
+                      const esPagada      = cuota.estado === 'pagada'
+                      const esAbono       = cuota.estado === 'abono_parcial'
+                      const esVencida     = cuota.estado === 'vencida'
+                      const esPendiente   = cuota.estado === 'pendiente'
+
+                      const rowBg = esPagada  ? 'bg-green-50/50'
+                                  : esAbono   ? 'bg-amber-50/60'
+                                  : esVencida ? 'bg-red-50/40'
+                                  : 'hover:bg-oriental-bg/50'
+
                       return (
-                      <tr key={cuota.id} className={`transition-colors ${esAbonoParcial ? 'bg-orange-50/40' : 'hover:bg-oriental-bg/50'}`}>
-                        <td className="px-3 py-2.5 text-oriental-gray font-normal text-xs">{cuota.numero_cuota}</td>
-                        <td className="px-3 py-2.5">
+                      <tr key={cuota.id} className={`transition-colors ${rowBg}`}>
+                        {/* N° */}
+                        <td className="px-3 py-3 text-oriental-gray font-normal text-xs">{cuota.numero_cuota}</td>
+
+                        {/* Financiamiento */}
+                        <td className="px-3 py-3">
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${planBadge(cuota._plan_tipo)}`}>
                             {cuota.concepto ?? planLabel(cuota._plan_tipo)}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-oriental-gray text-sm">{formatDate(cuota.fecha_vencimiento)}</td>
-                        <td className="px-3 py-2.5 text-right">
-                          <p className="font-semibold text-oriental-black text-sm">{formatCurrency(cuota.monto, credito.moneda)}</p>
-                          {esAbonoParcial && cuota.monto_pagado > 0 && (
-                            <p className="text-[10px] text-orange-600 mt-0.5">
-                              Abonado: {formatCurrency(cuota.monto_pagado, credito.moneda)}
-                            </p>
+
+                        {/* Vencimiento */}
+                        <td className={`px-3 py-3 text-sm ${esVencida ? 'text-red-600 font-semibold' : 'text-oriental-gray'}`}>
+                          {formatDate(cuota.fecha_vencimiento)}
+                        </td>
+
+                        {/* Monto */}
+                        <td className="px-3 py-3 text-right">
+                          <p className="font-semibold text-oriental-black text-sm">{formatCurrency(montoTotal, credito.moneda)}</p>
+                          {esAbono && montoPagado > 0 && (
+                            <div className="mt-1.5">
+                              <div className="flex justify-between text-[10px] mb-0.5">
+                                <span className="text-amber-600">Abonado {formatCurrency(montoPagado, credito.moneda)}</span>
+                                <span className="text-amber-800 font-semibold">{pct.toFixed(0)}%</span>
+                              </div>
+                              <div className="w-full bg-amber-200 rounded-full h-1.5">
+                                <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                              <p className="text-[10px] text-amber-700 mt-0.5">Falta {formatCurrency(faltante, credito.moneda)}</p>
+                            </div>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-right">
+
+                        {/* Mora */}
+                        <td className="px-3 py-3 text-right">
                           {cuota.mora > 0
                             ? <span className="text-oriental-red font-semibold text-sm">{formatCurrency(cuota.mora, credito.moneda)}</span>
                             : <span className="text-gray-300">—</span>
                           }
                         </td>
-                        <td className="px-3 py-2.5 text-oriental-gray text-sm">{cuota.fecha_pago ? formatDate(cuota.fecha_pago) : '—'}</td>
-                        <td className="px-3 py-2.5">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cuotaEstadoColors[cuota.estado] ?? 'bg-gray-100 text-gray-700'}`}>
-                            {cuotaEstadoLabel[cuota.estado] ?? cuota.estado}
-                          </span>
+
+                        {/* Fecha pago */}
+                        <td className="px-3 py-3 text-oriental-gray text-sm">{cuota.fecha_pago ? formatDate(cuota.fecha_pago) : '—'}</td>
+
+                        {/* Estado — badge visual + botón discreto de registrar */}
+                        <td className="px-3 py-3">
+                          {esPagada ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                              <CheckCircle2 size={12} className="text-green-600" />
+                              Pagado
+                            </span>
+                          ) : esAbono ? (
+                            <div className="space-y-1.5">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                                <CircleDot size={12} className="text-amber-600" />
+                                Abono parcial
+                              </span>
+                              <Link href={pagoUrl} className="flex items-center gap-1 text-[11px] text-oriental-red hover:text-oriental-black font-medium transition-colors">
+                                <PlusCircle size={11} />
+                                Registrar saldo
+                              </Link>
+                            </div>
+                          ) : esVencida ? (
+                            <div className="space-y-1.5">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                                Vencida
+                              </span>
+                              <Link href={pagoUrl} className="flex items-center gap-1 text-[11px] text-oriental-red hover:text-oriental-black font-medium transition-colors">
+                                <PlusCircle size={11} />
+                                Registrar pago
+                              </Link>
+                            </div>
+                          ) : esPendiente ? (
+                            <div className="space-y-1.5">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                Pendiente
+                              </span>
+                              <Link href={pagoUrl} className="flex items-center gap-1 text-[11px] text-oriental-red hover:text-oriental-black font-medium transition-colors">
+                                <PlusCircle size={11} />
+                                Registrar pago
+                              </Link>
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                              {cuota.estado}
+                            </span>
+                          )}
                         </td>
+
                         {/* Recibos vinculados */}
-                        <td className="px-3 py-2.5">
+                        <td className="px-3 py-3">
                           {recibos.length === 0 ? (
                             <span className="text-gray-300 text-xs">—</span>
                           ) : (
@@ -361,18 +434,6 @@ export default async function CreditoDetallePage({
                                 </Link>
                               ))}
                             </div>
-                          )}
-                        </td>
-                        {/* Botón Registrar pago */}
-                        <td className="px-3 py-2.5">
-                          {cuota.estado !== 'pagada' && faltante > 0 && (
-                            <Link
-                              href={pagoUrl}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-red text-white text-xs font-semibold hover:bg-oriental-red-dark transition-colors whitespace-nowrap"
-                            >
-                              <Receipt size={12} />
-                              Registrar pago
-                            </Link>
                           )}
                         </td>
                       </tr>
