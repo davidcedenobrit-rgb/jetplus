@@ -28,7 +28,7 @@ export default async function VehiculosPage({
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-oriental-black">Vehículos</h1>

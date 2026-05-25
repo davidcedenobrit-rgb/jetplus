@@ -28,9 +28,10 @@ interface SidebarProps {
   rol?: string
   aprobacionesPendientes?: number
   depositosPendientesCarla?: number
+  onClose?: () => void
 }
 
-export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0 }: SidebarProps) {
+export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -64,6 +65,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                 active
                   ? 'bg-oriental-red text-white font-semibold'
@@ -82,6 +84,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           return (
             <Link
               href="/aprobaciones"
+              onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                 active
                   ? 'bg-oriental-red text-white font-semibold'
@@ -105,6 +108,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           return (
             <Link
               href="/carla"
+              onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                 active
                   ? 'bg-oriental-red text-white font-semibold'

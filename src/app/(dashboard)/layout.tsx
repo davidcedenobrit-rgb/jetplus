@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Sidebar from '@/components/layout/Sidebar'
+import ClientLayout from '@/components/layout/ClientLayout'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
 
-  // Conteo de aprobaciones pendientes (solo relevante para el badge)
+  // Conteo de aprobaciones pendientes
   const { count: aprobacionesPendientes } = await supabase
     .from('solicitudes_cambio')
     .select('id', { count: 'exact', head: true })
@@ -27,16 +27,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     : { count: 0 }
 
   return (
-    <div className="flex h-screen bg-oriental-bg overflow-hidden">
-      <Sidebar
-        userEmail={user.email ?? ''}
-        rol={rol}
-        aprobacionesPendientes={aprobacionesPendientes ?? 0}
-        depositosPendientesCarla={depositosPendientesCarla ?? 0}
-      />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
-    </div>
+    <ClientLayout
+      userEmail={user.email ?? ''}
+      rol={rol}
+      aprobacionesPendientes={aprobacionesPendientes ?? 0}
+      depositosPendientesCarla={depositosPendientesCarla ?? 0}
+    >
+      {children}
+    </ClientLayout>
   )
 }

@@ -74,7 +74,7 @@ export default function ReportesPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-oriental-black">Reportes</h1>
       </div>

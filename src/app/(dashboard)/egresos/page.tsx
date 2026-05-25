@@ -36,7 +36,7 @@ export default async function EgresosPage({
   const filtros = ['', 'pendiente_aprobacion', 'aprobado', 'pagado', 'rechazado']
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-oriental-black">Egresos</h1>

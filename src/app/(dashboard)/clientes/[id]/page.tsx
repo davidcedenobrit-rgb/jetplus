@@ -86,7 +86,7 @@ export default async function ClienteDetallePage({
     .order('created_at', { ascending: false })
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 lg:p-8 max-w-5xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/clientes" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
