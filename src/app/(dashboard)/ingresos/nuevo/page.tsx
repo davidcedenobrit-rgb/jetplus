@@ -201,13 +201,40 @@ function NuevoIngresoPageInner() {
 
     setGruposVehiculo(grupos)
 
-    // Auto-seleccionar cuota si viene desde el plan de crédito
+    // ── Auto-selección de cuotas ──
     if (preselectedCuotaIdRef.current) {
+      // Prioridad 1: viene desde el botón "Registrar pago" del plan de crédito
       const cuotaExiste = cuotasEnriquecidas.find((c: any) => c.id === preselectedCuotaIdRef.current)
       if (cuotaExiste) {
         setCuotasSeleccionadas(new Set([preselectedCuotaIdRef.current!]))
       }
-      preselectedCuotaIdRef.current = null // limpiar para no re-seleccionar en recargas
+      preselectedCuotaIdRef.current = null
+    } else {
+      // Prioridad 2: auto-selección inteligente según estado del cliente
+      const hoyStr = new Date().toISOString().split('T')[0]
+      const vencidas = cuotasEnriquecidas.filter((c: any) => c.fecha_vencimiento < hoyStr)
+
+      if (vencidas.length > 0) {
+        // Cliente moroso → pre-seleccionar TODAS las vencidas (de la más antigua a la más reciente)
+        const vencidasOrdenadas = [...vencidas].sort((a: any, b: any) =>
+          a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
+        )
+        setCuotasSeleccionadas(new Set(vencidasOrdenadas.map((c: any) => c.id)))
+      } else {
+        // Cliente al día → pre-seleccionar la próxima cuota de CADA crédito activo (La Oriental primero)
+        const proximas = new Set<string>()
+        const pendientesPorCredito = new Map<string, any>()
+        const ordenadas = [...cuotasEnriquecidas].sort((a: any, b: any) =>
+          a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
+        )
+        for (const c of ordenadas) {
+          if (!pendientesPorCredito.has(c.credito_id)) {
+            pendientesPorCredito.set(c.credito_id, c)
+            proximas.add(c.id)
+          }
+        }
+        setCuotasSeleccionadas(proximas)
+      }
     }
 
     setLoadingCuotas(false)
@@ -418,7 +445,7 @@ function NuevoIngresoPageInner() {
       )
     }
 
-    // ── Aplicar cuotas con soporte para abono parcial y cuota_ingresos ──
+    // ── Aplicar cuotas con soporte para abono parcial, cascade y cuota_ingresos ──
     if (cuotasParaAplicar.length > 0) {
       // Convertir monto a la moneda base de las cuotas (USD)
       const montoBase = moneda === 'USD'
@@ -427,11 +454,21 @@ function NuevoIngresoPageInner() {
           ? parsed.data.monto / parsed.data.tasa_cambio
           : parsed.data.monto
 
+      // Cuotas seleccionadas primero (en orden de vencimiento), luego el resto de pendientes/vencidas
+      // para auto-cascade si el monto excede las cuotas elegidas
+      const cuotasSeleccionadasOrdenadas = [...cuotasParaAplicar].sort((a: any, b: any) =>
+        a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
+      )
+      const cuotasRestantesOrdenadas = todasLasCuotas
+        .filter((c: any) => !cuotasSeleccionadas.has(c.id))
+        .sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
+      const cuotasEnOrden = [...cuotasSeleccionadasOrdenadas, ...cuotasRestantesOrdenadas]
+
       let restante = montoBase
       // Acumular cuánto se aplicó por crédito para actualizar el saldo
       const deltasPorCredito: Record<string, number> = {}
 
-      for (const cuota of cuotasParaAplicar) {
+      for (const cuota of cuotasEnOrden) {
         if (restante <= 0.005) break
 
         const montoCuota = Number(cuota.monto)
@@ -854,8 +891,11 @@ function NuevoIngresoPageInner() {
                 {cuotasSeleccionadas.size > 0 ? (() => {
                   const montoIngresado = parseFloat(monto) || 0
                   const esAbonoParcial = montoIngresado > 0 && montoIngresado < totalCuotasSeleccionadas
+                  const hayExcedente = montoIngresado > totalCuotasSeleccionadas + 0.005
+                  const cuotasNoSeleccionadas = todasLasCuotas.filter(c => !cuotasSeleccionadas.has(c.id))
+                  const haySiguienteCuota = cuotasNoSeleccionadas.length > 0
                   return (
-                    <div className={`rounded-xl px-4 py-3 ${esAbonoParcial ? 'bg-orange-600' : 'bg-green-700'}`}>
+                    <div className={`rounded-xl px-4 py-3 ${esAbonoParcial ? 'bg-orange-600' : hayExcedente ? 'bg-blue-700' : 'bg-green-700'}`}>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-bold text-white flex items-center gap-2">
                           <Check size={16} />
@@ -867,7 +907,17 @@ function NuevoIngresoPageInner() {
                       </div>
                       {esAbonoParcial && (
                         <p className="text-xs text-orange-100 mt-1.5">
-                          ⚠ El monto ingresado (${montoIngresado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}) no cubre el total — la última cuota quedará como <strong>Abono parcial</strong>
+                          ⚠ El monto (${montoIngresado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}) no cubre el total — la última cuota quedará como <strong>Abono parcial</strong>
+                        </p>
+                      )}
+                      {hayExcedente && haySiguienteCuota && (
+                        <p className="text-xs text-blue-100 mt-1.5">
+                          ↳ Excedente de ${(montoIngresado - totalCuotasSeleccionadas).toLocaleString('es-VE', { minimumFractionDigits: 2 })} — se aplicará <strong>automáticamente</strong> a la siguiente cuota pendiente
+                        </p>
+                      )}
+                      {hayExcedente && !haySiguienteCuota && (
+                        <p className="text-xs text-blue-100 mt-1.5">
+                          ✓ El monto cubre todas las cuotas pendientes — excedente de ${(montoIngresado - totalCuotasSeleccionadas).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
                         </p>
                       )}
                     </div>
