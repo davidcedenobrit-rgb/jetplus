@@ -161,20 +161,25 @@ export default function NuevoCreditoPage() {
   }, [planAC500Sel])
 
   // Auto-calcular monto por cuota — La Oriental
+  // Siempre recalcula; si no hay monto/cuotas válidos, limpia el campo
   useEffect(() => {
-    const monto  = parseFloat(inicialOrientalMonto) || 0
-    const cuotas = parseInt(inicialOrientalCuotas)  || 0
+    const monto  = parseFloat(inicialOrientalMonto)
+    const cuotas = parseInt(inicialOrientalCuotas)
     if (monto > 0 && cuotas > 0) {
       setInicialOrientalMontoCuota((monto / cuotas).toFixed(2))
+    } else {
+      setInicialOrientalMontoCuota('')
     }
   }, [inicialOrientalMonto, inicialOrientalCuotas])
 
   // Auto-calcular monto por cuota — Vehimotors
   useEffect(() => {
-    const monto  = parseFloat(vehimotorsMonto) || 0
-    const cuotas = parseInt(vehimotorsCuotas)  || 0
+    const monto  = parseFloat(vehimotorsMonto)
+    const cuotas = parseInt(vehimotorsCuotas)
     if (monto > 0 && cuotas > 0) {
       setVehimotorsMontoCuota((monto / cuotas).toFixed(2))
+    } else {
+      setVehimotorsMontoCuota('')
     }
   }, [vehimotorsMonto, vehimotorsCuotas])
 
@@ -649,12 +654,17 @@ export default function NuevoCreditoPage() {
                   <div>
                     <label className="label flex items-center gap-1.5">
                       Monto por cuota (USD)
-                      {inicialOrientalMontoCuota && parseFloat(inicialOrientalMonto) > 0 && (
-                        <span className="text-[10px] font-normal text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full">auto</span>
+                      {inicialOrientalMontoCuota && (
+                        <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded-full">auto</span>
                       )}
                     </label>
-                    <input type="number" step="0.01" min="0" className="input font-semibold" placeholder="0.00"
-                      value={inicialOrientalMontoCuota} onChange={e => setInicialOrientalMontoCuota(e.target.value)} />
+                    <input
+                      type="number" step="0.01" min="0"
+                      className={`input font-bold ${inicialOrientalMontoCuota ? 'bg-purple-50 text-purple-900 border-purple-300 cursor-not-allowed' : ''}`}
+                      placeholder="Se calcula automático"
+                      value={inicialOrientalMontoCuota}
+                      readOnly
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -724,12 +734,17 @@ export default function NuevoCreditoPage() {
                   <div>
                     <label className="label flex items-center gap-1.5">
                       Monto por cuota (USD)
-                      {vehimotorsMontoCuota && parseFloat(vehimotorsMonto) > 0 && (
-                        <span className="text-[10px] font-normal text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full">auto</span>
+                      {vehimotorsMontoCuota && (
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-full">auto</span>
                       )}
                     </label>
-                    <input type="number" step="0.01" min="0" className="input font-semibold" placeholder="0.00"
-                      value={vehimotorsMontoCuota} onChange={e => setVehimotorsMontoCuota(e.target.value)} />
+                    <input
+                      type="number" step="0.01" min="0"
+                      className={`input font-bold ${vehimotorsMontoCuota ? 'bg-indigo-50 text-indigo-900 border-indigo-300 cursor-not-allowed' : ''}`}
+                      placeholder="Se calcula automático"
+                      value={vehimotorsMontoCuota}
+                      readOnly
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
