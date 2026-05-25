@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Navi Dev — Devlog · La Oriental Finanzas</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:     #000000;
+    --dark:      #0d0d0d;
+    --card:      #111111;
+    --card2:     #161616;
+    --border:    rgba(255,255,255,0.07);
+    --orange:    #f97316;
+    --orange2:   #fb923c;
+    --orange-dim:#7c3210;
+    --white:     #ffffff;
+    --gray:      #a0a0a0;
+    --gray2:     #666666;
+    --green:     #22c55e;
+    --red:       #ef4444;
+    --teal:      #14b8a6;
+    --blue:      #3b82f6;
+    --purple:    #a855f7;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--black);
+    color: var(--white);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* === HEADER === */
+  header {
+    background: var(--dark);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .navi-logo {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--orange);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .navi-logo .dot {
+    width: 8px; height: 8px;
+    background: var(--orange);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .badge-internal {
+    background: rgba(249,115,22,0.15);
+    border: 1px solid rgba(249,115,22,0.3);
+    color: var(--orange);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+  .btn-pdf {
+    background: var(--orange);
+    color: var(--black);
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-pdf:hover { background: var(--orange2); }
+
+  /* === LAYOUT === */
+  .page { max-width: 1100px; margin: 0 auto; padding: 0 32px 80px; }
+
+  /* === HERO === */
+  .hero {
+    padding: 64px 0 48px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(249,115,22,0.1);
+    border: 1px solid rgba(249,115,22,0.25);
+    color: var(--orange);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(32px, 5vw, 58px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+  .hero h1 span { color: var(--orange); }
+  .hero-client {
+    font-size: 16px;
+    color: var(--gray);
+    margin-bottom: 32px;
+  }
+  .hero-impact {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(18px, 2.5vw, 24px);
+    font-weight: 600;
+    color: var(--white);
+    background: linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.04));
+    border: 1px solid rgba(249,115,22,0.2);
+    border-left: 3px solid var(--orange);
+    padding: 18px 24px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 36px;
+    font-style: italic;
+  }
+  .kpis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 140px;
+  }
+  .kpi-num {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--orange);
+    line-height: 1;
+  }
+  .kpi-label { font-size: 12px; color: var(--gray); font-weight: 500; }
+
+  /* === SECTIONS === */
+  section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+  section:last-child { border-bottom: none; }
+  .section-tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 32px;
+    line-height: 1.1;
+  }
+
+  /* === ANTES VS DESPUÉS === */
+  .avd-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .avd-col { padding: 28px; }
+  .avd-antes { background: rgba(239,68,68,0.06); }
+  .avd-despues { background: rgba(34,197,94,0.06); }
+  .avd-col-head {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .avd-antes .avd-col-head { color: #ef4444; }
+  .avd-despues .avd-col-head { color: #22c55e; }
+  .avd-row {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .avd-row:last-child { border-bottom: none; }
+  .avd-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* === FEATURES === */
+  .feature-group { margin-bottom: 32px; }
+  .feature-group-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--orange);
+    border-bottom: 1px solid rgba(249,115,22,0.2);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+  .feature-list { display: flex; flex-direction: column; gap: 8px; }
+  .feature-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  .feature-item:hover { border-color: rgba(249,115,22,0.25); }
+  .feature-check { color: var(--orange); font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .feature-name { font-weight: 600; color: var(--white); }
+  .feature-desc { color: var(--gray); font-size: 13px; margin-top: 2px; }
+  .feature-count {
+    margin-top: 24px;
+    text-align: right;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--orange);
+  }
+
+  /* === ARQUITECTURA === */
+  .arch-diagram {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    margin-bottom: 28px;
+    overflow-x: auto;
+  }
+  .arch-diagram pre {
+    color: var(--gray);
+    white-space: pre;
+    line-height: 1.8;
+  }
+  .arch-diagram pre .hl { color: var(--orange); font-weight: 700; }
+  .tech-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .chip-fe   { background: rgba(59,130,246,0.1);  border-color: rgba(59,130,246,0.25);  color: #60a5fa; }
+  .chip-be   { background: rgba(168,85,247,0.1);  border-color: rgba(168,85,247,0.25);  color: #c084fc; }
+  .chip-db   { background: rgba(20,184,166,0.1);  border-color: rgba(20,184,166,0.25);  color: #2dd4bf; }
+  .chip-infra{ background: rgba(249,115,22,0.1);  border-color: rgba(249,115,22,0.25);  color: #fb923c; }
+  .chip-auth { background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.25);   color: #f87171; }
+  .chip-pwa  { background: rgba(34,197,94,0.1);   border-color: rgba(34,197,94,0.25);   color: #4ade80; }
+
+  /* === MÉTRICAS === */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 20px;
+    text-align: center;
+  }
+  .metric-num {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--orange);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .metric-label { font-size: 13px; color: var(--gray); font-weight: 500; }
+  .metric-note  { font-size: 11px; color: var(--gray2); margin-top: 4px; }
+
+  /* === TIMELINE === */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--orange), transparent);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 36px;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -24px; top: 6px;
+    width: 10px; height: 10px;
+    background: var(--orange);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.2);
+  }
+  .tl-phase {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 4px;
+  }
+  .tl-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+  .tl-desc { font-size: 14px; color: var(--gray); }
+  .tl-items { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .tl-bullet {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--gray);
+  }
+  .tl-bullet::before { content: '→'; color: var(--orange); flex-shrink: 0; }
+
+  /* === ROADMAP === */
+  .roadmap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .roadmap-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .roadmap-card:hover { border-color: rgba(249,115,22,0.3); transform: translateY(-2px); }
+  .roadmap-badge {
+    display: inline-block;
+    background: rgba(249,115,22,0.1);
+    border: 1px solid rgba(249,115,22,0.25);
+    color: var(--orange);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    align-self: flex-start;
+  }
+  .roadmap-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .roadmap-desc { font-size: 13px; color: var(--gray); line-height: 1.5; }
+  .roadmap-value {
+    font-size: 12px;
+    color: var(--orange2);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* === FOOTER === */
+  footer {
+    background: var(--dark);
+    border-top: 1px solid var(--border);
+    padding: 28px 32px;
+    text-align: center;
+  }
+  .footer-logo {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  .footer-sub { font-size: 12px; color: var(--gray2); }
+
+  /* === ANIMATIONS === */
+  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.75); } }
+
+  /* === PRINT === */
+  @media print {
+    header { position: static; }
+    body::before { display: none; }
+    .btn-pdf { display: none; }
+    section { break-inside: avoid; }
+  }
+
+  @media (max-width: 720px) {
+    .page { padding: 0 20px 60px; }
+    .header-inner { padding: 0 20px; }
+    .avd-grid { grid-template-columns: 1fr; }
+    footer { padding: 20px; }
+    .kpis { gap: 8px; }
+    .kpi { min-width: 120px; padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <a class="navi-logo" href="#">
+      <div class="dot"></div>
+      NAVI DEV
+    </a>
+    <div class="header-right">
+      <span class="badge-internal">Uso Interno</span>
+      <button class="btn-pdf" onclick="window.print()">⬇ Descargar PDF</button>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">
+      <span>●</span> Devlog · Sprint Cierre · 25 Mayo 2026
+    </div>
+    <h1>Centro de Mando<br /><span>La Oriental Finanzas</span></h1>
+    <p class="hero-client">La Oriental Automotors MG &amp; MAXUS · Maturín, Venezuela</p>
+    <p class="hero-impact">
+      "De hojas de cálculo fragmentadas y control manual a un sistema financiero centralizado, con trazabilidad completa, control de roles y acceso desde cualquier dispositivo."
+    </p>
+    <div class="kpis">
+      <div class="kpi">
+        <span class="kpi-num">11</span>
+        <span class="kpi-label">Módulos entregados</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num">62+</span>
+        <span class="kpi-label">Funcionalidades</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num">5</span>
+        <span class="kpi-label">Roles de acceso</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num">100%</span>
+        <span class="kpi-label">Cloud-native</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num">PWA</span>
+        <span class="kpi-label">Instalable como app</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANTES VS DESPUÉS -->
+  <section>
+    <p class="section-tag">Impacto</p>
+    <h2 class="section-title">Antes vs. Después</h2>
+    <div class="avd-grid">
+      <div class="avd-col avd-antes">
+        <div class="avd-col-head">✗ Antes de Navi Dev</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Control de créditos en hojas Excel sin historial ni trazabilidad</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Ingresos registrados manualmente, sin validaciones ni estados</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Sin control de quién aprobó qué ni cuándo</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Carla recibía depósitos sin registro formal ni confirmación digital</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> No había forma de saber el saldo real de cada crédito en tiempo real</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Acceso desde escritorio únicamente, sin versión móvil</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Sin separación de roles — todos veían y podían hacer todo</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Reportes manuales que José pedía cada vez a su equipo</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Inventario de vehículos gestionado aparte, sin conexión a ventas</div>
+        <div class="avd-row"><span class="avd-icon">✗</span> Sin dominio propio ni app instalable en el teléfono</div>
+      </div>
+      <div class="avd-col avd-despues">
+        <div class="avd-col-head">✓ Con el Centro de Mando</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Créditos con cuotas, saldos automáticos y pagos asociados a recibos</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Ingresos con 8 estados, timestamps y flujo de aprobación completo</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Log de auditoría con fecha, usuario y acción en cada operación</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Módulo Carla: tabla de entregas pendientes y entregadas con fecha</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Saldo actualizado automáticamente al registrar cada pago</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Diseño mobile-first, sidebar drawer, PWA instalable en iPhone y Android</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> 5 roles con permisos granulares: jose, admin, director, carla, editor</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Dashboard con KPIs en tiempo real, reportes por módulo</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Inventario vinculado a clientes, créditos e ingresos</div>
+        <div class="avd-row"><span class="avd-icon">✓</span> Dominio propio centrodemando.laoriental.co + ícono de marca</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FUNCIONALIDADES -->
+  <section>
+    <p class="section-tag">Entregables</p>
+    <h2 class="section-title">Funcionalidades Entregadas</h2>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Autenticación &amp; Roles</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Login con email y contraseña</div>
+            <div class="feature-desc">Sesión persistente con manejo de estado de autenticación en el servidor</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">5 roles de usuario con permisos granulares</div>
+            <div class="feature-desc">jose · admin · director · carla · editor — cada uno con acceso diferenciado a módulos y acciones</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Protección de rutas por rol</div>
+            <div class="feature-desc">Redirect automático si el usuario no tiene el rol requerido para la página</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Badges de rol en el sidebar</div>
+            <div class="feature-desc">Indicadores visuales DIR y CARLA según el usuario autenticado</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo de Clientes</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Registro y edición de clientes</div>
+            <div class="feature-desc">Nombre, cédula/RIF, teléfono, dirección y datos de contacto</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Ficha de cliente consolidada</div>
+            <div class="feature-desc">Vista de créditos, ingresos y vehículos asociados desde un solo punto</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Búsqueda y listado paginado</div>
+            <div class="feature-desc">Filtrado por nombre o cédula/RIF en tiempo real</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo de Vehículos</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Inventario de vehículos MG &amp; MAXUS</div>
+            <div class="feature-desc">Registro de placa, modelo, año, color, VIN, precio base en USD</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Calculadora de financiamiento automática</div>
+            <div class="feature-desc">Precio base + 16% IVA + gastos admin = precio total con Saldo a Financiar en tiempo real</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Corrección anti-NaN en campos de moneda</div>
+            <div class="feature-desc">Validación defensiva en formatUSD que evita el bug "USDNaN" al dejar campos vacíos</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Vinculación vehículo → cliente → crédito</div>
+            <div class="feature-desc">Relación directa entre el vehículo financiado y el expediente financiero</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo de Ingresos — Flujo de 8 estados</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Registro de recibo de ingreso</div>
+            <div class="feature-desc">Número de recibo, monto, moneda (USD/VES), método de pago, concepto, placa</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Flujo de 8 estados con timestamps por paso</div>
+            <div class="feature-desc">registrado → pendiente_aprobacion → aprobado → enviado_carla → enviado_deposito → depositado → entregado_carla → reportado_vehimotors</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Timeline de auditoría en cada recibo</div>
+            <div class="feature-desc">Línea de tiempo visual con icono, estado y fecha de cada transición</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Botones de acción condicionales por rol y estado</div>
+            <div class="feature-desc">Cada botón aparece solo si el estado actual lo permite y el rol del usuario está autorizado</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Acción "Entregado a Carla" restringida a directores</div>
+            <div class="feature-desc">Solo roles jose/admin/director pueden marcar el depósito como entregado; guarda entregado_carla_at</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Confirmación de depósito (Confirmar depósito)</div>
+            <div class="feature-desc">Paso explícito de enviado_deposito → depositado con timestamp deposito_at</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Listado con filtros por estado y búsqueda</div>
+            <div class="feature-desc">8 filtros de estado con chips clicables, incluyendo filtro "Entregado Carla"</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Badges de color por estado en la lista</div>
+            <div class="feature-desc">Cada estado tiene su color diferenciado: amber, teal, blue, green, red, etc.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo de Egresos</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Registro de egresos con categorías</div>
+            <div class="feature-desc">Gastos operativos, pagos a proveedores, nómina y gastos varios</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Flujo de aprobación de egresos</div>
+            <div class="feature-desc">Estados pendiente → aprobado/rechazado con control de roles</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo de Créditos</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Creación de crédito con cuotas</div>
+            <div class="feature-desc">Monto total, plazo, cuota mensual calculada automáticamente</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Seguimiento de saldo por crédito</div>
+            <div class="feature-desc">Saldo se reduce automáticamente al registrar ingresos vinculados al crédito</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Historial de pagos por cuota</div>
+            <div class="feature-desc">Tabla cuota_ingresos y monto_pagado para pagos parciales y múltiples recibos por cuota</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Selector de crédito activo por cliente</div>
+            <div class="feature-desc">Clientes con múltiples créditos pueden seleccionar cuál editar sin cambiar de URL</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo Carla — Control de Depósitos</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Dashboard exclusivo para Carla</div>
+            <div class="feature-desc">Vista dedicada con tabla de depósitos pendientes de entrega y ya entregados</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Tabla de pendientes con monto total</div>
+            <div class="feature-desc">Ingresos en estado "depositado" ordenados por fecha de depósito más antigua</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Tabla de entregados con fecha de entrega</div>
+            <div class="feature-desc">Historial de los últimos 50 ingresos marcados como entregado_carla con timestamp</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Badge de pendientes en el sidebar</div>
+            <div class="feature-desc">Contador teal en el ítem de navegación "Carla" visible para roles autorizados</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Columna entregado_carla_at en base de datos</div>
+            <div class="feature-desc">Migración aplicada: timestamp de entrega guardado por operación</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo de Aprobaciones</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Cola de solicitudes de cambio</div>
+            <div class="feature-desc">Cualquier modificación sensible genera una solicitud pendiente de aprobación</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Badge de aprobaciones pendientes en sidebar</div>
+            <div class="feature-desc">Contador rojo visible para todos los roles, desaparece cuando la cola está vacía</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo de Tasas</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Registro de tasas de cambio USD/VES</div>
+            <div class="feature-desc">Histórico de tasas con fecha, soporte para operaciones en ambas monedas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo de Reportes</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Dashboard con KPIs financieros en tiempo real</div>
+            <div class="feature-desc">Ingresos del mes, egresos, créditos activos, vehículos en inventario</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Reportes filtrados por rango de fechas y categoría</div>
+            <div class="feature-desc">Exportable como PDF desde el navegador con impresión optimizada</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Documentos de Empresa</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Repositorio de documentos corporativos</div>
+            <div class="feature-desc">Almacenamiento y acceso a documentos legales, contratos y archivos de la empresa</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">PWA &amp; Experiencia Móvil</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Progressive Web App instalable</div>
+            <div class="feature-desc">Manifest con nombre, iconos y colores de La Oriental — instala como app nativa en iOS y Android</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Ícono dinámico con identidad de marca</div>
+            <div class="feature-desc">ImageResponse genera iconos 192x192 y 512x512 con líneas de velocidad estilo La Oriental</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Apple Web App meta tags</div>
+            <div class="feature-desc">apple-web-app-capable, status bar black-translucent, icono apple-touch-icon</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Sidebar drawer para móvil</div>
+            <div class="feature-desc">Navegación lateral deslizable con overlay oscuro, botón hamburguesa y cierre al navegar</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Padding responsive en todas las páginas</div>
+            <div class="feature-desc">p-4 en móvil, lg:p-8 en desktop — aplicado en todos los módulos y páginas de detalle</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Infraestructura &amp; Dominio</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Dominio personalizado centrodemando.laoriental.co</div>
+            <div class="feature-desc">Configuración DNS con CNAME y registros A apuntando a la infraestructura cloud</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">SSL/HTTPS automático en el dominio personalizado</div>
+            <div class="feature-desc">Certificado TLS provisionado automáticamente al agregar el dominio</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Autenticación actualizada para nuevo dominio</div>
+            <div class="feature-desc">URLs de redirect en OAuth configuradas para centrodemando.laoriental.co y dominio de respaldo</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-check">✓</span>
+          <div>
+            <div class="feature-name">Rutas /docs y /devlog en producción</div>
+            <div class="feature-desc">Documentación cliente y bitácora interna accesibles desde el dominio de producción</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-count">62 funcionalidades entregadas en este sprint ✦</div>
+  </section>
+
+  <!-- ARQUITECTURA TÉCNICA -->
+  <section>
+    <p class="section-tag">Ingeniería</p>
+    <h2 class="section-title">Arquitectura Técnica</h2>
+
+    <div class="arch-diagram">
+      <pre>
+  <span class="hl">CLIENTE (Navegador / PWA)</span>
+         │
+         ▼
+  <span class="hl">Next.js 15 App Router</span>  ──  Edge Middleware  ──  Auth Guard
+         │
+    ┌────┴────┐
+    │         │
+<span class="hl">Server Components</span>   <span class="hl">Client Components</span>
+(SSR, data fetch)    (interactividad, forms)
+    │
+    ▼
+<span class="hl">Supabase PostgreSQL</span>  ──  Row-Level Security (RLS)
+    │
+    ├── clientes
+    ├── vehiculos
+    ├── ingresos       ←── estado machine (8 estados)
+    ├── egresos
+    ├── creditos
+    ├── cuotas
+    ├── cuota_ingresos  ←── junction table (pagos parciales)
+    ├── tasas
+    └── solicitudes_cambio
+
+<span class="hl">Supabase Auth</span>  ──  user_metadata.rol  ──  5 roles
+<span class="hl">Vercel</span>          ──  Edge Network        ──  CI/CD automático
+<span class="hl">ImageResponse</span>  ──  Íconos dinámicos    ──  PWA + iOS
+      </pre>
+    </div>
+
+    <div class="tech-chips">
+      <span class="chip chip-fe">⚡ Next.js 15 App Router</span>
+      <span class="chip chip-fe">🎨 Tailwind CSS</span>
+      <span class="chip chip-fe">📦 TypeScript (strict)</span>
+      <span class="chip chip-fe">🖼 next/og ImageResponse</span>
+      <span class="chip chip-be">🔧 Server Components</span>
+      <span class="chip chip-be">🔄 Server Actions</span>
+      <span class="chip chip-db">🗄 Supabase PostgreSQL</span>
+      <span class="chip chip-db">🔒 Row-Level Security</span>
+      <span class="chip chip-db">⏱ Timestamps de auditoría</span>
+      <span class="chip chip-auth">🛡 Supabase Auth</span>
+      <span class="chip chip-auth">👤 Role-based Access Control</span>
+      <span class="chip chip-infra">☁️ Vercel (Edge Network)</span>
+      <span class="chip chip-infra">🌐 Dominio personalizado</span>
+      <span class="chip chip-infra">🔐 SSL/TLS automático</span>
+      <span class="chip chip-pwa">📱 PWA Manifest</span>
+      <span class="chip chip-pwa">🍎 Apple Web App</span>
+    </div>
+  </section>
+
+  <!-- MÉTRICAS DE VALOR -->
+  <section>
+    <p class="section-tag">Valor entregado</p>
+    <h2 class="section-title">Métricas de Valor</h2>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-num">8</div>
+        <div class="metric-label">Estados de ingreso</div>
+        <div class="metric-note">trazabilidad completa de cada recibo</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num">5</div>
+        <div class="metric-label">Roles de acceso</div>
+        <div class="metric-note">permisos granulares por módulo y acción</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num">0</div>
+        <div class="metric-label">Errores de NaN en producción</div>
+        <div class="metric-note">validación defensiva en todos los campos numéricos</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num">100%</div>
+        <div class="metric-label">Operaciones con timestamp</div>
+        <div class="metric-note">auditoría completa de cuándo ocurrió cada acción</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num">2</div>
+        <div class="metric-label">Monedas soportadas</div>
+        <div class="metric-note">USD y VES con tasas históricas</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num">∞</div>
+        <div class="metric-label">Créditos por cliente</div>
+        <div class="metric-note">sin límite, seleccionables desde la ficha</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section>
+    <p class="section-tag">Cronología</p>
+    <h2 class="section-title">Timeline de Desarrollo</h2>
+    <div class="timeline">
+
+      <div class="tl-item">
+        <div class="tl-phase">Fase 1 · Fundamentos</div>
+        <div class="tl-title">Base del sistema y módulos core</div>
+        <div class="tl-items">
+          <div class="tl-bullet">Autenticación con Supabase Auth y manejo de roles via user_metadata</div>
+          <div class="tl-bullet">Módulos de clientes, vehículos, ingresos y egresos</div>
+          <div class="tl-bullet">Layout base con sidebar de navegación y rutas protegidas</div>
+          <div class="tl-bullet">Schema PostgreSQL con RLS y tablas principales</div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-phase">Fase 2 · Finanzas avanzadas</div>
+        <div class="tl-title">Créditos, cuotas y pagos parciales</div>
+        <div class="tl-items">
+          <div class="tl-bullet">Módulo de créditos con cuotas calculadas y saldo dinámico</div>
+          <div class="tl-bullet">Junction table cuota_ingresos para múltiples pagos por cuota</div>
+          <div class="tl-bullet">Calculadora de financiamiento vehicular con precio total y saldo</div>
+          <div class="tl-bullet">Módulo de tasas de cambio USD/VES históricas</div>
+          <div class="tl-bullet">Sistema de aprobaciones con cola y badges en sidebar</div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-phase">Fase 3 · Control operativo</div>
+        <div class="tl-title">Flujo Carla y estados de ingreso</div>
+        <div class="tl-items">
+          <div class="tl-bullet">Estado machine de 8 pasos para ingresos con timestamps por transición</div>
+          <div class="tl-bullet">Migración columna entregado_carla_at en tabla ingresos</div>
+          <div class="tl-bullet">Módulo exclusivo Carla con tablas de pendientes y entregados</div>
+          <div class="tl-bullet">Botones de acción condicionales con validación de rol en el servidor</div>
+          <div class="tl-bullet">Timeline visual de auditoría en cada recibo</div>
+          <div class="tl-bullet">Corrección de bug USDNaN en calculadora de vehículos</div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-phase">Fase 4 · Experiencia &amp; Deploy</div>
+        <div class="tl-title">PWA, móvil, dominio y documentación</div>
+        <div class="tl-items">
+          <div class="tl-bullet">PWA Manifest con iconos dinámicos generados con ImageResponse</div>
+          <div class="tl-bullet">Diseño de íconos con líneas de velocidad estilo La Oriental 192x512px</div>
+          <div class="tl-bullet">Sidebar drawer para móvil con ClientLayout y overlay interactivo</div>
+          <div class="tl-bullet">Padding responsive aplicado en todos los módulos (p-4 móvil / lg:p-8)</div>
+          <div class="tl-bullet">Dominio personalizado centrodemando.laoriental.co con SSL</div>
+          <div class="tl-bullet">Documentación /docs para cliente y /devlog interno Navi Dev</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ROADMAP -->
+  <section>
+    <p class="section-tag">Siguiente versión</p>
+    <h2 class="section-title">Roadmap Sugerido</h2>
+    <div class="roadmap-grid">
+
+      <div class="roadmap-card">
+        <span class="roadmap-badge">Próxima versión</span>
+        <div class="roadmap-title">Notificaciones push</div>
+        <div class="roadmap-desc">Alertas en tiempo real cuando hay nuevas aprobaciones pendientes, depósitos para Carla o cuotas vencidas. Aprovecha la infra de PWA ya instalada.</div>
+        <div class="roadmap-value">⚡ Valor: eliminación del "¿ya revisaste?" manual</div>
+      </div>
+
+      <div class="roadmap-card">
+        <span class="roadmap-badge">Próxima versión</span>
+        <div class="roadmap-title">Exportación de reportes a Excel</div>
+        <div class="roadmap-desc">Generación de archivos .xlsx de ingresos, egresos y créditos por rango de fechas, directamente desde el módulo de Reportes.</div>
+        <div class="roadmap-value">⚡ Valor: elimina el proceso manual de copiado a hojas</div>
+      </div>
+
+      <div class="roadmap-card">
+        <span class="roadmap-badge">Próxima versión</span>
+        <div class="roadmap-title">Fotografías de vehículos</div>
+        <div class="roadmap-desc">Galería de imágenes por vehículo directamente en el expediente. Útil para mostrar el estado del auto al momento de la venta.</div>
+        <div class="roadmap-value">⚡ Valor: expediente digital completo sin herramientas externas</div>
+      </div>
+
+      <div class="roadmap-card">
+        <span class="roadmap-badge">Próxima versión</span>
+        <div class="roadmap-title">Dashboard ejecutivo para José</div>
+        <div class="roadmap-desc">Vista de director con gráficas de ingresos vs egresos por mes, cartera de créditos activos, top clientes por monto y vehículos más vendidos.</div>
+        <div class="roadmap-value">⚡ Valor: toma de decisiones basada en datos, no en memoria</div>
+      </div>
+
+      <div class="roadmap-card">
+        <span class="roadmap-badge">Próxima versión</span>
+        <div class="roadmap-title">Firmas digitales en recibos</div>
+        <div class="roadmap-desc">Canvas de firma en el teléfono al momento de aprobar o entregar. La firma queda almacenada y vinculada al recibo como evidencia.</div>
+        <div class="roadmap-value">⚡ Valor: legalidad y trazabilidad sin papel</div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">NAVI DEV</div>
+  <div class="footer-sub">Infraestructura digital de clase mundial · © 2026 Navi Group · Desarrollado para La Oriental Automotors</div>
+</footer>
+
+</body>
+</html>

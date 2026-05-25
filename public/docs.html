@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Centro de Mando — Documentación | La Oriental Automotors</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: rgba(255,255,255,0.07);
+    --red: #D31F2A;
+    --red-soft: rgba(211,31,42,0.12);
+    --text: #e8e8e8;
+    --muted: #888;
+    --white: #ffffff;
+    --green: #10b981;
+    --green-soft: rgba(16,185,129,0.1);
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.6; }
+
+  /* TOPBAR */
+  .topbar { position: sticky; top: 0; z-index: 100; background: rgba(10,10,10,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .topbar-logo { display: flex; align-items: center; gap: 12px; }
+  .logo-badge { width: 36px; height: 36px; background: var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: white; letter-spacing: -0.5px; flex-shrink: 0; }
+  .topbar-title { font-weight: 700; font-size: 15px; color: var(--white); }
+  .topbar-sub { font-size: 12px; color: var(--muted); }
+  .btn-pdf { background: var(--red); color: white; border: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: opacity 0.2s; }
+  .btn-pdf:hover { opacity: 0.88; }
+
+  /* HERO */
+  .hero { padding: 72px 32px 56px; max-width: 900px; margin: 0 auto; }
+  .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; background: var(--green-soft); color: var(--green); font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 100px; margin-bottom: 24px; }
+  .hero-eyebrow::before { content: '✓'; }
+  .hero h1 { font-size: clamp(32px, 5vw, 52px); font-weight: 800; color: var(--white); line-height: 1.1; letter-spacing: -1px; margin-bottom: 16px; }
+  .hero h1 span { color: var(--red); }
+  .hero-sub { font-size: 18px; color: var(--muted); max-width: 600px; margin-bottom: 32px; line-height: 1.5; }
+  .hero-meta { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .meta-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .meta-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+  /* SECTION */
+  .section { padding: 48px 32px; max-width: 900px; margin: 0 auto; }
+  .section + .section { border-top: 1px solid var(--border); }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--red); text-transform: uppercase; margin-bottom: 8px; }
+  .section-title { font-size: 26px; font-weight: 800; color: var(--white); margin-bottom: 8px; letter-spacing: -0.5px; }
+  .section-desc { font-size: 15px; color: var(--muted); margin-bottom: 32px; max-width: 580px; }
+
+  /* CARDS */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: border-color 0.2s; }
+  .card:hover { border-color: rgba(211,31,42,0.3); }
+  .card-icon { width: 40px; height: 40px; background: var(--red-soft); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 16px; }
+  .card h3 { font-size: 15px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+  .card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .card-user { display: inline-block; background: var(--red-soft); color: var(--red); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; margin-top: 12px; }
+
+  /* ROLES TABLE */
+  .roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .role-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .role-name { font-size: 14px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+  .role-title { font-size: 11px; color: var(--red); font-weight: 600; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .role-perms { list-style: none; }
+  .role-perms li { font-size: 12px; color: var(--muted); padding: 3px 0; display: flex; align-items: flex-start; gap: 6px; }
+  .role-perms li::before { content: '✓'; color: var(--green); font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+
+  /* FLOW */
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow-step { display: flex; gap: 20px; }
+  .flow-line { display: flex; flex-direction: column; align-items: center; }
+  .flow-num { width: 32px; height: 32px; border-radius: 50%; background: var(--red); color: white; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .flow-connector { width: 2px; flex: 1; background: var(--border); min-height: 20px; margin: 4px 0; }
+  .flow-step:last-child .flow-connector { display: none; }
+  .flow-content { padding: 4px 0 28px; }
+  .flow-title { font-size: 14px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+  .flow-desc { font-size: 13px; color: var(--muted); }
+  .flow-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 100px; margin-top: 6px; }
+  .badge-auto { background: rgba(16,185,129,0.12); color: var(--green); }
+  .badge-manual { background: var(--red-soft); color: var(--red); }
+  .badge-director { background: rgba(139,92,246,0.12); color: #a78bfa; }
+
+  /* RULES */
+  .rules-list { display: flex; flex-direction: column; gap: 10px; }
+  .rule-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px; }
+  .rule-check { color: var(--green); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .rule-text strong { display: block; font-size: 14px; color: var(--white); margin-bottom: 3px; }
+  .rule-text span { font-size: 13px; color: var(--muted); }
+
+  /* URL CARDS */
+  .url-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .url-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .url-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; margin-bottom: 12px; background: var(--green-soft); color: var(--green); }
+  .url-link { font-size: 15px; font-weight: 700; color: var(--white); word-break: break-all; display: block; margin-bottom: 6px; }
+  .url-desc { font-size: 13px; color: var(--muted); }
+
+  /* SUPPORT */
+  .support-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; }
+  .support-box p { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .support-box strong { color: var(--white); }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 40px 32px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+
+  /* PRINT */
+  @media print {
+    .topbar { position: relative; }
+    .btn-pdf { display: none; }
+    body { background: white; color: #111; }
+    .card, .role-card, .rule-item, .url-card, .support-box { background: #f9f9f9; border-color: #ddd; }
+    .hero h1, .card h3, .flow-title, .rule-text strong, .url-link, .section-title { color: #111; }
+    .topbar-title, .topbar-sub { color: #111; }
+    .topbar { background: white; border-bottom-color: #ddd; }
+  }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 12px 16px; }
+    .hero, .section { padding-left: 16px; padding-right: 16px; }
+    .hero { padding-top: 40px; }
+    .card-grid, .roles-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-badge">LO</div>
+    <div>
+      <div class="topbar-title">Centro de Mando</div>
+      <div class="topbar-sub">La Oriental Automotors · MG & MAXUS</div>
+    </div>
+  </div>
+  <button class="btn-pdf" onclick="window.print()">⬇ Descargar PDF</button>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Sistema activo en producción</div>
+  <h1>Centro de Mando<br/><span>La Oriental</span> Finanzas</h1>
+  <p class="hero-sub">Sistema de gestión financiera interno para La Oriental Automotors. Control de ingresos, créditos, cuotas y flujo de caja en tiempo real.</p>
+  <div class="hero-meta">
+    <div class="meta-item"><div class="meta-dot"></div> Entrega: 25 de mayo, 2026</div>
+    <div class="meta-item"><div class="meta-dot"></div> Versión 1.0 · Sprint 1</div>
+    <div class="meta-item"><div class="meta-dot"></div> Acceso: centrodemando.laoriental.co</div>
+  </div>
+</div>
+
+<!-- MÓDULOS -->
+<div class="section">
+  <div class="section-label">Sistema</div>
+  <div class="section-title">Módulos del Centro de Mando</div>
+  <p class="section-desc">El sistema está compuesto por los siguientes módulos, cada uno orientado a una función operativa específica.</p>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>Dashboard</h3>
+      <p>Vista general del estado financiero: ingresos del mes, egresos, créditos activos y cuotas próximas a vencer.</p>
+      <span class="card-user">Todos los usuarios</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">👥</div>
+      <h3>Clientes</h3>
+      <p>Registro y consulta de clientes con datos de contacto, historial de vehículos y créditos asociados.</p>
+      <span class="card-user">Todos los usuarios</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">🚗</div>
+      <h3>Vehículos</h3>
+      <p>Gestión del inventario de vehículos vendidos, vinculación con clientes y configuración de planes de financiamiento.</p>
+      <span class="card-user">José · Admin</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">💰</div>
+      <h3>Ingresos</h3>
+      <p>Registro de cobros con múltiples métodos de pago. Cada pago se vincula directamente a las cuotas del cliente y reduce su saldo automáticamente.</p>
+      <span class="card-user">Lesydé · Mary · José</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">📤</div>
+      <h3>Egresos</h3>
+      <p>Control de salidas de dinero: pagos a Vehimotors, gastos administrativos y otros. Con flujo de aprobación integrado.</p>
+      <span class="card-user">José · Admin</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">📋</div>
+      <h3>Créditos</h3>
+      <p>Seguimiento completo de créditos por cliente y vehículo. Plan de cuotas, estados de pago, abonos parciales y recibos vinculados.</p>
+      <span class="card-user">Todos los usuarios</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">💱</div>
+      <h3>Tasas</h3>
+      <p>Registro y consulta del tipo de cambio USD/VES para conversiones en los cobros en bolívares.</p>
+      <span class="card-user">José · Admin</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">📈</div>
+      <h3>Reportes</h3>
+      <p>Resúmenes financieros del período: totales cobrados, pendientes, egresos y estado general del flujo de caja.</p>
+      <span class="card-user">José · Admin</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏦</div>
+      <h3>Registro Carla</h3>
+      <p>Vista exclusiva del control de depósitos. Muestra qué dinero está depositado en banco pero pendiente de entrega física, y el historial de entregas realizadas.</p>
+      <span class="card-user">Carla · José · Admin</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">✅</div>
+      <h3>Aprobaciones</h3>
+      <p>Flujo de revisión para ingresos y cambios. José aprueba, rechaza o solicita corrección con registro de quién y cuándo aprobó.</p>
+      <span class="card-user">José · Admin</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">📁</div>
+      <h3>Docs. Empresa</h3>
+      <p>Repositorio de documentos internos de la empresa: contratos, formatos y archivos institucionales.</p>
+      <span class="card-user">Todos los usuarios</span>
+    </div>
+  </div>
+</div>
+
+<!-- ROLES -->
+<div class="section">
+  <div class="section-label">Acceso</div>
+  <div class="section-title">Roles y permisos</div>
+  <p class="section-desc">Cada usuario accede con su correo y contraseña. El sistema reconoce automáticamente su nivel de acceso.</p>
+  <div class="roles-grid">
+    <div class="role-card">
+      <div class="role-name">José Rojas</div>
+      <div class="role-title">Director</div>
+      <ul class="role-perms">
+        <li>Acceso completo al sistema</li>
+        <li>Editar cualquier crédito (montos, cuotas, fechas)</li>
+        <li>Aprobar y rechazar ingresos</li>
+        <li>Confirmar depósitos bancarios</li>
+        <li>Marcar entregas a Carla</li>
+        <li>Reportar a Vehimotors</li>
+        <li>Gestionar tasas de cambio</li>
+        <li>Ver todos los reportes</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-name">Lesydé</div>
+      <div class="role-title">Operadora</div>
+      <ul class="role-perms">
+        <li>Registrar cobros de clientes</li>
+        <li>Seleccionar cuotas a pagar</li>
+        <li>Ver historial de ingresos</li>
+        <li>Consultar créditos y cuotas</li>
+        <li>Ver clientes y vehículos</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-name">Mary</div>
+      <div class="role-title">Operadora</div>
+      <ul class="role-perms">
+        <li>Registrar cobros de clientes</li>
+        <li>Seleccionar cuotas a pagar</li>
+        <li>Ver historial de ingresos</li>
+        <li>Consultar créditos y cuotas</li>
+        <li>Ver clientes y vehículos</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-name">Carla</div>
+      <div class="role-title">Contabilidad</div>
+      <ul class="role-perms">
+        <li>Ver depósitos pendientes de entrega</li>
+        <li>Ver historial de depósitos recibidos</li>
+        <li>Consultar ingresos y detalles de recibos</li>
+        <li>Acceso a módulo "Registro Carla"</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- FLUJO DE INGRESOS -->
+<div class="section">
+  <div class="section-label">Operación</div>
+  <div class="section-title">Flujo de un cobro</div>
+  <p class="section-desc">Así funciona el proceso completo desde que un cliente paga hasta que el dinero queda registrado en contabilidad.</p>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-num">1</div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Registro del cobro</div>
+        <div class="flow-desc">Lesydé o Mary seleccionan el cliente, eligen las cuotas a cubrir y registran el monto con el método de pago (efectivo, bolívares, USDT u otro). Si el cliente paga con varios métodos, se genera un recibo por cada uno.</div>
+        <span class="flow-badge badge-manual">Operadora</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-num">2</div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Actualización automática de cuotas</div>
+        <div class="flow-desc">El sistema aplica el monto a las cuotas seleccionadas. Si el dinero alcanza para cubrir una cuota completa, queda como <em>pagada</em>. Si es parcial, queda como <em>abono parcial</em> y el saldo del crédito disminuye en exactamente lo que se pagó.</div>
+        <span class="flow-badge badge-auto">Automático</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-num">3</div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Aprobación por José</div>
+        <div class="flow-desc">José revisa el ingreso registrado y lo aprueba, rechaza o solicita corrección. Queda registrado quién aprobó y en qué fecha.</div>
+        <span class="flow-badge badge-director">Director</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-num">4</div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Notificación a Carla (opcional)</div>
+        <div class="flow-desc">Si el ingreso debe pasar por Carla antes del depósito, se le notifica con un clic.</div>
+        <span class="flow-badge badge-manual">José · Admin</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-num">5</div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Envío a depósito</div>
+        <div class="flow-desc">Se marca el ingreso como listo para depositar en banco. El sistema crea automáticamente un egreso hacia Vehimotors si aplica.</div>
+        <span class="flow-badge badge-director">José · Admin</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-num">6</div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Confirmación de depósito</div>
+        <div class="flow-desc">Una vez confirmado en banco, José marca el ingreso como <em>depositado</em>. Aparece en el módulo de Carla como pendiente de entrega.</div>
+        <span class="flow-badge badge-director">Director</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-num">7</div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Entrega a Carla</div>
+        <div class="flow-desc">José registra la entrega física del depósito a Carla. Queda registrado con fecha y hora. Carla lo ve en su módulo como recibido.</div>
+        <span class="flow-badge badge-director">Director</span>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-num">8</div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Reporte a Vehimotors</div>
+        <div class="flow-desc">Último paso del flujo. El ingreso queda cerrado como reportado. Queda todo el historial trazable desde el cobro inicial hasta la entrega final.</div>
+        <span class="flow-badge badge-director">Director</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REGLAS DEL NEGOCIO -->
+<div class="section">
+  <div class="section-label">Lógica del sistema</div>
+  <div class="section-title">Reglas del negocio</div>
+  <p class="section-desc">El sistema aplica estas reglas automáticamente, sin intervención manual.</p>
+  <div class="rules-list">
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Un recibo por método de pago</strong>
+        <span>Si un cliente paga con efectivo + bolívares + USDT, se generan 3 recibos separados, todos vinculados a las mismas cuotas.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Saldo del crédito se reduce automáticamente</strong>
+        <span>Al registrar un cobro, el saldo pendiente del crédito disminuye exactamente en el monto aplicado. Si llega a cero, el crédito pasa a estado "Pagado".</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Abono parcial cuando el monto no alcanza</strong>
+        <span>Si el pago cubre una cuota incompleta, queda marcada como "Abono parcial" en naranja, mostrando cuánto se pagó y cuánto queda.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Prioridad La Oriental sobre Vehimotors</strong>
+        <span>En el selector de cuotas y en el panel informativo, siempre aparece primero el crédito de La Oriental y luego el de Vehimotors.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Clientes con múltiples vehículos y créditos</strong>
+        <span>El sistema agrupa todos los créditos y cuotas del cliente en una sola vista, permitiendo elegir exactamente a cuál crédito aplicar cada pago.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Trazabilidad completa de cada cobro</strong>
+        <span>Cada ingreso tiene un número de recibo único, historial de estados con fechas, quién aprobó y a qué cuotas se aplicó.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Solo José puede editar parámetros financieros</strong>
+        <span>El director puede modificar montos, número de cuotas, frecuencia, saldo y fechas de inicio de cualquier crédito directamente.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Egreso automático a Vehimotors al depositar</strong>
+        <span>Al marcar un ingreso como "Enviado a depositar", el sistema crea automáticamente el egreso correspondiente hacia Vehimotors.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-check">✓</div>
+      <div class="rule-text">
+        <strong>Monedas: USD y VES con tasa de cambio</strong>
+        <span>Los cobros en bolívares se convierten a dólares usando la tasa registrada. El sistema muestra el equivalente en USD en cada transacción.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- URLs -->
+<div class="section">
+  <div class="section-label">Acceso</div>
+  <div class="section-title">Dirección del sistema</div>
+  <p class="section-desc">El Centro de Mando es una aplicación web que funciona en cualquier navegador y puede instalarse como app en el teléfono.</p>
+  <div class="url-cards">
+    <div class="url-card">
+      <span class="url-badge">✓ Producción</span>
+      <a class="url-link" href="https://centrodemando.laoriental.co" target="_blank">centrodemando.laoriental.co</a>
+      <p class="url-desc">Acceso principal para todo el equipo. Funciona en computadora, tablet y teléfono.</p>
+    </div>
+    <div class="url-card">
+      <span class="url-badge" style="background:rgba(139,92,246,0.12);color:#a78bfa;">📱 App móvil</span>
+      <span class="url-link">Instalable como app</span>
+      <p class="url-desc">En iPhone: Safari → Compartir → "Añadir a pantalla de inicio". En Android: Chrome → menú → "Instalar app". El ícono LO CDM aparece en el teléfono.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SOPORTE -->
+<div class="section">
+  <div class="section-label">Soporte</div>
+  <div class="section-title">Contacto y mantenimiento</div>
+  <div class="support-box">
+    <p>Para reportar un problema, solicitar un ajuste o una nueva funcionalidad, contactar a través de:</p>
+    <p style="margin-top:16px;"><strong>WhatsApp Navi Group:</strong> Canal directo de soporte técnico</p>
+    <p style="margin-top:8px;"><strong>Tiempo de respuesta:</strong> Mismo día en horario laboral</p>
+    <p style="margin-top:8px;"><strong>Actualizaciones:</strong> El sistema se actualiza automáticamente. No requiere instalación manual de ninguna versión.</p>
+    <p style="margin-top:16px;color:#888;font-size:13px;">Las credenciales de acceso son personales e intransferibles. Si un usuario necesita ser añadido o eliminado, solicitarlo a soporte.</p>
+  </div>
+</div>
+
+<div class="footer">
+  <p>Centro de Mando · La Oriental Automotors MG & MAXUS · Maturín, Edo. Monagas</p>
+  <p style="margin-top:6px;">Documento generado el 25 de mayo de 2026 · Versión 1.0</p>
+</div>
+
+</body>
+</html>

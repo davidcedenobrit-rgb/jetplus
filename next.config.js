@@ -32,6 +32,10 @@ const nextConfig = {
       headers: securityHeaders,
     },
   ],
+  rewrites: async () => [
+    { source: '/docs',    destination: '/docs.html'    },
+    { source: '/devlog',  destination: '/devlog.html'  },
+  ],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
