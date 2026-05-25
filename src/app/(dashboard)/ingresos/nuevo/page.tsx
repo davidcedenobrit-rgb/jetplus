@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
 import { IngresoSchema } from '@/lib/validations'
-import { ArrowLeft, Save, Search, X, Car, Hash, Check, CreditCard } from 'lucide-react'
+import { ArrowLeft, Save, Search, X, Car, Hash, Check, CreditCard, AlertCircle, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
 import type { Cliente, Vehiculo } from '@/types/database'
@@ -32,6 +32,11 @@ const planBadgeClass = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'text-purple-700 bg-purple-50 border-purple-200' :
   tipo === 'financiamiento_vehimotors' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' :
   'text-gray-600 bg-gray-50 border-gray-200'
+
+// La Oriental primero (0), Vehimotors segundo (1), resto al final (2)
+const planPriority = (tipo: string | null) =>
+  tipo === 'inicial_la_oriental' ? 0 :
+  tipo === 'financiamiento_vehimotors' ? 1 : 2
 
 type ModosBusqueda = 'placa' | 'cliente'
 
@@ -148,15 +153,18 @@ export default function NuevoIngresoPage() {
     // Grupos para la UI (vehículo → crédito → cuotas), solo los que tienen cuotas pendientes
     const grupos: GrupoVehiculo[] = vehiculos
       .map((vehiculo: any) => {
-        const creditosVeh = creditos.filter((c: any) => c.vehiculo_id === vehiculo.id)
+        const creditosVeh = creditos
+          .filter((c: any) => c.vehiculo_id === vehiculo.id)
+          // La Oriental primero, Vehimotors después
+          .sort((a: any, b: any) => planPriority(a.plan_tipo) - planPriority(b.plan_tipo))
         return {
           vehiculo,
           creditos: creditosVeh
-            .map(credito => ({
+            .map((credito: any) => ({
               credito,
               cuotasPendientes: cuotasEnriquecidas.filter((c: any) => c.credito_id === credito.id),
             }))
-            .filter(cr => cr.cuotasPendientes.length > 0),
+            .filter((cr: any) => cr.cuotasPendientes.length > 0),
         }
       })
       .filter((g: GrupoVehiculo) => g.creditos.length > 0)
@@ -227,6 +235,36 @@ export default function NuevoIngresoPage() {
       setMonto(totalCuotasSeleccionadas.toFixed(2))
     }
   }, [totalCuotasSeleccionadas])
+
+  // ── Aviso informativo: vencidas y próximas (una por crédito, La Oriental primero) ──
+  const cuotasVencidasInfo = useMemo(() => {
+    const hoyStr = new Date().toISOString().split('T')[0]
+    return todasLasCuotas
+      .filter(c => c.fecha_vencimiento < hoyStr)
+      .sort((a, b) => planPriority(a._credito?.plan_tipo) - planPriority(b._credito?.plan_tipo))
+  }, [todasLasCuotas])
+
+  const proximasCuotasInfo = useMemo(() => {
+    const hoyStr = new Date().toISOString().split('T')[0]
+    const vistas = new Set<string>()
+    const proximas: any[] = []
+    const futuras = todasLasCuotas
+      .filter(c => c.fecha_vencimiento >= hoyStr)
+      .sort((a, b) => {
+        // La Oriental primero, luego por fecha
+        const pA = planPriority(a._credito?.plan_tipo)
+        const pB = planPriority(b._credito?.plan_tipo)
+        if (pA !== pB) return pA - pB
+        return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
+      })
+    for (const c of futuras) {
+      if (!vistas.has(c.credito_id)) {
+        vistas.add(c.credito_id)
+        proximas.push(c)
+      }
+    }
+    return proximas
+  }, [todasLasCuotas])
 
   // ── Lista plana de cuotas a aplicar en submit ──
   const cuotasParaAplicar = useMemo(() =>
@@ -488,6 +526,96 @@ export default function NuevoIngresoPage() {
             </div>
           )}
         </div>
+
+        {/* ── AVISO: ESTADO DEL CRÉDITO ── */}
+        {hayClienteResuelto && !loadingCuotas && (cuotasVencidasInfo.length > 0 || proximasCuotasInfo.length > 0) && (
+          <div className="card p-5">
+            <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
+              <div className="w-1 h-4 bg-oriental-red rounded-full" />
+              Estado del crédito
+            </h2>
+            <div className="space-y-3">
+
+              {/* Vencidas */}
+              {cuotasVencidasInfo.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle size={15} className="text-red-600" />
+                    <p className="text-sm font-bold text-red-700">
+                      {cuotasVencidasInfo.length} cuota{cuotasVencidasInfo.length > 1 ? 's' : ''} vencida{cuotasVencidasInfo.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {cuotasVencidasInfo.map((c: any) => (
+                      <div key={c.id} className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+                        <div>
+                          <p className="text-sm font-semibold text-red-800">
+                            Cuota #{c.numero_cuota}
+                            <span className={`ml-2 text-xs px-1.5 py-0.5 rounded border ${planBadgeClass(c._credito?.plan_tipo)}`}>
+                              {planLabel(c._credito?.plan_tipo)}
+                            </span>
+                          </p>
+                          <p className="text-xs text-red-500">
+                            Venció: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {c._vehiculo && <span className="ml-2 font-mono">· {c._vehiculo.placa ?? c._vehiculo.modelo}</span>}
+                          </p>
+                        </div>
+                        <p className="font-extrabold text-red-700 text-base">
+                          ${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Próximas */}
+              {proximasCuotasInfo.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar size={15} className="text-oriental-gray" />
+                    <p className="text-sm font-bold text-oriental-black">
+                      Próxima{proximasCuotasInfo.length > 1 ? 's' : ''} cuota{proximasCuotasInfo.length > 1 ? 's' : ''} a pagar
+                      {proximasCuotasInfo.length > 1 && (
+                        <span className="ml-1 text-xs font-normal text-oriental-gray">({proximasCuotasInfo.length} créditos activos)</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {proximasCuotasInfo.map((c: any) => (
+                      <div key={c.id} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+                        <div>
+                          <p className="text-sm font-semibold text-blue-800">
+                            Cuota #{c.numero_cuota}
+                            <span className={`ml-2 text-xs px-1.5 py-0.5 rounded border ${planBadgeClass(c._credito?.plan_tipo)}`}>
+                              {planLabel(c._credito?.plan_tipo)}
+                            </span>
+                          </p>
+                          <p className="text-xs text-blue-500">
+                            Vence: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {c._vehiculo && <span className="ml-2 font-mono">· {c._vehiculo.placa ?? c._vehiculo.modelo}</span>}
+                          </p>
+                        </div>
+                        <p className="font-extrabold text-blue-700 text-base">
+                          ${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    ))}
+                    {proximasCuotasInfo.length > 1 && (
+                      <div className="flex items-center justify-between bg-blue-100 rounded-lg px-4 py-2 mt-1">
+                        <p className="text-sm font-bold text-blue-900">Total a pagar este período</p>
+                        <p className="font-extrabold text-blue-900 text-base">
+                          ${proximasCuotasInfo.reduce((s: number, c: any) => s + Number(c.monto), 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
 
         {/* ── SELECTOR DE CUOTAS ── */}
         {hayClienteResuelto && (
