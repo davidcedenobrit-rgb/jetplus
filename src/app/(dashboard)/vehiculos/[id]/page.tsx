@@ -4,6 +4,7 @@ import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, Car, User, Calendar, Hash, CreditCard, TrendingUp } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
+import VehiculoDocumentos from './VehiculoDocumentos'
 
 export default async function VehiculoDetallePage({
   params,
@@ -29,6 +30,12 @@ export default async function VehiculoDetallePage({
     .eq('vehiculo_id', id)
     .order('fecha_pago', { ascending: false })
     .limit(20)
+
+  const { data: archivos } = await supabase
+    .from('archivos')
+    .select('id, tipo, url, nombre, created_at')
+    .eq('vehiculo_id', id)
+    .order('created_at', { ascending: true })
 
   const estadoColors: Record<string, string> = {
     activo: 'bg-green-100 text-green-800',
@@ -95,8 +102,16 @@ export default async function VehiculoDetallePage({
           <DeleteButton table="vehiculos" id={id} redirectTo="/vehiculos" label="Eliminar vehículo" />
         </div>
 
-        {/* Ingresos asociados */}
-        <div className="lg:col-span-2">
+        {/* Columna derecha: documentos + ingresos */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Documentos */}
+          <VehiculoDocumentos
+            vehiculoId={id}
+            archivosIniciales={archivos ?? []}
+          />
+
+          {/* Ingresos asociados */}
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-oriental-black flex items-center gap-2">
