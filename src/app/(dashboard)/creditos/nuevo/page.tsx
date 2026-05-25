@@ -160,6 +160,24 @@ export default function NuevoCreditoPage() {
     return getCuotasFromPlan(planAC500Sel)
   }, [planAC500Sel])
 
+  // Auto-calcular monto por cuota — La Oriental
+  useEffect(() => {
+    const monto  = parseFloat(inicialOrientalMonto) || 0
+    const cuotas = parseInt(inicialOrientalCuotas)  || 0
+    if (monto > 0 && cuotas > 0) {
+      setInicialOrientalMontoCuota((monto / cuotas).toFixed(2))
+    }
+  }, [inicialOrientalMonto, inicialOrientalCuotas])
+
+  // Auto-calcular monto por cuota — Vehimotors
+  useEffect(() => {
+    const monto  = parseFloat(vehimotorsMonto) || 0
+    const cuotas = parseInt(vehimotorsCuotas)  || 0
+    if (monto > 0 && cuotas > 0) {
+      setVehimotorsMontoCuota((monto / cuotas).toFixed(2))
+    }
+  }, [vehimotorsMonto, vehimotorsCuotas])
+
   // Plan personalizado — cálculos
   const calcInicialOriental = useMemo(() => {
     const montoTotal = parseFloat(inicialOrientalMonto) || 0
@@ -629,8 +647,13 @@ export default function NuevoCreditoPage() {
                       value={inicialOrientalCuotas} onChange={e => setInicialOrientalCuotas(e.target.value)} />
                   </div>
                   <div>
-                    <label className="label">Monto por cuota (USD)</label>
-                    <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                    <label className="label flex items-center gap-1.5">
+                      Monto por cuota (USD)
+                      {inicialOrientalMontoCuota && parseFloat(inicialOrientalMonto) > 0 && (
+                        <span className="text-[10px] font-normal text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full">auto</span>
+                      )}
+                    </label>
+                    <input type="number" step="0.01" min="0" className="input font-semibold" placeholder="0.00"
                       value={inicialOrientalMontoCuota} onChange={e => setInicialOrientalMontoCuota(e.target.value)} />
                   </div>
                 </div>
@@ -699,8 +722,13 @@ export default function NuevoCreditoPage() {
                       value={vehimotorsCuotas} onChange={e => setVehimotorsCuotas(e.target.value)} />
                   </div>
                   <div>
-                    <label className="label">Monto por cuota (USD)</label>
-                    <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
+                    <label className="label flex items-center gap-1.5">
+                      Monto por cuota (USD)
+                      {vehimotorsMontoCuota && parseFloat(vehimotorsMonto) > 0 && (
+                        <span className="text-[10px] font-normal text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full">auto</span>
+                      )}
+                    </label>
+                    <input type="number" step="0.01" min="0" className="input font-semibold" placeholder="0.00"
                       value={vehimotorsMontoCuota} onChange={e => setVehimotorsMontoCuota(e.target.value)} />
                   </div>
                 </div>
