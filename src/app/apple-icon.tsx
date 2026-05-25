@@ -8,40 +8,30 @@ export default function AppleIcon() {
     (
       <div
         style={{
-          width: '100%',
-          height: '100%',
+          width: 180,
+          height: 180,
+          background: '#0f0f0f',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#D31F2A',
           borderRadius: 36,
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        <span
-          style={{
-            color: 'white',
-            fontSize: 72,
-            fontWeight: 800,
-            letterSpacing: '-2px',
-            fontFamily: 'sans-serif',
-            lineHeight: 1,
-          }}
-        >
-          LO
-        </span>
-        <span
-          style={{
-            color: 'rgba(255,255,255,0.7)',
-            fontSize: 20,
-            fontWeight: 600,
-            letterSpacing: '3px',
-            fontFamily: 'sans-serif',
-            marginTop: 6,
-          }}
-        >
-          CDM
-        </span>
+        {/* Líneas rojas de velocidad — estilo La Oriental */}
+        <div style={{ position: 'absolute', left: 14, top: 52, width: 34, height: 10, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 2 }} />
+        <div style={{ position: 'absolute', left: 10, top: 72, width: 44, height: 14, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 2 }} />
+        <div style={{ position: 'absolute', left: 14, top: 96, width: 34, height: 10, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 2 }} />
+        {/* Texto principal */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginLeft: 28 }}>
+          <span style={{ color: 'white', fontSize: 68, fontWeight: 900, fontFamily: 'sans-serif', lineHeight: 1, letterSpacing: '-3px', display: 'flex' }}>
+            LO
+          </span>
+          <span style={{ color: '#D31F2A', fontSize: 20, fontWeight: 700, fontFamily: 'sans-serif', letterSpacing: '4px', marginTop: 2, display: 'flex' }}>
+            CDM
+          </span>
+        </div>
       </div>
     ),
     { ...size }
