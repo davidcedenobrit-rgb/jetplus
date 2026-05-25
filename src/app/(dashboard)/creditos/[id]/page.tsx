@@ -125,7 +125,7 @@ export default async function CreditoDetallePage({
   const esVehiculoConMultiplesCreditos = creditos.length > 1
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-8 max-w-7xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/creditos" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
@@ -157,7 +157,7 @@ export default async function CreditoDetallePage({
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Columna izquierda */}
         <div className="space-y-6">
 
@@ -277,7 +277,7 @@ export default async function CreditoDetallePage({
         </div>
 
         {/* Tabla unificada de cuotas */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <div className="card p-6">
             <h2 className="font-bold text-oriental-black mb-4 flex items-center gap-2 flex-wrap">
               <Calendar size={18} className="text-oriental-gray" />
