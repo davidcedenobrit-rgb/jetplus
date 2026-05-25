@@ -48,6 +48,7 @@ interface PlanAC500 {
 }
 
 function formatUSD(n: number) {
+  if (n == null || isNaN(n)) return '$0.00'
   return new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n)
 }
 
@@ -693,7 +694,8 @@ export default function NuevoVehiculoPage() {
                         <p className="text-white font-bold text-lg">
                           {(() => {
                             const ini = parseFloat(vh4060Inicial) || (calc4060?.inicial ?? 0)
-                            const total = precioCalc.total || (parseFloat(precioBase) + (parseFloat(precioBase) * 0.16) + (parseFloat(gastosAdmin) || 0))
+                            const base = parseFloat(precioBase) || 0
+                            const total = precioCalc?.total || (base + base * 0.16 + (parseFloat(gastosAdmin) || 0))
                             const saldo = Math.max(0, total - ini)
                             return formatUSD(saldo)
                           })()}
