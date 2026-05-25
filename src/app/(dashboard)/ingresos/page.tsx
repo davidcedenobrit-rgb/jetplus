@@ -29,7 +29,6 @@ export default async function IngresosPage({
     rechazado: 'bg-red-100 text-red-800',
     correccion_requerida: 'bg-orange-100 text-orange-800',
     enviado_carla: 'bg-purple-100 text-purple-800',
-    listo_depositar: 'bg-cyan-100 text-cyan-800',
     enviado_deposito: 'bg-blue-100 text-blue-800',
     depositado: 'bg-emerald-100 text-emerald-800',
     entregado_carla: 'bg-teal-100 text-teal-800',
@@ -37,7 +36,17 @@ export default async function IngresosPage({
     anulado: 'bg-gray-200 text-gray-400',
   }
 
-  const filtros = ['', 'pendiente_aprobacion', 'aprobado', 'listo_depositar', 'depositado', 'entregado_carla', 'rechazado']
+  const filtros = [
+    '',
+    'pendiente_aprobacion',
+    'aprobado',
+    'enviado_carla',
+    'enviado_deposito',
+    'depositado',
+    'entregado_carla',
+    'reportado_vehimotors',
+    'rechazado',
+  ]
 
   return (
     <div className="p-4 lg:p-8">
