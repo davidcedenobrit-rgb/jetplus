@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL } from '@/lib/utils'
 import { Plus, Search } from 'lucide-react'
 
+const ROL_DIRECTOR = ['jose', 'admin', 'director']
+
 export default async function IngresosPage({
   searchParams,
 }: {
@@ -10,6 +12,10 @@ export default async function IngresosPage({
 }) {
   const params = await searchParams
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const rol = (user?.user_metadata?.rol as string) ?? 'editor'
+  const esDirector = ROL_DIRECTOR.includes(rol)
 
   let query = supabase
     .from('ingresos')
@@ -36,17 +42,28 @@ export default async function IngresosPage({
     anulado: 'bg-gray-200 text-gray-400',
   }
 
-  const filtros = [
-    '',
-    'pendiente_aprobacion',
-    'aprobado',
-    'enviado_carla',
-    'enviado_deposito',
-    'depositado',
-    'entregado_carla',
-    'reportado_vehimotors',
-    'rechazado',
-  ]
+  // Filtros diferenciados por rol
+  // Director ve el pipeline completo con label contextual para 'aprobado'
+  // Leysdem/Mary ven solo los estados relevantes para su trabajo
+  const filtros: { estado: string; label: string }[] = esDirector
+    ? [
+        { estado: '',                    label: 'Todos'             },
+        { estado: 'pendiente_aprobacion',label: 'Pendiente'         },
+        { estado: 'aprobado',            label: 'Aprobado (con José)'},
+        { estado: 'enviado_carla',       label: 'Enviado Carla'     },
+        { estado: 'enviado_deposito',    label: 'En depósito'       },
+        { estado: 'depositado',          label: 'Depositado'        },
+        { estado: 'entregado_carla',     label: 'Entregado Carla'   },
+        { estado: 'reportado_vehimotors',label: 'Vehimotors'        },
+        { estado: 'rechazado',           label: 'Rechazado'         },
+      ]
+    : [
+        { estado: '',                    label: 'Todos'             },
+        { estado: 'pendiente_aprobacion',label: 'Pendiente'         },
+        { estado: 'aprobado',            label: 'Aprobado'          },
+        { estado: 'rechazado',           label: 'Rechazado'         },
+        { estado: 'correccion_requerida',label: 'Corrección'        },
+      ]
 
   return (
     <div className="p-4 lg:p-8">
@@ -63,9 +80,9 @@ export default async function IngresosPage({
 
       {/* Filtros rápidos */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        {filtros.map(estado => (
+        {filtros.map(({ estado, label }) => (
           <Link
-            key={estado}
+            key={estado || 'todos'}
             href={estado ? `/ingresos?estado=${estado}` : '/ingresos'}
             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
               params.estado === estado || (!params.estado && !estado)
@@ -73,7 +90,7 @@ export default async function IngresosPage({
                 : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
             }`}
           >
-            {estado ? ESTADOS_RECIBO_LABEL[estado] : 'Todos'}
+            {label}
           </Link>
         ))}
       </div>
