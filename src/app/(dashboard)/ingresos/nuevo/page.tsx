@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
 import { IngresoSchema } from '@/lib/validations'
-import { ArrowLeft, Save, Search, X, Car, Hash, AlertCircle, Clock, Calendar } from 'lucide-react'
+import { ArrowLeft, Save, Search, X, Car, Hash, Check, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
 import type { Cliente, Vehiculo } from '@/types/database'
@@ -23,7 +23,25 @@ const CONCEPTOS = [
   'Otro',
 ]
 
+const planLabel = (tipo: string | null) =>
+  tipo === 'inicial_la_oriental' ? 'La Oriental' :
+  tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
+  tipo === 'cuota_especial' ? 'Cuota Especial' : 'Crédito'
+
+const planBadgeClass = (tipo: string | null) =>
+  tipo === 'inicial_la_oriental' ? 'text-purple-700 bg-purple-50 border-purple-200' :
+  tipo === 'financiamiento_vehimotors' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' :
+  'text-gray-600 bg-gray-50 border-gray-200'
+
 type ModosBusqueda = 'placa' | 'cliente'
+
+interface GrupoVehiculo {
+  vehiculo: Vehiculo
+  creditos: {
+    credito: any
+    cuotasPendientes: any[]
+  }[]
+}
 
 export default function NuevoIngresoPage() {
   const router = useRouter()
@@ -45,15 +63,15 @@ export default function NuevoIngresoPage() {
 
   // ── Datos resueltos ──
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
-  const [vehiculosCliente, setVehiculosCliente] = useState<Vehiculo[]>([])
-  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehiculo | null>(null)
-  const [showVehiculoDropdown, setShowVehiculoDropdown] = useState(false)
+  const [vehiculoContexto, setVehiculoContexto] = useState<Vehiculo | null>(null) // vehículo encontrado por placa (solo referencia)
 
-  // ── Cuotas del vehículo ──
-  const [cuotasVencidas, setCuotasVencidas] = useState<any[]>([])
-  const [proximasCuotas, setProximasCuotas] = useState<any[]>([])
-  const [todasCuotasPendientes, setTodasCuotasPendientes] = useState<any[]>([])
+  // ── Créditos y cuotas del cliente (carga completa) ──
+  const [gruposVehiculo, setGruposVehiculo] = useState<GrupoVehiculo[]>([])
+  const [todasLasCuotas, setTodasLasCuotas] = useState<any[]>([])
   const [loadingCuotas, setLoadingCuotas] = useState(false)
+
+  // ── Selección manual de cuotas ──
+  const [cuotasSeleccionadas, setCuotasSeleccionadas] = useState<Set<string>>(new Set())
 
   // ── Campos del pago ──
   const [concepto, setConcepto] = useState('')
@@ -67,6 +85,85 @@ export default function NuevoIngresoPage() {
   const [observaciones, setObservaciones] = useState('')
   const [tasaCambio, setTasaCambio] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
+
+  // ── Cargar TODOS los créditos y cuotas del cliente ──
+  async function loadCuotasCliente(cliente: Cliente) {
+    setLoadingCuotas(true)
+    setCuotasSeleccionadas(new Set())
+
+    // 1. Todos los vehículos del cliente
+    const { data: vehiculos } = await supabase
+      .from('vehiculos').select('*')
+      .eq('cliente_id', cliente.id)
+      .order('created_at')
+
+    if (!vehiculos || vehiculos.length === 0) {
+      setGruposVehiculo([])
+      setTodasLasCuotas([])
+      setLoadingCuotas(false)
+      return
+    }
+
+    // 2. Todos los créditos activos de esos vehículos
+    const vehiculoIds = vehiculos.map((v: any) => v.id)
+    const { data: creditos } = await supabase
+      .from('creditos').select('*')
+      .in('vehiculo_id', vehiculoIds)
+      .eq('estado', 'activo')
+
+    if (!creditos || creditos.length === 0) {
+      setGruposVehiculo([])
+      setTodasLasCuotas([])
+      setLoadingCuotas(false)
+      return
+    }
+
+    // 3. Todas las cuotas pendientes/vencidas
+    const creditoIds = creditos.map((c: any) => c.id)
+    const { data: cuotas } = await supabase
+      .from('cuotas').select('*')
+      .in('credito_id', creditoIds)
+      .in('estado', ['pendiente', 'vencida'])
+      .order('fecha_vencimiento')
+
+    // Construir mapas para enriquecer
+    const creditoMap: Record<string, any> = {}
+    creditos.forEach((c: any) => { creditoMap[c.id] = c })
+
+    const vehiculoForCredito: Record<string, Vehiculo> = {}
+    vehiculos.forEach((v: any) => {
+      creditos
+        .filter((c: any) => c.vehiculo_id === v.id)
+        .forEach((c: any) => { vehiculoForCredito[c.id] = v })
+    })
+
+    // Cuotas enriquecidas con _credito y _vehiculo
+    const cuotasEnriquecidas = (cuotas ?? []).map((c: any) => ({
+      ...c,
+      _credito: creditoMap[c.credito_id],
+      _vehiculo: vehiculoForCredito[c.credito_id],
+    }))
+    setTodasLasCuotas(cuotasEnriquecidas)
+
+    // Grupos para la UI (vehículo → crédito → cuotas), solo los que tienen cuotas pendientes
+    const grupos: GrupoVehiculo[] = vehiculos
+      .map((vehiculo: any) => {
+        const creditosVeh = creditos.filter((c: any) => c.vehiculo_id === vehiculo.id)
+        return {
+          vehiculo,
+          creditos: creditosVeh
+            .map(credito => ({
+              credito,
+              cuotasPendientes: cuotasEnriquecidas.filter((c: any) => c.credito_id === credito.id),
+            }))
+            .filter(cr => cr.cuotasPendientes.length > 0),
+        }
+      })
+      .filter((g: GrupoVehiculo) => g.creditos.length > 0)
+
+    setGruposVehiculo(grupos)
+    setLoadingCuotas(false)
+  }
 
   // ── Buscar por placa ──
   async function buscarPorPlaca() {
@@ -86,8 +183,10 @@ export default function NuevoIngresoPage() {
       return
     }
     setError('')
-    setVehiculoSeleccionado(vehiculo)
-    setClienteSeleccionado((vehiculo as any).clientes)
+    const cliente = (vehiculo as any).clientes as Cliente
+    setVehiculoContexto(vehiculo)
+    setClienteSeleccionado(cliente)
+    loadCuotasCliente(cliente)
   }
 
   // ── Buscar clientes por nombre/cédula ──
@@ -102,105 +201,61 @@ export default function NuevoIngresoPage() {
       setShowClienteDropdown(true)
     }, 300)
     return () => clearTimeout(t)
-  }, [clienteQuery])
+  }, [clienteQuery, clienteSeleccionado])
 
-  // ── Cargar vehículos del cliente ──
+  // ── Toggle cuota ──
+  function toggleCuota(cuotaId: string) {
+    setCuotasSeleccionadas(prev => {
+      const next = new Set(prev)
+      if (next.has(cuotaId)) next.delete(cuotaId)
+      else next.add(cuotaId)
+      return next
+    })
+  }
+
+  // ── Total cuotas seleccionadas ──
+  const totalCuotasSeleccionadas = useMemo(() =>
+    todasLasCuotas
+      .filter(c => cuotasSeleccionadas.has(c.id))
+      .reduce((s, c) => s + Number(c.monto), 0),
+    [cuotasSeleccionadas, todasLasCuotas]
+  )
+
+  // ── Auto-llenar monto cuando se seleccionan cuotas ──
   useEffect(() => {
-    if (!clienteSeleccionado) { setVehiculosCliente([]); return }
-    supabase.from('vehiculos').select('*')
-      .eq('cliente_id', clienteSeleccionado.id)
-      .then(({ data }) => {
-        setVehiculosCliente(data ?? [])
-        if (data && data.length === 1) {
-          setVehiculoSeleccionado(data[0])
-        } else if (data && data.length > 1 && modo === 'cliente') {
-          setShowVehiculoDropdown(true)
-        }
-      })
-  }, [clienteSeleccionado])
-
-  // ── Cargar cuotas del vehículo seleccionado ──
-  useEffect(() => {
-    if (!vehiculoSeleccionado) {
-      setCuotasVencidas([]); setProximasCuotas([]); setTodasCuotasPendientes([])
-      return
+    if (cuotasSeleccionadas.size > 0 && totalCuotasSeleccionadas > 0) {
+      setMonto(totalCuotasSeleccionadas.toFixed(2))
     }
-    setLoadingCuotas(true)
-    const hoy = new Date().toISOString().split('T')[0]
-    supabase.from('creditos').select('id, plan_tipo, frecuencia_pago, moneda, saldo')
-      .eq('vehiculo_id', vehiculoSeleccionado.id)
-      .eq('estado', 'activo')
-      .then(async ({ data: creditos }) => {
-        if (!creditos || creditos.length === 0) { setLoadingCuotas(false); return }
-        const ids = creditos.map((c: any) => c.id)
-        const creditoMap: Record<string, any> = {}
-        creditos.forEach((c: any) => { creditoMap[c.id] = c })
-        const { data: cuotas } = await supabase.from('cuotas')
-          .select('*')
-          .in('credito_id', ids)
-          .in('estado', ['pendiente', 'vencida'])
-          .order('fecha_vencimiento')
-        const todas = (cuotas ?? []).map((c: any) => ({ ...c, _credito: creditoMap[c.credito_id] }))
+  }, [totalCuotasSeleccionadas])
 
-        // Vencidas: anteriores a hoy
-        setCuotasVencidas(todas.filter((c: any) => c.fecha_vencimiento < hoy))
+  // ── Lista plana de cuotas a aplicar en submit ──
+  const cuotasParaAplicar = useMemo(() =>
+    todasLasCuotas.filter(c => cuotasSeleccionadas.has(c.id)),
+    [cuotasSeleccionadas, todasLasCuotas]
+  )
 
-        // Próximas: la siguiente por cada crédito activo
-        const proximas: any[] = []
-        ids.forEach((cid: string) => {
-          const proxima = todas.find((c: any) => c.credito_id === cid && c.fecha_vencimiento >= hoy)
-          if (proxima) proximas.push(proxima)
-        })
-        proximas.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
-        setProximasCuotas(proximas)
+  // ── vehiculo_id e placa para el ingreso (único si todas vienen del mismo vehículo) ──
+  const vehiculoIdParaIngreso = useMemo(() => {
+    if (cuotasParaAplicar.length === 0) return vehiculoContexto?.id ?? null
+    const ids = new Set(cuotasParaAplicar.map(c => c._vehiculo?.id).filter(Boolean))
+    return ids.size === 1 ? (Array.from(ids)[0] as string) : null
+  }, [cuotasParaAplicar, vehiculoContexto])
 
-        // ── Todas ordenadas por prioridad de pago ──
-        // 1. La Oriental primero, luego Vehimotors (o sin clasificar)
-        // 2. Dentro de cada crédito: vencidas primero, luego por fecha
-        const ordenadas = [...todas].sort((a, b) => {
-          const prioA = a._credito?.plan_tipo === 'inicial_la_oriental' ? 0 : 1
-          const prioB = b._credito?.plan_tipo === 'inicial_la_oriental' ? 0 : 1
-          if (prioA !== prioB) return prioA - prioB
-          return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
-        })
-        setTodasCuotasPendientes(ordenadas)
-        setLoadingCuotas(false)
-      })
-  }, [vehiculoSeleccionado])
-
-  // ── Calcular cuotas que cubre este pago (en tiempo real) ──
-  const montoUSD = useMemo(() => {
-    const m = parseFloat(monto) || 0
-    if (moneda === 'USD') return m
-    const tasa = parseFloat(tasaCambio) || 0
-    return tasa > 0 ? m / tasa : 0
-  }, [monto, moneda, tasaCambio])
-
-  const { cuotasAplicar, sobrante } = useMemo(() => {
-    if (!vehiculoSeleccionado || montoUSD <= 0 || todasCuotasPendientes.length === 0) {
-      return { cuotasAplicar: [], sobrante: 0 }
-    }
-    const aplicar: any[] = []
-    let restante = montoUSD
-    for (const cuota of todasCuotasPendientes) {
-      if (restante < Number(cuota.monto) - 0.005) break // no alcanza para esta cuota
-      aplicar.push(cuota)
-      restante -= Number(cuota.monto)
-    }
-    return { cuotasAplicar: aplicar, sobrante: Math.max(0, restante) }
-  }, [montoUSD, todasCuotasPendientes, vehiculoSeleccionado])
+  const placaParaIngreso = useMemo(() => {
+    if (cuotasParaAplicar.length === 0) return vehiculoContexto?.placa ?? null
+    const placas = new Set(cuotasParaAplicar.map(c => c._vehiculo?.placa).filter(Boolean))
+    return placas.size === 1 ? (Array.from(placas)[0] as string) : null
+  }, [cuotasParaAplicar, vehiculoContexto])
 
   function resetBusqueda() {
     setClienteSeleccionado(null)
-    setVehiculoSeleccionado(null)
-    setVehiculosCliente([])
+    setVehiculoContexto(null)
     setClienteQuery('')
     setPlacaQuery('')
     setShowClienteDropdown(false)
-    setShowVehiculoDropdown(false)
-    setCuotasVencidas([])
-    setProximasCuotas([])
-    setTodasCuotasPendientes([])
+    setGruposVehiculo([])
+    setTodasLasCuotas([])
+    setCuotasSeleccionadas(new Set())
     setError('')
   }
 
@@ -245,8 +300,8 @@ export default function NuevoIngresoPage() {
     const { data: inserted, error: insertError } = await supabase.from('ingresos').insert({
       numero_recibo,
       cliente_id: clienteSeleccionado.id,
-      vehiculo_id: vehiculoSeleccionado?.id ?? null,
-      placa: vehiculoSeleccionado?.placa ?? null,
+      vehiculo_id: vehiculoIdParaIngreso,
+      placa: placaParaIngreso,
       concepto,
       monto: parsed.data.monto,
       moneda,
@@ -275,10 +330,9 @@ export default function NuevoIngresoPage() {
       )
     }
 
-    // ── Aplicar cuotas automáticamente ──
-    if (cuotasAplicar.length > 0) {
-      // 1. Marcar cada cuota como pagada
-      for (const cuota of cuotasAplicar) {
+    // ── Aplicar cuotas seleccionadas manualmente ──
+    if (cuotasParaAplicar.length > 0) {
+      for (const cuota of cuotasParaAplicar) {
         await supabase.from('cuotas').update({
           estado: 'pagada',
           fecha_pago: fechaPago,
@@ -286,10 +340,9 @@ export default function NuevoIngresoPage() {
         }).eq('id', cuota.id)
       }
 
-      // 2. Actualizar saldo de cada crédito afectado
-      const creditosAfectados = [...new Set(cuotasAplicar.map((c: any) => c.credito_id))]
+      const creditosAfectados = [...new Set(cuotasParaAplicar.map((c: any) => c.credito_id))]
       for (const creditoId of creditosAfectados) {
-        const cuotasDeCred = cuotasAplicar.filter((c: any) => c.credito_id === creditoId)
+        const cuotasDeCred = cuotasParaAplicar.filter((c: any) => c.credito_id === creditoId)
         const totalPagado = cuotasDeCred.reduce((s: number, c: any) => s + Number(c.monto), 0)
 
         const { data: cred } = await supabase
@@ -309,8 +362,8 @@ export default function NuevoIngresoPage() {
     router.refresh()
   }
 
-  const hayVehiculoResuelto = !!vehiculoSeleccionado
   const hayClienteResuelto = !!clienteSeleccionado
+  const hoy = new Date().toISOString().split('T')[0]
 
   return (
     <div className="p-8 max-w-4xl">
@@ -330,10 +383,9 @@ export default function NuevoIngresoPage() {
         <div className="card p-6">
           <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
             <div className="w-1 h-4 bg-oriental-red rounded-full" />
-            Identificar cliente y vehículo
+            Identificar cliente
           </h2>
 
-          {/* Selector de modo */}
           <div className="flex gap-2 mb-5">
             <button type="button" onClick={() => { setModo('placa'); resetBusqueda() }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
@@ -350,7 +402,7 @@ export default function NuevoIngresoPage() {
           </div>
 
           {/* ── MODO PLACA ── */}
-          {modo === 'placa' && !hayVehiculoResuelto && (
+          {modo === 'placa' && !hayClienteResuelto && (
             <div>
               <label className="label">Placa del vehículo</label>
               <div className="flex gap-2">
@@ -388,7 +440,7 @@ export default function NuevoIngresoPage() {
                 <input type="text" className="input pl-9"
                   placeholder="Juan Pérez / V-12345678"
                   value={clienteQuery}
-                  onChange={e => { setClienteQuery(e.target.value) }}
+                  onChange={e => setClienteQuery(e.target.value)}
                   onFocus={() => clientes.length > 0 && setShowClienteDropdown(true)}
                 />
               </div>
@@ -396,7 +448,12 @@ export default function NuevoIngresoPage() {
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
                   {clientes.map(c => (
                     <button key={c.id} type="button"
-                      onClick={() => { setClienteSeleccionado(c); setClienteQuery(c.nombre); setShowClienteDropdown(false) }}
+                      onClick={() => {
+                        setClienteSeleccionado(c)
+                        setClienteQuery(c.nombre)
+                        setShowClienteDropdown(false)
+                        loadCuotasCliente(c)
+                      }}
                       className="w-full text-left px-4 py-3 hover:bg-oriental-bg transition-colors border-b border-gray-50 last:border-0">
                       <p className="font-medium text-oriental-black text-sm">{c.nombre}</p>
                       <p className="text-xs text-oriental-gray">{c.cedula_rif}</p>
@@ -407,221 +464,177 @@ export default function NuevoIngresoPage() {
             </div>
           )}
 
-          {/* ── SELECTOR DE VEHÍCULO (cuando hay múltiples) ── */}
-          {hayClienteResuelto && !hayVehiculoResuelto && vehiculosCliente.length > 1 && (
-            <div className="mt-4">
-              <p className="text-sm text-oriental-gray mb-2">
-                <span className="font-semibold text-oriental-black">{clienteSeleccionado!.nombre}</span> tiene {vehiculosCliente.length} vehículos. ¿Cuál está pagando?
-              </p>
-              <div className="space-y-2">
-                {vehiculosCliente.map(v => (
-                  <button key={v.id} type="button"
-                    onClick={() => setVehiculoSeleccionado(v)}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-oriental-red hover:bg-oriental-red/5 text-left transition-all group"
-                  >
-                    <div className="w-10 h-10 bg-gray-100 group-hover:bg-oriental-red/10 rounded-full flex items-center justify-center transition-colors">
-                      <Car size={18} className="text-oriental-gray group-hover:text-oriental-red" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-oriental-black">{v.marca} {v.modelo} {v.anio}</p>
-                      <p className="text-xs text-oriental-gray">{v.version} · {v.color}</p>
-                    </div>
-                    <span className="font-mono font-bold text-sm bg-gray-100 px-3 py-1.5 rounded">
-                      {v.placa ?? 'Sin placa'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── RESULTADO RESUELTO ── */}
-          {(hayVehiculoResuelto || hayClienteResuelto) && (
-            <div className={`rounded-xl p-4 flex items-center justify-between ${hayVehiculoResuelto ? 'bg-oriental-black' : 'bg-gray-50 border border-gray-200'}`}>
+          {/* ── CLIENTE RESUELTO ── */}
+          {hayClienteResuelto && (
+            <div className="rounded-xl p-4 flex items-center justify-between bg-oriental-black">
               <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${hayVehiculoResuelto ? 'bg-oriental-red/30' : 'bg-gray-200'}`}>
-                  <Car size={18} className={hayVehiculoResuelto ? 'text-white' : 'text-oriental-gray'} />
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-oriental-red/30">
+                  <Car size={18} className="text-white" />
                 </div>
                 <div>
-                  {hayVehiculoResuelto ? (
-                    <>
-                      <p className="text-white font-bold">{vehiculoSeleccionado!.marca} {vehiculoSeleccionado!.modelo} {vehiculoSeleccionado!.anio}</p>
-                      <p className="text-gray-400 text-xs">{clienteSeleccionado?.nombre} · {clienteSeleccionado?.cedula_rif}</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-oriental-black font-bold">{clienteSeleccionado?.nombre}</p>
-                      <p className="text-oriental-gray text-xs">{clienteSeleccionado?.cedula_rif}</p>
-                    </>
-                  )}
+                  <p className="text-white font-bold">{clienteSeleccionado!.nombre}</p>
+                  <p className="text-gray-400 text-xs">
+                    {clienteSeleccionado!.cedula_rif}
+                    {vehiculoContexto && (
+                      <span className="ml-2 font-mono">· {vehiculoContexto.placa}</span>
+                    )}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {hayVehiculoResuelto && (
-                  <span className="font-mono font-bold bg-gray-800 text-white px-3 py-1.5 rounded text-sm tracking-widest">
-                    {vehiculoSeleccionado!.placa ?? 'Sin placa'}
-                  </span>
-                )}
-                <button type="button" onClick={resetBusqueda}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${hayVehiculoResuelto ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-400 hover:text-oriental-red'}`}>
-                  <X size={16} />
-                </button>
-              </div>
+              <button type="button" onClick={resetBusqueda}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors">
+                <X size={16} />
+              </button>
             </div>
           )}
         </div>
 
-        {/* ── CUOTAS VENCIDAS / PRÓXIMAS CUOTAS ── */}
-        {vehiculoSeleccionado && (loadingCuotas || cuotasVencidas.length > 0 || proximasCuotas.length > 0) && (
+        {/* ── SELECTOR DE CUOTAS ── */}
+        {hayClienteResuelto && (
           <div className="card p-5">
-            <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-1 flex items-center gap-2">
               <div className="w-1 h-4 bg-oriental-red rounded-full" />
-              Estado del crédito
+              Aplicar pago a cuota(s)
             </h2>
+            <p className="text-xs text-oriental-gray mb-4">
+              Selecciona las cuotas que cubre este pago. El monto se calcula automáticamente.
+            </p>
+
             {loadingCuotas ? (
-              <p className="text-sm text-oriental-gray">Cargando cuotas...</p>
+              <p className="text-sm text-oriental-gray py-4">Cargando créditos del cliente...</p>
+            ) : gruposVehiculo.length === 0 ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-6 text-center">
+                <CreditCard size={28} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-sm text-oriental-gray">Este cliente no tiene créditos activos con cuotas pendientes</p>
+                <p className="text-xs text-oriental-gray/60 mt-1">El ingreso se registrará sin aplicar cuotas</p>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {/* Cuotas vencidas */}
-                {cuotasVencidas.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle size={15} className="text-red-600" />
-                      <p className="text-sm font-bold text-red-700">{cuotasVencidas.length} cuota{cuotasVencidas.length > 1 ? 's' : ''} vencida{cuotasVencidas.length > 1 ? 's' : ''}</p>
+              <div className="space-y-6">
+                {gruposVehiculo.map(({ vehiculo, creditos }) => (
+                  <div key={vehiculo.id}>
+                    {/* Encabezado del vehículo */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-oriental-black rounded-full flex items-center justify-center flex-shrink-0">
+                        <Car size={14} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-oriental-black">
+                          {vehiculo.marca} {vehiculo.modelo}
+                          {vehiculo.anio && <span className="font-normal text-oriental-gray ml-1">{vehiculo.anio}</span>}
+                        </p>
+                        <p className="text-xs text-oriental-gray">
+                          {vehiculo.version && <span className="mr-1">{vehiculo.version} ·</span>}
+                          <span className="font-mono font-semibold">{vehiculo.placa ?? 'Sin placa'}</span>
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      {cuotasVencidas.map((c: any) => (
-                        <div key={c.id} className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
-                          <div>
-                            <p className="text-sm font-semibold text-red-800">
-                              Cuota #{c.numero_cuota}
-                              {c.concepto && <span className="ml-2 text-xs font-normal text-red-600">{c.concepto}</span>}
-                            </p>
-                            <p className="text-xs text-red-500">
-                              Venció: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              {c._credito?.frecuencia_pago && <span className="ml-2 capitalize">· {c._credito.frecuencia_pago}</span>}
-                            </p>
+
+                    {/* Créditos del vehículo */}
+                    <div className="ml-11 space-y-4">
+                      {creditos.map(({ credito, cuotasPendientes }) => (
+                        <div key={credito.id}>
+                          {/* Badge plan + saldo */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${planBadgeClass(credito.plan_tipo)}`}>
+                              {planLabel(credito.plan_tipo)}
+                            </span>
+                            <span className="text-xs text-oriental-gray">
+                              Saldo: <span className="font-semibold text-oriental-black">
+                                ${Number(credito.saldo).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                              </span>
+                            </span>
                           </div>
-                          <p className="font-extrabold text-red-700 text-base">${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+
+                          {/* Cuotas como filas seleccionables */}
+                          <div className="space-y-1.5">
+                            {cuotasPendientes.map((cuota: any) => {
+                              const isSelected = cuotasSeleccionadas.has(cuota.id)
+                              const isVencida = cuota.fecha_vencimiento < hoy
+                              return (
+                                <button
+                                  key={cuota.id}
+                                  type="button"
+                                  onClick={() => toggleCuota(cuota.id)}
+                                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                                    isSelected
+                                      ? 'bg-green-50 border-green-500 shadow-sm'
+                                      : isVencida
+                                      ? 'bg-red-50 border-red-200 hover:border-red-400'
+                                      : 'bg-white border-gray-200 hover:border-gray-400 hover:shadow-sm'
+                                  }`}
+                                >
+                                  {/* Checkbox visual */}
+                                  <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                                    isSelected
+                                      ? 'bg-green-600 border-green-600'
+                                      : isVencida
+                                      ? 'border-red-400'
+                                      : 'border-gray-300'
+                                  }`}>
+                                    {isSelected && <Check size={11} className="text-white" strokeWidth={3} />}
+                                  </div>
+
+                                  {/* Info cuota */}
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`text-sm font-semibold ${
+                                      isSelected ? 'text-green-800' : isVencida ? 'text-red-800' : 'text-oriental-black'
+                                    }`}>
+                                      Cuota #{cuota.numero_cuota}
+                                      {isVencida && (
+                                        <span className="ml-2 text-xs font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
+                                          VENCIDA
+                                        </span>
+                                      )}
+                                      {cuota.concepto && (
+                                        <span className={`ml-2 text-xs font-normal ${
+                                          isVencida ? 'text-red-500' : 'text-oriental-gray'
+                                        }`}>
+                                          {cuota.concepto}
+                                        </span>
+                                      )}
+                                    </p>
+                                    <p className={`text-xs mt-0.5 ${
+                                      isVencida ? 'text-red-500' : 'text-oriental-gray'
+                                    }`}>
+                                      {isVencida ? 'Venció' : 'Vence'}:{' '}
+                                      {new Date(cuota.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', {
+                                        day: 'numeric', month: 'short', year: 'numeric'
+                                      })}
+                                    </p>
+                                  </div>
+
+                                  {/* Monto */}
+                                  <p className={`font-extrabold text-base flex-shrink-0 ${
+                                    isSelected ? 'text-green-700' : isVencida ? 'text-red-700' : 'text-oriental-black'
+                                  }`}>
+                                    ${Number(cuota.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                  </p>
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
+                ))}
 
-                {/* Próximas cuotas — una por cada crédito activo */}
-                {proximasCuotas.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar size={15} className="text-oriental-gray" />
-                      <p className="text-sm font-bold text-oriental-black">
-                        Próxima{proximasCuotas.length > 1 ? 's' : ''} cuota{proximasCuotas.length > 1 ? 's' : ''} a pagar
-                        {proximasCuotas.length > 1 && <span className="ml-1 text-xs font-normal text-oriental-gray">({proximasCuotas.length} créditos activos)</span>}
-                      </p>
-                    </div>
-                    <div className="space-y-1.5">
-                      {proximasCuotas.map((c: any) => {
-                        const planLabel = c._credito?.plan_tipo === 'inicial_la_oriental'
-                          ? 'Inicial La Oriental'
-                          : c._credito?.plan_tipo === 'financiamiento_vehimotors'
-                          ? 'Vehimotors'
-                          : c.concepto ?? null
-                        return (
-                          <div key={c.id} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
-                            <div>
-                              <p className="text-sm font-semibold text-blue-800">
-                                Cuota #{c.numero_cuota}
-                                {planLabel && <span className="ml-2 text-xs font-normal text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">{planLabel}</span>}
-                              </p>
-                              <p className="text-xs text-blue-500">
-                                Vence: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                {c._credito?.frecuencia_pago && <span className="ml-2 capitalize">· {c._credito.frecuencia_pago}</span>}
-                              </p>
-                            </div>
-                            <p className="font-extrabold text-blue-700 text-base">${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
-                          </div>
-                        )
-                      })}
-                      {proximasCuotas.length > 1 && (
-                        <div className="flex items-center justify-between bg-blue-100 rounded-lg px-4 py-2 mt-1">
-                          <p className="text-sm font-bold text-blue-900">Total a pagar este período</p>
-                          <p className="font-extrabold text-blue-900 text-base">
-                            ${proximasCuotas.reduce((s, c) => s + Number(c.monto), 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── CUOTAS QUE CUBRE ESTE PAGO ── */}
-        {vehiculoSeleccionado && todasCuotasPendientes.length > 0 && montoUSD > 0 && (
-          <div className="card p-5">
-            <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
-              <div className="w-1 h-4 bg-green-500 rounded-full" />
-              Cuotas que cubre este pago
-            </h2>
-
-            {cuotasAplicar.length > 0 ? (
-              <div className="space-y-2">
-                {cuotasAplicar.map((c: any) => {
-                  const planLabel = c._credito?.plan_tipo === 'inicial_la_oriental'
-                    ? 'La Oriental' : c._credito?.plan_tipo === 'financiamiento_vehimotors'
-                    ? 'Vehimotors' : c.concepto ?? 'Crédito'
-                  const planColor = c._credito?.plan_tipo === 'inicial_la_oriental'
-                    ? 'bg-purple-50 text-purple-700 border-purple-200'
-                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                  return (
-                    <div key={c.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
-                      <div className="flex items-center gap-3">
-                        <CheckMark />
-                        <div>
-                          <p className="text-sm font-semibold text-green-800">
-                            Cuota #{c.numero_cuota}
-                            <span className={`ml-2 text-xs px-1.5 py-0.5 rounded border ${planColor}`}>{planLabel}</span>
-                          </p>
-                          <p className="text-xs text-green-600">
-                            {c.fecha_vencimiento < new Date().toISOString().split('T')[0] ? '⚠ Vencida — ' : ''}
-                            Vence: {new Date(c.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="font-extrabold text-green-700">${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
-                    </div>
-                  )
-                })}
-
-                {/* Resumen total */}
-                <div className="flex items-center justify-between bg-green-700 rounded-lg px-4 py-3 mt-1">
-                  <p className="text-sm font-bold text-white">
-                    {cuotasAplicar.length} cuota{cuotasAplicar.length > 1 ? 's' : ''} se marcarán como <span className="underline">Pagadas</span>
-                  </p>
-                  <p className="font-extrabold text-white">
-                    ${cuotasAplicar.reduce((s: number, c: any) => s + Number(c.monto), 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-
-                {sobrante > 0.01 && (
-                  <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2.5">
-                    <AlertCircle size={15} className="text-yellow-600 flex-shrink-0" />
-                    <p className="text-sm text-yellow-800">
-                      Sobrante de <span className="font-bold">${sobrante.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span> — no alcanza para la siguiente cuota
+                {/* Resumen de selección */}
+                {cuotasSeleccionadas.size > 0 ? (
+                  <div className="flex items-center justify-between bg-green-700 rounded-xl px-4 py-3">
+                    <p className="text-sm font-bold text-white flex items-center gap-2">
+                      <Check size={16} />
+                      {cuotasSeleccionadas.size} cuota{cuotasSeleccionadas.size > 1 ? 's' : ''} seleccionada{cuotasSeleccionadas.size > 1 ? 's' : ''}
+                    </p>
+                    <p className="font-extrabold text-white text-base">
+                      ${totalCuotasSeleccionadas.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
+                ) : (
+                  <p className="text-xs text-oriental-gray text-center py-1">
+                    Toca una cuota para seleccionarla
+                  </p>
                 )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
-                <AlertCircle size={15} className="text-yellow-600 flex-shrink-0" />
-                <p className="text-sm text-yellow-800">
-                  El monto ingresado (${montoUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })}) no alcanza para cubrir la próxima cuota
-                  {todasCuotasPendientes[0] && <span className="font-semibold"> de ${Number(todasCuotasPendientes[0].monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>}.
-                  El ingreso se registrará como pago parcial.
-                </p>
               </div>
             )}
           </div>
@@ -642,7 +655,12 @@ export default function NuevoIngresoPage() {
               </select>
             </div>
             <div>
-              <label className="label">Monto *</label>
+              <label className="label">
+                Monto *
+                {cuotasSeleccionadas.size > 0 && (
+                  <span className="ml-2 text-xs text-green-600 font-normal">(calculado de cuotas)</span>
+                )}
+              </label>
               <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
                 placeholder="0.00" value={monto} onChange={e => setMonto(e.target.value)} required />
             </div>
@@ -728,24 +746,14 @@ export default function NuevoIngresoPage() {
         <div className="flex items-center gap-3">
           <button type="submit" className="btn-primary flex items-center gap-2 py-3 px-6" disabled={loading}>
             <Save size={16} />
-            {loading ? 'Guardando...' : cuotasAplicar.length > 0
-              ? `Registrar y marcar ${cuotasAplicar.length} cuota${cuotasAplicar.length > 1 ? 's' : ''} como pagada${cuotasAplicar.length > 1 ? 's' : ''}`
+            {loading ? 'Guardando...' : cuotasParaAplicar.length > 0
+              ? `Registrar y aplicar ${cuotasParaAplicar.length} cuota${cuotasParaAplicar.length > 1 ? 's' : ''}`
               : 'Registrar ingreso'
             }
           </button>
           <Link href="/ingresos" className="btn-secondary py-3 px-6">Cancelar</Link>
         </div>
       </form>
-    </div>
-  )
-}
-
-function CheckMark() {
-  return (
-    <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
     </div>
   )
 }
