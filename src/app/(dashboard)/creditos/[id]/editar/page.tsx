@@ -8,6 +8,22 @@ import Link from 'next/link'
 
 type EstadoCuota = 'pendiente' | 'pagada' | 'vencida'
 
+// Calcula la fecha de vencimiento de la cuota N (1-based) desde fecha_inicio
+function calcularFechaVencimiento(fechaInicio: string, numeroCuota: number, frecuencia: string): string {
+  const base = new Date(fechaInicio + 'T12:00:00')
+  if (frecuencia === 'mensual') {
+    base.setMonth(base.getMonth() + numeroCuota)
+  } else if (frecuencia === 'quincenal') {
+    base.setDate(base.getDate() + numeroCuota * 15)
+  } else if (frecuencia === 'semanal') {
+    base.setDate(base.getDate() + numeroCuota * 7)
+  } else {
+    // único pago — misma fecha para todas
+    base.setMonth(base.getMonth() + numeroCuota)
+  }
+  return base.toISOString().split('T')[0]
+}
+
 // José, admin y director tienen poder de edición total
 const ROL_DIRECTOR = ['jose', 'admin', 'director']
 const FRECUENCIAS = ['mensual', 'quincenal', 'semanal', 'único pago']
@@ -219,11 +235,12 @@ export default function EditarCreditoPage() {
         const mf = parseFloat(montoFinanciado)
         const ini = parseFloat(inicial)
         const sal = parseFloat(saldo)
-        const nc = parseInt(numCuotas)
+        const ncNuevo = parseInt(numCuotas)
+        const ncAnterior = credito?.num_cuotas ?? 0
         if (!isNaN(mf)) updateData.monto_financiado = mf
         if (!isNaN(ini)) updateData.inicial = ini
         if (!isNaN(sal)) updateData.saldo = sal
-        if (!isNaN(nc)) updateData.num_cuotas = nc
+        if (!isNaN(ncNuevo)) updateData.num_cuotas = ncNuevo
         if (frecuenciaPago) updateData.frecuencia_pago = frecuenciaPago
         if (fechaInicio) updateData.fecha_inicio = fechaInicio
         updateData.moneda = monedaCredito
@@ -231,19 +248,71 @@ export default function EditarCreditoPage() {
         const { error: err } = await supabase.from('creditos').update(updateData).eq('id', creditoActivoId)
         if (err) throw new Error(err.message)
 
-        for (const [cuotaId, cambios] of Object.entries(edicionesCuotas)) {
-          const co = cuotas.find(c => c.id === cuotaId)
-          if (!co) continue
-          const update: any = { updated_at: new Date().toISOString() }
-          if (cambios.estado !== undefined && cambios.estado !== co.estado) {
-            update.estado = cambios.estado
-            if (cambios.estado === 'pagada' && !co.fecha_pago) update.fecha_pago = new Date().toISOString().split('T')[0]
+        // ── Regenerar plan si cambia algo estructural ──────────────────
+        const cambioEstructural =
+          (!isNaN(ncNuevo) && ncNuevo !== ncAnterior) ||
+          (!isNaN(mf) && mf !== credito?.monto_financiado) ||
+          (fechaInicio !== credito?.fecha_inicio) ||
+          (frecuenciaPago !== credito?.frecuencia_pago)
+
+        if (cambioEstructural) {
+          // Preservar cuotas ya pagadas
+          const cuotasPagadas = cuotas.filter(c => c.estado === 'pagada')
+          const numPagadas    = cuotasPagadas.length
+
+          // Eliminar cuotas no pagadas
+          const cuotasNoPagadas = cuotas.filter(c => c.estado !== 'pagada')
+          if (cuotasNoPagadas.length > 0) {
+            const { error: delErr } = await supabase
+              .from('cuotas').delete()
+              .in('id', cuotasNoPagadas.map(c => c.id))
+            if (delErr) throw new Error(delErr.message)
           }
-          if (cambios.monto !== undefined && parseFloat(cambios.monto) !== co.monto) update.monto = parseFloat(cambios.monto)
-          if (cambios.fecha_vencimiento !== undefined && cambios.fecha_vencimiento !== co.fecha_vencimiento) update.fecha_vencimiento = cambios.fecha_vencimiento
-          if (Object.keys(update).length > 1) {
-            const { error: err } = await supabase.from('cuotas').update(update).eq('id', cuotaId)
-            if (err) throw new Error(err.message)
+
+          // Generar cuotas faltantes
+          const ncFinal   = !isNaN(ncNuevo) ? ncNuevo : ncAnterior
+          const cuotasFaltan = ncFinal - numPagadas
+          if (cuotasFaltan > 0) {
+            const montoBase = !isNaN(mf) && mf > 0 ? mf : credito?.monto_financiado ?? 0
+            const montoPorCuota = parseFloat((montoBase / ncFinal).toFixed(2))
+            const frecActual   = frecuenciaPago || credito?.frecuencia_pago || 'mensual'
+            const fechaBase    = fechaInicio    || credito?.fecha_inicio
+            const conceptoCuota =
+              (planTipo || credito?.plan_tipo) === 'inicial_la_oriental'    ? 'Crédito de Inicial — La Oriental' :
+              (planTipo || credito?.plan_tipo) === 'financiamiento_vehimotors' ? 'Crédito Financiamiento — Vehimotors' :
+              'Cuota'
+
+            const nuevasCuotas = Array.from({ length: cuotasFaltan }, (_, i) => {
+              const n = numPagadas + i + 1
+              return {
+                credito_id:       creditoActivoId,
+                numero_cuota:     n,
+                fecha_vencimiento: calcularFechaVencimiento(fechaBase, n, frecActual),
+                monto:            montoPorCuota,
+                estado:           'pendiente',
+                concepto:         conceptoCuota,
+              }
+            })
+
+            const { error: insErr } = await supabase.from('cuotas').insert(nuevasCuotas)
+            if (insErr) throw new Error(insErr.message)
+          }
+        } else {
+          // Sin cambio estructural — editar cuotas individualmente
+          for (const [cuotaId, cambios] of Object.entries(edicionesCuotas)) {
+            const co = cuotas.find(c => c.id === cuotaId)
+            if (!co) continue
+            const update: any = {}
+            if (cambios.estado !== undefined && cambios.estado !== co.estado) {
+              update.estado = cambios.estado
+              if (cambios.estado === 'pagada' && !co.fecha_pago) update.fecha_pago = new Date().toISOString().split('T')[0]
+            }
+            if (cambios.monto !== undefined && parseFloat(cambios.monto) !== co.monto) update.monto = parseFloat(cambios.monto)
+            if (cambios.fecha_vencimiento !== undefined && cambios.fecha_vencimiento !== co.fecha_vencimiento) update.fecha_vencimiento = cambios.fecha_vencimiento
+            if (Object.keys(update).length > 0) {
+              const { error: cuotaErr } = await supabase.from('cuotas').update(update).eq('id', cuotaId)
+              if (cuotaErr) throw new Error(cuotaErr.message)
+            }
           }
         }
 
