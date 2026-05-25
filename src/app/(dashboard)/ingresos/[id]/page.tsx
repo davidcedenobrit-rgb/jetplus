@@ -4,7 +4,8 @@ import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL } from '@/lib/utils'
 import Link from 'next/link'
 import {
   ArrowLeft, CheckCircle2, XCircle, AlertTriangle,
-  Send, Landmark, Building2, Printer, FileText
+  Send, Landmark, Building2, Printer, FileText,
+  User, Clock, Hash, CreditCard, BadgeCheck, ImageIcon
 } from 'lucide-react'
 import ActionButtons from './ActionButtons'
 import ComprobantesGallery from '@/components/ComprobantesGallery'
@@ -216,6 +217,113 @@ export default async function IngresoDetallePage({
             rol={rol}
           />
 
+          {/* ── Seguimiento de depósito ───────────────────────────── */}
+          {(ingreso as any).enviado_deposito_responsable && (
+            <div className="card p-5 space-y-4">
+              <h3 className="text-sm font-bold text-oriental-black flex items-center gap-2">
+                <Landmark size={15} className="text-oriental-gray" />
+                Seguimiento del depósito
+              </h3>
+
+              {/* Datos del envío (José registró) */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
+                <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Enviado a depositar</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-start gap-2">
+                    <User size={13} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold">Responsable</p>
+                      <p className="text-sm font-semibold text-blue-900">{(ingreso as any).enviado_deposito_responsable}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Clock size={13} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold">Enviado el</p>
+                      <p className="text-sm font-semibold text-blue-900">
+                        {ingreso.deposito_at
+                          ? new Date(ingreso.deposito_at).toLocaleString('es-VE', {
+                              day: '2-digit', month: 'short', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit'
+                            })
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Datos del depósito confirmado (Ari llenó) */}
+              {(ingreso as any).deposito_referencia ? (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <BadgeCheck size={14} className="text-emerald-600" />
+                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Depósito confirmado</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <Hash size={13} className="text-emerald-500 flex-shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-emerald-500 uppercase tracking-wider font-semibold">N° Referencia</p>
+                        <p className="text-sm font-mono font-bold text-emerald-900">{(ingreso as any).deposito_referencia}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CreditCard size={13} className="text-emerald-500 flex-shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-emerald-500 uppercase tracking-wider font-semibold">Banco receptor</p>
+                        <p className="text-sm font-semibold text-emerald-900">{(ingreso as any).deposito_banco}</p>
+                      </div>
+                    </div>
+                    {(ingreso as any).depositado_at && (
+                      <div className="flex items-center gap-2">
+                        <Clock size={13} className="text-emerald-500 flex-shrink-0" />
+                        <div>
+                          <p className="text-[10px] text-emerald-500 uppercase tracking-wider font-semibold">Confirmado el</p>
+                          <p className="text-sm font-semibold text-emerald-900">
+                            {new Date((ingreso as any).depositado_at).toLocaleString('es-VE', {
+                              day: '2-digit', month: 'short', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Comprobante del depósito */}
+                  {(archivos ?? []).filter((a: any) => a.tipo === 'comprobante_deposito').length > 0 && (
+                    <div className="pt-2 border-t border-emerald-100">
+                      <p className="text-[10px] text-emerald-500 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
+                        <ImageIcon size={11} /> Comprobante de depósito
+                      </p>
+                      <div className="space-y-1.5">
+                        {(archivos ?? [])
+                          .filter((a: any) => a.tipo === 'comprobante_deposito')
+                          .map((a: any) => (
+                            <a
+                              key={a.id}
+                              href={a.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-xs text-emerald-700 hover:text-emerald-900 hover:underline transition-colors"
+                            >
+                              <FileText size={12} />
+                              {a.nombre ?? 'Ver comprobante'}
+                            </a>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+                  <p className="text-xs text-amber-600 font-medium">Pendiente confirmación del depósito</p>
+                  <p className="text-[11px] text-amber-500 mt-0.5">El responsable debe cargar la referencia y el banco</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Timeline */}
           <div className="card p-5">
             <h3 className="text-sm font-bold text-oriental-black mb-4">Historial</h3>
@@ -223,13 +331,14 @@ export default async function IngresoDetallePage({
               <TimelineItem label="Registrado" date={ingreso.fecha_registro} active />
               <TimelineItem label="Aprobado" date={ingreso.fecha_aprobacion} active={!!ingreso.fecha_aprobacion} />
               <TimelineItem label="Enviado a Carla" date={ingreso.enviado_carla_at} active={!!ingreso.enviado_carla_at} />
-              <TimelineItem label="Depositado" date={ingreso.deposito_at} active={!!ingreso.deposito_at} />
+              <TimelineItem label="Enviado a depositar" date={ingreso.deposito_at} active={!!ingreso.deposito_at} />
+              <TimelineItem label="Depositado" date={(ingreso as any).depositado_at} active={!!(ingreso as any).depositado_at} />
               <TimelineItem label="Entregado a Carla" date={(ingreso as any).entregado_carla_at} active={!!(ingreso as any).entregado_carla_at} highlight />
               <TimelineItem label="Reportado Vehimotors" date={ingreso.vehimotors_at} active={!!ingreso.vehimotors_at} />
             </div>
           </div>
 
-          <ComprobantesGallery archivos={archivos ?? []} />
+          <ComprobantesGallery archivos={(archivos ?? []).filter((a: any) => a.tipo !== 'comprobante_deposito')} />
         </div>
       </div>
     </div>
