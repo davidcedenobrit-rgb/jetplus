@@ -4,6 +4,9 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, CircleDot, PlusCircle } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
+import RevertirCuotaButton from './RevertirCuotaButton'
+
+const ROL_DIRECTOR = ['jose', 'admin', 'director']
 
 const planLabel = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'La Oriental' :
@@ -44,6 +47,13 @@ export default async function CreditoDetallePage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+
+  // Detectar rol del usuario actual
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  const { data: usuarioData } = authUser
+    ? await supabase.from('usuarios').select('rol').eq('id', authUser.id).single()
+    : { data: null }
+  const esDirector = usuarioData ? ROL_DIRECTOR.includes(usuarioData.rol) : false
 
   // Cargar el crédito principal (para obtener vehiculo_id y cliente)
   const { data: credito } = await supabase
@@ -372,10 +382,21 @@ export default async function CreditoDetallePage({
                         {/* Estado — badge visual + botón discreto de registrar */}
                         <td className="px-3 py-3">
                           {esPagada ? (
+                            <div>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
                               <CheckCircle2 size={12} className="text-green-600" />
                               Pagado
                             </span>
+                            {esDirector && (
+                              <RevertirCuotaButton
+                                cuotaId={cuota.id}
+                                creditoId={cuota.credito_id}
+                                numeroCuota={cuota.numero_cuota}
+                                montoPagado={Number(cuota.monto_pagado ?? cuota.monto)}
+                                planLabel={cuota.concepto ?? planLabel(cuota._plan_tipo)}
+                              />
+                            )}
+                            </div>
                           ) : esAbono ? (
                             <div className="space-y-1.5">
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
