@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { redirect } from 'next/navigation'
 import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL } from '@/lib/utils'
 import Link from 'next/link'
 import {

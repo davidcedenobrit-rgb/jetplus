@@ -8,7 +8,7 @@ export type EstadoRecibo =
   | 'registrado' | 'pendiente_aprobacion' | 'aprobado' | 'rechazado'
   | 'correccion_requerida' | 'enviado_cliente' | 'enviado_carla'
   | 'listo_depositar' | 'enviado_deposito' | 'depositado'
-  | 'reportado_vehimotors' | 'anulado'
+  | 'entregado_carla' | 'reportado_vehimotors' | 'anulado'
 export type EstadoEgreso =
   | 'registrado' | 'pendiente_aprobacion' | 'aprobado' | 'rechazado'
   | 'correccion_requerida' | 'pagado' | 'reportado_carla'

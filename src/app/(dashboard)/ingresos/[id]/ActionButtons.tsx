@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   CheckCircle2, XCircle, AlertTriangle,
-  Send, Landmark, Building2, Printer
+  Send, Landmark, Building2, Printer, BadgeCheck
 } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 
@@ -101,12 +101,12 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
       style: 'bg-oriental-black hover:bg-gray-800 text-white',
     },
     {
-      label: 'Reportar a Vehimotors',
-      icon: Building2,
-      estado: 'reportado_vehimotors',
-      timestamp: 'vehimotors_at',
-      show: ['depositado', 'enviado_deposito', 'entregado_carla'],
-      style: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+      label: 'Confirmar depósito',
+      icon: BadgeCheck,
+      estado: 'depositado',
+      timestamp: 'deposito_at',
+      show: ['enviado_deposito'],
+      style: 'bg-emerald-600 hover:bg-emerald-700 text-white',
     },
     {
       label: 'Entregado a Carla',
@@ -116,6 +116,14 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
       show: ['depositado'],
       onlyRoles: ROL_DIRECTOR,
       style: 'bg-teal-600 hover:bg-teal-700 text-white',
+    },
+    {
+      label: 'Reportar a Vehimotors',
+      icon: Building2,
+      estado: 'reportado_vehimotors',
+      timestamp: 'vehimotors_at',
+      show: ['depositado', 'enviado_deposito', 'entregado_carla'],
+      style: 'bg-indigo-600 hover:bg-indigo-700 text-white',
     },
   ]
 
