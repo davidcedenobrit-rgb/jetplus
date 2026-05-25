@@ -368,25 +368,56 @@ export default function NuevoIngresoPage() {
       )
     }
 
-    // ── Aplicar cuotas seleccionadas manualmente ──
+    // ── Aplicar cuotas con soporte para abono parcial y cuota_ingresos ──
     if (cuotasParaAplicar.length > 0) {
+      // Convertir monto a la moneda base de las cuotas (USD)
+      const montoBase = moneda === 'USD'
+        ? parsed.data.monto
+        : parsed.data.tasa_cambio && parsed.data.tasa_cambio > 0
+          ? parsed.data.monto / parsed.data.tasa_cambio
+          : parsed.data.monto
+
+      let restante = montoBase
+      // Acumular cuánto se aplicó por crédito para actualizar el saldo
+      const deltasPorCredito: Record<string, number> = {}
+
       for (const cuota of cuotasParaAplicar) {
+        if (restante <= 0.005) break
+
+        const montoCuota = Number(cuota.monto)
+        const montoPagadoPrev = Number(cuota.monto_pagado ?? 0)
+        const faltaPorPagar = Math.max(0, montoCuota - montoPagadoPrev)
+        if (faltaPorPagar <= 0.005) continue // ya completamente pagada
+
+        const montoAplicar = Math.min(restante, faltaPorPagar)
+        const nuevoMontoPagado = montoPagadoPrev + montoAplicar
+        const esPagadaCompleta = (montoCuota - nuevoMontoPagado) < 0.005
+
+        // Actualizar cuota
         await supabase.from('cuotas').update({
-          estado: 'pagada',
-          fecha_pago: fechaPago,
+          monto_pagado: nuevoMontoPagado,
+          estado: esPagadaCompleta ? 'pagada' : 'abono_parcial',
+          ...(esPagadaCompleta ? { fecha_pago: fechaPago } : {}),
           updated_at: new Date().toISOString(),
         }).eq('id', cuota.id)
+
+        // Vincular recibo ↔ cuota con el monto aplicado
+        await supabase.from('cuota_ingresos').insert({
+          cuota_id: cuota.id,
+          ingreso_id: inserted.id,
+          monto_aplicado: montoAplicar,
+        })
+
+        deltasPorCredito[cuota.credito_id] = (deltasPorCredito[cuota.credito_id] ?? 0) + montoAplicar
+        restante -= montoAplicar
       }
 
-      const creditosAfectados = [...new Set(cuotasParaAplicar.map((c: any) => c.credito_id))]
-      for (const creditoId of creditosAfectados) {
-        const cuotasDeCred = cuotasParaAplicar.filter((c: any) => c.credito_id === creditoId)
-        const totalPagado = cuotasDeCred.reduce((s: number, c: any) => s + Number(c.monto), 0)
-
+      // Actualizar saldo de cada crédito afectado
+      for (const [creditoId, delta] of Object.entries(deltasPorCredito)) {
         const { data: cred } = await supabase
-          .from('creditos').select('saldo, num_cuotas').eq('id', creditoId).single()
+          .from('creditos').select('saldo').eq('id', creditoId).single()
         if (cred) {
-          const nuevoSaldo = Math.max(0, Number(cred.saldo) - totalPagado)
+          const nuevoSaldo = Math.max(0, Number(cred.saldo) - delta)
           await supabase.from('creditos').update({
             saldo: nuevoSaldo,
             estado: nuevoSaldo <= 0.01 ? 'pagado' : 'activo',
@@ -748,17 +779,28 @@ export default function NuevoIngresoPage() {
                 ))}
 
                 {/* Resumen de selección */}
-                {cuotasSeleccionadas.size > 0 ? (
-                  <div className="flex items-center justify-between bg-green-700 rounded-xl px-4 py-3">
-                    <p className="text-sm font-bold text-white flex items-center gap-2">
-                      <Check size={16} />
-                      {cuotasSeleccionadas.size} cuota{cuotasSeleccionadas.size > 1 ? 's' : ''} seleccionada{cuotasSeleccionadas.size > 1 ? 's' : ''}
-                    </p>
-                    <p className="font-extrabold text-white text-base">
-                      ${totalCuotasSeleccionadas.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                ) : (
+                {cuotasSeleccionadas.size > 0 ? (() => {
+                  const montoIngresado = parseFloat(monto) || 0
+                  const esAbonoParcial = montoIngresado > 0 && montoIngresado < totalCuotasSeleccionadas
+                  return (
+                    <div className={`rounded-xl px-4 py-3 ${esAbonoParcial ? 'bg-orange-600' : 'bg-green-700'}`}>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-white flex items-center gap-2">
+                          <Check size={16} />
+                          {cuotasSeleccionadas.size} cuota{cuotasSeleccionadas.size > 1 ? 's' : ''} seleccionada{cuotasSeleccionadas.size > 1 ? 's' : ''}
+                        </p>
+                        <p className="font-extrabold text-white text-base">
+                          ${totalCuotasSeleccionadas.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      {esAbonoParcial && (
+                        <p className="text-xs text-orange-100 mt-1.5">
+                          ⚠ El monto ingresado (${montoIngresado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}) no cubre el total — la última cuota quedará como <strong>Abono parcial</strong>
+                        </p>
+                      )}
+                    </div>
+                  )
+                })() : (
                   <p className="text-xs text-oriental-gray text-center py-1">
                     Toca una cuota para seleccionarla
                   </p>

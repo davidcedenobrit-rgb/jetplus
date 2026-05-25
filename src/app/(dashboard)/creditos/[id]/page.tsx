@@ -20,6 +20,14 @@ const cuotaEstadoColors: Record<string, string> = {
   pagada: 'bg-green-100 text-green-800',
   pendiente: 'bg-yellow-100 text-yellow-800',
   vencida: 'bg-red-100 text-red-800',
+  abono_parcial: 'bg-orange-100 text-orange-800',
+}
+
+const cuotaEstadoLabel: Record<string, string> = {
+  pagada: 'Pagada',
+  pendiente: 'Pendiente',
+  vencida: 'Vencida',
+  abono_parcial: 'Abono parcial',
 }
 
 const estadoColors: Record<string, string> = {
@@ -72,6 +80,31 @@ export default async function CreditoDetallePage({
     return { ...cuota, _plan_tipo: cred?.plan_tipo ?? null }
   })
 
+  // Cargar recibos vinculados a cada cuota (cuota_ingresos → ingresos)
+  const cuotaIds = cuotasEnriquecidas.map((c: any) => c.id)
+  const { data: cuotaRecibosRaw } = cuotaIds.length > 0
+    ? await supabase
+        .from('cuota_ingresos')
+        .select('cuota_id, monto_aplicado, ingresos(id, numero_recibo, metodo_pago, estado, moneda)')
+        .in('cuota_id', cuotaIds)
+    : { data: [] }
+
+  // Mapa: cuota_id → lista de recibos
+  const recibosMap: Record<string, { ingreso_id: string; numero_recibo: string; metodo_pago: string; estado: string; monto_aplicado: number; moneda: string }[]> = {}
+  for (const cr of cuotaRecibosRaw ?? []) {
+    const ing = (cr as any).ingresos
+    if (!ing) continue
+    if (!recibosMap[cr.cuota_id]) recibosMap[cr.cuota_id] = []
+    recibosMap[cr.cuota_id].push({
+      ingreso_id: ing.id,
+      numero_recibo: ing.numero_recibo,
+      metodo_pago: ing.metodo_pago,
+      estado: ing.estado,
+      monto_aplicado: Number(cr.monto_aplicado),
+      moneda: ing.moneda,
+    })
+  }
+
   // Resumen consolidado
   const totalFinanciado = creditos.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
   const totalSaldo = creditos.reduce((s: number, c: any) => s + Number(c.saldo), 0)
@@ -82,6 +115,7 @@ export default async function CreditoDetallePage({
   const cuotasPagadas = cuotasEnriquecidas.filter(c => c.estado === 'pagada').length
   const cuotasPendientes = cuotasEnriquecidas.filter(c => c.estado === 'pendiente').length
   const cuotasVencidas = cuotasEnriquecidas.filter(c => c.estado === 'vencida').length
+  const cuotasAbono = cuotasEnriquecidas.filter(c => c.estado === 'abono_parcial').length
 
   // Estado general del vehículo (si alguno en mora → mora, si todos pagados → pagado)
   const estadoGeneral = creditos.some((c: any) => c.estado === 'mora') ? 'mora'
@@ -159,7 +193,7 @@ export default async function CreditoDetallePage({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className={`grid gap-2 mt-4 ${cuotasAbono > 0 ? 'grid-cols-2' : 'grid-cols-3'}`}>
               <div className="bg-green-50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-green-700">{cuotasPagadas}</p>
                 <p className="text-[10px] text-green-600">Pagadas</p>
@@ -172,6 +206,12 @@ export default async function CreditoDetallePage({
                 <p className="text-lg font-bold text-red-700">{cuotasVencidas}</p>
                 <p className="text-[10px] text-red-600">Vencidas</p>
               </div>
+              {cuotasAbono > 0 && (
+                <div className="bg-orange-50 rounded-lg p-2 text-center">
+                  <p className="text-lg font-bold text-orange-700">{cuotasAbono}</p>
+                  <p className="text-[10px] text-orange-600">Abono parcial</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -252,42 +292,74 @@ export default async function CreditoDetallePage({
                 <table className="w-full text-sm">
                   <thead className="bg-oriental-bg border-b border-gray-200">
                     <tr>
-                      <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">N°</th>
+                      <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider w-8">N°</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Financiamiento</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Vencimiento</th>
                       <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Monto</th>
                       <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Mora</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Fecha pago</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Estado</th>
+                      <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Recibos</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {cuotasEnriquecidas.map((cuota: any, idx: number) => (
-                      <tr key={cuota.id} className="hover:bg-oriental-bg/50 transition-colors">
-                        <td className="px-3 py-2.5 font-bold text-oriental-black text-xs">
-                          <span className="text-oriental-gray font-normal">{cuota.numero_cuota}</span>
-                        </td>
+                    {cuotasEnriquecidas.map((cuota: any) => {
+                      const recibos = recibosMap[cuota.id] ?? []
+                      const esAbonoParcial = cuota.estado === 'abono_parcial'
+                      return (
+                      <tr key={cuota.id} className={`transition-colors ${esAbonoParcial ? 'bg-orange-50/40' : 'hover:bg-oriental-bg/50'}`}>
+                        <td className="px-3 py-2.5 text-oriental-gray font-normal text-xs">{cuota.numero_cuota}</td>
                         <td className="px-3 py-2.5">
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${planBadge(cuota._plan_tipo)}`}>
                             {cuota.concepto ?? planLabel(cuota._plan_tipo)}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-oriental-gray">{formatDate(cuota.fecha_vencimiento)}</td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-oriental-black">{formatCurrency(cuota.monto, credito.moneda)}</td>
+                        <td className="px-3 py-2.5 text-oriental-gray text-sm">{formatDate(cuota.fecha_vencimiento)}</td>
+                        <td className="px-3 py-2.5 text-right">
+                          <p className="font-semibold text-oriental-black text-sm">{formatCurrency(cuota.monto, credito.moneda)}</p>
+                          {esAbonoParcial && cuota.monto_pagado > 0 && (
+                            <p className="text-[10px] text-orange-600 mt-0.5">
+                              Abonado: {formatCurrency(cuota.monto_pagado, credito.moneda)}
+                            </p>
+                          )}
+                        </td>
                         <td className="px-3 py-2.5 text-right">
                           {cuota.mora > 0
-                            ? <span className="text-oriental-red font-semibold">{formatCurrency(cuota.mora, credito.moneda)}</span>
+                            ? <span className="text-oriental-red font-semibold text-sm">{formatCurrency(cuota.mora, credito.moneda)}</span>
                             : <span className="text-gray-300">—</span>
                           }
                         </td>
-                        <td className="px-3 py-2.5 text-oriental-gray">{cuota.fecha_pago ? formatDate(cuota.fecha_pago) : '—'}</td>
+                        <td className="px-3 py-2.5 text-oriental-gray text-sm">{cuota.fecha_pago ? formatDate(cuota.fecha_pago) : '—'}</td>
                         <td className="px-3 py-2.5">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${cuotaEstadoColors[cuota.estado] ?? 'bg-gray-100 text-gray-700'}`}>
-                            {cuota.estado}
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cuotaEstadoColors[cuota.estado] ?? 'bg-gray-100 text-gray-700'}`}>
+                            {cuotaEstadoLabel[cuota.estado] ?? cuota.estado}
                           </span>
                         </td>
+                        {/* Recibos vinculados */}
+                        <td className="px-3 py-2.5">
+                          {recibos.length === 0 ? (
+                            <span className="text-gray-300 text-xs">—</span>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              {recibos.map(r => (
+                                <Link
+                                  key={r.ingreso_id}
+                                  href={`/ingresos/${r.ingreso_id}`}
+                                  className="inline-flex items-center gap-1 text-xs font-mono text-oriental-red hover:text-oriental-black hover:underline transition-colors"
+                                  title={`${r.metodo_pago} · ${formatCurrency(r.monto_aplicado, r.moneda)}`}
+                                >
+                                  {r.numero_recibo}
+                                  {r.estado === 'pendiente_aprobacion' && (
+                                    <span className="text-[9px] text-yellow-600 font-sans not-italic">(pend.)</span>
+                                  )}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
