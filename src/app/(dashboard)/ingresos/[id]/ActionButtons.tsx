@@ -174,13 +174,13 @@ function ModalConfirmarDeposito({
       setUploadError('')
       const ext = archivoFile.name.split('.').pop()
       const path = `depositos/${ingresoId}/${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('archivos').upload(path, archivoFile, { upsert: true })
+      const { error } = await supabase.storage.from('comprobantes').upload(path, archivoFile, { upsert: true })
       if (error) {
         setUploadError('Error al subir el comprobante. Intenta de nuevo.')
         setUploading(false)
         return
       }
-      const { data: urlData } = supabase.storage.from('archivos').getPublicUrl(path)
+      const { data: urlData } = supabase.storage.from('comprobantes').getPublicUrl(path)
       archivoUrl = urlData.publicUrl
       setUploading(false)
     }
@@ -379,7 +379,7 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
 
     // Guardar el comprobante en archivos si se subió
     if (archivoUrl && user?.id) {
-      await supabase.from('archivos').insert({
+      await supabase.from('comprobantes').insert({
         tipo: 'comprobante_deposito',
         url: archivoUrl,
         nombre: `Comprobante depósito - ${numeroRecibo}`,

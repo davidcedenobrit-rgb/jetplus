@@ -114,7 +114,7 @@ export default function VehiculoDocumentos({ vehiculoId, archivosIniciales }: Pr
     const path = `vehiculos/${vehiculoId}/${tipo}/${Date.now()}.${ext}`
 
     const { error: upErr } = await supabase.storage
-      .from('archivos')
+      .from('comprobantes')
       .upload(path, file, { upsert: false })
 
     if (upErr) {
@@ -123,10 +123,10 @@ export default function VehiculoDocumentos({ vehiculoId, archivosIniciales }: Pr
       return
     }
 
-    const { data: urlData } = supabase.storage.from('archivos').getPublicUrl(path)
+    const { data: urlData } = supabase.storage.from('comprobantes').getPublicUrl(path)
 
     const { data: inserted, error: dbErr } = await supabase
-      .from('archivos')
+      .from('comprobantes')
       .insert({
         tipo,
         url:         urlData.publicUrl,
@@ -155,11 +155,11 @@ export default function VehiculoDocumentos({ vehiculoId, archivosIniciales }: Pr
       const url = new URL(archivo.url)
       const pathParts = url.pathname.split('/archivos/')
       if (pathParts[1]) {
-        await supabase.storage.from('archivos').remove([pathParts[1]])
+        await supabase.storage.from('comprobantes').remove([pathParts[1]])
       }
     } catch { /* Si falla el delete del storage, igual borramos el registro */ }
 
-    await supabase.from('archivos').delete().eq('id', archivo.id)
+    await supabase.from('comprobantes').delete().eq('id', archivo.id)
     setArchivos(prev => prev.filter(a => a.id !== archivo.id))
     setDeleting(null)
   }
