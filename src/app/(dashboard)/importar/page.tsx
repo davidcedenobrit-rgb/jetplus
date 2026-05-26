@@ -64,7 +64,7 @@ const VEHICULO_FIELDS = [
   { key: 'version',        label: 'Versión',            required: false, hint: 'Ej: Trophy, Luxury' },
   { key: 'anio',           label: 'Año',                required: false, hint: 'Ej: 2024' },
   { key: 'color',          label: 'Color',              required: false, hint: 'Ej: Blanco Polar' },
-  { key: 'placa',          label: 'Placa',              required: false, hint: 'Ej: AA001BC' },
+  { key: 'placa',          label: 'Placa',              required: true,  hint: 'Ej: AA001BC' },
   { key: 'vin',            label: 'VIN / Serial',       required: false, hint: '17 caracteres' },
   { key: 'serial_motor',   label: 'Serial Motor',       required: false, hint: 'Número del motor' },
   { key: 'fecha_entrega',  label: 'Fecha de entrega',   required: false, hint: 'YYYY-MM-DD' },
@@ -74,7 +74,7 @@ const VEHICULO_FIELDS = [
 
 // Templates CSV para descargar
 const CLIENTE_TEMPLATE = 'nombre,cedula_rif,telefono,whatsapp,correo,ciudad,tipo\nJuan Pérez,V-12345678,0424-1234567,0414-9876543,juan@email.com,Maturín,natural\nComercial ABC C.A.,J-12345678-1,0291-1234567,,info@abc.com,Maturín,juridico'
-const VEHICULO_TEMPLATE = 'cedula_cliente,marca,modelo,version,anio,color,placa,vin,tipo_compra\nV-12345678,MG,MG5,Trophy,2024,Blanco Polar,AA001BC,LSJWXAJEXRW000001,contado\nV-12345678,MAXUS,T60,Luxury,2023,Negro Obsidiana,BB002CD,,financiado'
+const VEHICULO_TEMPLATE = 'cedula_cliente,marca,modelo,version,anio,color,placa,vin,serial_motor,fecha_entrega,tipo_compra,observaciones\nV-12345678,MG,MG5,Trophy,2024,Blanco Polar,AA001BC,LSJWXAJEXRW000001,,2024-06-15,contado,\nV-87654321,MAXUS,T60,Luxury,2023,Negro Obsidiana,BB002CD,,,2023-11-01,financiado,'
 
 function downloadTemplate(content: string, filename: string) {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
