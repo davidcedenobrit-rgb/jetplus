@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
-  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck
+  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload
 } from 'lucide-react'
 
 const navItems = [
@@ -98,6 +98,25 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                   {aprobacionesPendientes > 99 ? '99+' : aprobacionesPendientes}
                 </span>
               )}
+            </Link>
+          )
+        })()}
+
+        {/* Importar — solo directores */}
+        {['jose', 'admin', 'director'].includes(rol) && (() => {
+          const active = pathname === '/importar' || pathname.startsWith('/importar/')
+          return (
+            <Link
+              href="/importar"
+              onClick={onClose}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                active
+                  ? 'bg-oriental-red text-white font-semibold'
+                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
+              }`}
+            >
+              <Upload size={18} />
+              Importar datos
             </Link>
           )
         })()}
