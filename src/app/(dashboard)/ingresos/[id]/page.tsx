@@ -91,26 +91,25 @@ export default async function IngresoDetallePage({
           <div id="recibo-imprimible" className="card overflow-hidden">
 
             {/* Cabecera del recibo */}
-            <div className="print-bg-black bg-oriental-black px-6 py-5 flex items-start justify-between">
+            <div className="bg-white border-b-2 border-oriental-red px-6 py-5 flex items-center justify-between">
               <div>
-                {/* Logo textual */}
-                <div className="flex items-center gap-2.5 mb-1">
-                  <div className="print-bg-red bg-oriental-red w-7 h-7 rounded flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-[10px] font-black tracking-tight">LO</span>
-                  </div>
-                  <div>
-                    <p className="text-white font-black text-sm tracking-tight leading-none">LA ORIENTAL AUTOMOTORS</p>
-                    <p className="text-gray-400 text-[10px] leading-tight mt-0.5">Concesionario Oficial MG & MAXUS</p>
-                  </div>
-                </div>
-                <p className="text-gray-500 text-[10px] mt-1.5">Av. Libertador, Maturín, Edo. Monagas · Venezuela</p>
+                {/* Logo real */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo-la-oriental.png"
+                  alt="La Oriental Automotors"
+                  className="h-14 w-auto object-contain"
+                  style={{ maxWidth: 220 }}
+                />
+                <p className="text-gray-400 text-[10px] mt-1.5">Concesionario Oficial MG & MAXUS · Maturín, Edo. Monagas</p>
               </div>
               <div className="text-right">
-                <p className="text-gray-400 text-[10px] uppercase tracking-wider">N° de Recibo</p>
-                <p className="text-oriental-red font-mono font-black text-base mt-0.5">{ingreso.numero_recibo}</p>
+                <p className="text-gray-400 text-[10px] uppercase tracking-wider font-semibold">N° de Recibo</p>
+                <p className="text-oriental-red font-mono font-black text-xl mt-0.5">{ingreso.numero_recibo}</p>
                 <div className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${estadoColors[ingreso.estado] ?? 'bg-gray-100 text-gray-700'}`}>
                   {ESTADOS_RECIBO_LABEL[ingreso.estado]}
                 </div>
+                <p className="text-gray-400 text-[10px] mt-1">{formatDate(ingreso.fecha_pago)}</p>
               </div>
             </div>
 
@@ -301,7 +300,7 @@ export default async function IngresoDetallePage({
 
             {/* Pie del recibo */}
             <div className="print-bg-gray bg-oriental-bg border-t border-gray-200 px-6 py-3 flex items-center justify-between">
-              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. · Maturín, Edo. Monagas</p>
+              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. · RIF: J-505692143 · Maturín, Edo. Monagas</p>
               <p className="text-[10px] text-oriental-gray font-mono">{ingreso.numero_recibo} · {formatDate(ingreso.fecha_registro)}</p>
             </div>
           </div>
