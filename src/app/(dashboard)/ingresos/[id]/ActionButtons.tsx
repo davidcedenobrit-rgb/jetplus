@@ -379,7 +379,7 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
 
     // Guardar el comprobante en archivos si se subió
     if (archivoUrl && user?.id) {
-      await supabase.from('comprobantes').insert({
+      await supabase.from('archivos').insert({
         tipo: 'comprobante_deposito',
         url: archivoUrl,
         nombre: `Comprobante depósito - ${numeroRecibo}`,

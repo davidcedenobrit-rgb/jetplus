@@ -126,7 +126,7 @@ export default function VehiculoDocumentos({ vehiculoId, archivosIniciales }: Pr
     const { data: urlData } = supabase.storage.from('comprobantes').getPublicUrl(path)
 
     const { data: inserted, error: dbErr } = await supabase
-      .from('comprobantes')
+      .from('archivos')
       .insert({
         tipo,
         url:         urlData.publicUrl,
