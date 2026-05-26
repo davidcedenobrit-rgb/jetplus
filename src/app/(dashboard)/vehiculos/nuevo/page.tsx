@@ -578,7 +578,7 @@ export default function NuevoVehiculoPage() {
               </select>
             </div>
             <div>
-              <label className="label">Versión / Trim</label>
+              <label className="label">Versión</label>
               <input type="text" className="input" placeholder="Ej: Luxury, Comfort" value={version} onChange={e => setVersion(e.target.value)} />
             </div>
             <div>
