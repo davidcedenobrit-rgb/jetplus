@@ -224,6 +224,28 @@ export default function NuevoVehiculoPage() {
     return { monto, cuotas, montoCuota, totalCuotas, showWarning }
   }, [vhMonto, vhCuotas, vhMontoCuota])
 
+  // Auto-calcular monto por cuota — La Oriental (plan personalizado)
+  useEffect(() => {
+    const monto = parseFloat(orMonto)
+    const cuotas = parseInt(orCuotas)
+    if (monto > 0 && cuotas > 0) {
+      setOrMontoCuota((monto / cuotas).toFixed(2))
+    } else {
+      setOrMontoCuota('')
+    }
+  }, [orMonto, orCuotas])
+
+  // Auto-calcular monto por cuota — Vehimotors (plan personalizado)
+  useEffect(() => {
+    const monto = parseFloat(vhMonto)
+    const cuotas = parseInt(vhCuotas)
+    if (monto > 0 && cuotas > 0) {
+      setVhMontoCuota((monto / cuotas).toFixed(2))
+    } else {
+      setVhMontoCuota('')
+    }
+  }, [vhMonto, vhCuotas])
+
   const calcCuotaEspecial = useMemo(() => {
     const monto = parseFloat(ceMonto) || 0
     const cuotas = parseInt(ceCuotas) || 0
@@ -943,9 +965,15 @@ export default function NuevoVehiculoPage() {
                         value={orCuotas} onChange={e => setOrCuotas(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label">Monto por cuota (USD)</label>
-                      <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
-                        value={orMontoCuota} onChange={e => setOrMontoCuota(e.target.value)} />
+                      <label className="label flex items-center gap-2">
+                        Monto por cuota (USD)
+                        <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full">auto</span>
+                      </label>
+                      <input type="number" step="0.01" min="0"
+                        className={`input font-bold ${orMontoCuota ? 'bg-purple-50 text-purple-900 border-purple-300 cursor-not-allowed' : ''}`}
+                        placeholder="Se calcula automático"
+                        value={orMontoCuota}
+                        readOnly />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
@@ -1013,9 +1041,15 @@ export default function NuevoVehiculoPage() {
                         value={vhCuotas} onChange={e => setVhCuotas(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label">Monto por cuota (USD)</label>
-                      <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
-                        value={vhMontoCuota} onChange={e => setVhMontoCuota(e.target.value)} />
+                      <label className="label flex items-center gap-2">
+                        Monto por cuota (USD)
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full">auto</span>
+                      </label>
+                      <input type="number" step="0.01" min="0"
+                        className={`input font-bold ${vhMontoCuota ? 'bg-indigo-50 text-indigo-900 border-indigo-300 cursor-not-allowed' : ''}`}
+                        placeholder="Se calcula automático"
+                        value={vhMontoCuota}
+                        readOnly />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
