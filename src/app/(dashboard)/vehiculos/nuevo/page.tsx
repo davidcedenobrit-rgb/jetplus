@@ -988,7 +988,7 @@ export default function NuevoVehiculoPage() {
                     <div>
                       <label className="label">Frecuencia</label>
                       <div className="flex gap-2">
-                        {['semanal', 'quincenal', 'mensual', 'trimestral'].map(f => (
+                        {['semanal', 'quincenal', 'mensual'].map(f => (
                           <button key={f} type="button" onClick={() => setOrFrecuencia(f)}
                             className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
                               orFrecuencia === f ? 'bg-purple-700 text-white border-purple-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
@@ -1064,7 +1064,7 @@ export default function NuevoVehiculoPage() {
                     <div>
                       <label className="label">Frecuencia</label>
                       <div className="flex gap-2">
-                        {['semanal', 'quincenal', 'mensual', 'trimestral'].map(f => (
+                        {['semanal', 'quincenal', 'mensual'].map(f => (
                           <button key={f} type="button" onClick={() => setVhFrecuencia(f)}
                             className={`flex-1 py-2 rounded-lg text-xs font-semibold border capitalize transition-colors ${
                               vhFrecuencia === f ? 'bg-indigo-700 text-white border-indigo-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
