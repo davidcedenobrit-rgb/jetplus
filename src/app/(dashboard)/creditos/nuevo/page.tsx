@@ -122,6 +122,39 @@ export default function NuevoCreditoPage() {
       .then(({ data }) => { setVehiculos(data ?? []); setLoadingVehiculos(false) })
   }, [clienteSeleccionado])
 
+  // Pre-cargar créditos existentes cuando se selecciona un vehículo
+  useEffect(() => {
+    if (!vehiculoSeleccionado) return
+    supabase
+      .from('creditos')
+      .select('*')
+      .eq('vehiculo_id', vehiculoSeleccionado.id)
+      .then(({ data: creditos }) => {
+        if (!creditos || creditos.length === 0) return
+        for (const cred of creditos) {
+          if (cred.plan_tipo === 'inicial_la_oriental') {
+            setInicialOrientalMonto(String(cred.monto_financiado ?? ''))
+            setInicialOrientalCuotas(String(cred.num_cuotas ?? '12'))
+            setInicialOrientalFrecuencia(cred.frecuencia_pago ?? 'mensual')
+            setInicialOrientalFecha(cred.fecha_inicio ?? new Date().toISOString().split('T')[0])
+            setInicialOrientalObs(cred.observaciones ?? '')
+          }
+          if (cred.plan_tipo === 'financiamiento_vehimotors') {
+            setVehimotorsMonto(String(cred.monto_financiado ?? ''))
+            setVehimotorsCuotas(String(cred.num_cuotas ?? '24'))
+            setVehimotorsFrecuencia(cred.frecuencia_pago ?? 'mensual')
+            setVehimotorsFecha(cred.fecha_inicio ?? new Date().toISOString().split('T')[0])
+            setVehimotorsObs(cred.observaciones ?? '')
+          }
+        }
+        // Cambiar a plan personalizado si hay créditos de esos tipos
+        const tienes = creditos.map((c: any) => c.plan_tipo)
+        if (tienes.includes('inicial_la_oriental') || tienes.includes('financiamiento_vehimotors')) {
+          setPlan('personalizado')
+        }
+      })
+  }, [vehiculoSeleccionado])
+
   // Cargar planes AC500 cuando cambia modalidad
   useEffect(() => {
     if (plan !== 'asegurate_500') return
