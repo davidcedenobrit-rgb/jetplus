@@ -153,12 +153,12 @@ function NuevoIngresoPageInner() {
       return
     }
 
-    // 3. Todas las cuotas pendientes/vencidas
+    // 3. Todas las cuotas pendientes/vencidas/abono_parcial
     const creditoIds = creditos.map((c: any) => c.id)
     const { data: cuotas } = await supabase
       .from('cuotas').select('*')
       .in('credito_id', creditoIds)
-      .in('estado', ['pendiente', 'vencida'])
+      .in('estado', ['pendiente', 'vencida', 'abono_parcial'])
       .order('fecha_vencimiento')
 
     // Construir mapas para enriquecer
@@ -212,14 +212,37 @@ function NuevoIngresoPageInner() {
     } else {
       // Prioridad 2: auto-selección inteligente según estado del cliente
       const hoyStr = new Date().toISOString().split('T')[0]
-      const vencidas = cuotasEnriquecidas.filter((c: any) => c.fecha_vencimiento < hoyStr)
 
-      if (vencidas.length > 0) {
-        // Cliente moroso → pre-seleccionar TODAS las vencidas (de la más antigua a la más reciente)
-        const vencidasOrdenadas = [...vencidas].sort((a: any, b: any) =>
+      // Abonos parciales siempre van primero (tienen saldo pendiente)
+      const abonosParciales = cuotasEnriquecidas.filter((c: any) => c.estado === 'abono_parcial')
+      const vencidas = cuotasEnriquecidas.filter((c: any) =>
+        (c.estado === 'vencida' || c.fecha_vencimiento < hoyStr) && c.estado !== 'abono_parcial'
+      )
+
+      if (abonosParciales.length > 0 || vencidas.length > 0) {
+        // Hay deuda pendiente → pre-seleccionar abonos parciales + vencidas (ordenadas por fecha)
+        const prioritarias = [...abonosParciales, ...vencidas].sort((a: any, b: any) =>
           a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
         )
-        setCuotasSeleccionadas(new Set(vencidasOrdenadas.map((c: any) => c.id)))
+        const seleccionadas = new Set(prioritarias.map((c: any) => c.id))
+
+        // Además, añadir la PRÓXIMA cuota pendiente por crédito que aún no está vencida.
+        // Así el cliente ve: abono/vencida + la siguiente cuota que toca pagar.
+        const creditosConPrioritaria = new Set(prioritarias.map((c: any) => c.credito_id))
+        const futurasPorCredito = cuotasEnriquecidas
+          .filter((c: any) => c.estado === 'pendiente' && c.fecha_vencimiento >= hoyStr)
+          .sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
+
+        const visitadosFuturos = new Set<string>()
+        for (const c of futurasPorCredito) {
+          // Solo la primera cuota futura de cada crédito que ya tenía prioritaria
+          if (creditosConPrioritaria.has(c.credito_id) && !visitadosFuturos.has(c.credito_id)) {
+            visitadosFuturos.add(c.credito_id)
+            seleccionadas.add(c.id)
+          }
+        }
+
+        setCuotasSeleccionadas(seleccionadas)
       } else {
         // Cliente al día → pre-seleccionar la próxima cuota de CADA crédito activo (La Oriental primero)
         const proximas = new Set<string>()
@@ -292,10 +315,16 @@ function NuevoIngresoPageInner() {
   }
 
   // ── Total cuotas seleccionadas ──
+  // Para abono_parcial usa el saldo pendiente (faltante), no el monto total
   const totalCuotasSeleccionadas = useMemo(() =>
     todasLasCuotas
       .filter(c => cuotasSeleccionadas.has(c.id))
-      .reduce((s, c) => s + Number(c.monto), 0),
+      .reduce((s, c) => {
+        const faltante = c.estado === 'abono_parcial'
+          ? Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0))
+          : Number(c.monto)
+        return s + faltante
+      }, 0),
     [cuotasSeleccionadas, todasLasCuotas]
   )
 
@@ -817,7 +846,9 @@ function NuevoIngresoPageInner() {
                           <div className="space-y-1.5">
                             {cuotasPendientes.map((cuota: any) => {
                               const isSelected = cuotasSeleccionadas.has(cuota.id)
-                              const isVencida = cuota.fecha_vencimiento < hoy
+                              const isAbono = cuota.estado === 'abono_parcial'
+                              const isVencida = cuota.fecha_vencimiento < hoy && !isAbono
+                              const faltante = isAbono ? Math.max(0, Number(cuota.monto) - Number(cuota.monto_pagado ?? 0)) : Number(cuota.monto)
                               return (
                                 <button
                                   key={cuota.id}
@@ -826,6 +857,8 @@ function NuevoIngresoPageInner() {
                                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${
                                     isSelected
                                       ? 'bg-green-50 border-green-500 shadow-sm'
+                                      : isAbono
+                                      ? 'bg-amber-50 border-amber-400 hover:border-amber-500'
                                       : isVencida
                                       ? 'bg-red-50 border-red-200 hover:border-red-400'
                                       : 'bg-white border-gray-200 hover:border-gray-400 hover:shadow-sm'
@@ -835,6 +868,8 @@ function NuevoIngresoPageInner() {
                                   <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-all ${
                                     isSelected
                                       ? 'bg-green-600 border-green-600'
+                                      : isAbono
+                                      ? 'border-amber-500'
                                       : isVencida
                                       ? 'border-red-400'
                                       : 'border-gray-300'
@@ -845,35 +880,40 @@ function NuevoIngresoPageInner() {
                                   {/* Info cuota */}
                                   <div className="flex-1 min-w-0">
                                     <p className={`text-sm font-semibold ${
-                                      isSelected ? 'text-green-800' : isVencida ? 'text-red-800' : 'text-oriental-black'
+                                      isSelected ? 'text-green-800' : isAbono ? 'text-amber-800' : isVencida ? 'text-red-800' : 'text-oriental-black'
                                     }`}>
                                       Cuota #{cuota.numero_cuota}
-                                      {isVencida && (
+                                      {isAbono && (
+                                        <span className="ml-2 text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                                          ABONO PARCIAL
+                                        </span>
+                                      )}
+                                      {isVencida && !isAbono && (
                                         <span className="ml-2 text-xs font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
                                           VENCIDA
                                         </span>
                                       )}
                                       {cuota.concepto && (
                                         <span className={`ml-2 text-xs font-normal ${
-                                          isVencida ? 'text-red-500' : 'text-oriental-gray'
+                                          isAbono ? 'text-amber-600' : isVencida ? 'text-red-500' : 'text-oriental-gray'
                                         }`}>
                                           {cuota.concepto}
                                         </span>
                                       )}
                                     </p>
                                     <p className={`text-xs mt-0.5 ${
-                                      isVencida ? 'text-red-500' : 'text-oriental-gray'
+                                      isAbono ? 'text-amber-600' : isVencida ? 'text-red-500' : 'text-oriental-gray'
                                     }`}>
-                                      {isVencida ? 'Venció' : 'Vence'}:{' '}
-                                      {new Date(cuota.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', {
-                                        day: 'numeric', month: 'short', year: 'numeric'
-                                      })}
+                                      {isAbono
+                                        ? `Falta: $${faltante.toLocaleString('es-VE', { minimumFractionDigits: 2 })} de $${Number(cuota.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
+                                        : `${isVencida ? 'Venció' : 'Vence'}: ${new Date(cuota.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                                      }
                                     </p>
                                   </div>
 
                                   {/* Monto */}
                                   <p className={`font-extrabold text-base flex-shrink-0 ${
-                                    isSelected ? 'text-green-700' : isVencida ? 'text-red-700' : 'text-oriental-black'
+                                    isSelected ? 'text-green-700' : isAbono ? 'text-amber-700' : isVencida ? 'text-red-700' : 'text-oriental-black'
                                   }`}>
                                     ${Number(cuota.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
                                   </p>
