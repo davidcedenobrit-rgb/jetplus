@@ -515,6 +515,10 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
             <Printer size={16} />
             Imprimir recibo
           </button>
+          <p className="text-[11px] text-oriental-gray/60 text-center leading-tight px-1">
+            💡 En Chrome: activa <strong>Más ajustes</strong> y desactiva<br />
+            <em>"Encabezados y pies de página"</em> para una impresión limpia
+          </p>
           <DeleteButton table="ingresos" id={ingresoId} redirectTo="/ingresos" label="Eliminar ingreso" />
         </div>
       </div>

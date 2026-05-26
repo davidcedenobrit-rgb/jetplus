@@ -10,6 +10,13 @@ import {
 import ActionButtons from './ActionButtons'
 import ComprobantesGallery from '@/components/ComprobantesGallery'
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data } = await supabase.from('ingresos').select('numero_recibo').eq('id', id).single()
+  return { title: data?.numero_recibo ?? 'Recibo — La Oriental' }
+}
+
 export default async function IngresoDetallePage({
   params,
 }: {
