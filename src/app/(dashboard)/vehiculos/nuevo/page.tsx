@@ -236,15 +236,23 @@ export default function NuevoVehiculoPage() {
   }, [orMonto, orCuotas])
 
   // Auto-calcular monto por cuota — Vehimotors (plan personalizado)
+  // Si hay tasa anual en la calculadora, usa PMT; si no, división simple
   useEffect(() => {
-    const monto = parseFloat(vhMonto)
+    const monto  = parseFloat(vhMonto)
     const cuotas = parseInt(vhCuotas)
     if (monto > 0 && cuotas > 0) {
-      setVhMontoCuota((monto / cuotas).toFixed(2))
+      const tasa = parseFloat(calcTasaAnual) || 0
+      if (tasa > 0) {
+        const r = tasa / 100 / 12
+        const pmt = monto * r * Math.pow(1 + r, cuotas) / (Math.pow(1 + r, cuotas) - 1)
+        setVhMontoCuota(pmt.toFixed(2))
+      } else {
+        setVhMontoCuota((monto / cuotas).toFixed(2))
+      }
     } else {
       setVhMontoCuota('')
     }
-  }, [vhMonto, vhCuotas])
+  }, [vhMonto, vhCuotas, calcTasaAnual])
 
   const calcCuotaEspecial = useMemo(() => {
     const monto = parseFloat(ceMonto) || 0
