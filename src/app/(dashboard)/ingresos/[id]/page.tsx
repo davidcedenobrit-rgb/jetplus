@@ -280,17 +280,29 @@ export default async function IngresoDetallePage({
               {/* Firmas */}
               <div className="border-t border-gray-100 pt-5 mt-2">
                 <div className="grid grid-cols-2 gap-8">
+                  {/* Sello empresa */}
                   <div className="text-center">
-                    <div className="border-b-2 border-gray-300 mb-2 pb-10" />
-                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-semibold">Firma / Sello empresa</p>
+                    <div className="relative h-24 flex items-center justify-center mb-1">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/sello-la-oriental.jpeg"
+                        alt="Sello La Oriental Automotors"
+                        className="h-24 w-auto object-contain"
+                        style={{ mixBlendMode: 'multiply', opacity: 0.85 }}
+                      />
+                    </div>
+                    <div className="border-b-2 border-gray-300 mb-2" />
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-semibold">Sello / Firma empresa</p>
                     {ingreso.aprobado_por && ingreso.fecha_aprobacion && (
                       <p className="text-[10px] text-green-700 font-medium mt-1">
                         ✓ Aprobado {formatDate(ingreso.fecha_aprobacion)}
                       </p>
                     )}
                   </div>
+                  {/* Firma cliente */}
                   <div className="text-center">
-                    <div className="border-b-2 border-gray-300 mb-2 pb-10" />
+                    <div className="pb-24 mb-1" />
+                    <div className="border-b-2 border-gray-300 mb-2" />
                     <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-semibold">Firma del cliente</p>
                     <p className="text-[10px] text-oriental-gray mt-1">{cliente?.cedula_rif ?? ''}</p>
                   </div>
