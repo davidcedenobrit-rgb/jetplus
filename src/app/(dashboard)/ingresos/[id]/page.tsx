@@ -35,6 +35,21 @@ export default async function IngresoDetallePage({
     .eq('ingreso_id', id)
     .order('created_at', { ascending: true })
 
+  // Cuotas aplicadas en este ingreso (para el recibo)
+  const { data: cuotasAplicadas } = await supabase
+    .from('cuota_ingresos')
+    .select('monto_aplicado, cuotas(numero_cuota, monto, fecha_vencimiento, concepto, credito_id, creditos(plan_tipo))')
+    .eq('ingreso_id', id)
+
+  // Vehículo vinculado
+  const { data: vehiculo } = ingreso.vehiculo_id
+    ? await supabase
+        .from('vehiculos')
+        .select('marca, modelo, version, anio, placa, color')
+        .eq('id', ingreso.vehiculo_id)
+        .single()
+    : { data: null }
+
   const cliente = (ingreso as any).clientes
 
   const estadoColors: Record<string, string> = {
@@ -53,8 +68,8 @@ export default async function IngresoDetallePage({
 
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      {/* Header — oculto al imprimir */}
+      <div className="flex items-center gap-4 mb-6 print:hidden">
         <Link href="/ingresos" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
           <ArrowLeft size={18} className="text-oriental-gray" />
         </Link>
@@ -72,141 +87,228 @@ export default async function IngresoDetallePage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Details */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Recibo digital */}
-          <div className="card overflow-hidden">
-            {/* Recibo header */}
-            <div className="bg-oriental-black px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-oriental-red rounded flex items-center justify-center">
-                  <Building2 size={16} className="text-white" />
+          {/* ── RECIBO IMPRIMIBLE ── */}
+          <div id="recibo-imprimible" className="card overflow-hidden">
+
+            {/* Cabecera del recibo */}
+            <div className="print-bg-black bg-oriental-black px-6 py-5 flex items-start justify-between">
+              <div>
+                {/* Logo textual */}
+                <div className="flex items-center gap-2.5 mb-1">
+                  <div className="print-bg-red bg-oriental-red w-7 h-7 rounded flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-[10px] font-black tracking-tight">LO</span>
+                  </div>
+                  <div>
+                    <p className="text-white font-black text-sm tracking-tight leading-none">LA ORIENTAL AUTOMOTORS</p>
+                    <p className="text-gray-400 text-[10px] leading-tight mt-0.5">Concesionario Oficial MG & MAXUS</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-white font-bold text-sm tracking-tight">LA ORIENTAL AUTOMOTORS</p>
-                  <p className="text-gray-400 text-[11px]">MG & MAXUS · Maturín, Edo. Monagas</p>
-                </div>
+                <p className="text-gray-500 text-[10px] mt-1.5">Av. Libertador, Maturín, Edo. Monagas · Venezuela</p>
               </div>
               <div className="text-right">
-                <p className="text-oriental-red font-mono font-bold text-sm">{ingreso.numero_recibo}</p>
-                <p className="text-gray-500 text-[11px]">{formatDate(ingreso.fecha_pago)}</p>
+                <p className="text-gray-400 text-[10px] uppercase tracking-wider">N° de Recibo</p>
+                <p className="text-oriental-red font-mono font-black text-base mt-0.5">{ingreso.numero_recibo}</p>
+                <div className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${estadoColors[ingreso.estado] ?? 'bg-gray-100 text-gray-700'}`}>
+                  {ESTADOS_RECIBO_LABEL[ingreso.estado]}
+                </div>
               </div>
             </div>
 
-            {/* Recibo body */}
+            {/* Cuerpo del recibo */}
             <div className="p-6 space-y-5">
-              {/* Cliente */}
+
+              {/* Fila 1: Cliente + Contacto */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Cliente</p>
+                  <p className="font-bold text-oriental-black text-sm">{cliente?.nombre ?? '—'}</p>
+                  <p className="text-xs text-oriental-gray mt-0.5">{cliente?.cedula_rif ?? '—'}</p>
+                  {cliente?.ciudad && <p className="text-xs text-oriental-gray">{cliente.ciudad}</p>}
+                </div>
+                <div>
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Contacto</p>
+                  <p className="text-xs text-oriental-black">{cliente?.telefono ?? '—'}</p>
+                  <p className="text-xs text-oriental-gray mt-0.5">{cliente?.correo ?? '—'}</p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100" />
+
+              {/* Fila 2: Vehículo */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Vehículo</p>
+                  {vehiculo ? (
+                    <div>
+                      <p className="text-sm font-bold text-oriental-black">
+                        {vehiculo.marca} {vehiculo.modelo}
+                        {vehiculo.anio && <span className="font-normal text-oriental-gray ml-1">{vehiculo.anio}</span>}
+                      </p>
+                      {vehiculo.version && <p className="text-xs text-oriental-gray">{vehiculo.version}</p>}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-oriental-gray">—</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Placa</p>
+                  <p className="font-mono font-black text-oriental-black text-base tracking-widest">
+                    {ingreso.placa ?? vehiculo?.placa ?? '—'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100" />
+
+              {/* Fila 3: Concepto + Fecha */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Cliente</p>
-                  <p className="font-semibold text-oriental-black">{cliente?.nombre ?? '—'}</p>
-                  <p className="text-sm text-oriental-gray">{cliente?.cedula_rif}</p>
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Concepto</p>
+                  <p className="text-sm font-semibold text-oriental-black">{ingreso.concepto}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Contacto</p>
-                  <p className="text-sm text-oriental-black">{cliente?.telefono ?? '—'}</p>
-                  <p className="text-sm text-oriental-gray">{cliente?.correo ?? '—'}</p>
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Fecha de pago</p>
+                  <p className="text-sm font-semibold text-oriental-black">{formatDate(ingreso.fecha_pago)}</p>
                 </div>
               </div>
 
               <div className="border-t border-gray-100" />
 
-              {/* Vehículo y placa */}
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Vehículo</p>
-                  <p className="text-sm text-oriental-black">{ingreso.vehiculo_id ? 'Vinculado' : '—'}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Placa</p>
-                  <p className="font-mono font-bold text-oriental-black">{ingreso.placa ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Concepto</p>
-                  <p className="text-sm text-oriental-black">{ingreso.concepto}</p>
-                </div>
-              </div>
+              {/* Cuotas aplicadas (solo si las hay) */}
+              {(cuotasAplicadas ?? []).length > 0 && (
+                <>
+                  <div>
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-2">Cuotas aplicadas</p>
+                    <div className="rounded-xl border border-gray-200 overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="print-bg-gray bg-gray-50 border-b border-gray-200">
+                            <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Cuota</th>
+                            <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Plan</th>
+                            <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Vencimiento</th>
+                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Monto total</th>
+                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Aplicado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(cuotasAplicadas ?? []).map((ci: any, idx: number) => {
+                            const cuota = ci.cuotas
+                            const planTipo = cuota?.creditos?.plan_tipo
+                            const planNombre = planTipo === 'inicial_la_oriental' ? 'La Oriental' :
+                              planTipo === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Crédito'
+                            return (
+                              <tr key={idx} className="border-b border-gray-100 last:border-0">
+                                <td className="px-3 py-2 font-semibold text-oriental-black">#{cuota?.numero_cuota ?? '—'}</td>
+                                <td className="px-3 py-2 text-oriental-gray">{planNombre}</td>
+                                <td className="px-3 py-2 text-oriental-gray">
+                                  {cuota?.fecha_vencimiento
+                                    ? new Date(cuota.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    : '—'}
+                                </td>
+                                <td className="px-3 py-2 text-right text-oriental-gray">
+                                  ${Number(cuota?.monto ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="px-3 py-2 text-right font-bold text-oriental-black">
+                                  ${Number(ci.monto_aplicado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="border-t border-gray-100" />
+                </>
+              )}
 
-              <div className="border-t border-gray-100" />
-
-              {/* Monto */}
-              <div className="bg-oriental-bg rounded-xl p-4 flex items-center justify-between">
+              {/* Monto recibido */}
+              <div className="print-bg-gray bg-oriental-bg rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold">Monto recibido</p>
-                  <p className="text-sm text-oriental-gray mt-0.5">{ingreso.moneda}</p>
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold">Monto recibido</p>
+                  <p className="text-xs text-oriental-gray mt-0.5">{ingreso.moneda === 'USD' ? 'Dólares americanos' : 'Bolívares'}</p>
                 </div>
-                <p className="text-3xl font-extrabold text-oriental-black">{formatCurrency(ingreso.monto, ingreso.moneda)}</p>
+                <p className="text-3xl font-black text-oriental-black">{formatCurrency(ingreso.monto, ingreso.moneda)}</p>
               </div>
 
               {/* Tasa de cambio (solo VES) */}
               {ingreso.moneda === 'VES' && ingreso.tasa_cambio && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] text-blue-600 uppercase tracking-wider font-semibold">Tasa de cambio</p>
-                    <p className="text-sm text-blue-700 mt-0.5">Equivalente en USD: ~{formatCurrency(ingreso.monto / ingreso.tasa_cambio, 'USD')}</p>
+                    <p className="text-[10px] text-blue-600 uppercase tracking-wider font-bold">Tasa de cambio</p>
+                    <p className="text-xs text-blue-700 mt-0.5">Equivalente en USD: ~{formatCurrency(ingreso.monto / ingreso.tasa_cambio, 'USD')}</p>
                   </div>
-                  <p className="text-2xl font-extrabold text-blue-800">{Number(ingreso.tasa_cambio).toFixed(2)} Bs/$</p>
+                  <p className="text-xl font-black text-blue-800">{Number(ingreso.tasa_cambio).toFixed(2)} Bs/$</p>
                 </div>
               )}
 
-              {/* Pago */}
+              <div className="border-t border-gray-100" />
+
+              {/* Forma de pago */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Forma de pago</p>
-                  <p className="text-sm text-oriental-black">{ingreso.metodo_pago}</p>
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1">Forma de pago</p>
+                  <p className="text-sm font-semibold text-oriental-black">{ingreso.metodo_pago}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Referencia</p>
-                  <p className="font-mono text-sm text-oriental-black">{ingreso.referencia ?? '—'}</p>
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1">N° Referencia</p>
+                  <p className="font-mono text-sm font-bold text-oriental-black">{ingreso.referencia ?? '—'}</p>
                 </div>
-                <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Banco emisor</p>
-                  <p className="text-sm text-oriental-black">{ingreso.banco_emisor ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Banco receptor</p>
-                  <p className="text-sm text-oriental-black">{ingreso.banco_receptor ?? '—'}</p>
-                </div>
+                {ingreso.banco_emisor && (
+                  <div>
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1">Banco emisor</p>
+                    <p className="text-sm text-oriental-black">{ingreso.banco_emisor}</p>
+                  </div>
+                )}
+                {ingreso.banco_receptor && (
+                  <div>
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1">Banco receptor</p>
+                    <p className="text-sm text-oriental-black">{ingreso.banco_receptor}</p>
+                  </div>
+                )}
               </div>
 
               {ingreso.observaciones && (
                 <>
                   <div className="border-t border-gray-100" />
                   <div>
-                    <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">Observaciones</p>
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1">Observaciones</p>
                     <p className="text-sm text-gray-700">{ingreso.observaciones}</p>
                   </div>
                 </>
               )}
 
-              {/* Firma */}
-              <div className="border-t border-gray-100 pt-4">
-                <div className="grid grid-cols-2 gap-4">
+              {/* Firmas */}
+              <div className="border-t border-gray-100 pt-5 mt-2">
+                <div className="grid grid-cols-2 gap-8">
                   <div className="text-center">
-                    <div className="border-b border-gray-300 mb-1 pb-8" />
-                    <p className="text-[11px] text-oriental-gray uppercase tracking-wider">Firma / Aprobación</p>
-                    {ingreso.aprobado_por && (
-                      <p className="text-xs text-green-700 font-medium mt-1">
-                        Aprobado {ingreso.fecha_aprobacion ? formatDate(ingreso.fecha_aprobacion) : ''}
+                    <div className="border-b-2 border-gray-300 mb-2 pb-10" />
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-semibold">Firma / Sello empresa</p>
+                    {ingreso.aprobado_por && ingreso.fecha_aprobacion && (
+                      <p className="text-[10px] text-green-700 font-medium mt-1">
+                        ✓ Aprobado {formatDate(ingreso.fecha_aprobacion)}
                       </p>
                     )}
                   </div>
                   <div className="text-center">
-                    <div className="border-b border-gray-300 mb-1 pb-8" />
-                    <p className="text-[11px] text-oriental-gray uppercase tracking-wider">Recibido por</p>
+                    <div className="border-b-2 border-gray-300 mb-2 pb-10" />
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-semibold">Firma del cliente</p>
+                    <p className="text-[10px] text-oriental-gray mt-1">{cliente?.cedula_rif ?? ''}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Recibo footer */}
-            <div className="bg-oriental-bg border-t border-gray-100 px-6 py-3 flex items-center justify-between">
-              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. — RIF: J-XXXXXXXXX-X</p>
-              <p className="text-[10px] text-oriental-gray">Documento generado digitalmente</p>
+            {/* Pie del recibo */}
+            <div className="print-bg-gray bg-oriental-bg border-t border-gray-200 px-6 py-3 flex items-center justify-between">
+              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. · Maturín, Edo. Monagas</p>
+              <p className="text-[10px] text-oriental-gray font-mono">{ingreso.numero_recibo} · {formatDate(ingreso.fecha_registro)}</p>
             </div>
           </div>
         </div>
 
-        {/* Right: Actions */}
-        <div className="space-y-4">
+        {/* Right: Actions — oculto al imprimir */}
+        <div className="space-y-4 print:hidden">
           <ActionButtons
             ingresoId={ingreso.id}
             estado={ingreso.estado}
