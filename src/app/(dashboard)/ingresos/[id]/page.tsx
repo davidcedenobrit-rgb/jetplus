@@ -96,7 +96,7 @@ export default async function IngresoDetallePage({
                 {/* Logo real */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/logo-la-oriental.png"
+                  src="/logo-la-oriental.jpg"
                   alt="La Oriental Automotors"
                   className="h-14 w-auto object-contain"
                   style={{ maxWidth: 220 }}
