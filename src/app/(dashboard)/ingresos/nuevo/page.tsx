@@ -436,10 +436,21 @@ function NuevoIngresoPageInner() {
     }
 
     const year = new Date().getFullYear()
-    const buf = new Uint32Array(1)
-    crypto.getRandomValues(buf)
-    const seq = String(buf[0] % 1_000_000).padStart(6, '0')
-    const numero_recibo = `LOA-REC-${year}-${seq}`
+    // Correlativo secuencial: busca el último recibo del año y suma 1
+    const { data: ultimoRecibo } = await supabase
+      .from('ingresos')
+      .select('numero_recibo')
+      .like('numero_recibo', `LOA-REC-${year}-%`)
+      .order('numero_recibo', { ascending: false })
+      .limit(1)
+      .single()
+    let nextNum = 1
+    if (ultimoRecibo?.numero_recibo) {
+      const partes = ultimoRecibo.numero_recibo.split('-')
+      const ultimo = parseInt(partes[partes.length - 1]) || 0
+      nextNum = ultimo + 1
+    }
+    const numero_recibo = `LOA-REC-${year}-${String(nextNum).padStart(5, '0')}`
 
     const { data: inserted, error: insertError } = await supabase.from('ingresos').insert({
       numero_recibo,

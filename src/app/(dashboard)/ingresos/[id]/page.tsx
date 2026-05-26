@@ -187,6 +187,7 @@ export default async function IngresoDetallePage({
                             <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Vencimiento</th>
                             <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Monto total</th>
                             <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Aplicado</th>
+                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Pendiente</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -195,6 +196,9 @@ export default async function IngresoDetallePage({
                             const planTipo = cuota?.creditos?.plan_tipo
                             const planNombre = planTipo === 'inicial_la_oriental' ? 'La Oriental' :
                               planTipo === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Crédito'
+                            const montoTotal = Number(cuota?.monto ?? 0)
+                            const aplicado = Number(ci.monto_aplicado)
+                            const pendiente = Math.max(0, montoTotal - aplicado)
                             return (
                               <tr key={idx} className="border-b border-gray-100 last:border-0">
                                 <td className="px-3 py-2 font-semibold text-oriental-black">#{cuota?.numero_cuota ?? '—'}</td>
@@ -205,10 +209,13 @@ export default async function IngresoDetallePage({
                                     : '—'}
                                 </td>
                                 <td className="px-3 py-2 text-right text-oriental-gray">
-                                  ${Number(cuota?.monto ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                  ${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="px-3 py-2 text-right font-bold text-oriental-black">
-                                  ${Number(ci.monto_aplicado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                  ${aplicado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className={`px-3 py-2 text-right font-bold ${pendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                  ${pendiente.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
                                 </td>
                               </tr>
                             )
@@ -311,9 +318,14 @@ export default async function IngresoDetallePage({
             </div>
 
             {/* Pie del recibo */}
-            <div className="print-bg-gray bg-oriental-bg border-t border-gray-200 px-6 py-3 flex items-center justify-between">
-              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. · RIF: J-505692143 · Maturín, Edo. Monagas</p>
-              <p className="text-[10px] text-oriental-gray font-mono">{ingreso.numero_recibo} · {formatDate(ingreso.fecha_registro)}</p>
+            <div className="print-bg-gray bg-oriental-bg border-t border-gray-200 px-6 py-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold text-oriental-black">La Oriental Automotors C.A. · RIF: J-505692143</p>
+                  <p className="text-[10px] text-oriental-gray mt-0.5">Av. Ugarte Pelayo, Centro Profesional David, Qta. Galpón Nro. S/N, Sector Centro, Maturín, Monagas. C.P. 6201</p>
+                </div>
+                <p className="text-[10px] text-oriental-gray font-mono flex-shrink-0">{ingreso.numero_recibo}</p>
+              </div>
             </div>
           </div>
         </div>
