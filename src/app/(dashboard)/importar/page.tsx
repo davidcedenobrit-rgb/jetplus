@@ -64,7 +64,7 @@ const VEHICULO_FIELDS = [
   { key: 'version',        label: 'Versión',            required: false, hint: 'Ej: Trophy, Luxury' },
   { key: 'anio',           label: 'Año',                required: false, hint: 'Ej: 2024' },
   { key: 'color',          label: 'Color',              required: false, hint: 'Ej: Blanco Polar' },
-  { key: 'placa',          label: 'Placa',              required: true,  hint: 'Ej: AA001BC' },
+  { key: 'placa',          label: 'Placa',              required: false, hint: 'Ej: AA001BC' },
   { key: 'vin',            label: 'VIN / Serial',       required: false, hint: '17 caracteres' },
   { key: 'serial_motor',   label: 'Serial Motor',       required: false, hint: 'Número del motor' },
   { key: 'fecha_entrega',  label: 'Fecha de entrega',   required: false, hint: 'YYYY-MM-DD' },
