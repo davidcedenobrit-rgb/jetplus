@@ -11,9 +11,10 @@ interface Props {
   numeroCuota: number
   montoPagado: number
   planLabel: string
+  esAbono?: boolean
 }
 
-export default function RevertirCuotaButton({ cuotaId, creditoId, numeroCuota, montoPagado, planLabel }: Props) {
+export default function RevertirCuotaButton({ cuotaId, creditoId, numeroCuota, montoPagado, planLabel, esAbono = false }: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -38,10 +39,10 @@ export default function RevertirCuotaButton({ cuotaId, creditoId, numeroCuota, m
         type="button"
         onClick={() => setOpen(true)}
         className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-oriental-red font-medium transition-colors mt-1"
-        title="Revertir pago (solo directores)"
+        title={esAbono ? 'Revertir abono parcial (solo directores)' : 'Revertir pago (solo directores)'}
       >
         <RotateCcw size={10} />
-        Revertir
+        {esAbono ? 'Revertir abono' : 'Revertir'}
       </button>
 
       {open && (
@@ -64,19 +65,19 @@ export default function RevertirCuotaButton({ cuotaId, creditoId, numeroCuota, m
             </div>
 
             <p className="text-sm text-oriental-gray mb-1">
-              Vas a revertir el pago de:
+              {esAbono ? 'Vas a revertir el abono parcial de:' : 'Vas a revertir el pago de:'}
             </p>
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <div className={`border rounded-xl px-4 py-3 mb-4 ${esAbono ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
               <p className="font-bold text-oriental-black text-sm">
                 Cuota #{numeroCuota} — {planLabel}
               </p>
-              <p className="text-xs text-red-600 font-semibold mt-0.5">
-                ${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })} USD
+              <p className={`text-xs font-semibold mt-0.5 ${esAbono ? 'text-amber-700' : 'text-red-600'}`}>
+                Abonado: ${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })} USD
               </p>
             </div>
 
             <p className="text-xs text-oriental-gray mb-4">
-              Esto eliminará el vínculo con el recibo, devolverá el saldo al crédito y marcará la cuota como <strong>Pendiente</strong>. El recibo de ingreso no se elimina.
+              Esto eliminará el vínculo con el(los) recibo(s), devolverá <strong>${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong> al saldo del crédito y marcará la cuota como <strong>Pendiente</strong>. Los recibos de ingreso no se eliminan.
             </p>
 
             {error && (

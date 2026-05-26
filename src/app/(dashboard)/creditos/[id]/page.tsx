@@ -407,6 +407,16 @@ export default async function CreditoDetallePage({
                                 <PlusCircle size={11} />
                                 Registrar saldo
                               </Link>
+                              {esDirector && (
+                                <RevertirCuotaButton
+                                  cuotaId={cuota.id}
+                                  creditoId={cuota.credito_id}
+                                  numeroCuota={cuota.numero_cuota}
+                                  montoPagado={Number(cuota.monto_pagado ?? 0)}
+                                  planLabel={cuota.concepto ?? planLabel(cuota._plan_tipo)}
+                                  esAbono={true}
+                                />
+                              )}
                             </div>
                           ) : esVencida ? (
                             <div className="space-y-1.5">
