@@ -606,7 +606,7 @@ export default function ReportesPage() {
                               <div class="firma">
                                 <div class="firma-line"></div>
                                 <p class="firma-label">Firma de Recibido</p>
-                                <p class="firma-sub">Director</p>
+                                <p class="firma-sub">Cliente</p>
                               </div>
                             </div>
                           </div>
