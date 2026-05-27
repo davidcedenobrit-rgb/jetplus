@@ -379,9 +379,9 @@ export default function NuevoVehiculoPage() {
         if (orActivo) {
           const { data: creditoOr, error: errOr } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
-            monto_financiado: calcInicialOriental.monto,
+            monto_financiado: calcInicialOriental.cuotas > 0 ? calcInicialOriental.totalCuotas : calcInicialOriental.monto,
             inicial: calcInicialOriental.monto,
-            saldo: calcInicialOriental.totalCuotas,
+            saldo: calcInicialOriental.cuotas > 0 ? calcInicialOriental.totalCuotas : calcInicialOriental.monto,
             num_cuotas: calcInicialOriental.cuotas,
             frecuencia_pago: orFrecuencia, fecha_inicio: orFecha,
             moneda: 'USD', estado: 'activo', plan_tipo: 'inicial_la_oriental',
@@ -398,9 +398,9 @@ export default function NuevoVehiculoPage() {
         if (vhActivo) {
           const { data: creditoVh, error: errVh } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
-            monto_financiado: calcVehimotors.monto,
+            monto_financiado: calcVehimotors.totalCuotas > 0 ? calcVehimotors.totalCuotas : calcVehimotors.monto,
             inicial: calcVehimotors.monto,
-            saldo: calcVehimotors.totalCuotas,
+            saldo: calcVehimotors.totalCuotas > 0 ? calcVehimotors.totalCuotas : calcVehimotors.monto,
             num_cuotas: calcVehimotors.cuotas,
             frecuencia_pago: vhFrecuencia, fecha_inicio: vhFecha,
             moneda: 'USD', estado: 'activo', plan_tipo: 'financiamiento_vehimotors',
