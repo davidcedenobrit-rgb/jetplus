@@ -536,30 +536,47 @@ export default function ReportesPage() {
                             <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#b91c1c;font-weight:700">USD ${c.montoPendiente.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
                             <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${estadoBadge(c.estadoGeneral)}</td>
                           </tr>`).join('')
+                        const base = window.location.origin
+                        const totalCobrado = listaFiltrada.reduce((s,c)=>s+c.montoPagado,0).toLocaleString('es-VE',{minimumFractionDigits:2})
+                        const totalPendiente = listaFiltrada.reduce((s,c)=>s+c.montoPendiente,0).toLocaleString('es-VE',{minimumFractionDigits:2})
                         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
                           <title>Reporte La Oriental — ${filtroLabel}</title>
                           <style>
                             * { margin:0; padding:0; box-sizing:border-box; }
                             body { font-family:'Segoe UI',system-ui,sans-serif; color:#111; padding:32px; font-size:13px; }
-                            @media print { @page { margin:1.5cm; size:A4 landscape; } body { padding:0; } .no-print { display:none; } }
-                            h1 { font-size:20px; font-weight:800; color:#111; }
-                            .sub { color:#6b7280; font-size:12px; margin-top:4px; }
-                            .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; border-bottom:3px solid #E8001D; padding-bottom:16px; }
-                            table { width:100%; border-collapse:collapse; font-size:12px; }
-                            th { background:#111; color:#fff; padding:10px 12px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+                            @media print { @page { margin:1.5cm; size:A4 landscape; } body { padding:0; } .no-print { display:none; } * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } }
+                            .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:3px solid #E8001D; padding-bottom:14px; }
+                            .header-left { display:flex; align-items:center; gap:14px; }
+                            .header-logo { height:54px; object-fit:contain; }
+                            .header-text h1 { font-size:18px; font-weight:800; color:#111; }
+                            .header-text .sub { color:#6b7280; font-size:11px; margin-top:3px; }
+                            table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
+                            th { background:#111111; color:#fff; padding:9px 11px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
                             th:nth-child(5),th:nth-child(6),th:nth-child(7) { text-align:right; }
-                            .totales { margin-top:16px; display:flex; gap:24px; }
-                            .tot-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px 16px; }
-                            .tot-label { font-size:11px; color:#6b7280; margin-bottom:2px; }
-                            .tot-val { font-size:16px; font-weight:800; color:#111; }
+                            td { padding:9px 11px; border-bottom:1px solid #e5e7eb; font-size:12px; }
+                            .totales { margin-top:14px; display:flex; gap:16px; }
+                            .tot-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px; }
+                            .tot-label { font-size:10px; color:#6b7280; margin-bottom:2px; text-transform:uppercase; letter-spacing:.04em; }
+                            .tot-val { font-size:15px; font-weight:800; color:#111; }
+                            .footer { margin-top:48px; display:flex; align-items:flex-end; justify-content:space-between; }
+                            .sello-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
+                            .sello-img { width:90px; height:90px; object-fit:contain; opacity:.9; }
+                            .firmas { display:flex; gap:56px; }
+                            .firma { text-align:center; }
+                            .firma-line { width:180px; height:1px; background:#111; margin-bottom:6px; }
+                            .firma-label { font-size:11px; font-weight:700; color:#111; }
+                            .firma-sub { font-size:10px; color:#6b7280; margin-top:2px; }
                           </style></head><body>
                           <div class="header">
-                            <div>
-                              <h1>La Oriental Automotors</h1>
-                              <p class="sub">Reporte de Cartera — ${filtroLabel}</p>
-                              <p class="sub" style="margin-top:2px">Fecha: ${fecha} · Para: José · Carla · Carlos</p>
+                            <div class="header-left">
+                              <img src="${base}/logo-la-oriental.jpg" class="header-logo" alt="Logo La Oriental" />
+                              <div class="header-text">
+                                <h1>La Oriental Automotors MG &amp; MAXUS</h1>
+                                <p class="sub">Reporte de Cartera — ${filtroLabel}</p>
+                                <p class="sub">Fecha: ${fecha} &nbsp;·&nbsp; Para: José · Carla · Carlos</p>
+                              </div>
                             </div>
-                            <button class="no-print" onclick="window.print()" style="background:#E8001D;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨 Imprimir</button>
+                            <button class="no-print" onclick="window.print()" style="background:#E8001D;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">🖨 Imprimir</button>
                           </div>
                           <table>
                             <thead><tr>
@@ -572,9 +589,26 @@ export default function ReportesPage() {
                             <tbody>${filas}</tbody>
                           </table>
                           <div class="totales">
-                            <div class="tot-card"><div class="tot-label">Total cobrado</div><div class="tot-val" style="color:#166534">USD ${listaFiltrada.reduce((s,c)=>s+c.montoPagado,0).toLocaleString('es-VE',{minimumFractionDigits:2})}</div></div>
-                            <div class="tot-card"><div class="tot-label">Total pendiente</div><div class="tot-val" style="color:#b91c1c">USD ${listaFiltrada.reduce((s,c)=>s+c.montoPendiente,0).toLocaleString('es-VE',{minimumFractionDigits:2})}</div></div>
+                            <div class="tot-card"><div class="tot-label">Total cobrado</div><div class="tot-val" style="color:#166534">USD ${totalCobrado}</div></div>
+                            <div class="tot-card"><div class="tot-label">Total pendiente</div><div class="tot-val" style="color:#b91c1c">USD ${totalPendiente}</div></div>
                             <div class="tot-card"><div class="tot-label">Clientes en lista</div><div class="tot-val">${listaFiltrada.length}</div></div>
+                          </div>
+                          <div class="footer">
+                            <div class="sello-wrap">
+                              <img src="${base}/sello-la-oriental.jpeg" class="sello-img" alt="Sello La Oriental" />
+                            </div>
+                            <div class="firmas">
+                              <div class="firma">
+                                <div class="firma-line"></div>
+                                <p class="firma-label">Firma Autorizada</p>
+                                <p class="firma-sub">La Oriental Automotors</p>
+                              </div>
+                              <div class="firma">
+                                <div class="firma-line"></div>
+                                <p class="firma-label">Firma de Recibido</p>
+                                <p class="firma-sub">Director</p>
+                              </div>
+                            </div>
                           </div>
                         </body></html>`
                         const win = window.open('', '_blank', 'width=1000,height=700')
