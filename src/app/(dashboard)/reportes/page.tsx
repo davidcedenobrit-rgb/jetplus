@@ -33,6 +33,60 @@ type ClienteCartera = {
 
 type FiltroEstado = 'todos' | 'pendiente' | 'vencida' | 'pagada'
 
+type ClienteVencido = {
+  nombre: string; cedula: string; placa: string; creditoId: string
+  cuotasVencidas: number; montoVencido: number
+  diasMaxVencido: number; bucket: 1 | 2 | 3 | 4 | 5
+}
+
+const BUCKETS: { id: 1|2|3|4|5; label: string; rango: string; bg: string; text: string; border: string; printBg: string; printColor: string }[] = [
+  { id: 1, label: '1 cuota',   rango: '1 – 30 días',   bg: 'bg-yellow-50',  text: 'text-yellow-700', border: 'border-yellow-200', printBg: '#fefce8', printColor: '#854d0e' },
+  { id: 2, label: '2 cuotas',  rango: '31 – 60 días',  bg: 'bg-orange-50',  text: 'text-orange-700', border: 'border-orange-200', printBg: '#fff7ed', printColor: '#c2410c' },
+  { id: 3, label: '3 cuotas',  rango: '61 – 90 días',  bg: 'bg-red-50',     text: 'text-red-600',    border: 'border-red-200',    printBg: '#fff1f2', printColor: '#b91c1c' },
+  { id: 4, label: '4 cuotas',  rango: '91 – 120 días', bg: 'bg-red-100',    text: 'text-red-700',    border: 'border-red-300',    printBg: '#fee2e2', printColor: '#991b1b' },
+  { id: 5, label: '5+ cuotas', rango: '> 120 días',    bg: 'bg-red-900/10', text: 'text-red-900',    border: 'border-red-400',    printBg: '#fca5a5', printColor: '#7f1d1d' },
+]
+
+function getBucket(dias: number): 1|2|3|4|5 {
+  if (dias <= 30)  return 1
+  if (dias <= 60)  return 2
+  if (dias <= 90)  return 3
+  if (dias <= 120) return 4
+  return 5
+}
+
+function computeVencidos(
+  creditos: any[], cuotas: any[], hoyStr: string, planFiltro?: string
+): ClienteVencido[] {
+  const hoyMs = new Date(hoyStr).getTime()
+  const creds = planFiltro ? creditos.filter(c => c.plan_tipo === planFiltro) : creditos
+  const credIds = new Set(creds.map((c: any) => c.id))
+  const vencidas = cuotas.filter((q: any) => q.estado === 'vencida' && credIds.has(q.credito_id))
+  const credMap: Record<string, any> = {}
+  creds.forEach((c: any) => { credMap[c.id] = c })
+
+  const byCredito: Record<string, ClienteVencido> = {}
+  vencidas.forEach((q: any) => {
+    const cred = credMap[q.credito_id]
+    if (!cred?.clientes) return
+    const cl = cred.clientes
+    const dias = Math.max(0, Math.floor((hoyMs - new Date(q.fecha_vencimiento + 'T12:00:00').getTime()) / 86400000))
+    const montoQ = Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0))
+    if (!byCredito[cred.id]) {
+      byCredito[cred.id] = {
+        nombre: cl.nombre, cedula: cl.cedula_rif, placa: cred.placa ?? '—',
+        creditoId: cred.id, cuotasVencidas: 0, montoVencido: 0, diasMaxVencido: 0, bucket: 1,
+      }
+    }
+    byCredito[cred.id].cuotasVencidas += 1
+    byCredito[cred.id].montoVencido   += montoQ
+    byCredito[cred.id].diasMaxVencido  = Math.max(byCredito[cred.id].diasMaxVencido, dias)
+  })
+  const lista = Object.values(byCredito)
+  lista.forEach(c => { c.bucket = getBucket(c.diasMaxVencido) })
+  return lista.sort((a, b) => b.diasMaxVencido - a.diasMaxVencido)
+}
+
 function BarRow({ label, value, max, color = 'bg-oriental-red', fmt }: {
   label: string; value: number; max: number; color?: string; fmt: (v: number) => string
 }) {
@@ -78,6 +132,188 @@ function StatCard({ value, label, sub, bg, textColor, subColor }: {
       <p className={`text-2xl font-extrabold ${textColor}`}>{value}</p>
       <p className={`text-xs font-semibold ${textColor} mt-0.5`}>{label}</p>
       {sub && <p className={`text-[10px] ${subColor ?? textColor} mt-1 leading-tight`}>{sub}</p>}
+    </div>
+  )
+}
+
+// ── Aging de vencidas ────────────────────────────────────────────────────────
+
+function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencido[]; subtituloImprimir: string }) {
+  const fmt = (n: number) => formatCurrency(n)
+  const fmtUSD = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2 })
+
+  const cntBucket = (id: number) => lista.filter(c => c.bucket === id).length
+  const haySome = lista.length > 0
+
+  function imprimirAging() {
+    const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
+    const base  = window.location.origin
+    const filas = lista.map((c, i) => {
+      const b = BUCKETS[c.bucket - 1]
+      return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;font-weight:600">${c.nombre}</td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;color:#6b7280">${c.cedula}</td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${c.placa}</span></td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:700;color:#b91c1c">${c.cuotasVencidas}</td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:700">${c.diasMaxVencido} días</td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#b91c1c">${fmtUSD(c.montoVencido)}</td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb"><span style="background:${b.printBg};color:${b.printColor};padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">${b.rango}</span></td>
+      </tr>`
+    }).join('')
+
+    const bucketSummary = BUCKETS.map(b => `
+      <div style="background:${b.printBg};border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;text-align:center;min-width:110px">
+        <div style="font-size:22px;font-weight:800;color:${b.printColor}">${cntBucket(b.id)}</div>
+        <div style="font-size:10px;font-weight:700;color:${b.printColor};margin-top:1px">${b.label}</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:1px">${b.rango}</div>
+      </div>`).join('')
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+      <title>${subtituloImprimir} — Antigüedad de Cartera</title>
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; color:#111; padding:32px; font-size:13px; }
+        @media print { @page { margin:1.5cm; size:A4 landscape; } body { padding:0; } .no-print { display:none; } * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } }
+        .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:3px solid #E8001D; padding-bottom:14px; }
+        .header-left { display:flex; align-items:center; gap:14px; }
+        .header-logo { height:54px; object-fit:contain; }
+        .header-text h1 { font-size:18px; font-weight:800; }
+        .header-text .sub { color:#6b7280; font-size:11px; margin-top:3px; }
+        .buckets { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+        table { width:100%; border-collapse:collapse; font-size:12px; }
+        th { background:#111; color:#fff; padding:9px 11px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+        th:nth-child(5),th:nth-child(6),th:nth-child(7) { text-align:center; }
+        th:nth-child(7) { text-align:right; }
+        .footer { margin-top:40px; display:flex; align-items:flex-end; justify-content:space-between; }
+        .sello-img { width:80px; height:80px; object-fit:contain; }
+        .firmas { display:flex; gap:56px; }
+        .firma { text-align:center; }
+        .firma-line { width:180px; height:1px; background:#111; margin-bottom:6px; }
+        .firma-label { font-size:11px; font-weight:700; }
+        .firma-sub { font-size:10px; color:#6b7280; margin-top:2px; }
+      </style></head><body>
+      <div class="header">
+        <div class="header-left">
+          <img src="${base}/logo-la-oriental.jpg" class="header-logo" alt="Logo" />
+          <div class="header-text">
+            <h1>La Oriental Automotors MG &amp; MAXUS</h1>
+            <p class="sub">${subtituloImprimir} — Antigüedad de Cartera Vencida</p>
+            <p class="sub">Fecha: ${fecha} &nbsp;·&nbsp; Para: José · Carla · Carlos</p>
+          </div>
+        </div>
+        <button class="no-print" onclick="window.print()" style="background:#E8001D;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨 Imprimir</button>
+      </div>
+      <div class="buckets">${bucketSummary}</div>
+      ${lista.length === 0
+        ? '<p style="text-align:center;color:#6b7280;padding:32px 0;font-size:14px">✓ Sin cuotas vencidas — cartera al día</p>'
+        : `<table>
+            <thead><tr>
+              <th>#</th><th>Cliente</th><th>Cédula / RIF</th><th>Placa</th>
+              <th style="text-align:center">Cuotas venc.</th>
+              <th style="text-align:center">Días vencido</th>
+              <th style="text-align:right">Monto vencido</th>
+              <th>Tramo</th>
+            </tr></thead>
+            <tbody>${filas}</tbody>
+          </table>`
+      }
+      <div class="footer">
+        <img src="${base}/sello-la-oriental.jpeg" class="sello-img" alt="Sello" />
+        <div class="firmas">
+          <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Director</p><p class="firma-sub">La Oriental Automotors</p></div>
+          <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Responsable</p><p class="firma-sub">Responsable</p></div>
+        </div>
+      </div>
+    </body></html>`
+    const win = window.open('', '_blank', 'width=1100,height=750')
+    win?.document.write(html)
+    win?.document.close()
+  }
+
+  return (
+    <div className="border-t border-gray-100 pt-5 mt-1">
+      {/* Cabecera */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <AlertCircle size={15} className="text-red-500" />
+          <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Antigüedad de cartera vencida</p>
+          {haySome && <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">{lista.length} cliente{lista.length !== 1 ? 's' : ''} con mora</span>}
+        </div>
+        <button onClick={imprimirAging}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-red text-white text-xs font-semibold rounded-lg hover:bg-oriental-red-dark transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          Imprimir mora
+        </button>
+      </div>
+
+      {/* 5 buckets summary */}
+      <div className="grid grid-cols-5 gap-2 mb-4">
+        {BUCKETS.map(b => {
+          const cnt = cntBucket(b.id)
+          return (
+            <div key={b.id} className={`rounded-xl p-3 text-center border ${b.bg} ${b.border}`}>
+              <p className={`text-2xl font-extrabold ${b.text}`}>{cnt}</p>
+              <p className={`text-[10px] font-bold ${b.text} mt-0.5`}>{b.label}</p>
+              <p className="text-[10px] text-oriental-gray mt-0.5">{b.rango}</p>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Tabla de clientes en mora */}
+      {!haySome ? (
+        <div className="text-center py-6 bg-green-50 rounded-xl border border-green-100">
+          <CheckCircle2 size={28} className="text-green-500 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-green-700">Sin cuotas vencidas</p>
+          <p className="text-xs text-green-600 mt-1">La cartera está al día</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-gray-100">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cliente</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Placa</th>
+                <th className="text-center px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cuotas venc.</th>
+                <th className="text-center px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Días vencido</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Monto vencido</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Tramo</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {lista.map((c, i) => {
+                const b = BUCKETS[c.bucket - 1]
+                return (
+                  <tr key={c.creditoId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-oriental-black text-sm">{c.nombre}</p>
+                      <p className="text-xs text-oriental-gray">{c.cedula}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-bold">{c.placa}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-sm font-extrabold text-oriental-red">{c.cuotasVencidas}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-sm font-bold text-oriental-black">{c.diasMaxVencido} días</span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="text-sm font-bold text-oriental-red">{fmt(c.montoVencido)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${b.bg} ${b.text} ${b.border}`}>
+                        {b.rango}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
@@ -321,6 +557,11 @@ export default function ReportesPage() {
   const [generalFiltro, setGeneralFiltro] = useState<FiltroEstado>('todos')
   const [generalClienteList, setGeneralClienteList] = useState<ClienteCartera[]>([])
 
+  // ── Aging (antigüedad de vencidas)
+  const [orVencidosList, setOrVencidosList]       = useState<ClienteVencido[]>([])
+  const [vhVencidosList, setVhVencidosList]       = useState<ClienteVencido[]>([])
+  const [generalVencidosList, setGeneralVencidosList] = useState<ClienteVencido[]>([])
+
   // ── Deudores / Pagadores
   const [topDeudores, setTopDeudores] = useState<{ nombre: string; cedula: string; saldo: number; creditos: number }[]>([])
   const [topPagadores, setTopPagadores] = useState<{ nombre: string; cedula: string; pagadas: number; total: number }[]>([])
@@ -493,6 +734,11 @@ export default function ReportesPage() {
       g.estadoGeneral = g.cuotasVencidas > 0 ? 'vencida' : g.cuotasPendientes > 0 ? 'pendiente' : 'pagada'
     })
     setGeneralClienteList(Object.values(genMap))
+
+    // ── Aging de vencidas por cartera
+    setOrVencidosList(computeVencidos(creditos, cuotas, hoyStr, 'inicial_la_oriental'))
+    setVhVencidosList(computeVencidos(creditos, cuotas, hoyStr, 'financiamiento_vehimotors'))
+    setGeneralVencidosList(computeVencidos(creditos, cuotas, hoyStr))
 
     // ── Top deudores
     const saldoPorCliente: Record<string, { nombre: string; cedula: string; saldo: number; creditos: number }> = {}
@@ -690,6 +936,7 @@ export default function ReportesPage() {
                 lista={vhClienteList} filtro={vhFiltro} setFiltro={setVhFiltro}
                 subtituloImprimir="Reporte Cartera Vehimotors"
               />
+              <AgingVencidosBlock lista={vhVencidosList} subtituloImprimir="Cartera Vehimotors" />
             </div>
           </section>
 
@@ -748,6 +995,7 @@ export default function ReportesPage() {
               {orClienteList.length === 0 && !loading && (
                 <p className="text-center text-sm text-oriental-gray py-4 border-t border-gray-100">No hay créditos de La Oriental registrados</p>
               )}
+              <AgingVencidosBlock lista={orVencidosList} subtituloImprimir="Cartera La Oriental" />
             </div>
           </section>
 
@@ -764,6 +1012,7 @@ export default function ReportesPage() {
               {generalClienteList.length === 0 && !loading && (
                 <p className="text-center text-sm text-oriental-gray py-6">No hay clientes registrados</p>
               )}
+              <AgingVencidosBlock lista={generalVencidosList} subtituloImprimir="Listado General — Antigüedad de Mora" />
             </div>
           </section>
 
