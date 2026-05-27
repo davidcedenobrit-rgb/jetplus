@@ -106,6 +106,13 @@ export default function ReportesPage() {
   const [vhMontoPagado, setVhMontoPagado] = useState(0)
   const [vhMontoPendiente, setVhMontoPendiente] = useState(0)
 
+  // ── La Oriental (créditos de inicial)
+  const [orPagadas, setOrPagadas] = useState(0)
+  const [orPendientes, setOrPendientes] = useState(0)
+  const [orVencidas, setOrVencidas] = useState(0)
+  const [orMontoPagado, setOrMontoPagado] = useState(0)
+  const [orMontoPendiente, setOrMontoPendiente] = useState(0)
+
   // ── Deudores / Pagadores
   const [topDeudores, setTopDeudores] = useState<{ nombre: string; cedula: string; saldo: number; creditos: number }[]>([])
   const [topPagadores, setTopPagadores] = useState<{ nombre: string; cedula: string; pagadas: number; total: number }[]>([])
@@ -190,6 +197,18 @@ export default function ReportesPage() {
     setVhVencidas(vhVenc.length)
     setVhMontoPagado(vhPag.reduce((s: number, c: any) => s + Number(c.monto ?? 0), 0))
     setVhMontoPendiente([...vhPend, ...vhVenc].reduce((s: number, c: any) =>
+      s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
+
+    // ── La Oriental
+    const orCuotas = cuotas.filter((c: any) => creditoPlanMap[c.credito_id] === 'inicial_la_oriental')
+    const orPag  = orCuotas.filter((c: any) => c.estado === 'pagada')
+    const orPend = orCuotas.filter((c: any) => c.estado === 'pendiente' || c.estado === 'abono_parcial')
+    const orVenc = orCuotas.filter((c: any) => c.estado === 'vencida')
+    setOrPagadas(orPag.length)
+    setOrPendientes(orPend.length)
+    setOrVencidas(orVenc.length)
+    setOrMontoPagado(orPag.reduce((s: number, c: any) => s + Number(c.monto ?? 0), 0))
+    setOrMontoPendiente([...orPend, ...orVenc].reduce((s: number, c: any) =>
       s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
 
     // ── Top deudores
@@ -387,7 +406,59 @@ export default function ReportesPage() {
             </div>
           </section>
 
-          {/* ══ 4. DEUDORES Y PAGADORES ═══════════════════════════════════ */}
+          {/* ══ 4. CARTERA LA ORIENTAL ════════════════════════════════════ */}
+          <section>
+            <SectionTitle>Cartera La Oriental — financiamiento interno</SectionTitle>
+            <div className="card p-6">
+              {/* Fila superior: estado de cuotas */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-green-50 rounded-xl p-4 text-center border border-green-100">
+                  <CheckCircle2 size={20} className="text-green-600 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-green-700">{orPagadas}</p>
+                  <p className="text-xs text-green-600 font-semibold">Cuotas cobradas a clientes</p>
+                  <p className="text-sm font-bold text-green-800 mt-1">{formatCurrency(orMontoPagado)}</p>
+                </div>
+                <div className="bg-yellow-50 rounded-xl p-4 text-center border border-yellow-100">
+                  <Clock size={20} className="text-yellow-600 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-yellow-700">{orPendientes}</p>
+                  <p className="text-xs text-yellow-600 font-semibold">Cuotas pendientes de cobro</p>
+                  <p className="text-sm font-bold text-yellow-800 mt-1">{formatCurrency(orMontoPendiente)}</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
+                  <AlertCircle size={20} className="text-red-500 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-red-700">{orVencidas}</p>
+                  <p className="text-xs text-red-600 font-semibold">Cuotas vencidas</p>
+                  <p className="text-sm font-bold text-red-800 mt-1">{orVencidas > 0 ? 'Requieren gestión' : 'Sin vencidas'}</p>
+                </div>
+              </div>
+
+              {/* Fila inferior: reporte a directores */}
+              <div className="border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 size={15} className="text-purple-500" />
+                  <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Reporte a Directores La Oriental</p>
+                  <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">José · Carla · Carlos</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                    <p className="text-xs text-purple-600 font-semibold mb-1">✓ Ya cobrado — listo para reportar</p>
+                    <p className="text-2xl font-extrabold text-purple-800">{formatCurrency(orMontoPagado)}</p>
+                    <p className="text-[11px] text-purple-500 mt-1">{orPagadas} cuota{orPagadas !== 1 ? 's' : ''} recibida{orPagadas !== 1 ? 's' : ''} de clientes</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                    <p className="text-xs text-amber-600 font-semibold mb-1">⏳ Pendiente por cobrar a clientes</p>
+                    <p className="text-2xl font-extrabold text-amber-800">{formatCurrency(orMontoPendiente)}</p>
+                    <p className="text-[11px] text-amber-500 mt-1">{orPendientes + orVencidas} cuota{(orPendientes + orVencidas) !== 1 ? 's' : ''} sin cobrar</p>
+                  </div>
+                </div>
+                {orMontoPagado === 0 && orMontoPendiente === 0 && (
+                  <p className="text-center text-sm text-oriental-gray py-4">No hay créditos de La Oriental registrados</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ══ 5. DEUDORES Y PAGADORES ═══════════════════════════════════ */}
           <section>
             <SectionTitle>Clientes — análisis de pago</SectionTitle>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -457,7 +528,7 @@ export default function ReportesPage() {
             </div>
           </section>
 
-          {/* ══ 5. VENTAS Y VEHÍCULOS ═════════════════════════════════════ */}
+          {/* ══ 6. VENTAS Y VEHÍCULOS ═════════════════════════════════════ */}
           <section>
             <SectionTitle>Ventas — análisis de vehículos</SectionTitle>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -529,7 +600,7 @@ export default function ReportesPage() {
             </div>
           </section>
 
-          {/* ══ 6. FLUJO DE CAJA ══════════════════════════════════════════ */}
+          {/* ══ 7. FLUJO DE CAJA ══════════════════════════════════════════ */}
           <section>
             <SectionTitle>Flujo de caja</SectionTitle>
 
