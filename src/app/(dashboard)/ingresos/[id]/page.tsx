@@ -57,6 +57,32 @@ export default async function IngresoDetallePage({
         .single()
     : { data: null }
 
+  // Estado de cuenta actual del vehículo (para mostrar en el recibo)
+  let creditosVehiculo: any[] = []
+  let cuotasVehiculo: any[] = []
+  if (ingreso.vehiculo_id) {
+    const { data: creds } = await supabase
+      .from('creditos')
+      .select('id, plan_tipo, monto_financiado, saldo, num_cuotas')
+      .eq('vehiculo_id', ingreso.vehiculo_id)
+      .order('plan_tipo')
+    creditosVehiculo = creds ?? []
+    if (creditosVehiculo.length > 0) {
+      const { data: cuotas } = await supabase
+        .from('cuotas')
+        .select('id, estado, credito_id')
+        .in('credito_id', creditosVehiculo.map((c: any) => c.id))
+      cuotasVehiculo = cuotas ?? []
+    }
+  }
+  const ecTotalFinanciado = creditosVehiculo.reduce((s: number, c: any) => s + Number(c.monto_financiado ?? 0), 0)
+  const ecTotalSaldo      = creditosVehiculo.reduce((s: number, c: any) => s + Number(c.saldo ?? 0), 0)
+  const ecTotalPagado     = ecTotalFinanciado - ecTotalSaldo
+  const ecPct             = ecTotalFinanciado > 0 ? Math.round((ecTotalPagado / ecTotalFinanciado) * 100) : 0
+  const ecPagadas         = cuotasVehiculo.filter((c: any) => c.estado === 'pagada').length
+  const ecPendientes      = cuotasVehiculo.filter((c: any) => c.estado === 'pendiente').length
+  const ecVencidas        = cuotasVehiculo.filter((c: any) => c.estado === 'vencida').length
+
   const cliente = (ingreso as any).clientes
 
   const estadoColors: Record<string, string> = {
@@ -291,6 +317,98 @@ export default async function IngresoDetallePage({
                   <div>
                     <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1">Observaciones</p>
                     <p className="text-sm text-gray-700">{ingreso.observaciones}</p>
+                  </div>
+                </>
+              )}
+
+              {/* ── Estado de cuenta tras este pago ── */}
+              {creditosVehiculo.length > 0 && (
+                <>
+                  <div className="border-t-2 border-dashed border-gray-200" />
+                  <div>
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-3 flex items-center gap-1.5">
+                      <span className="inline-block w-1 h-3 bg-oriental-red rounded-full" />
+                      Estado de cuenta — al día de este recibo
+                    </p>
+
+                    {/* Resumen total */}
+                    <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-3">
+                      <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider mb-2.5">Resumen total</p>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-oriental-gray">Total financiado</span>
+                          <span className="font-semibold text-oriental-black">
+                            USD {ecTotalFinanciado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-oriental-gray">Ya pagado</span>
+                          <span className="font-semibold text-green-700">
+                            USD {ecTotalPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-oriental-gray">Saldo pendiente</span>
+                          <span className="font-bold text-oriental-red">
+                            USD {ecTotalSaldo.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Barra de progreso */}
+                      <div className="mt-3">
+                        <div className="flex justify-between text-[10px] text-oriental-gray mb-1">
+                          <span>Progreso general</span>
+                          <span className="font-semibold">{ecPct}%</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${ecPct}%` }} />
+                        </div>
+                      </div>
+                      {/* Contadores de cuotas */}
+                      <div className="flex gap-2 mt-3">
+                        <div className="flex-1 bg-green-50 rounded-lg px-2 py-1.5 text-center border border-green-100">
+                          <p className="text-sm font-extrabold text-green-700">{ecPagadas}</p>
+                          <p className="text-[10px] text-green-600">Pagadas</p>
+                        </div>
+                        <div className="flex-1 bg-yellow-50 rounded-lg px-2 py-1.5 text-center border border-yellow-100">
+                          <p className="text-sm font-extrabold text-yellow-700">{ecPendientes}</p>
+                          <p className="text-[10px] text-yellow-600">Pendientes</p>
+                        </div>
+                        <div className={`flex-1 rounded-lg px-2 py-1.5 text-center border ${ecVencidas > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
+                          <p className={`text-sm font-extrabold ${ecVencidas > 0 ? 'text-red-700' : 'text-gray-400'}`}>{ecVencidas}</p>
+                          <p className={`text-[10px] ${ecVencidas > 0 ? 'text-red-500' : 'text-gray-400'}`}>Vencidas</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Desglose por financiamiento */}
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider mb-2">Desglose por financiamiento</p>
+                      {creditosVehiculo.map((c: any) => {
+                        const cuotasCred = cuotasVehiculo.filter((q: any) => q.credito_id === c.id)
+                        const pagadasCred = cuotasCred.filter((q: any) => q.estado === 'pagada').length
+                        const planLabel = c.plan_tipo === 'inicial_la_oriental' ? 'La Oriental'
+                          : c.plan_tipo === 'financiamiento_vehimotors' ? 'Vehimotors'
+                          : 'Crédito'
+                        const planBg = c.plan_tipo === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-700 border-purple-200'
+                          : c.plan_tipo === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                          : 'bg-gray-100 text-gray-600 border-gray-200'
+                        return (
+                          <div key={c.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${planBg}`}>
+                            <div>
+                              <span className="text-[10px] font-bold">{planLabel}</span>
+                              <p className="text-[10px] mt-0.5 opacity-70">{pagadasCred}/{cuotasCred.length} cuotas</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] opacity-60">Saldo</p>
+                              <p className="text-xs font-bold">
+                                USD {Number(c.saldo ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </>
               )}
