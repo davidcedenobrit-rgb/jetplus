@@ -357,7 +357,7 @@ export default function NuevoVehiculoPage() {
 
       // --- Plan Personalizado: crear DOS créditos (uno o ambos activos) ---
       if (plan === 'personalizado') {
-        const orActivo = calcInicialOriental.cuotas > 0
+        const orActivo = calcInicialOriental.monto > 0   // activo si hay monto, aunque cuotas = 0 (pago único)
         const vhActivo = calcVehimotors.cuotas > 0
         if (!orActivo && !vhActivo) {
           setError('Completa al menos un bloque de crédito'); setLoading(false); return
@@ -388,7 +388,10 @@ export default function NuevoVehiculoPage() {
             observaciones: orObs || 'Crédito de Inicial — La Oriental',
           }).select().single()
           if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
-          await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental'))
+          // Solo insertar cuotas si hay más de 0 (0 = pago único sin cuotas)
+          if (calcInicialOriental.cuotas > 0) {
+            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental'))
+          }
           primerCreditoId = creditoOr.id
         }
 
@@ -968,20 +971,31 @@ export default function NuevoVehiculoPage() {
                         value={orMonto} onChange={e => setOrMonto(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label">N° de cuotas</label>
-                      <input type="number" min="1" max="120" className="input" placeholder="12"
+                      <label className="label">N° de cuotas <span className="text-purple-500 text-[10px] font-normal">(0 = pago único)</span></label>
+                      <input type="number" min="0" max="120" className="input" placeholder="12"
                         value={orCuotas} onChange={e => setOrCuotas(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label flex items-center gap-2">
-                        Monto por cuota (USD)
-                        <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full">auto</span>
-                      </label>
-                      <input type="number" step="0.01" min="0"
-                        className={`input font-bold ${orMontoCuota ? 'bg-purple-50 text-purple-900 border-purple-300 cursor-not-allowed' : ''}`}
-                        placeholder="Se calcula automático"
-                        value={orMontoCuota}
-                        readOnly />
+                      {parseInt(orCuotas) === 0 ? (
+                        <div className="h-full flex flex-col justify-end">
+                          <div className="bg-purple-100 border-2 border-purple-300 border-dashed rounded-xl px-4 py-3 text-center">
+                            <p className="text-purple-800 font-bold text-sm">Pago único</p>
+                            <p className="text-purple-600 text-[11px] mt-0.5">La Oriental cobra el monto completo sin cuotas</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <label className="label flex items-center gap-2">
+                            Monto por cuota (USD)
+                            <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full">auto</span>
+                          </label>
+                          <input type="number" step="0.01" min="0"
+                            className={`input font-bold ${orMontoCuota ? 'bg-purple-50 text-purple-900 border-purple-300 cursor-not-allowed' : ''}`}
+                            placeholder="Se calcula automático"
+                            value={orMontoCuota}
+                            readOnly />
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
@@ -1006,6 +1020,15 @@ export default function NuevoVehiculoPage() {
                     <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este crédito..."
                       value={orObs} onChange={e => setOrObs(e.target.value)} />
                   </div>
+                  {calcInicialOriental.cuotas === 0 && calcInicialOriental.monto > 0 && (
+                    <div className="mt-3 bg-purple-700 rounded-lg p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Pago único — La Oriental</p>
+                        <p className="text-purple-300 text-[11px] mt-0.5">Sin cuotas — cobro total al inicio</p>
+                      </div>
+                      <p className="text-white font-extrabold text-xl">{formatUSD(calcInicialOriental.monto)}</p>
+                    </div>
+                  )}
                   {calcInicialOriental.cuotas > 0 && calcInicialOriental.montoCuota > 0 && (
                     <div className="mt-3 bg-purple-700 rounded-lg p-4 grid grid-cols-3 gap-3">
                       <div className="text-center">
