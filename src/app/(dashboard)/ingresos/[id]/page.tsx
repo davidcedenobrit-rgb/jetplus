@@ -162,7 +162,8 @@ export default async function IngresoDetallePage({
                   className="h-14 w-auto object-contain"
                   style={{ maxWidth: 220 }}
                 />
-                <p className="text-gray-500 text-[10px] mt-1.5 leading-relaxed">
+                <p className="text-gray-600 text-[10px] font-semibold mt-1.5">RIF: J-50569214-3</p>
+                <p className="text-gray-500 text-[10px] mt-0.5 leading-relaxed">
                   Av. Ugarte Pelayo, Centro Profesional David, Qta. Galpón Nro. S/N<br />
                   Sector Centro, Maturín, Monagas. C.P. 6201
                 </p>
@@ -474,7 +475,7 @@ export default async function IngresoDetallePage({
 
             {/* Pie del recibo */}
             <div className="print-bg-gray bg-oriental-bg border-t border-gray-200 px-6 py-3 flex items-center justify-between">
-              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. · RIF: J-505692143</p>
+              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. · RIF: J-50569214-3</p>
               <p className="text-[10px] text-oriental-gray font-mono">{ingreso.numero_recibo}</p>
             </div>
           </div>
