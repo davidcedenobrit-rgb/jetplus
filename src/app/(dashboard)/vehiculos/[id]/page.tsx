@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, Car, User, Calendar, Hash, CreditCard, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Car, User, Calendar, Hash, CreditCard, TrendingUp, ExternalLink, CheckCircle2, Clock, AlertCircle, CircleDot } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import VehiculoDocumentos from './VehiculoDocumentos'
 
@@ -36,6 +36,45 @@ export default async function VehiculoDetallePage({
     .select('id, tipo, url, nombre, created_at')
     .eq('vehiculo_id', id)
     .order('created_at', { ascending: true })
+
+  // Créditos del vehículo para el resumen financiero
+  const { data: creditos } = await supabase
+    .from('creditos')
+    .select('*')
+    .eq('vehiculo_id', id)
+    .order('plan_tipo')
+
+  let cuotasResumen: any[] = []
+  if (creditos && creditos.length > 0) {
+    const creditoIds = creditos.map((c: any) => c.id)
+    const { data: cuotas } = await supabase
+      .from('cuotas')
+      .select('id, estado, monto, credito_id')
+      .in('credito_id', creditoIds)
+    cuotasResumen = cuotas ?? []
+  }
+
+  // Calcular métricas financieras
+  const totalFinanciado = (creditos ?? []).reduce((s: number, c: any) => s + Number(c.monto_financiado ?? 0), 0)
+  const totalSaldo = (creditos ?? []).reduce((s: number, c: any) => s + Number(c.saldo ?? 0), 0)
+  const totalPagado = totalFinanciado - totalSaldo
+  const porcentajePagado = totalFinanciado > 0 ? Math.round((totalPagado / totalFinanciado) * 100) : 0
+  const cuotasPagadas = cuotasResumen.filter((c: any) => c.estado === 'pagada').length
+  const cuotasPendientes = cuotasResumen.filter((c: any) => c.estado === 'pendiente').length
+  const cuotasVencidas = cuotasResumen.filter((c: any) => c.estado === 'vencida').length
+  const cuotasAbono = cuotasResumen.filter((c: any) => c.estado === 'abono_parcial').length
+  const primerCreditoId = creditos?.[0]?.id ?? null
+
+  const planLabel = (tipo: string | null) =>
+    tipo === 'inicial_la_oriental' ? 'La Oriental' :
+    tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
+    tipo === 'cuota_especial' ? 'Cuota Especial' : 'Crédito'
+
+  const planBadge = (tipo: string | null) =>
+    tipo === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-700' :
+    tipo === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700' :
+    tipo === 'cuota_especial' ? 'bg-teal-100 text-teal-700' :
+    'bg-gray-100 text-gray-500'
 
   const estadoColors: Record<string, string> = {
     activo: 'bg-green-100 text-green-800',
@@ -96,6 +135,128 @@ export default async function VehiculoDetallePage({
             <div className="card p-6">
               <p className="text-xs text-oriental-gray uppercase tracking-wider font-semibold mb-2">Observaciones</p>
               <p className="text-sm text-gray-700">{vehiculo.observaciones}</p>
+            </div>
+          )}
+
+          {/* Resumen financiero */}
+          {creditos && creditos.length > 0 && (
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold text-oriental-black flex items-center gap-2">
+                  <CreditCard size={16} className="text-oriental-gray" /> Financiamiento
+                </h2>
+                {primerCreditoId && (
+                  <Link
+                    href={`/creditos/${primerCreditoId}`}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-oriental-red hover:underline"
+                  >
+                    Ver detalle <ExternalLink size={12} />
+                  </Link>
+                )}
+              </div>
+
+              {/* Montos */}
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-oriental-gray">Total financiado</span>
+                  <span className="font-semibold text-oriental-black">{formatCurrency(totalFinanciado, 'USD')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-oriental-gray">Ya pagado</span>
+                  <span className="font-semibold text-green-700">{formatCurrency(totalPagado, 'USD')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-oriental-gray">Saldo pendiente</span>
+                  <span className="font-bold text-oriental-red">{formatCurrency(totalSaldo, 'USD')}</span>
+                </div>
+              </div>
+
+              {/* Barra de progreso */}
+              <div className="mb-4">
+                <div className="flex justify-between text-[11px] text-oriental-gray mb-1">
+                  <span>Progreso</span>
+                  <span className="font-semibold text-oriental-black">{porcentajePagado}%</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-green-500 rounded-full transition-all"
+                    style={{ width: `${porcentajePagado}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Contadores de cuotas */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="flex items-center gap-2 bg-green-50 rounded-lg px-3 py-2">
+                  <CheckCircle2 size={13} className="text-green-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-green-800">{cuotasPagadas}</p>
+                    <p className="text-[10px] text-green-600">Pagadas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 bg-yellow-50 rounded-lg px-3 py-2">
+                  <Clock size={13} className="text-yellow-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-yellow-800">{cuotasPendientes}</p>
+                    <p className="text-[10px] text-yellow-600">Pendientes</p>
+                  </div>
+                </div>
+                {cuotasVencidas > 0 && (
+                  <div className="flex items-center gap-2 bg-red-50 rounded-lg px-3 py-2">
+                    <AlertCircle size={13} className="text-red-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-red-700">{cuotasVencidas}</p>
+                      <p className="text-[10px] text-red-500">Vencidas</p>
+                    </div>
+                  </div>
+                )}
+                {cuotasAbono > 0 && (
+                  <div className="flex items-center gap-2 bg-orange-50 rounded-lg px-3 py-2">
+                    <CircleDot size={13} className="text-orange-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-orange-700">{cuotasAbono}</p>
+                      <p className="text-[10px] text-orange-500">Abono parcial</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Desglose por financiamiento */}
+              <div className="space-y-2 border-t border-gray-100 pt-3">
+                <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider mb-2">Desglose</p>
+                {creditos.map((c: any) => {
+                  const cuotasCred = cuotasResumen.filter((q: any) => q.credito_id === c.id)
+                  const pagadasCred = cuotasCred.filter((q: any) => q.estado === 'pagada').length
+                  return (
+                    <Link
+                      key={c.id}
+                      href={`/creditos/${c.id}`}
+                      className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-oriental-bg/50 transition-all group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${planBadge(c.plan_tipo)}`}>
+                          {planLabel(c.plan_tipo)}
+                        </span>
+                        <span className="text-[11px] text-oriental-gray">{pagadasCred}/{cuotasCred.length} cuotas</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-oriental-red">{formatCurrency(Number(c.saldo ?? 0), 'USD')}</span>
+                        <ExternalLink size={11} className="text-gray-300 group-hover:text-oriental-gray transition-colors" />
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+
+              {/* Botón ir al detalle completo */}
+              {primerCreditoId && (
+                <Link
+                  href={`/creditos/${primerCreditoId}`}
+                  className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-oriental-black text-white text-xs font-semibold rounded-xl hover:bg-gray-800 transition-colors"
+                >
+                  Ver detalle completo <ExternalLink size={13} />
+                </Link>
+              )}
             </div>
           )}
 
