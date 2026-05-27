@@ -112,6 +112,13 @@ export default function ReportesPage() {
   const [orVencidas, setOrVencidas] = useState(0)
   const [orMontoPagado, setOrMontoPagado] = useState(0)
   const [orMontoPendiente, setOrMontoPendiente] = useState(0)
+  const [orFiltro, setOrFiltro] = useState<'todos' | 'pendiente' | 'vencida' | 'pagada'>('todos')
+  type OrCliente = {
+    nombre: string; cedula: string; placa: string; creditoId: string
+    totalCuotas: number; cuotasPagadas: number; cuotasPendientes: number; cuotasVencidas: number
+    montoPagado: number; montoPendiente: number; estadoGeneral: 'pendiente' | 'vencida' | 'pagada'
+  }
+  const [orClienteList, setOrClienteList] = useState<OrCliente[]>([])
 
   // ── Deudores / Pagadores
   const [topDeudores, setTopDeudores] = useState<{ nombre: string; cedula: string; saldo: number; creditos: number }[]>([])
@@ -147,7 +154,7 @@ export default function ReportesPage() {
     ] = await Promise.all([
       supabase.from('clientes').select('id').eq('activo', true),
       supabase.from('vehiculos').select('id, marca, modelo, tipo_compra'),
-      supabase.from('creditos').select('id, plan_tipo, saldo, monto_financiado, cliente_id, clientes(id, nombre, cedula_rif)'),
+      supabase.from('creditos').select('id, plan_tipo, saldo, monto_financiado, placa, cliente_id, clientes(id, nombre, cedula_rif)'),
       supabase.from('cuotas').select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id'),
       supabase.from('ingresos').select('id, monto, metodo_pago, estado, fecha_pago')
         .gte('fecha_pago', fechaDesde).lte('fecha_pago', fechaHasta),
@@ -200,7 +207,9 @@ export default function ReportesPage() {
       s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
 
     // ── La Oriental
-    const orCuotas = cuotas.filter((c: any) => creditoPlanMap[c.credito_id] === 'inicial_la_oriental')
+    const orCreditos = creditos.filter((c: any) => c.plan_tipo === 'inicial_la_oriental')
+    const orCreditoIds = new Set(orCreditos.map((c: any) => c.id))
+    const orCuotas = cuotas.filter((c: any) => orCreditoIds.has(c.credito_id))
     const orPag  = orCuotas.filter((c: any) => c.estado === 'pagada')
     const orPend = orCuotas.filter((c: any) => c.estado === 'pendiente' || c.estado === 'abono_parcial')
     const orVenc = orCuotas.filter((c: any) => c.estado === 'vencida')
@@ -210,6 +219,28 @@ export default function ReportesPage() {
     setOrMontoPagado(orPag.reduce((s: number, c: any) => s + Number(c.monto ?? 0), 0))
     setOrMontoPendiente([...orPend, ...orVenc].reduce((s: number, c: any) =>
       s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
+
+    // ── Listado de clientes La Oriental por crédito
+    const orList: Record<string, any> = {}
+    orCreditos.forEach((c: any) => {
+      const cl = c.clientes
+      if (!cl) return
+      const cuotasCred = orCuotas.filter((q: any) => q.credito_id === c.id)
+      const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
+      const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
+      const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      const estadoGeneral = cvenc.length > 0 ? 'vencida' : cpend.length > 0 ? 'pendiente' : 'pagada'
+      orList[c.id] = {
+        nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—', creditoId: c.id,
+        totalCuotas: cuotasCred.length,
+        cuotasPagadas: cpag.length, cuotasPendientes: cpend.length, cuotasVencidas: cvenc.length,
+        montoPagado: cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0),
+        montoPendiente: [...cpend, ...cvenc].reduce((s: number, q: any) =>
+          s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
+        estadoGeneral,
+      }
+    })
+    setOrClienteList(Object.values(orList))
 
     // ── Top deudores
     const saldoPorCliente: Record<string, { nombre: string; cedula: string; saldo: number; creditos: number }> = {}
@@ -409,9 +440,10 @@ export default function ReportesPage() {
           {/* ══ 4. CARTERA LA ORIENTAL ════════════════════════════════════ */}
           <section>
             <SectionTitle>Cartera La Oriental — financiamiento interno</SectionTitle>
-            <div className="card p-6">
-              {/* Fila superior: estado de cuotas */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="card p-6 space-y-5">
+
+              {/* KPIs de cuotas */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-green-50 rounded-xl p-4 text-center border border-green-100">
                   <CheckCircle2 size={20} className="text-green-600 mx-auto mb-2" />
                   <p className="text-2xl font-bold text-green-700">{orPagadas}</p>
@@ -432,7 +464,7 @@ export default function ReportesPage() {
                 </div>
               </div>
 
-              {/* Fila inferior: reporte a directores */}
+              {/* Resumen para directores */}
               <div className="border-t border-gray-100 pt-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Building2 size={15} className="text-purple-500" />
@@ -451,10 +483,169 @@ export default function ReportesPage() {
                     <p className="text-[11px] text-amber-500 mt-1">{orPendientes + orVencidas} cuota{(orPendientes + orVencidas) !== 1 ? 's' : ''} sin cobrar</p>
                   </div>
                 </div>
-                {orMontoPagado === 0 && orMontoPendiente === 0 && (
-                  <p className="text-center text-sm text-oriental-gray py-4">No hay créditos de La Oriental registrados</p>
-                )}
               </div>
+
+              {/* Listado de clientes con filtros */}
+              {orClienteList.length > 0 && (
+                <div className="border-t border-gray-100 pt-4">
+                  {/* Cabecera con filtros y botón imprimir */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Users size={15} className="text-oriental-gray" />
+                      <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Listado de clientes</p>
+                      {(['todos', 'pendiente', 'vencida', 'pagada'] as const).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setOrFiltro(f)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+                            orFiltro === f
+                              ? f === 'vencida' ? 'bg-red-600 text-white border-red-600'
+                                : f === 'pendiente' ? 'bg-yellow-500 text-white border-yellow-500'
+                                : f === 'pagada' ? 'bg-green-600 text-white border-green-600'
+                                : 'bg-oriental-black text-white border-oriental-black'
+                              : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                          }`}
+                        >
+                          {f === 'todos' ? `Todos (${orClienteList.length})`
+                            : f === 'pendiente' ? `Pendientes (${orClienteList.filter(c => c.estadoGeneral === 'pendiente').length})`
+                            : f === 'vencida' ? `Vencidos (${orClienteList.filter(c => c.estadoGeneral === 'vencida').length})`
+                            : `Al día (${orClienteList.filter(c => c.estadoGeneral === 'pagada').length})`}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
+                        const listaFiltrada = orClienteList.filter(c => orFiltro === 'todos' || c.estadoGeneral === orFiltro)
+                        const filtroLabel = orFiltro === 'todos' ? 'Todos los clientes'
+                          : orFiltro === 'pendiente' ? 'Clientes con cuotas pendientes'
+                          : orFiltro === 'vencida' ? 'Clientes con cuotas vencidas'
+                          : 'Clientes al día'
+                        const estadoBadge = (e: string) =>
+                          e === 'vencida' ? `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Vencido</span>`
+                          : e === 'pendiente' ? `<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Pendiente</span>`
+                          : `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Al día</span>`
+                        const filas = listaFiltrada.map((c, i) => `
+                          <tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
+                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-weight:600">${c.nombre}</td>
+                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280">${c.cedula}</td>
+                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${c.placa}</span></td>
+                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center">${c.cuotasPagadas}/${c.totalCuotas}</td>
+                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#166534;font-weight:700">USD ${c.montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
+                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#b91c1c;font-weight:700">USD ${c.montoPendiente.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
+                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${estadoBadge(c.estadoGeneral)}</td>
+                          </tr>`).join('')
+                        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+                          <title>Reporte La Oriental — ${filtroLabel}</title>
+                          <style>
+                            * { margin:0; padding:0; box-sizing:border-box; }
+                            body { font-family:'Segoe UI',system-ui,sans-serif; color:#111; padding:32px; font-size:13px; }
+                            @media print { @page { margin:1.5cm; size:A4 landscape; } body { padding:0; } .no-print { display:none; } }
+                            h1 { font-size:20px; font-weight:800; color:#111; }
+                            .sub { color:#6b7280; font-size:12px; margin-top:4px; }
+                            .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; border-bottom:3px solid #E8001D; padding-bottom:16px; }
+                            table { width:100%; border-collapse:collapse; font-size:12px; }
+                            th { background:#111; color:#fff; padding:10px 12px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+                            th:nth-child(5),th:nth-child(6),th:nth-child(7) { text-align:right; }
+                            .totales { margin-top:16px; display:flex; gap:24px; }
+                            .tot-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px 16px; }
+                            .tot-label { font-size:11px; color:#6b7280; margin-bottom:2px; }
+                            .tot-val { font-size:16px; font-weight:800; color:#111; }
+                          </style></head><body>
+                          <div class="header">
+                            <div>
+                              <h1>La Oriental Automotors</h1>
+                              <p class="sub">Reporte de Cartera — ${filtroLabel}</p>
+                              <p class="sub" style="margin-top:2px">Fecha: ${fecha} · Para: José · Carla · Carlos</p>
+                            </div>
+                            <button class="no-print" onclick="window.print()" style="background:#E8001D;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨 Imprimir</button>
+                          </div>
+                          <table>
+                            <thead><tr>
+                              <th>#</th><th>Cliente</th><th>Cédula / RIF</th><th>Placa</th>
+                              <th style="text-align:center">Cuotas</th>
+                              <th style="text-align:right">Cobrado</th>
+                              <th style="text-align:right">Pendiente</th>
+                              <th>Estado</th>
+                            </tr></thead>
+                            <tbody>${filas}</tbody>
+                          </table>
+                          <div class="totales">
+                            <div class="tot-card"><div class="tot-label">Total cobrado</div><div class="tot-val" style="color:#166534">USD ${listaFiltrada.reduce((s,c)=>s+c.montoPagado,0).toLocaleString('es-VE',{minimumFractionDigits:2})}</div></div>
+                            <div class="tot-card"><div class="tot-label">Total pendiente</div><div class="tot-val" style="color:#b91c1c">USD ${listaFiltrada.reduce((s,c)=>s+c.montoPendiente,0).toLocaleString('es-VE',{minimumFractionDigits:2})}</div></div>
+                            <div class="tot-card"><div class="tot-label">Clientes en lista</div><div class="tot-val">${listaFiltrada.length}</div></div>
+                          </div>
+                        </body></html>`
+                        const win = window.open('', '_blank', 'width=1000,height=700')
+                        win?.document.write(html)
+                        win?.document.close()
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                      Imprimir listado
+                    </button>
+                  </div>
+
+                  {/* Tabla de clientes */}
+                  <div className="overflow-x-auto rounded-lg border border-gray-100">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cliente</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Placa</th>
+                          <th className="text-center px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cuotas</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cobrado</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Pendiente</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {orClienteList
+                          .filter(c => orFiltro === 'todos' || c.estadoGeneral === orFiltro)
+                          .map((c, i) => (
+                            <tr key={c.creditoId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                              <td className="px-4 py-3">
+                                <p className="font-semibold text-oriental-black text-sm">{c.nombre}</p>
+                                <p className="text-xs text-oriental-gray">{c.cedula}</p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-bold">{c.placa}</span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="text-sm font-medium text-oriental-black">{c.cuotasPagadas}/{c.totalCuotas}</span>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <span className="text-sm font-bold text-green-700">{formatCurrency(c.montoPagado)}</span>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <span className={`text-sm font-bold ${c.montoPendiente > 0 ? 'text-oriental-red' : 'text-green-600'}`}>
+                                  {formatCurrency(c.montoPendiente)}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                  c.estadoGeneral === 'vencida' ? 'bg-red-100 text-red-700'
+                                  : c.estadoGeneral === 'pendiente' ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-green-100 text-green-700'
+                                }`}>
+                                  {c.estadoGeneral === 'vencida' ? 'Vencido'
+                                    : c.estadoGeneral === 'pendiente' ? 'Pendiente'
+                                    : 'Al día'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {orClienteList.length === 0 && !loading && (
+                <p className="text-center text-sm text-oriental-gray py-4 border-t border-gray-100 pt-4">No hay créditos de La Oriental registrados</p>
+              )}
             </div>
           </section>
 
