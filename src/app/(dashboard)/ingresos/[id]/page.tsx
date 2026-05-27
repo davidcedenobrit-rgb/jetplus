@@ -101,6 +101,34 @@ export default async function IngresoDetallePage({
 
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
+      {/* CSS de impresión: forzar A4, escalar para que quepa en una hoja */}
+      <style>{`
+        @media print {
+          @page { size: A4 portrait; margin: 0.8cm; }
+          body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          #recibo-imprimible { font-size: 11px !important; }
+          #recibo-imprimible .p-6 { padding: 12px !important; }
+          #recibo-imprimible .p-4 { padding: 10px !important; }
+          #recibo-imprimible .p-3 { padding: 8px !important; }
+          #recibo-imprimible .space-y-5 > * + * { margin-top: 10px !important; }
+          #recibo-imprimible .space-y-3 > * + * { margin-top: 6px !important; }
+          #recibo-imprimible .mb-4 { margin-bottom: 8px !important; }
+          #recibo-imprimible .mb-5 { margin-bottom: 10px !important; }
+          #recibo-imprimible .text-3xl { font-size: 20px !important; }
+          #recibo-imprimible .text-2xl { font-size: 16px !important; }
+          #recibo-imprimible .h-14 { height: 44px !important; }
+          #recibo-imprimible .h-24 { height: 64px !important; }
+          #recibo-imprimible .pb-24 { padding-bottom: 64px !important; }
+          #recibo-imprimible .pt-5 { padding-top: 12px !important; }
+          #recibo-imprimible .py-5 { padding-top: 10px !important; padding-bottom: 10px !important; }
+          #recibo-imprimible .gap-6 { gap: 12px !important; }
+          #recibo-imprimible .gap-4 { gap: 8px !important; }
+          #recibo-imprimible .rounded-xl { border-radius: 8px !important; }
+          #recibo-imprimible table { font-size: 10px !important; }
+          #recibo-imprimible th, #recibo-imprimible td { padding: 5px 8px !important; }
+        }
+      `}</style>
+
       {/* Header — oculto al imprimir */}
       <div className="flex items-center gap-4 mb-6 print:hidden">
         <Link href="/ingresos" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
@@ -326,88 +354,86 @@ export default async function IngresoDetallePage({
                 <>
                   <div className="border-t-2 border-dashed border-gray-200" />
                   <div>
-                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-3 flex items-center gap-1.5">
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-2 flex items-center gap-1.5">
                       <span className="inline-block w-1 h-3 bg-oriental-red rounded-full" />
                       Estado de cuenta — al día de este recibo
                     </p>
 
-                    {/* Resumen total */}
-                    <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-3">
-                      <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider mb-2.5">Resumen total</p>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-oriental-gray">Total financiado</span>
-                          <span className="font-semibold text-oriental-black">
-                            USD {ecTotalFinanciado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-oriental-gray">Ya pagado</span>
-                          <span className="font-semibold text-green-700">
-                            USD {ecTotalPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-oriental-gray">Saldo pendiente</span>
-                          <span className="font-bold text-oriental-red">
-                            USD {ecTotalSaldo.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Barra de progreso */}
-                      <div className="mt-3">
-                        <div className="flex justify-between text-[10px] text-oriental-gray mb-1">
-                          <span>Progreso general</span>
-                          <span className="font-semibold">{ecPct}%</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${ecPct}%` }} />
-                        </div>
-                      </div>
-                      {/* Contadores de cuotas */}
-                      <div className="flex gap-2 mt-3">
-                        <div className="flex-1 bg-green-50 rounded-lg px-2 py-1.5 text-center border border-green-100">
-                          <p className="text-sm font-extrabold text-green-700">{ecPagadas}</p>
-                          <p className="text-[10px] text-green-600">Pagadas</p>
-                        </div>
-                        <div className="flex-1 bg-yellow-50 rounded-lg px-2 py-1.5 text-center border border-yellow-100">
-                          <p className="text-sm font-extrabold text-yellow-700">{ecPendientes}</p>
-                          <p className="text-[10px] text-yellow-600">Pendientes</p>
-                        </div>
-                        <div className={`flex-1 rounded-lg px-2 py-1.5 text-center border ${ecVencidas > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
-                          <p className={`text-sm font-extrabold ${ecVencidas > 0 ? 'text-red-700' : 'text-gray-400'}`}>{ecVencidas}</p>
-                          <p className={`text-[10px] ${ecVencidas > 0 ? 'text-red-500' : 'text-gray-400'}`}>Vencidas</p>
-                        </div>
-                      </div>
-                    </div>
+                    {/* Layout horizontal: resumen + desglose lado a lado */}
+                    <div className="grid grid-cols-2 gap-3">
 
-                    {/* Desglose por financiamiento */}
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider mb-2">Desglose por financiamiento</p>
-                      {creditosVehiculo.map((c: any) => {
-                        const cuotasCred = cuotasVehiculo.filter((q: any) => q.credito_id === c.id)
-                        const pagadasCred = cuotasCred.filter((q: any) => q.estado === 'pagada').length
-                        const planLabel = c.plan_tipo === 'inicial_la_oriental' ? 'La Oriental'
-                          : c.plan_tipo === 'financiamiento_vehimotors' ? 'Vehimotors'
-                          : 'Crédito'
-                        const planBg = c.plan_tipo === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-700 border-purple-200'
-                          : c.plan_tipo === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
-                          : 'bg-gray-100 text-gray-600 border-gray-200'
-                        return (
-                          <div key={c.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${planBg}`}>
-                            <div>
-                              <span className="text-[10px] font-bold">{planLabel}</span>
-                              <p className="text-[10px] mt-0.5 opacity-70">{pagadasCred}/{cuotasCred.length} cuotas</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[10px] opacity-60">Saldo</p>
-                              <p className="text-xs font-bold">
-                                USD {Number(c.saldo ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                              </p>
-                            </div>
+                      {/* Columna izquierda: Resumen total */}
+                      <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
+                        <p className="text-[9px] font-bold text-oriental-gray uppercase tracking-wider mb-2">Resumen total</p>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-oriental-gray">Total financiado</span>
+                            <span className="font-semibold text-oriental-black">USD {ecTotalFinanciado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
                           </div>
-                        )
-                      })}
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-oriental-gray">Ya pagado</span>
+                            <span className="font-semibold text-green-700">USD {ecTotalPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-oriental-gray">Saldo pendiente</span>
+                            <span className="font-bold text-oriental-red">USD {ecTotalSaldo.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        </div>
+                        {/* Barra de progreso */}
+                        <div className="mt-2">
+                          <div className="flex justify-between text-[9px] text-oriental-gray mb-0.5">
+                            <span>Progreso</span><span className="font-semibold">{ecPct}%</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 rounded-full" style={{ width: `${ecPct}%` }} />
+                          </div>
+                        </div>
+                        {/* Contadores */}
+                        <div className="flex gap-1.5 mt-2">
+                          <div className="flex-1 bg-green-50 rounded px-1 py-1 text-center border border-green-100">
+                            <p className="text-xs font-extrabold text-green-700">{ecPagadas}</p>
+                            <p className="text-[9px] text-green-600">Pagadas</p>
+                          </div>
+                          <div className="flex-1 bg-yellow-50 rounded px-1 py-1 text-center border border-yellow-100">
+                            <p className="text-xs font-extrabold text-yellow-700">{ecPendientes}</p>
+                            <p className="text-[9px] text-yellow-600">Pendientes</p>
+                          </div>
+                          <div className={`flex-1 rounded px-1 py-1 text-center border ${ecVencidas > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
+                            <p className={`text-xs font-extrabold ${ecVencidas > 0 ? 'text-red-700' : 'text-gray-400'}`}>{ecVencidas}</p>
+                            <p className={`text-[9px] ${ecVencidas > 0 ? 'text-red-500' : 'text-gray-400'}`}>Vencidas</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Columna derecha: Desglose por financiamiento */}
+                      <div>
+                        <p className="text-[9px] font-bold text-oriental-gray uppercase tracking-wider mb-2">Desglose por financiamiento</p>
+                        <div className="space-y-1.5">
+                          {creditosVehiculo.map((c: any) => {
+                            const cuotasCred = cuotasVehiculo.filter((q: any) => q.credito_id === c.id)
+                            const pagadasCred = cuotasCred.filter((q: any) => q.estado === 'pagada').length
+                            const planLabel = c.plan_tipo === 'inicial_la_oriental' ? 'La Oriental'
+                              : c.plan_tipo === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Crédito'
+                            const planBg = c.plan_tipo === 'inicial_la_oriental'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : c.plan_tipo === 'financiamiento_vehimotors'
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              : 'bg-gray-50 text-gray-600 border-gray-200'
+                            return (
+                              <div key={c.id} className={`flex items-center justify-between p-2 rounded-lg border ${planBg}`}>
+                                <div>
+                                  <p className="text-[11px] font-bold">{planLabel}</p>
+                                  <p className="text-[9px] opacity-70">{pagadasCred}/{cuotasCred.length} cuotas</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-[9px] opacity-60">Saldo</p>
+                                  <p className="text-[11px] font-bold">USD {Number(c.saldo ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </>

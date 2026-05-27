@@ -254,6 +254,15 @@ export default function NuevoVehiculoPage() {
     }
   }, [vhMonto, vhCuotas, calcTasaAnual])
 
+  // ── Sincronizar fecha de entrega → fecha de inicio de cuotas ──────────────
+  useEffect(() => {
+    if (fechaEntrega) {
+      setOrFecha(fechaEntrega)
+      setVhFecha(fechaEntrega)
+      setCeFecha(fechaEntrega)
+    }
+  }, [fechaEntrega])
+
   const calcCuotaEspecial = useMemo(() => {
     const monto = parseFloat(ceMonto) || 0
     const cuotas = parseInt(ceCuotas) || 0
