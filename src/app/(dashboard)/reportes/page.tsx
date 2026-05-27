@@ -24,6 +24,15 @@ function pct(value: number, total: number) {
   return total > 0 ? Math.round((value / total) * 100) : 0
 }
 
+type ClienteCartera = {
+  nombre: string; cedula: string; placa: string; creditoId: string
+  totalCuotas: number; cuotasPagadas: number; cuotasPendientes: number; cuotasVencidas: number
+  montoPagado: number; montoPendiente: number; estadoGeneral: 'pendiente' | 'vencida' | 'pagada'
+  tiposCredito?: string[]
+}
+
+type FiltroEstado = 'todos' | 'pendiente' | 'vencida' | 'pagada'
+
 function BarRow({ label, value, max, color = 'bg-oriental-red', fmt }: {
   label: string; value: number; max: number; color?: string; fmt: (v: number) => string
 }) {
@@ -73,6 +82,199 @@ function StatCard({ value, label, sub, bg, textColor, subColor }: {
   )
 }
 
+// ── Helpers de impresión ──────────────────────────────────────────────────────
+
+function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitulo: string, fecha: string, base: string, mostrarTipos = false) {
+  const fmt = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2 })
+  const estadoBadge = (e: string) =>
+    e === 'vencida'   ? `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Vencido</span>`
+    : e === 'pendiente' ? `<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Pendiente</span>`
+    : `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Al día</span>`
+  const tipoBadge = (t: string) =>
+    t === 'inicial_la_oriental' ? `<span style="background:#ede9fe;color:#6d28d9;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">La Oriental</span>`
+    : t === 'financiamiento_vehimotors' ? `<span style="background:#e0e7ff;color:#3730a3;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">Vehimotors</span>`
+    : ''
+  const filas = lista.map((c, i) => `
+    <tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;font-weight:600">${c.nombre}${mostrarTipos && c.tiposCredito ? '<br><span style="display:flex;gap:3px;margin-top:3px">' + c.tiposCredito.map(tipoBadge).join('') + '</span>' : ''}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;color:#6b7280">${c.cedula}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${c.placa}</span></td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:center">${c.cuotasPagadas}/${c.totalCuotas}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right;color:#166534;font-weight:700">${fmt(c.montoPagado)}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right;color:#b91c1c;font-weight:700">${fmt(c.montoPendiente)}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb">${estadoBadge(c.estadoGeneral)}</td>
+    </tr>`).join('')
+  const totalCobrado = fmt(lista.reduce((s, c) => s + c.montoPagado, 0))
+  const totalPendiente = fmt(lista.reduce((s, c) => s + c.montoPendiente, 0))
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>${subtitulo} — ${filtroLabel}</title>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:'Segoe UI',system-ui,sans-serif; color:#111; padding:32px; font-size:13px; }
+      @media print { @page { margin:1.5cm; size:A4 landscape; } body { padding:0; } .no-print { display:none; } * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } }
+      .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:3px solid #E8001D; padding-bottom:14px; }
+      .header-left { display:flex; align-items:center; gap:14px; }
+      .header-logo { height:54px; object-fit:contain; }
+      .header-text h1 { font-size:18px; font-weight:800; color:#111; }
+      .header-text .sub { color:#6b7280; font-size:11px; margin-top:3px; }
+      table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
+      th { background:#111111; color:#fff; padding:9px 11px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+      th:nth-child(5),th:nth-child(6),th:nth-child(7) { text-align:right; }
+      .totales { margin-top:14px; display:flex; gap:16px; }
+      .tot-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px; }
+      .tot-label { font-size:10px; color:#6b7280; margin-bottom:2px; text-transform:uppercase; letter-spacing:.04em; }
+      .tot-val { font-size:15px; font-weight:800; color:#111; }
+      .footer { margin-top:48px; display:flex; align-items:flex-end; justify-content:space-between; }
+      .sello-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
+      .sello-img { width:90px; height:90px; object-fit:contain; opacity:.9; }
+      .firmas { display:flex; gap:56px; }
+      .firma { text-align:center; }
+      .firma-line { width:180px; height:1px; background:#111; margin-bottom:6px; }
+      .firma-label { font-size:11px; font-weight:700; color:#111; }
+      .firma-sub { font-size:10px; color:#6b7280; margin-top:2px; }
+    </style></head><body>
+    <div class="header">
+      <div class="header-left">
+        <img src="${base}/logo-la-oriental.jpg" class="header-logo" alt="Logo" />
+        <div class="header-text">
+          <h1>La Oriental Automotors MG &amp; MAXUS</h1>
+          <p class="sub">${subtitulo} — ${filtroLabel}</p>
+          <p class="sub">Fecha: ${fecha} &nbsp;·&nbsp; Para: José · Carla · Carlos</p>
+        </div>
+      </div>
+      <button class="no-print" onclick="window.print()" style="background:#E8001D;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">🖨 Imprimir</button>
+    </div>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Cliente</th><th>Cédula / RIF</th><th>Placa</th>
+        <th style="text-align:center">Cuotas</th>
+        <th style="text-align:right">Cobrado</th>
+        <th style="text-align:right">Pendiente</th>
+        <th>Estado</th>
+      </tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div class="totales">
+      <div class="tot-card"><div class="tot-label">Total cobrado</div><div class="tot-val" style="color:#166534">${totalCobrado}</div></div>
+      <div class="tot-card"><div class="tot-label">Total pendiente</div><div class="tot-val" style="color:#b91c1c">${totalPendiente}</div></div>
+      <div class="tot-card"><div class="tot-label">Clientes en lista</div><div class="tot-val">${lista.length}</div></div>
+    </div>
+    <div class="footer">
+      <div class="sello-wrap">
+        <img src="${base}/sello-la-oriental.jpeg" class="sello-img" alt="Sello" />
+      </div>
+      <div class="firmas">
+        <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Director</p><p class="firma-sub">La Oriental Automotors</p></div>
+        <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Responsable</p><p class="firma-sub">Responsable</p></div>
+      </div>
+    </div>
+  </body></html>`
+}
+
+function abrirPrint(html: string) {
+  const win = window.open('', '_blank', 'width=1100,height=750')
+  win?.document.write(html)
+  win?.document.close()
+}
+
+function ListaClientesBlock({
+  lista, filtro, setFiltro, subtituloImprimir, mostrarTipos = false
+}: {
+  lista: ClienteCartera[]; filtro: FiltroEstado; setFiltro: (f: FiltroEstado) => void
+  subtituloImprimir: string; mostrarTipos?: boolean
+}) {
+  if (lista.length === 0) return null
+  const listaFiltrada = filtro === 'todos' ? lista : lista.filter(c => c.estadoGeneral === filtro)
+  const cnt = (f: FiltroEstado) => f === 'todos' ? lista.length : lista.filter(c => c.estadoGeneral === f).length
+  const filtros: { key: FiltroEstado; label: string; activeClass: string }[] = [
+    { key: 'todos',     label: `Todos (${cnt('todos')})`,                  activeClass: 'bg-oriental-black text-white border-oriental-black' },
+    { key: 'pendiente', label: `Pendientes (${cnt('pendiente')})`,          activeClass: 'bg-yellow-500 text-white border-yellow-500' },
+    { key: 'vencida',   label: `Vencidos (${cnt('vencida')})`,              activeClass: 'bg-red-600 text-white border-red-600' },
+    { key: 'pagada',    label: `Al día (${cnt('pagada')})`,                 activeClass: 'bg-green-600 text-white border-green-600' },
+  ]
+  return (
+    <div className="border-t border-gray-100 pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Users size={15} className="text-oriental-gray" />
+          <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Listado de clientes</p>
+          {filtros.map(f => (
+            <button key={f.key} onClick={() => setFiltro(f.key)}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${filtro === f.key ? f.activeClass : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => {
+            const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
+            const filtroLabel = filtro === 'todos' ? 'Todos los clientes' : filtro === 'pendiente' ? 'Clientes con cuotas pendientes' : filtro === 'vencida' ? 'Clientes con cuotas vencidas' : 'Clientes al día'
+            abrirPrint(generarPrintHtml(listaFiltrada, filtroLabel, subtituloImprimir, fecha, window.location.origin, mostrarTipos))
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          Imprimir listado
+        </button>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-gray-100">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cliente</th>
+              {mostrarTipos && <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Créditos</th>}
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Placa</th>
+              <th className="text-center px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cuotas</th>
+              <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cobrado</th>
+              <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Pendiente</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Estado</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {listaFiltrada.map((c, i) => (
+              <tr key={c.creditoId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                <td className="px-4 py-3">
+                  <p className="font-semibold text-oriental-black text-sm">{c.nombre}</p>
+                  <p className="text-xs text-oriental-gray">{c.cedula}</p>
+                </td>
+                {mostrarTipos && (
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {c.tiposCredito?.map(t => (
+                        <span key={t} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-700' : t === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {t === 'inicial_la_oriental' ? 'La Oriental' : t === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Especial'}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                )}
+                <td className="px-4 py-3">
+                  <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-bold">{c.placa}</span>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span className="text-sm font-medium text-oriental-black">{c.cuotasPagadas}/{c.totalCuotas}</span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <span className="text-sm font-bold text-green-700">{formatCurrency(c.montoPagado)}</span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <span className={`text-sm font-bold ${c.montoPendiente > 0 ? 'text-oriental-red' : 'text-green-600'}`}>{formatCurrency(c.montoPendiente)}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${c.estadoGeneral === 'vencida' ? 'bg-red-100 text-red-700' : c.estadoGeneral === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                    {c.estadoGeneral === 'vencida' ? 'Vencido' : c.estadoGeneral === 'pendiente' ? 'Pendiente' : 'Al día'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 export default function ReportesPage() {
   const supabase = createClient()
   const hoy = new Date()
@@ -112,13 +314,12 @@ export default function ReportesPage() {
   const [orVencidas, setOrVencidas] = useState(0)
   const [orMontoPagado, setOrMontoPagado] = useState(0)
   const [orMontoPendiente, setOrMontoPendiente] = useState(0)
-  const [orFiltro, setOrFiltro] = useState<'todos' | 'pendiente' | 'vencida' | 'pagada'>('todos')
-  type OrCliente = {
-    nombre: string; cedula: string; placa: string; creditoId: string
-    totalCuotas: number; cuotasPagadas: number; cuotasPendientes: number; cuotasVencidas: number
-    montoPagado: number; montoPendiente: number; estadoGeneral: 'pendiente' | 'vencida' | 'pagada'
-  }
-  const [orClienteList, setOrClienteList] = useState<OrCliente[]>([])
+  const [orFiltro, setOrFiltro] = useState<FiltroEstado>('todos')
+  const [orClienteList, setOrClienteList] = useState<ClienteCartera[]>([])
+  const [vhFiltro, setVhFiltro] = useState<FiltroEstado>('todos')
+  const [vhClienteList, setVhClienteList] = useState<ClienteCartera[]>([])
+  const [generalFiltro, setGeneralFiltro] = useState<FiltroEstado>('todos')
+  const [generalClienteList, setGeneralClienteList] = useState<ClienteCartera[]>([])
 
   // ── Deudores / Pagadores
   const [topDeudores, setTopDeudores] = useState<{ nombre: string; cedula: string; saldo: number; creditos: number }[]>([])
@@ -241,6 +442,57 @@ export default function ReportesPage() {
       }
     })
     setOrClienteList(Object.values(orList))
+
+    // ── Listado clientes Vehimotors
+    const vhCreditos2 = creditos.filter((c: any) => c.plan_tipo === 'financiamiento_vehimotors')
+    const vhCreditoIds2 = new Set(vhCreditos2.map((c: any) => c.id))
+    const vhCuotasAll = cuotas.filter((c: any) => vhCreditoIds2.has(c.credito_id))
+    const vhList: Record<string, any> = {}
+    vhCreditos2.forEach((c: any) => {
+      const cl = c.clientes; if (!cl) return
+      const cuotasCred = vhCuotasAll.filter((q: any) => q.credito_id === c.id)
+      const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
+      const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
+      const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      vhList[c.id] = {
+        nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—', creditoId: c.id,
+        totalCuotas: cuotasCred.length,
+        cuotasPagadas: cpag.length, cuotasPendientes: cpend.length, cuotasVencidas: cvenc.length,
+        montoPagado: cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0),
+        montoPendiente: [...cpend, ...cvenc].reduce((s: number, q: any) =>
+          s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
+        estadoGeneral: cvenc.length > 0 ? 'vencida' : cpend.length > 0 ? 'pendiente' : 'pagada',
+      }
+    })
+    setVhClienteList(Object.values(vhList))
+
+    // ── Listado general (todos los créditos agrupados por cliente)
+    const genMap: Record<string, any> = {}
+    creditos.forEach((c: any) => {
+      const cl = c.clientes; if (!cl) return
+      const cuotasCred = cuotas.filter((q: any) => q.credito_id === c.id)
+      const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
+      const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
+      const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      if (!genMap[cl.id]) genMap[cl.id] = {
+        clienteId: cl.id, nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—',
+        creditoId: c.id, totalCuotas: 0, cuotasPagadas: 0, cuotasPendientes: 0, cuotasVencidas: 0,
+        montoPagado: 0, montoPendiente: 0, estadoGeneral: 'pagada', tiposCredito: [],
+      }
+      genMap[cl.id].totalCuotas    += cuotasCred.length
+      genMap[cl.id].cuotasPagadas  += cpag.length
+      genMap[cl.id].cuotasPendientes += cpend.length
+      genMap[cl.id].cuotasVencidas += cvenc.length
+      genMap[cl.id].montoPagado    += cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0)
+      genMap[cl.id].montoPendiente += [...cpend, ...cvenc].reduce((s: number, q: any) =>
+        s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0)
+      if (c.plan_tipo && !genMap[cl.id].tiposCredito.includes(c.plan_tipo))
+        genMap[cl.id].tiposCredito.push(c.plan_tipo)
+    })
+    Object.values(genMap).forEach((g: any) => {
+      g.estadoGeneral = g.cuotasVencidas > 0 ? 'vencida' : g.cuotasPendientes > 0 ? 'pendiente' : 'pagada'
+    })
+    setGeneralClienteList(Object.values(genMap))
 
     // ── Top deudores
     const saldoPorCliente: Record<string, { nombre: string; cedula: string; saldo: number; creditos: number }> = {}
@@ -434,6 +686,10 @@ export default function ReportesPage() {
                   <p className="text-[10px] text-red-500">{vhPendientes + vhVencidas} cuotas por cobrar</p>
                 </div>
               </div>
+              <ListaClientesBlock
+                lista={vhClienteList} filtro={vhFiltro} setFiltro={setVhFiltro}
+                subtituloImprimir="Reporte Cartera Vehimotors"
+              />
             </div>
           </section>
 
@@ -485,205 +741,33 @@ export default function ReportesPage() {
                 </div>
               </div>
 
-              {/* Listado de clientes con filtros */}
-              {orClienteList.length > 0 && (
-                <div className="border-t border-gray-100 pt-4">
-                  {/* Cabecera con filtros y botón imprimir */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Users size={15} className="text-oriental-gray" />
-                      <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Listado de clientes</p>
-                      {(['todos', 'pendiente', 'vencida', 'pagada'] as const).map(f => (
-                        <button
-                          key={f}
-                          onClick={() => setOrFiltro(f)}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
-                            orFiltro === f
-                              ? f === 'vencida' ? 'bg-red-600 text-white border-red-600'
-                                : f === 'pendiente' ? 'bg-yellow-500 text-white border-yellow-500'
-                                : f === 'pagada' ? 'bg-green-600 text-white border-green-600'
-                                : 'bg-oriental-black text-white border-oriental-black'
-                              : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
-                          }`}
-                        >
-                          {f === 'todos' ? `Todos (${orClienteList.length})`
-                            : f === 'pendiente' ? `Pendientes (${orClienteList.filter(c => c.estadoGeneral === 'pendiente').length})`
-                            : f === 'vencida' ? `Vencidos (${orClienteList.filter(c => c.estadoGeneral === 'vencida').length})`
-                            : `Al día (${orClienteList.filter(c => c.estadoGeneral === 'pagada').length})`}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => {
-                        const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
-                        const listaFiltrada = orClienteList.filter(c => orFiltro === 'todos' || c.estadoGeneral === orFiltro)
-                        const filtroLabel = orFiltro === 'todos' ? 'Todos los clientes'
-                          : orFiltro === 'pendiente' ? 'Clientes con cuotas pendientes'
-                          : orFiltro === 'vencida' ? 'Clientes con cuotas vencidas'
-                          : 'Clientes al día'
-                        const estadoBadge = (e: string) =>
-                          e === 'vencida' ? `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Vencido</span>`
-                          : e === 'pendiente' ? `<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Pendiente</span>`
-                          : `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Al día</span>`
-                        const filas = listaFiltrada.map((c, i) => `
-                          <tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
-                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
-                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-weight:600">${c.nombre}</td>
-                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280">${c.cedula}</td>
-                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${c.placa}</span></td>
-                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center">${c.cuotasPagadas}/${c.totalCuotas}</td>
-                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#166534;font-weight:700">USD ${c.montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#b91c1c;font-weight:700">USD ${c.montoPendiente.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-                            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${estadoBadge(c.estadoGeneral)}</td>
-                          </tr>`).join('')
-                        const base = window.location.origin
-                        const totalCobrado = listaFiltrada.reduce((s,c)=>s+c.montoPagado,0).toLocaleString('es-VE',{minimumFractionDigits:2})
-                        const totalPendiente = listaFiltrada.reduce((s,c)=>s+c.montoPendiente,0).toLocaleString('es-VE',{minimumFractionDigits:2})
-                        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-                          <title>Reporte La Oriental — ${filtroLabel}</title>
-                          <style>
-                            * { margin:0; padding:0; box-sizing:border-box; }
-                            body { font-family:'Segoe UI',system-ui,sans-serif; color:#111; padding:32px; font-size:13px; }
-                            @media print { @page { margin:1.5cm; size:A4 landscape; } body { padding:0; } .no-print { display:none; } * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } }
-                            .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:3px solid #E8001D; padding-bottom:14px; }
-                            .header-left { display:flex; align-items:center; gap:14px; }
-                            .header-logo { height:54px; object-fit:contain; }
-                            .header-text h1 { font-size:18px; font-weight:800; color:#111; }
-                            .header-text .sub { color:#6b7280; font-size:11px; margin-top:3px; }
-                            table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
-                            th { background:#111111; color:#fff; padding:9px 11px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
-                            th:nth-child(5),th:nth-child(6),th:nth-child(7) { text-align:right; }
-                            td { padding:9px 11px; border-bottom:1px solid #e5e7eb; font-size:12px; }
-                            .totales { margin-top:14px; display:flex; gap:16px; }
-                            .tot-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px; }
-                            .tot-label { font-size:10px; color:#6b7280; margin-bottom:2px; text-transform:uppercase; letter-spacing:.04em; }
-                            .tot-val { font-size:15px; font-weight:800; color:#111; }
-                            .footer { margin-top:48px; display:flex; align-items:flex-end; justify-content:space-between; }
-                            .sello-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
-                            .sello-img { width:90px; height:90px; object-fit:contain; opacity:.9; }
-                            .firmas { display:flex; gap:56px; }
-                            .firma { text-align:center; }
-                            .firma-line { width:180px; height:1px; background:#111; margin-bottom:6px; }
-                            .firma-label { font-size:11px; font-weight:700; color:#111; }
-                            .firma-sub { font-size:10px; color:#6b7280; margin-top:2px; }
-                          </style></head><body>
-                          <div class="header">
-                            <div class="header-left">
-                              <img src="${base}/logo-la-oriental.jpg" class="header-logo" alt="Logo La Oriental" />
-                              <div class="header-text">
-                                <h1>La Oriental Automotors MG &amp; MAXUS</h1>
-                                <p class="sub">Reporte de Cartera — ${filtroLabel}</p>
-                                <p class="sub">Fecha: ${fecha} &nbsp;·&nbsp; Para: José · Carla · Carlos</p>
-                              </div>
-                            </div>
-                            <button class="no-print" onclick="window.print()" style="background:#E8001D;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">🖨 Imprimir</button>
-                          </div>
-                          <table>
-                            <thead><tr>
-                              <th>#</th><th>Cliente</th><th>Cédula / RIF</th><th>Placa</th>
-                              <th style="text-align:center">Cuotas</th>
-                              <th style="text-align:right">Cobrado</th>
-                              <th style="text-align:right">Pendiente</th>
-                              <th>Estado</th>
-                            </tr></thead>
-                            <tbody>${filas}</tbody>
-                          </table>
-                          <div class="totales">
-                            <div class="tot-card"><div class="tot-label">Total cobrado</div><div class="tot-val" style="color:#166534">USD ${totalCobrado}</div></div>
-                            <div class="tot-card"><div class="tot-label">Total pendiente</div><div class="tot-val" style="color:#b91c1c">USD ${totalPendiente}</div></div>
-                            <div class="tot-card"><div class="tot-label">Clientes en lista</div><div class="tot-val">${listaFiltrada.length}</div></div>
-                          </div>
-                          <div class="footer">
-                            <div class="sello-wrap">
-                              <img src="${base}/sello-la-oriental.jpeg" class="sello-img" alt="Sello La Oriental" />
-                            </div>
-                            <div class="firmas">
-                              <div class="firma">
-                                <div class="firma-line"></div>
-                                <p class="firma-label">Firma Autorizada</p>
-                                <p class="firma-sub">La Oriental Automotors</p>
-                              </div>
-                              <div class="firma">
-                                <div class="firma-line"></div>
-                                <p class="firma-label">Firma de Recibido</p>
-                                <p class="firma-sub">Cliente</p>
-                              </div>
-                            </div>
-                          </div>
-                        </body></html>`
-                        const win = window.open('', '_blank', 'width=1000,height=700')
-                        win?.document.write(html)
-                        win?.document.close()
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-                      Imprimir listado
-                    </button>
-                  </div>
-
-                  {/* Tabla de clientes */}
-                  <div className="overflow-x-auto rounded-lg border border-gray-100">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cliente</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Placa</th>
-                          <th className="text-center px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cuotas</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cobrado</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Pendiente</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Estado</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {orClienteList
-                          .filter(c => orFiltro === 'todos' || c.estadoGeneral === orFiltro)
-                          .map((c, i) => (
-                            <tr key={c.creditoId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                              <td className="px-4 py-3">
-                                <p className="font-semibold text-oriental-black text-sm">{c.nombre}</p>
-                                <p className="text-xs text-oriental-gray">{c.cedula}</p>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-bold">{c.placa}</span>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className="text-sm font-medium text-oriental-black">{c.cuotasPagadas}/{c.totalCuotas}</span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-sm font-bold text-green-700">{formatCurrency(c.montoPagado)}</span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className={`text-sm font-bold ${c.montoPendiente > 0 ? 'text-oriental-red' : 'text-green-600'}`}>
-                                  {formatCurrency(c.montoPendiente)}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                                  c.estadoGeneral === 'vencida' ? 'bg-red-100 text-red-700'
-                                  : c.estadoGeneral === 'pendiente' ? 'bg-yellow-100 text-yellow-700'
-                                  : 'bg-green-100 text-green-700'
-                                }`}>
-                                  {c.estadoGeneral === 'vencida' ? 'Vencido'
-                                    : c.estadoGeneral === 'pendiente' ? 'Pendiente'
-                                    : 'Al día'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
+              <ListaClientesBlock
+                lista={orClienteList} filtro={orFiltro} setFiltro={setOrFiltro}
+                subtituloImprimir="Reporte Cartera La Oriental"
+              />
               {orClienteList.length === 0 && !loading && (
-                <p className="text-center text-sm text-oriental-gray py-4 border-t border-gray-100 pt-4">No hay créditos de La Oriental registrados</p>
+                <p className="text-center text-sm text-oriental-gray py-4 border-t border-gray-100">No hay créditos de La Oriental registrados</p>
               )}
             </div>
           </section>
 
-          {/* ══ 5. DEUDORES Y PAGADORES ═══════════════════════════════════ */}
+          {/* ══ 5. LISTADO GENERAL ════════════════════════════════════════ */}
+          <section>
+            <SectionTitle>Listado general de clientes — todos los créditos</SectionTitle>
+            <div className="card p-6">
+              <p className="text-sm text-oriental-gray mb-4">Vista consolidada: cada cliente aparece una sola vez con el total de todos sus créditos (La Oriental + Vehimotors). El estado refleja el peor estatus activo.</p>
+              <ListaClientesBlock
+                lista={generalClienteList} filtro={generalFiltro} setFiltro={setGeneralFiltro}
+                subtituloImprimir="Reporte General de Clientes"
+                mostrarTipos
+              />
+              {generalClienteList.length === 0 && !loading && (
+                <p className="text-center text-sm text-oriental-gray py-6">No hay clientes registrados</p>
+              )}
+            </div>
+          </section>
+
+          {/* ══ 6. DEUDORES Y PAGADORES ═══════════════════════════════════ */}
           <section>
             <SectionTitle>Clientes — análisis de pago</SectionTitle>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
