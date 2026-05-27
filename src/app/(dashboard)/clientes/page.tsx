@@ -37,6 +37,35 @@ export default async function ClientesPage({
         </Link>
       </div>
 
+      {/* Buscador */}
+      <form action="/clientes" method="GET" className="mb-4">
+        {params.tipo && <input type="hidden" name="tipo" value={params.tipo} />}
+        <div className="relative max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray pointer-events-none" />
+          <input
+            type="text"
+            name="q"
+            defaultValue={params.q ?? ''}
+            placeholder="Buscar por nombre o cédula / RIF..."
+            className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-oriental-black placeholder-gray-400 focus:outline-none focus:border-oriental-red focus:ring-1 focus:ring-oriental-red/20 transition-colors"
+          />
+          {params.q && (
+            <Link
+              href={params.tipo ? `/clientes?tipo=${params.tipo}` : '/clientes'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-oriental-red transition-colors"
+              title="Limpiar búsqueda"
+            >
+              ✕
+            </Link>
+          )}
+        </div>
+        {params.q && (
+          <p className="text-xs text-oriental-gray mt-1.5 ml-1">
+            {clientes?.length ?? 0} resultado{(clientes?.length ?? 0) !== 1 ? 's' : ''} para <span className="font-semibold text-oriental-black">"{params.q}"</span>
+          </p>
+        )}
+      </form>
+
       {/* Filtros */}
       <div className="flex gap-2 mb-6">
         {[
@@ -46,7 +75,10 @@ export default async function ClientesPage({
         ].map(f => (
           <Link
             key={f.value}
-            href={f.value ? `/clientes?tipo=${f.value}` : '/clientes'}
+            href={f.value
+              ? `/clientes?tipo=${f.value}${params.q ? `&q=${params.q}` : ''}`
+              : `/clientes${params.q ? `?q=${params.q}` : ''}`
+            }
             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
               params.tipo === f.value || (!params.tipo && !f.value)
                 ? 'bg-oriental-black text-white border-oriental-black'
@@ -88,10 +120,21 @@ export default async function ClientesPage({
         {(!clientes || clientes.length === 0) && (
           <div className="col-span-3 text-center py-16">
             <Search size={32} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-oriental-gray text-sm">No hay clientes registrados</p>
-            <Link href="/clientes/nuevo" className="text-oriental-red text-sm font-medium hover:underline mt-1 inline-block">
-              Registrar el primero
-            </Link>
+            {params.q ? (
+              <>
+                <p className="text-oriental-gray text-sm">Sin resultados para <span className="font-semibold text-oriental-black">"{params.q}"</span></p>
+                <Link href="/clientes" className="text-oriental-red text-sm font-medium hover:underline mt-1 inline-block">
+                  Ver todos los clientes
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-oriental-gray text-sm">No hay clientes registrados</p>
+                <Link href="/clientes/nuevo" className="text-oriental-red text-sm font-medium hover:underline mt-1 inline-block">
+                  Registrar el primero
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>
