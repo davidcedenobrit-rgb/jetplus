@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, CircleDot, PlusCircle } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import RevertirCuotaButton from './RevertirCuotaButton'
+import PrintButton from './PrintButton'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director']
 
@@ -134,6 +135,10 @@ export default async function CreditoDetallePage({
 
   const esVehiculoConMultiplesCreditos = creditos.length > 1
 
+  const fechaImpresion = new Date().toLocaleDateString('es-VE', {
+    day: '2-digit', month: 'long', year: 'numeric'
+  })
+
   return (
     <div className="p-4 lg:p-8 max-w-7xl">
       {/* Header */}
@@ -157,14 +162,17 @@ export default async function CreditoDetallePage({
           </div>
           <p className="text-oriental-gray text-sm mt-0.5">{cliente?.nombre} · {credito.placa ?? 'Sin placa'}</p>
         </div>
-        {/* Botón editar apunta al crédito con que se navegó */}
-        <Link
-          href={`/creditos/${id}/editar`}
-          className="flex items-center gap-2 px-4 py-2 bg-oriental-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <Edit3 size={15} />
-          Editar
-        </Link>
+        <div className="flex items-center gap-2">
+          <PrintButton />
+          {/* Botón editar apunta al crédito con que se navegó */}
+          <Link
+            href={`/creditos/${id}/editar`}
+            className="flex items-center gap-2 px-4 py-2 bg-oriental-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <Edit3 size={15} />
+            Editar
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -478,6 +486,193 @@ export default async function CreditoDetallePage({
             )}
           </div>
         </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          ESTADO DE CUENTA — Solo visible al imprimir
+      ════════════════════════════════════════════════════════════════ */}
+      <div id="estado-cuenta-imprimible" className="hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif', color: '#111', background: 'white', padding: '0' }}>
+
+        {/* ── Encabezado empresa ── */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '3px solid #E8001D', paddingBottom: '14px', marginBottom: '18px' }}>
+          <div>
+            <img src="/logo-la-oriental.jpg" alt="La Oriental Automotors" style={{ height: '56px', objectFit: 'contain', display: 'block' }} />
+            <p style={{ fontSize: '10px', color: '#666', marginTop: '6px', lineHeight: '1.6' }}>
+              Av. Ugarte Pelayo c/c Av. Bicentenario, Edif. El Parque, Local Nro. 1<br />
+              Maturín, Estado Monagas — Venezuela<br />
+              RIF: J-505692143
+            </p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontSize: '22px', fontWeight: '800', color: '#111', letterSpacing: '-0.5px' }}>Estado de Cuenta</p>
+            <p style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>Generado el {fechaImpresion}</p>
+            {credito.placa && (
+              <p style={{ fontSize: '12px', fontWeight: '700', color: '#E8001D', marginTop: '4px', fontFamily: 'monospace' }}>Placa: {credito.placa}</p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Cliente + Vehículo ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '18px' }}>
+          <div style={{ background: '#f9f9f9', borderRadius: '8px', padding: '12px 14px', border: '1px solid #eee' }}>
+            <p style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#888', marginBottom: '6px' }}>Cliente</p>
+            <p style={{ fontSize: '14px', fontWeight: '700', color: '#111' }}>{cliente?.nombre ?? '—'}</p>
+            <p style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>C.I. / RIF: {cliente?.cedula_rif ?? '—'}</p>
+            {cliente?.telefono && <p style={{ fontSize: '11px', color: '#555' }}>Tel: {cliente.telefono}</p>}
+          </div>
+          <div style={{ background: '#f9f9f9', borderRadius: '8px', padding: '12px 14px', border: '1px solid #eee' }}>
+            <p style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#888', marginBottom: '6px' }}>Vehículo</p>
+            <p style={{ fontSize: '14px', fontWeight: '700', color: '#111' }}>{vehiculo?.marca} {vehiculo?.modelo}</p>
+            <p style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>
+              {[vehiculo?.anio, vehiculo?.color, vehiculo?.placa ? `Placa: ${vehiculo.placa}` : null].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Resumen financiero ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
+          <div style={{ background: '#111', borderRadius: '8px', padding: '12px 14px', textAlign: 'center' }}>
+            <p style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Total financiado</p>
+            <p style={{ fontSize: '16px', fontWeight: '800', color: '#fff' }}>{formatCurrency(totalFinanciado, credito.moneda)}</p>
+          </div>
+          <div style={{ background: '#f0fdf4', borderRadius: '8px', padding: '12px 14px', textAlign: 'center', border: '1px solid #d1fae5' }}>
+            <p style={{ fontSize: '9px', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Ya pagado</p>
+            <p style={{ fontSize: '16px', fontWeight: '800', color: '#15803d' }}>{formatCurrency(totalFinanciado - totalSaldo, credito.moneda)}</p>
+          </div>
+          <div style={{ background: '#fff1f2', borderRadius: '8px', padding: '12px 14px', textAlign: 'center', border: '1px solid #fecdd3' }}>
+            <p style={{ fontSize: '9px', color: '#e11d48', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Saldo pendiente</p>
+            <p style={{ fontSize: '16px', fontWeight: '800', color: '#E8001D' }}>{formatCurrency(totalSaldo, credito.moneda)}</p>
+          </div>
+        </div>
+
+        {/* Barra de progreso */}
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#888', marginBottom: '4px' }}>
+            <span>Progreso general</span>
+            <span style={{ fontWeight: '700', color: '#111' }}>{porcentajePagado.toFixed(0)}%</span>
+          </div>
+          <div style={{ height: '7px', background: '#e5e7eb', borderRadius: '99px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${Math.min(100, porcentajePagado)}%`, background: '#22c55e', borderRadius: '99px' }} />
+          </div>
+        </div>
+
+        {/* Contadores cuotas */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
+          {[
+            { count: cuotasPagadas,   label: 'Pagadas',       bg: '#f0fdf4', color: '#15803d', border: '#d1fae5' },
+            { count: cuotasPendientes,label: 'Pendientes',    bg: '#fefce8', color: '#a16207', border: '#fef08a' },
+            { count: cuotasVencidas,  label: 'Vencidas',      bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
+            { count: cuotasAbono,     label: 'Abono parcial', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+          ].map(item => (
+            <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.border}`, borderRadius: '8px', padding: '8px 14px', minWidth: '90px', textAlign: 'center' }}>
+              <p style={{ fontSize: '18px', fontWeight: '800', color: item.color }}>{item.count}</p>
+              <p style={{ fontSize: '9px', color: item.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Tabla de cuotas ── */}
+        <p style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#888', marginBottom: '8px' }}>
+          Plan de cuotas — {cuotasEnriquecidas.length} cuotas en total
+        </p>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+          <thead>
+            <tr style={{ background: '#111', color: '#fff' }}>
+              {['N°', 'Financiamiento', 'Vencimiento', 'Monto', 'Abonado', 'Faltante', 'Fecha Pago', 'Estado'].map(h => (
+                <th key={h} style={{ padding: '7px 8px', textAlign: 'left', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {cuotasEnriquecidas.map((cuota: any, idx: number) => {
+              const montoPagado = Number(cuota.monto_pagado ?? 0)
+              const montoTotal  = Number(cuota.monto)
+              const faltante    = Math.max(0, montoTotal - montoPagado)
+              const esPagada    = cuota.estado === 'pagada'
+              const esAbono     = cuota.estado === 'abono_parcial'
+              const esVencida   = cuota.estado === 'vencida'
+
+              const rowBg = esPagada  ? '#f0fdf4'
+                          : esAbono   ? '#fff7ed'
+                          : esVencida ? '#fff1f2'
+                          : idx % 2 === 0 ? '#ffffff' : '#f9fafb'
+
+              const estadoStyle = esPagada  ? { background: '#dcfce7', color: '#15803d' }
+                                : esAbono   ? { background: '#ffedd5', color: '#c2410c' }
+                                : esVencida ? { background: '#fee2e2', color: '#b91c1c' }
+                                : { background: '#fef9c3', color: '#a16207' }
+
+              const planTipo = cuota._plan_tipo
+              const planBgColor = planTipo === 'inicial_la_oriental' ? '#f3e8ff'
+                                : planTipo === 'financiamiento_vehimotors' ? '#e0e7ff'
+                                : '#f0fdfa'
+              const planTextColor = planTipo === 'inicial_la_oriental' ? '#7e22ce'
+                                  : planTipo === 'financiamiento_vehimotors' ? '#3730a3'
+                                  : '#0f766e'
+
+              return (
+                <tr key={cuota.id} style={{ background: rowBg }}>
+                  <td style={{ padding: '6px 8px', color: '#666', borderBottom: '1px solid #f3f4f6' }}>{cuota.numero_cuota}</td>
+                  <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                    <span style={{ background: planBgColor, color: planTextColor, padding: '2px 7px', borderRadius: '99px', fontSize: '9px', fontWeight: '700' }}>
+                      {cuota.concepto ?? planLabel(planTipo)}
+                    </span>
+                  </td>
+                  <td style={{ padding: '6px 8px', color: esVencida ? '#b91c1c' : '#555', fontWeight: esVencida ? '700' : '400', borderBottom: '1px solid #f3f4f6' }}>
+                    {formatDate(cuota.fecha_vencimiento)}
+                  </td>
+                  <td style={{ padding: '6px 8px', fontWeight: '700', color: '#111', borderBottom: '1px solid #f3f4f6' }}>
+                    {formatCurrency(montoTotal, credito.moneda)}
+                  </td>
+                  <td style={{ padding: '6px 8px', color: montoPagado > 0 ? '#15803d' : '#ccc', borderBottom: '1px solid #f3f4f6' }}>
+                    {montoPagado > 0 ? formatCurrency(montoPagado, credito.moneda) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 8px', fontWeight: faltante > 0 ? '700' : '400', color: faltante > 0 ? '#E8001D' : '#22c55e', borderBottom: '1px solid #f3f4f6' }}>
+                    {faltante > 0 ? formatCurrency(faltante, credito.moneda) : '✓'}
+                  </td>
+                  <td style={{ padding: '6px 8px', color: '#555', borderBottom: '1px solid #f3f4f6' }}>
+                    {cuota.fecha_pago ? formatDate(cuota.fecha_pago) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                    <span style={{ ...estadoStyle, padding: '2px 8px', borderRadius: '99px', fontSize: '9px', fontWeight: '700' }}>
+                      {cuota.estado === 'pagada' ? 'Pagada'
+                       : cuota.estado === 'abono_parcial' ? 'Abono parcial'
+                       : cuota.estado === 'vencida' ? 'Vencida'
+                       : 'Pendiente'}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+
+        {/* ── Sello y firma ── */}
+        <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+          {/* Firma */}
+          <div style={{ flex: 1 }}>
+            <div style={{ borderTop: '1px solid #111', width: '220px', paddingTop: '6px', marginTop: '40px' }}>
+              <p style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>Firma Autorizada</p>
+              <p style={{ fontSize: '9px', color: '#888' }}>La Oriental Automotors S.C.A.</p>
+            </div>
+          </div>
+          {/* Sello */}
+          <div style={{ position: 'relative', width: '110px', height: '110px', flexShrink: 0 }}>
+            <img
+              src="/sello-la-oriental.jpeg"
+              alt="Sello La Oriental"
+              style={{ width: '110px', height: '110px', objectFit: 'contain', mixBlendMode: 'multiply', opacity: 0.85 }}
+            />
+          </div>
+        </div>
+
+        {/* ── Footer ── */}
+        <div style={{ marginTop: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '10px', textAlign: 'center' }}>
+          <p style={{ fontSize: '9px', color: '#aaa' }}>
+            La Oriental Automotors S.C.A. · RIF: J-505692143 · Maturín, Venezuela · Documento generado el {fechaImpresion}
+          </p>
+        </div>
+
       </div>
     </div>
   )

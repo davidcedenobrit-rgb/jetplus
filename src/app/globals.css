@@ -2,17 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── PRINT: Solo mostrar el recibo ─────────────────────────────────────── */
+/* ── PRINT: Solo mostrar el recibo o el estado de cuenta ───────────────── */
 @media print {
   @page {
     margin: 1.5cm;
     size: A4 portrait;
   }
 
-  /* Ocultar todo y mostrar solo el recibo */
+  /* Forzar colores en todos los elementos impresos */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ocultar todo */
   body * {
     visibility: hidden !important;
   }
+
+  /* ── Recibo de pago ── */
   #recibo-imprimible,
   #recibo-imprimible * {
     visibility: visible !important;
@@ -27,21 +35,24 @@
     box-shadow: none !important;
     border: none !important;
   }
-  /* Forzar colores en print (algunos navegadores los omiten) */
-  #recibo-imprimible .print-bg-black {
-    background-color: #111111 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  #recibo-imprimible .print-bg-black { background-color: #111111 !important; }
+  #recibo-imprimible .print-bg-red   { background-color: #E8001D !important; }
+  #recibo-imprimible .print-bg-gray  { background-color: #F5F5F5 !important; }
+
+  /* ── Estado de cuenta (crédito) — permite múltiples páginas ── */
+  #estado-cuenta-imprimible {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
   }
-  #recibo-imprimible .print-bg-red {
-    background-color: #E8001D !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  #recibo-imprimible .print-bg-gray {
-    background-color: #F5F5F5 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  #estado-cuenta-imprimible,
+  #estado-cuenta-imprimible * {
+    visibility: visible !important;
   }
 }
 
