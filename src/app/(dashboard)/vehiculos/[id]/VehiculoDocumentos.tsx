@@ -6,7 +6,7 @@ import {
   FileText, Upload, ExternalLink, Loader2,
   Receipt, Award, ShieldCheck, HeartPulse,
   FileSignature, CreditCard, ClipboardList, Trash2,
-  ClipboardCheck, Percent, Banknote
+  ClipboardCheck, Percent, Banknote, Wrench
 } from 'lucide-react'
 
 const CATEGORIAS = [
@@ -89,6 +89,14 @@ const CATEGORIAS = [
     color: 'bg-lime-50 border-lime-100',
     iconColor: 'text-lime-600',
     badge: 'bg-lime-100 text-lime-700',
+  },
+  {
+    tipo: 'pdi',
+    label: 'PDI',
+    icon: Wrench,
+    color: 'bg-slate-50 border-slate-100',
+    iconColor: 'text-slate-500',
+    badge: 'bg-slate-100 text-slate-700',
   },
 ] as const
 
