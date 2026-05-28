@@ -49,6 +49,11 @@ export default async function CreditoDetallePage({
   const { id } = await params
   const supabase = await createClient()
 
+  // Ventana de 7 días para estado "Por cobrar"
+  const hoyDate = new Date()
+  const en7Date = new Date(hoyDate); en7Date.setDate(hoyDate.getDate() + 7)
+  const en7Str  = en7Date.toISOString().split('T')[0]
+
   // Detectar rol del usuario actual
   const { data: { user: authUser } } = await supabase.auth.getUser()
   const { data: usuarioData } = authUser
@@ -123,10 +128,13 @@ export default async function CreditoDetallePage({
   const porcentajePagado = totalFinanciado > 0
     ? ((totalFinanciado - totalSaldo) / totalFinanciado) * 100 : 0
 
-  const cuotasPagadas = cuotasEnriquecidas.filter(c => c.estado === 'pagada').length
+  const cuotasPagadas    = cuotasEnriquecidas.filter(c => c.estado === 'pagada').length
   const cuotasPendientes = cuotasEnriquecidas.filter(c => c.estado === 'pendiente').length
-  const cuotasVencidas = cuotasEnriquecidas.filter(c => c.estado === 'vencida').length
-  const cuotasAbono = cuotasEnriquecidas.filter(c => c.estado === 'abono_parcial').length
+  const cuotasVencidas   = cuotasEnriquecidas.filter(c => c.estado === 'vencida').length
+  const cuotasAbono      = cuotasEnriquecidas.filter(c => c.estado === 'abono_parcial').length
+  // Desglose de pendientes: por cobrar (≤7 días) vs. al día (>7 días)
+  const cuotasPorCobrar  = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento <= en7Str).length
+  const cuotasAlDia      = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento >  en7Str).length
 
   // Estado general del vehículo (si alguno en mora → mora, si todos pagados → pagado)
   const estadoGeneral = creditos.some((c: any) => c.estado === 'mora') ? 'mora'
@@ -211,21 +219,25 @@ export default async function CreditoDetallePage({
               </div>
             </div>
 
-            <div className={`grid gap-2 mt-4 ${cuotasAbono > 0 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            <div className="grid grid-cols-2 gap-2 mt-4">
               <div className="bg-green-50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-green-700">{cuotasPagadas}</p>
                 <p className="text-[10px] text-green-600">Pagadas</p>
-              </div>
-              <div className="bg-yellow-50 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-yellow-700">{cuotasPendientes}</p>
-                <p className="text-[10px] text-yellow-600">Pendientes</p>
               </div>
               <div className="bg-red-50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-red-700">{cuotasVencidas}</p>
                 <p className="text-[10px] text-red-600">Vencidas</p>
               </div>
+              <div className="bg-yellow-50 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-yellow-700">{cuotasPorCobrar}</p>
+                <p className="text-[10px] text-yellow-600">Por cobrar</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-gray-500">{cuotasAlDia}</p>
+                <p className="text-[10px] text-gray-400">Al día</p>
+              </div>
               {cuotasAbono > 0 && (
-                <div className="bg-orange-50 rounded-lg p-2 text-center">
+                <div className="bg-orange-50 rounded-lg p-2 text-center col-span-2">
                   <p className="text-lg font-bold text-orange-700">{cuotasAbono}</p>
                   <p className="text-[10px] text-orange-600">Abono parcial</p>
                 </div>
@@ -336,10 +348,13 @@ export default async function CreditoDetallePage({
                       const esAbono       = cuota.estado === 'abono_parcial'
                       const esVencida     = cuota.estado === 'vencida'
                       const esPendiente   = cuota.estado === 'pendiente'
+                      const esPorCobrar   = esPendiente && cuota.fecha_vencimiento <= en7Str
+                      const esAlDia       = esPendiente && cuota.fecha_vencimiento >  en7Str
 
-                      const rowBg = esPagada  ? 'bg-green-50/50'
-                                  : esAbono   ? 'bg-amber-50/60'
-                                  : esVencida ? 'bg-red-50/40'
+                      const rowBg = esPagada    ? 'bg-green-50/50'
+                                  : esAbono     ? 'bg-amber-50/60'
+                                  : esVencida   ? 'bg-red-50/40'
+                                  : esPorCobrar ? 'bg-yellow-50/40'
                                   : 'hover:bg-oriental-bg/50'
 
                       return (
@@ -436,16 +451,20 @@ export default async function CreditoDetallePage({
                                 Registrar pago
                               </Link>
                             </div>
-                          ) : esPendiente ? (
+                          ) : esPorCobrar ? (
                             <div className="space-y-1.5">
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                Pendiente
+                                Por cobrar
                               </span>
                               <Link href={pagoUrl} className="flex items-center gap-1 text-[11px] text-oriental-red hover:text-oriental-black font-medium transition-colors">
                                 <PlusCircle size={11} />
                                 Registrar pago
                               </Link>
                             </div>
+                          ) : esAlDia ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200">
+                              Al día
+                            </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                               {cuota.estado}
@@ -560,10 +579,11 @@ export default async function CreditoDetallePage({
         <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
           {[
             { count: cuotasPagadas,   label: 'Pagadas',       bg: '#f0fdf4', color: '#15803d', border: '#d1fae5' },
-            { count: cuotasPendientes,label: 'Pendientes',    bg: '#fefce8', color: '#a16207', border: '#fef08a' },
             { count: cuotasVencidas,  label: 'Vencidas',      bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
+            { count: cuotasPorCobrar, label: 'Por cobrar',    bg: '#fefce8', color: '#a16207', border: '#fef08a' },
+            { count: cuotasAlDia,     label: 'Al día',        bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb' },
             { count: cuotasAbono,     label: 'Abono parcial', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
-          ].map(item => (
+          ].filter(item => item.count > 0 || item.label === 'Pagadas' || item.label === 'Vencidas').map(item => (
             <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.border}`, borderRadius: '8px', padding: '8px 14px', minWidth: '90px', textAlign: 'center' }}>
               <p style={{ fontSize: '18px', fontWeight: '800', color: item.color }}>{item.count}</p>
               <p style={{ fontSize: '9px', color: item.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</p>
@@ -588,19 +608,23 @@ export default async function CreditoDetallePage({
               const montoPagado = Number(cuota.monto_pagado ?? 0)
               const montoTotal  = Number(cuota.monto)
               const faltante    = Math.max(0, montoTotal - montoPagado)
-              const esPagada    = cuota.estado === 'pagada'
-              const esAbono     = cuota.estado === 'abono_parcial'
-              const esVencida   = cuota.estado === 'vencida'
+              const esPagada       = cuota.estado === 'pagada'
+              const esAbono        = cuota.estado === 'abono_parcial'
+              const esVencida      = cuota.estado === 'vencida'
+              const esPorCobrarPr  = cuota.estado === 'pendiente' && cuota.fecha_vencimiento <= en7Str
+              const esAlDiaPr      = cuota.estado === 'pendiente' && cuota.fecha_vencimiento >  en7Str
 
-              const rowBg = esPagada  ? '#f0fdf4'
-                          : esAbono   ? '#fff7ed'
-                          : esVencida ? '#fff1f2'
+              const rowBg = esPagada      ? '#f0fdf4'
+                          : esAbono       ? '#fff7ed'
+                          : esVencida     ? '#fff1f2'
+                          : esPorCobrarPr ? '#fefce8'
                           : idx % 2 === 0 ? '#ffffff' : '#f9fafb'
 
-              const estadoStyle = esPagada  ? { background: '#dcfce7', color: '#15803d' }
-                                : esAbono   ? { background: '#ffedd5', color: '#c2410c' }
-                                : esVencida ? { background: '#fee2e2', color: '#b91c1c' }
-                                : { background: '#fef9c3', color: '#a16207' }
+              const estadoStyle = esPagada      ? { background: '#dcfce7', color: '#15803d' }
+                                : esAbono       ? { background: '#ffedd5', color: '#c2410c' }
+                                : esVencida     ? { background: '#fee2e2', color: '#b91c1c' }
+                                : esPorCobrarPr ? { background: '#fef9c3', color: '#a16207' }
+                                : { background: '#f3f4f6', color: '#6b7280' }
 
               const planTipo = cuota._plan_tipo
               const planBgColor = planTipo === 'inicial_la_oriental' ? '#f3e8ff'
@@ -638,7 +662,8 @@ export default async function CreditoDetallePage({
                       {cuota.estado === 'pagada' ? 'Pagada'
                        : cuota.estado === 'abono_parcial' ? 'Abono parcial'
                        : cuota.estado === 'vencida' ? 'Vencida'
-                       : 'Pendiente'}
+                       : cuota.fecha_vencimiento <= en7Str ? 'Por cobrar'
+                       : 'Al día'}
                     </span>
                   </td>
                 </tr>
