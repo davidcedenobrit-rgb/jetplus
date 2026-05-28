@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import {
   FileText, Upload, ExternalLink, Loader2,
   Receipt, Award, ShieldCheck, HeartPulse,
-  FileSignature, CreditCard, ClipboardList, Trash2
+  FileSignature, CreditCard, ClipboardList, Trash2,
+  ClipboardCheck, Percent, Banknote
 } from 'lucide-react'
 
 const CATEGORIAS = [
@@ -64,6 +65,30 @@ const CATEGORIAS = [
     color: 'bg-teal-50 border-teal-100',
     iconColor: 'text-teal-500',
     badge: 'bg-teal-100 text-teal-700',
+  },
+  {
+    tipo: 'formato_entrega',
+    label: 'FE — Formato de Entrega',
+    icon: ClipboardCheck,
+    color: 'bg-orange-50 border-orange-100',
+    iconColor: 'text-orange-500',
+    badge: 'bg-orange-100 text-orange-700',
+  },
+  {
+    tipo: 'retencion_iva',
+    label: 'Retención de IVA',
+    icon: Percent,
+    color: 'bg-cyan-50 border-cyan-100',
+    iconColor: 'text-cyan-500',
+    badge: 'bg-cyan-100 text-cyan-700',
+  },
+  {
+    tipo: 'factura_comision',
+    label: 'Factura de Comisión',
+    icon: Banknote,
+    color: 'bg-lime-50 border-lime-100',
+    iconColor: 'text-lime-600',
+    badge: 'bg-lime-100 text-lime-700',
   },
 ] as const
 
