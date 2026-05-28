@@ -324,7 +324,7 @@ function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitul
   const fmt = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2 })
   const estadoBadge = (e: string) =>
     e === 'vencida'   ? `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Vencido</span>`
-    : e === 'pendiente' ? `<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Pendiente</span>`
+    : e === 'pendiente' ? `<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Por cobrar</span>`
     : `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Al día</span>`
   const tipoBadge = (t: string) =>
     t === 'inicial_la_oriental' ? `<span style="background:#ede9fe;color:#6d28d9;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">La Oriental</span>`
@@ -424,9 +424,9 @@ function ListaClientesBlock({
   const listaFiltrada = filtro === 'todos' ? lista : lista.filter(c => c.estadoGeneral === filtro)
   const cnt = (f: FiltroEstado) => f === 'todos' ? lista.length : lista.filter(c => c.estadoGeneral === f).length
   const filtros: { key: FiltroEstado; label: string; activeClass: string }[] = [
-    { key: 'todos',     label: `Todos (${cnt('todos')})`,                  activeClass: 'bg-oriental-black text-white border-oriental-black' },
-    { key: 'pendiente', label: `Pendientes (${cnt('pendiente')})`,          activeClass: 'bg-yellow-500 text-white border-yellow-500' },
+    { key: 'todos',     label: `Todos (${cnt('todos')})`,                   activeClass: 'bg-oriental-black text-white border-oriental-black' },
     { key: 'vencida',   label: `Vencidos (${cnt('vencida')})`,              activeClass: 'bg-red-600 text-white border-red-600' },
+    { key: 'pendiente', label: `Por cobrar (${cnt('pendiente')})`,          activeClass: 'bg-yellow-500 text-white border-yellow-500' },
     { key: 'pagada',    label: `Al día (${cnt('pagada')})`,                 activeClass: 'bg-green-600 text-white border-green-600' },
   ]
   return (
@@ -445,7 +445,7 @@ function ListaClientesBlock({
         <button
           onClick={() => {
             const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
-            const filtroLabel = filtro === 'todos' ? 'Todos los clientes' : filtro === 'pendiente' ? 'Clientes con cuotas pendientes' : filtro === 'vencida' ? 'Clientes con cuotas vencidas' : 'Clientes al día'
+            const filtroLabel = filtro === 'todos' ? 'Todos los clientes' : filtro === 'pendiente' ? 'Clientes por cobrar (próximos 7 días)' : filtro === 'vencida' ? 'Clientes con cuotas vencidas' : 'Clientes al día'
             abrirPrint(generarPrintHtml(listaFiltrada, filtroLabel, subtituloImprimir, fecha, window.location.origin, mostrarTipos))
           }}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
@@ -499,7 +499,7 @@ function ListaClientesBlock({
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${c.estadoGeneral === 'vencida' ? 'bg-red-100 text-red-700' : c.estadoGeneral === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
-                    {c.estadoGeneral === 'vencida' ? 'Vencido' : c.estadoGeneral === 'pendiente' ? 'Pendiente' : 'Al día'}
+                    {c.estadoGeneral === 'vencida' ? 'Vencido' : c.estadoGeneral === 'pendiente' ? 'Por cobrar' : 'Al día'}
                   </span>
                 </td>
               </tr>
@@ -515,8 +515,18 @@ export default function ReportesPage() {
   const supabase = createClient()
   const hoy = new Date()
   const hoyStr = hoy.toISOString().split('T')[0]
+  const en7  = new Date(hoy); en7.setDate(hoy.getDate() + 7)
+  const en7Str  = en7.toISOString().split('T')[0]
   const en30 = new Date(hoy); en30.setDate(hoy.getDate() + 30)
   const en30Str = en30.toISOString().split('T')[0]
+
+  // Helper: calcula estado de un cliente según la regla de 7 días
+  // vencida > pendiente (≤7 días) > pagada (al día)
+  function estadoCliente(cvenc: any[], cpend: any[]): 'vencida' | 'pendiente' | 'pagada' {
+    if (cvenc.length > 0) return 'vencida'
+    if (cpend.some((q: any) => q.fecha_vencimiento <= en7Str)) return 'pendiente'
+    return 'pagada'
+  }
 
   const [fechaDesde, setFechaDesde] = useState(`${hoy.getFullYear()}-01-01`)
   const [fechaHasta, setFechaHasta] = useState(hoyStr)
@@ -671,7 +681,7 @@ export default function ReportesPage() {
       const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
       const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
       const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
-      const estadoGeneral = cvenc.length > 0 ? 'vencida' : cpend.length > 0 ? 'pendiente' : 'pagada'
+      const estadoGeneral = estadoCliente(cvenc, cpend)
       orList[c.id] = {
         nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—', creditoId: c.id,
         totalCuotas: cuotasCred.length,
@@ -702,7 +712,7 @@ export default function ReportesPage() {
         montoPagado: cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0),
         montoPendiente: [...cpend, ...cvenc].reduce((s: number, q: any) =>
           s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
-        estadoGeneral: cvenc.length > 0 ? 'vencida' : cpend.length > 0 ? 'pendiente' : 'pagada',
+        estadoGeneral: estadoCliente(cvenc, cpend),
       }
     })
     setVhClienteList(Object.values(vhList))
@@ -731,7 +741,16 @@ export default function ReportesPage() {
         genMap[cl.id].tiposCredito.push(c.plan_tipo)
     })
     Object.values(genMap).forEach((g: any) => {
-      g.estadoGeneral = g.cuotasVencidas > 0 ? 'vencida' : g.cuotasPendientes > 0 ? 'pendiente' : 'pagada'
+      // Recalcular con regla de 7 días sobre las cuotas pendientes de este cliente
+      const cuotasPendCliente = cuotas.filter((q: any) =>
+        (q.estado === 'pendiente' || q.estado === 'abono_parcial') &&
+        creditos.some((c: any) => c.id === q.credito_id && (c.clientes as any)?.id === g.clienteId)
+      )
+      const cuotasVencCliente = cuotas.filter((q: any) =>
+        q.estado === 'vencida' &&
+        creditos.some((c: any) => c.id === q.credito_id && (c.clientes as any)?.id === g.clienteId)
+      )
+      g.estadoGeneral = estadoCliente(cuotasVencCliente, cuotasPendCliente)
     })
     setGeneralClienteList(Object.values(genMap))
 
