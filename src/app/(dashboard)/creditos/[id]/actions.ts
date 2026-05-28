@@ -22,10 +22,32 @@ export async function revertirPagoCuota(cuotaId: string, creditoId: string, mont
     return { error: 'Sin permiso — solo directores pueden revertir pagos' }
   }
 
-  // Eliminar registros cuota_ingresos vinculados
+  // 1. Obtener los ingresos vinculados a esta cuota ANTES de borrar los vínculos
+  const { data: vinculos } = await supabase
+    .from('cuota_ingresos')
+    .select('ingreso_id')
+    .eq('cuota_id', cuotaId)
+
+  const ingresoIds = (vinculos ?? []).map((v: any) => v.ingreso_id as string)
+
+  // 2. Eliminar vínculos cuota_ingresos de esta cuota
   await supabase.from('cuota_ingresos').delete().eq('cuota_id', cuotaId)
 
-  // Resetear la cuota a pendiente
+  // 3. Para cada ingreso vinculado: si ya no tiene NINGUNA cuota activa, eliminarlo completamente
+  for (const ingresoId of ingresoIds) {
+    const { count } = await supabase
+      .from('cuota_ingresos')
+      .select('*', { count: 'exact', head: true })
+      .eq('ingreso_id', ingresoId)
+
+    if ((count ?? 0) === 0) {
+      // Sin más cuotas vinculadas → limpiar archivos y eliminar el ingreso
+      await supabase.from('archivos').delete().eq('ingreso_id', ingresoId)
+      await supabase.from('ingresos').delete().eq('id', ingresoId)
+    }
+  }
+
+  // 4. Resetear la cuota a pendiente
   const { error: cuotaErr } = await supabase.from('cuotas').update({
     estado: 'pendiente',
     fecha_pago: null,
@@ -34,7 +56,7 @@ export async function revertirPagoCuota(cuotaId: string, creditoId: string, mont
 
   if (cuotaErr) return { error: cuotaErr.message }
 
-  // Restaurar saldo del crédito
+  // 5. Restaurar saldo del crédito
   const { data: credito } = await supabase
     .from('creditos').select('saldo, monto_financiado').eq('id', creditoId).single()
 
@@ -48,5 +70,6 @@ export async function revertirPagoCuota(cuotaId: string, creditoId: string, mont
   }
 
   revalidatePath('/creditos/[id]', 'page')
+  revalidatePath('/ingresos', 'page')
   return { ok: true }
 }
