@@ -131,7 +131,8 @@ function NuevoIngresoPageInner() {
     const { data: creditos } = await supabase
       .from('creditos').select('*')
       .eq('cliente_id', cliente.id)
-      .not('estado', 'in', '(pagado,cancelado)')
+      .neq('estado', 'pagado')
+      .neq('estado', 'cancelado')
 
     if (!creditos || creditos.length === 0) {
       setGruposVehiculo([])
