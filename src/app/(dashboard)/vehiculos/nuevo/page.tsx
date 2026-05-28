@@ -411,7 +411,20 @@ export default function NuevoVehiculoPage() {
           }).select().single()
           if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
           if (calcInicialOriental.cuotas > 0) {
+            // Plan con múltiples cuotas
             await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental', orPagadasN))
+          } else {
+            // Pago único — crear 1 cuota por el monto completo para que aparezca en el selector de pagos
+            await supabase.from('cuotas').insert([{
+              credito_id: creditoOr.id,
+              numero_cuota: 1,
+              fecha_vencimiento: orFecha,
+              monto: orTotalMonto,
+              mora: 0,
+              concepto: 'Crédito de Inicial — La Oriental',
+              estado: 'pendiente',
+              monto_pagado: 0,
+            }])
           }
           primerCreditoId = creditoOr.id
         }

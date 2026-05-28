@@ -139,12 +139,14 @@ function NuevoIngresoPageInner() {
       return
     }
 
-    // 2. Todos los créditos activos de esos vehículos
+    // 2. Todos los créditos vigentes de esos vehículos
+    // Incluimos activo y mora — excluimos solo pagado y cancelado
+    // para no perder créditos con cuotas pendientes si el estado no es exactamente 'activo'
     const vehiculoIds = vehiculos.map((v: any) => v.id)
     const { data: creditos } = await supabase
       .from('creditos').select('*')
       .in('vehiculo_id', vehiculoIds)
-      .eq('estado', 'activo')
+      .not('estado', 'in', '(pagado,cancelado)')
 
     if (!creditos || creditos.length === 0) {
       setGruposVehiculo([])
