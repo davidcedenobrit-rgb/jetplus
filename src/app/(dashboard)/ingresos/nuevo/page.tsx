@@ -249,12 +249,16 @@ function NuevoIngresoPageInner() {
 
         setCuotasSeleccionadas(seleccionadas)
       } else {
-        // Cliente al día → pre-seleccionar la próxima cuota de CADA crédito activo (La Oriental primero)
+        // Cliente al día → pre-seleccionar la próxima cuota de CADA crédito
+        // Orden: La Oriental primero (planPriority 0), Vehimotors (1), luego por fecha
         const proximas = new Set<string>()
         const pendientesPorCredito = new Map<string, any>()
-        const ordenadas = [...cuotasEnriquecidas].sort((a: any, b: any) =>
-          a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
-        )
+        const ordenadas = [...cuotasEnriquecidas].sort((a: any, b: any) => {
+          const pA = planPriority(a._credito?.plan_tipo)
+          const pB = planPriority(b._credito?.plan_tipo)
+          if (pA !== pB) return pA - pB
+          return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
+        })
         for (const c of ordenadas) {
           if (!pendientesPorCredito.has(c.credito_id)) {
             pendientesPorCredito.set(c.credito_id, c)
