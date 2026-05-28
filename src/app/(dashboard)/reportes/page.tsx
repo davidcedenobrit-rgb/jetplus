@@ -27,7 +27,9 @@ function pct(value: number, total: number) {
 type ClienteCartera = {
   nombre: string; cedula: string; placa: string; creditoId: string
   totalCuotas: number; cuotasPagadas: number; cuotasPendientes: number; cuotasVencidas: number
-  montoPagado: number; montoPendiente: number; estadoGeneral: 'pendiente' | 'vencida' | 'pagada'
+  montoPagado: number; montoPendiente: number; montoVencido: number
+  proximaCuotaMonto: number; proximaCuotaFecha: string
+  estadoGeneral: 'pendiente' | 'vencida' | 'pagada'
   tiposCredito?: string[]
 }
 
@@ -320,7 +322,14 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
 
 // ── Helpers de impresión ──────────────────────────────────────────────────────
 
-function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitulo: string, fecha: string, base: string, mostrarTipos = false) {
+function fmtFechaCuota(fecha: string): string {
+  if (!fecha) return ''
+  const [y, m, d] = fecha.split('-')
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+  return `${parseInt(d)} ${meses[parseInt(m) - 1]} ${y}`
+}
+
+function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitulo: string, fecha: string, base: string, mostrarTipos = false, filtro: FiltroEstado = 'todos') {
   const fmt = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2 })
   const estadoBadge = (e: string) =>
     e === 'vencida'   ? `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Vencido</span>`
@@ -330,17 +339,27 @@ function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitul
     t === 'inicial_la_oriental' ? `<span style="background:#ede9fe;color:#6d28d9;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">La Oriental</span>`
     : t === 'financiamiento_vehimotors' ? `<span style="background:#e0e7ff;color:#3730a3;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">Vehimotors</span>`
     : ''
-  const filas = lista.map((c, i) => `
+  const filas = lista.map((c, i) => {
+    const rowEstado = filtro === 'todos' ? c.estadoGeneral : filtro
+    const cuotasDisplay = rowEstado === 'vencida'
+      ? `<span style="color:#b91c1c;font-weight:800">${c.cuotasVencidas}/${c.totalCuotas}</span>`
+      : `${c.cuotasPagadas}/${c.totalCuotas}`
+    const pendDisplay = rowEstado === 'vencida'
+      ? `<span style="color:#b91c1c;font-weight:700">${fmt(c.montoVencido ?? 0)}</span>`
+      : rowEstado === 'pendiente'
+      ? `<span style="color:#92400e;font-weight:700">${fmt(c.proximaCuotaMonto ?? 0)}</span>${c.proximaCuotaFecha ? `<br><span style="font-size:10px;color:#b45309">${c.proximaCuotaFecha}</span>` : ''}`
+      : `<span style="color:#166534;font-weight:600">Al día</span>`
+    return `
     <tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;font-weight:600">${c.nombre}${mostrarTipos && c.tiposCredito ? '<br><span style="display:flex;gap:3px;margin-top:3px">' + c.tiposCredito.map(tipoBadge).join('') + '</span>' : ''}</td>
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;color:#6b7280">${c.cedula}</td>
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${c.placa}</span></td>
-      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:center">${c.cuotasPagadas}/${c.totalCuotas}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:center">${cuotasDisplay}</td>
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right;color:#166534;font-weight:700">${fmt(c.montoPagado)}</td>
-      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right;color:#b91c1c;font-weight:700">${fmt(c.montoPendiente)}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right">${pendDisplay}</td>
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb">${estadoBadge(c.estadoGeneral)}</td>
-    </tr>`).join('')
+    </tr>`}).join('')
   const totalCobrado = fmt(lista.reduce((s, c) => s + c.montoPagado, 0))
   const totalPendiente = fmt(lista.reduce((s, c) => s + c.montoPendiente, 0))
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -446,7 +465,7 @@ function ListaClientesBlock({
           onClick={() => {
             const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
             const filtroLabel = filtro === 'todos' ? 'Todos los clientes' : filtro === 'pendiente' ? 'Clientes por cobrar (próximos 7 días)' : filtro === 'vencida' ? 'Clientes con cuotas vencidas' : 'Clientes al día'
-            abrirPrint(generarPrintHtml(listaFiltrada, filtroLabel, subtituloImprimir, fecha, window.location.origin, mostrarTipos))
+            abrirPrint(generarPrintHtml(listaFiltrada, filtroLabel, subtituloImprimir, fecha, window.location.origin, mostrarTipos, filtro))
           }}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
         >
@@ -463,7 +482,9 @@ function ListaClientesBlock({
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Placa</th>
               <th className="text-center px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cuotas</th>
               <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cobrado</th>
-              <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Pendiente</th>
+              <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">
+                {filtro === 'vencida' ? 'Monto vencido' : filtro === 'pendiente' ? 'Próx. cuota' : 'Pendiente'}
+              </th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Estado</th>
             </tr>
           </thead>
@@ -489,13 +510,28 @@ function ListaClientesBlock({
                   <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-bold">{c.placa}</span>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className="text-sm font-medium text-oriental-black">{c.cuotasPagadas}/{c.totalCuotas}</span>
+                  {c.estadoGeneral === 'vencida' ? (
+                    <span className="text-sm font-extrabold text-oriental-red">{c.cuotasVencidas}/{c.totalCuotas}</span>
+                  ) : (
+                    <span className="text-sm font-medium text-oriental-black">{c.cuotasPagadas}/{c.totalCuotas}</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className="text-sm font-bold text-green-700">{formatCurrency(c.montoPagado)}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <span className={`text-sm font-bold ${c.montoPendiente > 0 ? 'text-oriental-red' : 'text-green-600'}`}>{formatCurrency(c.montoPendiente)}</span>
+                  {c.estadoGeneral === 'vencida' ? (
+                    <span className="text-sm font-bold text-oriental-red">{formatCurrency(c.montoVencido ?? 0)}</span>
+                  ) : c.estadoGeneral === 'pendiente' ? (
+                    <div>
+                      <span className="text-sm font-bold text-yellow-700">{formatCurrency(c.proximaCuotaMonto ?? 0)}</span>
+                      {c.proximaCuotaFecha && (
+                        <p className="text-[10px] text-yellow-600 mt-0.5">{fmtFechaCuota(c.proximaCuotaFecha)}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs font-semibold text-green-600">Al día</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${c.estadoGeneral === 'vencida' ? 'bg-red-100 text-red-700' : c.estadoGeneral === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
@@ -688,6 +724,8 @@ export default function ReportesPage() {
       const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
       const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
       const estadoGeneral = estadoCliente(cvenc, cpend)
+      const cpendSorted = [...cpend].sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
+      const proxima = cpendSorted[0]
       orList[c.id] = {
         nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—', creditoId: c.id,
         totalCuotas: cuotasCred.length,
@@ -695,6 +733,10 @@ export default function ReportesPage() {
         montoPagado: cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0),
         montoPendiente: [...cpend, ...cvenc].reduce((s: number, q: any) =>
           s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
+        montoVencido: cvenc.reduce((s: number, q: any) =>
+          s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
+        proximaCuotaMonto: proxima ? Math.max(0, Number(proxima.monto ?? 0) - Number(proxima.monto_pagado ?? 0)) : 0,
+        proximaCuotaFecha: proxima?.fecha_vencimiento ?? '',
         estadoGeneral,
       }
     })
@@ -711,6 +753,8 @@ export default function ReportesPage() {
       const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
       const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
       const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      const cpendSorted = [...cpend].sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
+      const proxima = cpendSorted[0]
       vhList[c.id] = {
         nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—', creditoId: c.id,
         totalCuotas: cuotasCred.length,
@@ -718,6 +762,10 @@ export default function ReportesPage() {
         montoPagado: cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0),
         montoPendiente: [...cpend, ...cvenc].reduce((s: number, q: any) =>
           s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
+        montoVencido: cvenc.reduce((s: number, q: any) =>
+          s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
+        proximaCuotaMonto: proxima ? Math.max(0, Number(proxima.monto ?? 0) - Number(proxima.monto_pagado ?? 0)) : 0,
+        proximaCuotaFecha: proxima?.fecha_vencimiento ?? '',
         estadoGeneral: estadoCliente(cvenc, cpend),
       }
     })
@@ -725,29 +773,38 @@ export default function ReportesPage() {
 
     // ── Listado general (todos los créditos agrupados por cliente)
     const genMap: Record<string, any> = {}
+    const genPendCuotasMap: Record<string, any[]> = {}
     creditos.forEach((c: any) => {
       const cl = c.clientes; if (!cl) return
       const cuotasCred = cuotas.filter((q: any) => q.credito_id === c.id)
       const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
       const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
       const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
-      if (!genMap[cl.id]) genMap[cl.id] = {
-        clienteId: cl.id, nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—',
-        creditoId: c.id, totalCuotas: 0, cuotasPagadas: 0, cuotasPendientes: 0, cuotasVencidas: 0,
-        montoPagado: 0, montoPendiente: 0, estadoGeneral: 'pagada', tiposCredito: [],
+      if (!genMap[cl.id]) {
+        genMap[cl.id] = {
+          clienteId: cl.id, nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—',
+          creditoId: c.id, totalCuotas: 0, cuotasPagadas: 0, cuotasPendientes: 0, cuotasVencidas: 0,
+          montoPagado: 0, montoPendiente: 0, montoVencido: 0,
+          proximaCuotaMonto: 0, proximaCuotaFecha: '',
+          estadoGeneral: 'pagada', tiposCredito: [],
+        }
+        genPendCuotasMap[cl.id] = []
       }
-      genMap[cl.id].totalCuotas    += cuotasCred.length
-      genMap[cl.id].cuotasPagadas  += cpag.length
+      genMap[cl.id].totalCuotas      += cuotasCred.length
+      genMap[cl.id].cuotasPagadas    += cpag.length
       genMap[cl.id].cuotasPendientes += cpend.length
-      genMap[cl.id].cuotasVencidas += cvenc.length
-      genMap[cl.id].montoPagado    += cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0)
-      genMap[cl.id].montoPendiente += [...cpend, ...cvenc].reduce((s: number, q: any) =>
+      genMap[cl.id].cuotasVencidas   += cvenc.length
+      genMap[cl.id].montoPagado      += cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0)
+      genMap[cl.id].montoPendiente   += [...cpend, ...cvenc].reduce((s: number, q: any) =>
         s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0)
+      genMap[cl.id].montoVencido     += cvenc.reduce((s: number, q: any) =>
+        s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0)
+      genPendCuotasMap[cl.id].push(...cpend)
       if (c.plan_tipo && !genMap[cl.id].tiposCredito.includes(c.plan_tipo))
         genMap[cl.id].tiposCredito.push(c.plan_tipo)
     })
     Object.values(genMap).forEach((g: any) => {
-      // Recalcular con regla de 7 días sobre las cuotas pendientes de este cliente
+      // Recalcular estadoGeneral con regla de 7 días
       const cuotasPendCliente = cuotas.filter((q: any) =>
         (q.estado === 'pendiente' || q.estado === 'abono_parcial') &&
         creditos.some((c: any) => c.id === q.credito_id && (c.clientes as any)?.id === g.clienteId)
@@ -757,6 +814,14 @@ export default function ReportesPage() {
         creditos.some((c: any) => c.id === q.credito_id && (c.clientes as any)?.id === g.clienteId)
       )
       g.estadoGeneral = estadoCliente(cuotasVencCliente, cuotasPendCliente)
+      // Próxima cuota (earliest pending across all credits)
+      const pendSorted = (genPendCuotasMap[g.clienteId] ?? [])
+        .sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
+      const proxima = pendSorted[0]
+      if (proxima) {
+        g.proximaCuotaMonto = Math.max(0, Number(proxima.monto ?? 0) - Number(proxima.monto_pagado ?? 0))
+        g.proximaCuotaFecha = proxima.fecha_vencimiento
+      }
     })
     setGeneralClienteList(Object.values(genMap))
 
