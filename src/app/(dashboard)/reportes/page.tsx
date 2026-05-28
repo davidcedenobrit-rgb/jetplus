@@ -141,16 +141,29 @@ function StatCard({ value, label, sub, bg, textColor, subColor }: {
 // ── Aging de vencidas ────────────────────────────────────────────────────────
 
 function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencido[]; subtituloImprimir: string }) {
+  const [selectedBucket, setSelectedBucket] = useState<1|2|3|4|5|null>(null)
   const fmt = (n: number) => formatCurrency(n)
   const fmtUSD = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2 })
 
   const cntBucket = (id: number) => lista.filter(c => c.bucket === id).length
   const haySome = lista.length > 0
+  const listaFiltrada = selectedBucket !== null ? lista.filter(c => c.bucket === selectedBucket) : []
+  const bucketInfo = selectedBucket !== null ? BUCKETS[selectedBucket - 1] : null
+
+  function toggleBucket(id: 1|2|3|4|5) {
+    setSelectedBucket(prev => prev === id ? null : id)
+  }
 
   function imprimirAging() {
     const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
     const base  = window.location.origin
-    const filas = lista.map((c, i) => {
+    // Imprimir solo el tramo seleccionado (o todos si no hay selección)
+    const listaImprimir = selectedBucket !== null ? listaFiltrada : lista
+    const tramoLabel = selectedBucket !== null
+      ? ` — Tramo: ${BUCKETS[selectedBucket - 1].rango}`
+      : ' — Todos los tramos'
+
+    const filas = listaImprimir.map((c, i) => {
       const b = BUCKETS[c.bucket - 1]
       return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
         <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
@@ -165,7 +178,7 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
     }).join('')
 
     const bucketSummary = BUCKETS.map(b => `
-      <div style="background:${b.printBg};border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;text-align:center;min-width:110px">
+      <div style="background:${b.printBg};border:${selectedBucket === b.id ? '2px solid #111' : '1px solid #e5e7eb'};border-radius:8px;padding:10px 14px;text-align:center;min-width:110px">
         <div style="font-size:22px;font-weight:800;color:${b.printColor}">${cntBucket(b.id)}</div>
         <div style="font-size:10px;font-weight:700;color:${b.printColor};margin-top:1px">${b.label}</div>
         <div style="font-size:10px;color:#6b7280;margin-top:1px">${b.rango}</div>
@@ -185,7 +198,7 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
         .buckets { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
         table { width:100%; border-collapse:collapse; font-size:12px; }
         th { background:#111; color:#fff; padding:9px 11px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
-        th:nth-child(5),th:nth-child(6),th:nth-child(7) { text-align:center; }
+        th:nth-child(5),th:nth-child(6) { text-align:center; }
         th:nth-child(7) { text-align:right; }
         .footer { margin-top:40px; display:flex; align-items:flex-end; justify-content:space-between; }
         .sello-img { width:80px; height:80px; object-fit:contain; }
@@ -200,15 +213,15 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
           <img src="${base}/logo-la-oriental.jpg" class="header-logo" alt="Logo" />
           <div class="header-text">
             <h1>La Oriental Automotors MG &amp; MAXUS</h1>
-            <p class="sub">${subtituloImprimir} — Antigüedad de Cartera Vencida</p>
+            <p class="sub">${subtituloImprimir} — Antigüedad de Cartera Vencida${tramoLabel}</p>
             <p class="sub">Fecha: ${fecha} &nbsp;·&nbsp; Para: José · Carla · Carlos</p>
           </div>
         </div>
         <button class="no-print" onclick="window.print()" style="background:#E8001D;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨 Imprimir</button>
       </div>
       <div class="buckets">${bucketSummary}</div>
-      ${lista.length === 0
-        ? '<p style="text-align:center;color:#6b7280;padding:32px 0;font-size:14px">✓ Sin cuotas vencidas — cartera al día</p>'
+      ${listaImprimir.length === 0
+        ? '<p style="text-align:center;color:#6b7280;padding:32px 0;font-size:14px">✓ Sin clientes en este tramo</p>'
         : `<table>
             <thead><tr>
               <th>#</th><th>Cliente</th><th>Cédula / RIF</th><th>Placa</th>
@@ -237,54 +250,89 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
     <div className="border-t border-gray-100 pt-5 mt-1">
       {/* Cabecera */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <AlertCircle size={15} className="text-red-500" />
           <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Antigüedad de cartera vencida</p>
-          {haySome && <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">{lista.length} cliente{lista.length !== 1 ? 's' : ''} con mora</span>}
+          {haySome && (
+            <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">
+              {lista.length} cliente{lista.length !== 1 ? 's' : ''} con mora
+            </span>
+          )}
+          {selectedBucket !== null && bucketInfo && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border flex items-center gap-1 ${bucketInfo.bg} ${bucketInfo.text} ${bucketInfo.border}`}>
+              {bucketInfo.rango}
+              <button
+                type="button"
+                onClick={() => setSelectedBucket(null)}
+                className="hover:opacity-70 transition-opacity ml-0.5"
+                title="Quitar filtro"
+              >✕</button>
+            </span>
+          )}
         </div>
         <button onClick={imprimirAging}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-red text-white text-xs font-semibold rounded-lg hover:bg-oriental-red-dark transition-colors">
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-red text-white text-xs font-semibold rounded-lg hover:bg-oriental-red-dark transition-colors flex-shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-          Imprimir mora
+          {selectedBucket !== null ? `Imprimir ${bucketInfo?.rango}` : 'Imprimir mora'}
         </button>
       </div>
 
-      {/* 5 buckets summary */}
-      <div className="grid grid-cols-5 gap-2 mb-4">
+      {/* 5 buckets — clickeables */}
+      <div className="grid grid-cols-5 gap-2 mb-3">
         {BUCKETS.map(b => {
           const cnt = cntBucket(b.id)
+          const isSelected = selectedBucket === b.id
+          const hasClients = cnt > 0
           return (
-            <div key={b.id} className={`rounded-xl p-3 text-center border ${b.bg} ${b.border}`}>
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => hasClients ? toggleBucket(b.id as 1|2|3|4|5) : undefined}
+              className={`rounded-xl p-3 text-center border transition-all duration-150 w-full ${
+                hasClients
+                  ? 'cursor-pointer hover:brightness-95 active:scale-95'
+                  : 'cursor-default opacity-50'
+              } ${b.bg} ${b.border} ${isSelected ? 'ring-2 ring-offset-1 ring-gray-500 shadow-md' : ''}`}
+            >
               <p className={`text-2xl font-extrabold ${b.text}`}>{cnt}</p>
               <p className={`text-[10px] font-bold ${b.text} mt-0.5`}>{b.label}</p>
               <p className="text-[10px] text-oriental-gray mt-0.5">{b.rango}</p>
-            </div>
+              {isSelected && (
+                <p className={`text-[9px] font-bold mt-1 ${b.text}`}>▲ seleccionado</p>
+              )}
+            </button>
           )
         })}
       </div>
 
-      {/* Tabla de clientes en mora */}
+      {/* Sin mora */}
       {!haySome ? (
         <div className="text-center py-6 bg-green-50 rounded-xl border border-green-100">
           <CheckCircle2 size={28} className="text-green-500 mx-auto mb-2" />
           <p className="text-sm font-semibold text-green-700">Sin cuotas vencidas</p>
           <p className="text-xs text-green-600 mt-1">La cartera está al día</p>
         </div>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-100">
+      ) : selectedBucket === null ? (
+        /* Hint cuando ningún bucket está seleccionado */
+        <p className="text-center text-xs text-oriental-gray py-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+          Toca un tramo para ver el detalle de clientes
+        </p>
+      ) : listaFiltrada.length === 0 ? null : (
+        /* Tabla dropdown filtrada por bucket */
+        <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className={`border-b border-gray-200 ${bucketInfo?.bg ?? 'bg-gray-50'}`}>
               <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cliente</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Placa</th>
-                <th className="text-center px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Cuotas venc.</th>
-                <th className="text-center px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Días vencido</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Monto vencido</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-oriental-gray uppercase tracking-wider">Tramo</th>
+                <th className={`text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Cliente</th>
+                <th className={`text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Placa</th>
+                <th className={`text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Cuotas venc.</th>
+                <th className={`text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Días vencido</th>
+                <th className={`text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Monto vencido</th>
+                <th className={`text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Tramo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {lista.map((c, i) => {
+              {listaFiltrada.map((c, i) => {
                 const b = BUCKETS[c.bucket - 1]
                 return (
                   <tr key={c.creditoId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
