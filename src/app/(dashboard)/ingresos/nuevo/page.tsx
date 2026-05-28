@@ -126,26 +126,11 @@ function NuevoIngresoPageInner() {
     setLoadingCuotas(true)
     setCuotasSeleccionadas(new Set())
 
-    // 1. Todos los vehículos del cliente
-    const { data: vehiculos } = await supabase
-      .from('vehiculos').select('*')
-      .eq('cliente_id', cliente.id)
-      .order('created_at')
-
-    if (!vehiculos || vehiculos.length === 0) {
-      setGruposVehiculo([])
-      setTodasLasCuotas([])
-      setLoadingCuotas(false)
-      return
-    }
-
-    // 2. Todos los créditos vigentes de esos vehículos
-    // Incluimos activo y mora — excluimos solo pagado y cancelado
-    // para no perder créditos con cuotas pendientes si el estado no es exactamente 'activo'
-    const vehiculoIds = vehiculos.map((v: any) => v.id)
+    // 1. Créditos directamente por cliente_id (evita fallos por vehiculo_id incorrecto)
+    //    Excluimos solo pagado y cancelado — incluimos activo, mora y cualquier otro estado vigente
     const { data: creditos } = await supabase
       .from('creditos').select('*')
-      .in('vehiculo_id', vehiculoIds)
+      .eq('cliente_id', cliente.id)
       .not('estado', 'in', '(pagado,cancelado)')
 
     if (!creditos || creditos.length === 0) {
@@ -155,6 +140,12 @@ function NuevoIngresoPageInner() {
       return
     }
 
+    // 2. Vehículos del cliente (para display y agrupación en la UI)
+    const { data: vehiculos } = await supabase
+      .from('vehiculos').select('*')
+      .eq('cliente_id', cliente.id)
+      .order('created_at')
+
     // 3. Todas las cuotas pendientes/vencidas/abono_parcial
     const creditoIds = creditos.map((c: any) => c.id)
     const { data: cuotas } = await supabase
@@ -163,30 +154,42 @@ function NuevoIngresoPageInner() {
       .in('estado', ['pendiente', 'vencida', 'abono_parcial'])
       .order('fecha_vencimiento')
 
-    // Construir mapas para enriquecer
+    // Construir mapas para enriquecer cuotas
     const creditoMap: Record<string, any> = {}
     creditos.forEach((c: any) => { creditoMap[c.id] = c })
 
-    const vehiculoForCredito: Record<string, Vehiculo> = {}
-    vehiculos.forEach((v: any) => {
-      creditos
-        .filter((c: any) => c.vehiculo_id === v.id)
-        .forEach((c: any) => { vehiculoForCredito[c.id] = v })
-    })
+    const vehiculoMap: Record<string, Vehiculo> = {}
+    ;(vehiculos ?? []).forEach((v: any) => { vehiculoMap[v.id] = v })
 
     // Cuotas enriquecidas con _credito y _vehiculo
-    const cuotasEnriquecidas = (cuotas ?? []).map((c: any) => ({
-      ...c,
-      _credito: creditoMap[c.credito_id],
-      _vehiculo: vehiculoForCredito[c.credito_id],
-    }))
+    const cuotasEnriquecidas = (cuotas ?? []).map((c: any) => {
+      const cred = creditoMap[c.credito_id]
+      return {
+        ...c,
+        _credito: cred,
+        _vehiculo: cred?.vehiculo_id ? vehiculoMap[cred.vehiculo_id] : undefined,
+      }
+    })
     setTodasLasCuotas(cuotasEnriquecidas)
 
-    // Grupos para la UI (vehículo → crédito → cuotas), solo los que tienen cuotas pendientes
-    const grupos: GrupoVehiculo[] = vehiculos
+    // Grupos para la UI: agrupa créditos por vehículo usando el vehiculo_id del crédito
+    // Así funciona aunque el crédito esté en un vehiculo_id distinto al buscado por placa
+    const creditosPorVehiculo = new Map<string, any[]>()
+    creditos.forEach((c: any) => {
+      const vid = c.vehiculo_id ?? '__sin_vehiculo__'
+      if (!creditosPorVehiculo.has(vid)) creditosPorVehiculo.set(vid, [])
+      creditosPorVehiculo.get(vid)!.push(c)
+    })
+
+    // Vehículos únicos referenciados por los créditos (ordenados por fecha de creación)
+    const vehiculosConCredito = [...new Set(creditos.map((c: any) => c.vehiculo_id).filter(Boolean))]
+      .map((vid: string) => vehiculoMap[vid])
+      .filter(Boolean)
+      .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+    const grupos: GrupoVehiculo[] = vehiculosConCredito
       .map((vehiculo: any) => {
-        const creditosVeh = creditos
-          .filter((c: any) => c.vehiculo_id === vehiculo.id)
+        const creditosVeh = (creditosPorVehiculo.get(vehiculo.id) ?? [])
           // La Oriental primero, Vehimotors después
           .sort((a: any, b: any) => planPriority(a.plan_tipo) - planPriority(b.plan_tipo))
         return {
