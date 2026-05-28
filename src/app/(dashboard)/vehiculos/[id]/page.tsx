@@ -49,7 +49,7 @@ export default async function VehiculoDetallePage({
     const creditoIds = creditos.map((c: any) => c.id)
     const { data: cuotas } = await supabase
       .from('cuotas')
-      .select('id, estado, monto, credito_id')
+      .select('id, estado, monto, monto_pagado, credito_id')
       .in('credito_id', creditoIds)
     cuotasResumen = cuotas ?? []
   }
@@ -63,6 +63,9 @@ export default async function VehiculoDetallePage({
   const cuotasPendientes = cuotasResumen.filter((c: any) => c.estado === 'pendiente').length
   const cuotasVencidas = cuotasResumen.filter((c: any) => c.estado === 'vencida').length
   const cuotasAbono = cuotasResumen.filter((c: any) => c.estado === 'abono_parcial').length
+  const montoVencido = cuotasResumen
+    .filter((c: any) => c.estado === 'vencida')
+    .reduce((s: number, c: any) => s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0)
   const primerCreditoId = creditos?.[0]?.id ?? null
 
   const planLabel = (tipo: string | null) =>
@@ -184,6 +187,41 @@ export default async function VehiculoDetallePage({
                   />
                 </div>
               </div>
+
+              {/* ⚠ Alerta cuotas vencidas */}
+              {cuotasVencidas > 0 && (
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertCircle size={15} className="text-red-500 flex-shrink-0" />
+                    <p className="text-sm font-bold text-red-700">Cuotas vencidas</p>
+                  </div>
+                  <div className="space-y-2">
+                    {(creditos ?? []).map((c: any) => {
+                      const vencCred = cuotasResumen.filter((q: any) => q.credito_id === c.id && q.estado === 'vencida')
+                      if (vencCred.length === 0) return null
+                      const montoVencCred = vencCred.reduce((s: number, q: any) =>
+                        s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0)
+                      return (
+                        <div key={c.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${planBadge(c.plan_tipo)}`}>
+                              {planLabel(c.plan_tipo)}
+                            </span>
+                            <span className="text-xs text-red-600">{vencCred.length} cuota{vencCred.length !== 1 ? 's' : ''} vencida{vencCred.length !== 1 ? 's' : ''}</span>
+                          </div>
+                          <span className="text-sm font-extrabold text-red-700">{formatCurrency(montoVencCred, 'USD')}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {(creditos ?? []).filter((c: any) => cuotasResumen.some((q: any) => q.credito_id === c.id && q.estado === 'vencida')).length > 1 && (
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-red-200">
+                      <span className="text-xs font-semibold text-red-600">Total vencido</span>
+                      <span className="text-sm font-extrabold text-red-700">{formatCurrency(montoVencido, 'USD')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Contadores de cuotas */}
               <div className="grid grid-cols-2 gap-2 mb-4">
