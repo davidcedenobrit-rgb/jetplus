@@ -553,6 +553,7 @@ export default function ReportesPage() {
   const [vhVencidas, setVhVencidas] = useState(0)
   const [vhMontoPagado, setVhMontoPagado] = useState(0)
   const [vhMontoPendiente, setVhMontoPendiente] = useState(0)
+  const [vhMontoVencido, setVhMontoVencido] = useState(0)   // solo cuotas vencidas
 
   // ── La Oriental (créditos de inicial)
   const [orPagadas, setOrPagadas] = useState(0)
@@ -560,6 +561,7 @@ export default function ReportesPage() {
   const [orVencidas, setOrVencidas] = useState(0)
   const [orMontoPagado, setOrMontoPagado] = useState(0)
   const [orMontoPendiente, setOrMontoPendiente] = useState(0)
+  const [orMontoVencido, setOrMontoVencido] = useState(0)   // solo cuotas vencidas
   const [orFiltro, setOrFiltro] = useState<FiltroEstado>('todos')
   const [orClienteList, setOrClienteList] = useState<ClienteCartera[]>([])
   const [vhFiltro, setVhFiltro] = useState<FiltroEstado>('todos')
@@ -657,6 +659,8 @@ export default function ReportesPage() {
     setVhMontoPagado(vhPag.reduce((s: number, c: any) => s + Number(c.monto ?? 0), 0))
     setVhMontoPendiente([...vhPend, ...vhVenc].reduce((s: number, c: any) =>
       s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
+    setVhMontoVencido(vhVenc.reduce((s: number, c: any) =>
+      s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
 
     // ── La Oriental
     const orCreditos = creditos.filter((c: any) => c.plan_tipo === 'inicial_la_oriental')
@@ -670,6 +674,8 @@ export default function ReportesPage() {
     setOrVencidas(orVenc.length)
     setOrMontoPagado(orPag.reduce((s: number, c: any) => s + Number(c.monto ?? 0), 0))
     setOrMontoPendiente([...orPend, ...orVenc].reduce((s: number, c: any) =>
+      s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
+    setOrMontoVencido(orVenc.reduce((s: number, c: any) =>
       s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
 
     // ── Listado de clientes La Oriental por crédito
@@ -937,7 +943,9 @@ export default function ReportesPage() {
                   <AlertCircle size={20} className="text-red-500 mx-auto mb-2" />
                   <p className="text-2xl font-bold text-red-700">{vhVencidas}</p>
                   <p className="text-xs text-red-600 font-semibold">Cuotas vencidas</p>
-                  <p className="text-sm font-bold text-red-800 mt-1">Monto: {formatCurrency(vhMontoPendiente)}</p>
+                  {vhMontoVencido > 0 && (
+                    <p className="text-sm font-bold text-red-800 mt-1">Monto: {formatCurrency(vhMontoVencido)}</p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
