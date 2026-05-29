@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-const ROL_DIRECTOR = ['jose', 'admin', 'director']
+const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 export async function revertirPagoCuota(cuotaId: string, creditoId: string, montoRevertir: number) {
   const supabase = await createClient()

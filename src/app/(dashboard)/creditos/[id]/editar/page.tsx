@@ -25,7 +25,7 @@ function calcularFechaVencimiento(fechaInicio: string, numeroCuota: number, frec
 }
 
 // José, admin y director tienen poder de edición total
-const ROL_DIRECTOR = ['jose', 'admin', 'director']
+const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const FRECUENCIAS = ['mensual', 'quincenal', 'semanal', 'único pago']
 
 const planLabel = (tipo: string | null) =>

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL } from '@/lib/utils'
 import { Plus, Search } from 'lucide-react'
 
-const ROL_DIRECTOR = ['jose', 'admin', 'director']
+const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 export default async function IngresosPage({
   searchParams,

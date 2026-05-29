@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 
-const ROL_DIRECTOR = ['jose', 'admin', 'director']
+const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 interface Props {
   ingresoId: string

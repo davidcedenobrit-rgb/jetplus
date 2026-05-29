@@ -7,7 +7,7 @@ import DeleteButton from '@/components/DeleteButton'
 import RevertirCuotaButton from './RevertirCuotaButton'
 import PrintButton from './PrintButton'
 
-const ROL_DIRECTOR = ['jose', 'admin', 'director']
+const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 const planLabel = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'La Oriental' :

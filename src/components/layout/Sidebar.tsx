@@ -103,7 +103,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
         })()}
 
         {/* Importar — solo directores */}
-        {['jose', 'admin', 'director'].includes(rol) && (() => {
+        {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
           const active = pathname === '/importar' || pathname.startsWith('/importar/')
           return (
             <Link
