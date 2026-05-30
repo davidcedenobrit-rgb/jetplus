@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Save, Search, X, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Save, Search, X, AlertCircle, Store, Car, CheckCircle2, MapPin } from 'lucide-react'
 import Link from 'next/link'
-import type { Cliente } from '@/types/database'
+import type { Cliente, VehiculoShowroom } from '@/types/database'
 import { VehiculoSchema, CreditoSchema } from '@/lib/validations'
 
 const MODELOS_MG = [
@@ -72,6 +72,11 @@ export default function NuevoVehiculoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
+
+  // Showroom
+  const [vehiculosShowroom, setVehiculosShowroom] = useState<VehiculoShowroom[]>([])
+  const [showroomSeleccionado, setShowroomSeleccionado] = useState<VehiculoShowroom | null>(null)
+  const [loadingShowroom, setLoadingShowroom] = useState(true)
 
   const [marca, setMarca] = useState<'MG' | 'MAXUS'>('MG')
   const [modelo, setModelo] = useState('')
@@ -151,6 +156,26 @@ export default function NuevoVehiculoPage() {
       })
     }
   }, [])
+
+  useEffect(() => {
+    supabase.from('vehiculos_showroom').select('*')
+      .in('estado', ['en_agencia', 'reservado'])
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setVehiculosShowroom((data ?? []) as VehiculoShowroom[]); setLoadingShowroom(false) })
+  }, [])
+
+  function seleccionarShowroom(v: VehiculoShowroom | null) {
+    setShowroomSeleccionado(v)
+    if (v) {
+      setMarca(v.marca as 'MG' | 'MAXUS')
+      setModelo(v.modelo)
+      setAnio(v.anio?.toString() ?? String(new Date().getFullYear()))
+      setColor(v.color ?? '')
+      setPlaca(v.placa ?? '')
+      setVin(v.vin ?? '')
+      setSerialMotor(v.serial_motor ?? '')
+    }
+  }
 
   useEffect(() => {
     if (clienteQuery.length < 2 || clienteSeleccionado) { setClientes([]); return }
@@ -363,6 +388,16 @@ export default function NuevoVehiculoPage() {
     }).select().single()
 
     if (insertError || !vehiculo) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
+
+    // Vincular showroom si se seleccionó uno
+    if (showroomSeleccionado) {
+      await supabase.from('vehiculos_showroom').update({
+        estado: 'vendido',
+        cliente_id: clienteSeleccionado.id,
+        vehiculo_id: vehiculo.id,
+        updated_at: new Date().toISOString(),
+      }).eq('id', showroomSeleccionado.id)
+    }
 
     // Si es financiado, crear crédito automáticamente
     if (tipoCompra === 'financiado') {
@@ -593,6 +628,80 @@ export default function NuevoVehiculoPage() {
           </div>
         </div>
 
+        {/* Selector Showroom */}
+        <div className="card p-6">
+          <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-1 flex items-center gap-2">
+            <div className="w-1 h-4 bg-orange-400 rounded-full" />
+            Vincular del Showroom
+          </h2>
+          <p className="text-xs text-oriental-gray mb-4">Opcional — selecciona si el vehículo viene de consignación</p>
+
+          {loadingShowroom ? (
+            <p className="text-sm text-oriental-gray">Cargando showroom…</p>
+          ) : vehiculosShowroom.length === 0 ? (
+            <div className="rounded-xl border-2 border-dashed border-gray-200 p-4 text-center">
+              <Store size={22} className="text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-oriental-gray">No hay vehículos disponibles en showroom</p>
+            </div>
+          ) : showroomSeleccionado ? (
+            <div className="rounded-xl border-2 border-orange-200 bg-orange-50 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Car size={18} className="text-orange-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-oriental-black">{showroomSeleccionado.marca} {showroomSeleccionado.modelo}</p>
+                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                    {showroomSeleccionado.placa && <span className="font-mono font-bold text-xs text-oriental-gray">{showroomSeleccionado.placa}</span>}
+                    {showroomSeleccionado.color && <span className="text-xs text-oriental-gray">{showroomSeleccionado.color}</span>}
+                    {showroomSeleccionado.ubicacion && (
+                      <span className="text-xs text-orange-600 flex items-center gap-1">
+                        <MapPin size={10} /> {showroomSeleccionado.ubicacion === 'otro' ? showroomSeleccionado.ubicacion_descripcion : showroomSeleccionado.ubicacion}
+                      </span>
+                    )}
+                    {showroomSeleccionado.pdi_hecho && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">PDI ✓</span>}
+                  </div>
+                </div>
+                <CheckCircle2 size={20} className="text-orange-500 flex-shrink-0" />
+              </div>
+              <button type="button" onClick={() => seleccionarShowroom(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-orange-100 transition-colors flex-shrink-0">
+                <X size={16} className="text-orange-600" />
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+              {vehiculosShowroom.map(v => (
+                <button key={v.id} type="button" onClick={() => seleccionarShowroom(v)}
+                  className="rounded-xl border-2 border-gray-200 hover:border-orange-300 hover:bg-orange-50 p-3 text-left transition-all">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{v.marca}</span>
+                    <div className="flex items-center gap-1">
+                      {v.pdi_hecho && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">PDI ✓</span>}
+                      {v.estado === 'reservado' && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">Reservado</span>}
+                    </div>
+                  </div>
+                  <p className="font-bold text-oriental-black text-sm">{v.modelo}</p>
+                  <div className="mt-1 space-y-0.5">
+                    <p className="text-xs text-oriental-gray flex items-center gap-1.5">
+                      {v.placa && <span className="font-mono font-bold text-oriental-black">{v.placa}</span>}
+                      {v.color && <span>· {v.color}</span>}
+                      {v.anio && <span>· {v.anio}</span>}
+                    </p>
+                    {v.ubicacion && (
+                      <p className="text-xs text-orange-600 font-semibold flex items-center gap-1">
+                        <MapPin size={10} /> {v.ubicacion === 'otro' ? (v.ubicacion_descripcion ?? 'Otro') : v.ubicacion}
+                      </p>
+                    )}
+                    {v.vin && <p className="text-[10px] font-mono text-oriental-gray truncate">VIN: {v.vin}</p>}
+                    {v.serial_motor && <p className="text-[10px] font-mono text-oriental-gray truncate">Motor: {v.serial_motor}</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Vehículo */}
         <div className="card p-6">
           <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -619,10 +728,6 @@ export default function NuevoVehiculoPage() {
                 <option value="">Seleccionar...</option>
                 {modelos.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
-            </div>
-            <div>
-              <label className="label">Versión</label>
-              <input type="text" className="input" placeholder="Ej: Luxury, Comfort" value={version} onChange={e => setVersion(e.target.value)} />
             </div>
             <div>
               <label className="label">Año</label>

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Store, Plus, Car, MapPin, Clock, CheckCircle2, Lock, Tag } from 'lucide-react'
+import { Store, Plus, Car, MapPin, CheckCircle2, Lock, Tag, Wrench } from 'lucide-react'
 import type { VehiculoShowroom } from '@/types/database'
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
@@ -153,21 +153,37 @@ export default async function ShowroomPage({
 
                 {/* Info principal */}
                 <h3 className="font-bold text-oriental-black text-base leading-tight">{v.modelo}</h3>
-                {v.version && <p className="text-xs text-oriental-gray mt-0.5">{v.version}</p>}
 
-                <div className="mt-2 space-y-1">
+                <div className="mt-2 space-y-1.5">
                   {v.placa && (
                     <p className="text-xs text-oriental-gray flex items-center gap-1.5">
-                      <Car size={11} /> <span className="font-mono font-bold text-oriental-black">{v.placa}</span>
+                      <Car size={11} className="flex-shrink-0" />
+                      <span className="font-mono font-bold text-oriental-black">{v.placa}</span>
                       {v.color && <span>· {v.color}</span>}
                       {v.anio && <span>· {v.anio}</span>}
                     </p>
                   )}
+                  {/* Ubicación destacada */}
                   {v.ubicacion && (
-                    <p className="text-xs text-oriental-gray flex items-center gap-1.5">
-                      <MapPin size={11} />
-                      <span className="capitalize">{v.ubicacion === 'otro' ? (v.ubicacion_descripcion ?? 'Otro') : v.ubicacion}</span>
-                    </p>
+                    <div className="inline-flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                      <MapPin size={11} className="text-oriental-red flex-shrink-0" />
+                      <span className="text-xs font-semibold text-oriental-black capitalize">
+                        {v.ubicacion === 'otro' ? (v.ubicacion_descripcion ?? 'Otro') : v.ubicacion}
+                      </span>
+                    </div>
+                  )}
+                  {/* PDI */}
+                  <div className="flex items-center gap-1.5">
+                    <Wrench size={11} className={v.pdi_hecho ? 'text-green-600' : 'text-gray-300'} />
+                    <span className={`text-[11px] font-semibold ${v.pdi_hecho ? 'text-green-700' : 'text-gray-400'}`}>
+                      {v.pdi_hecho ? 'PDI completado' : 'PDI pendiente'}
+                    </span>
+                  </div>
+                  {v.vin && (
+                    <p className="text-[10px] font-mono text-oriental-gray truncate">VIN: {v.vin}</p>
+                  )}
+                  {v.serial_motor && (
+                    <p className="text-[10px] font-mono text-oriental-gray truncate">Motor: {v.serial_motor}</p>
                   )}
                 </div>
 

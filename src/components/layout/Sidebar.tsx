@@ -9,8 +9,10 @@ import {
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store
 } from 'lucide-react'
 
-const navItems = [
+const navItemsTop = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+]
+const navItemsBottom = [
   { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/vehiculos', label: 'Vehículos', icon: Car },
   { href: '/ingresos', label: 'Ingresos', icon: TrendingUp },
@@ -20,6 +22,7 @@ const navItems = [
   { href: '/reportes', label: 'Reportes', icon: BarChart2 },
   { href: '/documentos-empresa', label: 'Docs. Empresa', icon: FolderOpen },
 ]
+const navItems = [...navItemsTop, ...navItemsBottom]
 
 const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
 
@@ -59,20 +62,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {/* Showroom — siempre visible primero para Arianna */}
-        {(() => {
-          const active = pathname === '/showroom' || pathname.startsWith('/showroom/')
-          return (
-            <Link href="/showroom" onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-              <Store size={18} />
-              <span className="flex-1">Vehículo Showroom</span>
-            </Link>
-          )
-        })()}
-
         {/* Resto del menú — oculto para Arianna */}
-        {rol !== 'arianna' && navItems.map(({ href, label, icon: Icon }) => {
+        {rol !== 'arianna' && navItemsTop.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
@@ -85,6 +76,30 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                   : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
               }`}
             >
+              <Icon size={18} />
+              {label}
+            </Link>
+          )
+        })}
+
+        {/* Vehículo Showroom — entre Dashboard y Clientes */}
+        {(() => {
+          const active = pathname === '/showroom' || pathname.startsWith('/showroom/')
+          return (
+            <Link href="/showroom" onClick={onClose}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+              <Store size={18} />
+              <span className="flex-1">Vehículo Showroom</span>
+            </Link>
+          )
+        })()}
+
+        {/* Clientes en adelante — oculto para Arianna */}
+        {rol !== 'arianna' && navItemsBottom.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <Link key={href} href={href} onClick={onClose}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
               <Icon size={18} />
               {label}
             </Link>
