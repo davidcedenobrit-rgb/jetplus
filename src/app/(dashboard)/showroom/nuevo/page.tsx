@@ -3,11 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Save, Store } from 'lucide-react'
+import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
-
-const MODELOS_MG = ['MG3 1.5L MT STD','MG3 1.5L AT STD','MG5 1.5L MT','MG5 1.5L CVT COM','MG ZS MT COM','MG ZS AT COM','MG ZS AT LUX','MG RX5 1.5T DCT','MG RX9 2.0T AT 4WD']
-const MODELOS_MAXUS = ['Maxus D60','Maxus D90 AT','Maxus D90 LUX 4x4','Maxus T60 Comfort 4x4','Maxus T60 Comfort 4x2','Maxus T70 4x4 AT','Maxus T90 4x4 Exe. Lux','Maxus S80 Diesel','Maxus C300 Chasis']
+import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
 
 export default function NuevoShowroomPage() {
   const router = useRouter()

@@ -148,18 +148,46 @@ export default function ShowroomAcciones({ vehiculo, esJose, userId }: Props) {
       )}
 
       {/* Avanzar estado */}
-      {!esVendido && flujoActual && (
+      {!esVendido && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-3">Cambiar estado</h3>
-          {vehiculo.estado === 'en_agencia' && !esJose ? (
-            <p className="text-xs text-oriental-gray">Solo José puede reservar un vehículo.</p>
-          ) : (
-            <button onClick={avanzarEstado} disabled={loading}
-              className="w-full btn-primary flex items-center justify-center gap-2 py-2.5 disabled:opacity-60">
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
-              {flujoActual.label}
-            </button>
-          )}
+          <div className="space-y-2">
+            {/* Avanzar flujo normal */}
+            {flujoActual && vehiculo.estado !== 'en_agencia' && vehiculo.estado !== 'reservado' && (
+              <button onClick={avanzarEstado} disabled={loading}
+                className="w-full btn-primary flex items-center justify-center gap-2 py-2.5 disabled:opacity-60">
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
+                {flujoActual.label}
+              </button>
+            )}
+            {/* En agencia → solo José puede reservar */}
+            {vehiculo.estado === 'en_agencia' && (
+              esJose ? (
+                <button onClick={avanzarEstado} disabled={loading}
+                  className="w-full btn-primary flex items-center justify-center gap-2 py-2.5 disabled:opacity-60">
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
+                  Reservar vehículo
+                </button>
+              ) : (
+                <p className="text-xs text-oriental-gray text-center py-1">Solo José puede reservar un vehículo.</p>
+              )
+            )}
+            {/* Cancelar reserva */}
+            {vehiculo.estado === 'reservado' && (
+              <button onClick={avanzarEstado} disabled={loading}
+                className="w-full btn-secondary flex items-center justify-center gap-2 py-2.5 disabled:opacity-60">
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
+                Cancelar reserva
+              </button>
+            )}
+            {/* José: reserva directa desde cualquier estado previo */}
+            {esJose && !['en_agencia', 'reservado', 'vendido'].includes(vehiculo.estado) && (
+              <button onClick={() => setShowReserva(true)} disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-purple-300 text-purple-700 hover:bg-purple-50 text-sm font-semibold transition-colors disabled:opacity-60">
+                <Lock size={15} /> Reservar directamente
+              </button>
+            )}
+          </div>
         </div>
       )}
 

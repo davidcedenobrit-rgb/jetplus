@@ -1,0 +1,31 @@
+export const MODELOS_MG = [
+  'MG3 1.5L MT STD',
+  'MG3 1.5L AT STD',
+  'MG5 1.5L MT',
+  'MG5 1.5L CVT COM',
+  'NEW MG ZS MT COM',
+  'NEW MG ZS AT COM',
+  'NEW MG ZS AT LUX',
+  'MG ZS Sincrónica Clásica',
+  'MG ZS AT Clásica',
+  'MG RX5 1.5T DCT',
+  'MG RX9 COM 4x2',
+  'MG RX9 LUX 4x4',
+  'MG4 URBAN COM',
+  'MC Cybester',
+]
+
+export const MODELOS_MAXUS = [
+  'Maxus D60',
+  'Maxus D60 LUX',
+  'Maxus D90 AT',
+  'Maxus D90 LUX 4x4',
+  'Maxus T60 Comfort 4x4',
+  'Maxus T60 Comfort 4x2',
+  'Maxus T70 4x4 AT',
+  'Maxus T90 4x4 Exe. Lux',
+  'Maxus S80 Diesel',
+  'Maxus C300 Chasis',
+  'Maxus G10 Van',
+  'Maxus G10 Pasajero',
+]

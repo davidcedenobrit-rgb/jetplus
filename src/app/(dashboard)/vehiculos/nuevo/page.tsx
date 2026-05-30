@@ -7,36 +7,7 @@ import { ArrowLeft, Save, Search, X, AlertCircle, Store, Car, CheckCircle2, MapP
 import Link from 'next/link'
 import type { Cliente, VehiculoShowroom } from '@/types/database'
 import { VehiculoSchema, CreditoSchema } from '@/lib/validations'
-
-const MODELOS_MG = [
-  'MG5 1.5L Sincronico',
-  'MG5 1.5L Automatico',
-  'MG3 1.5L Sincronico',
-  'MG3 1.5L AT STD',
-  'NEW MG ZS AT LUX',
-  'NEW MG ZS AT STD',
-  'MG ZS Sincrónica Clasica',
-  'MG ZS AT Clasica',
-  'RX5 1.5T Automatica',
-  'RX8',
-  'RX9 COM 4x2',
-  'RX9 LUX 4x4',
-  'MC Cybester',
-  'MG4 URBAN COM',
-]
-const MODELOS_MAXUS = [
-  'D60',
-  'D60 LUX',
-  'D90',
-  'D90 4X4 AT LUX',
-  'T60 Comfort 4x4 GASOLINA',
-  'T60 Comfort 4x2 GASOLINA',
-  'T90 4X4 AT Double Exe. Lux Gasolina',
-  'S80 1.9L Diesel/Chasis',
-  'C30 Chasis',
-  'G10 Van Gasolina',
-  'G10 Pasajero Gasolina',
-]
+import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
