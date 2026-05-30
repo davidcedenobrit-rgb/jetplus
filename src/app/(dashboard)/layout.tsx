@@ -10,6 +10,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const rol = (user.user_metadata?.rol as string) ?? 'editor'
 
+  // Arianna solo puede acceder al módulo showroom
+  // (el redirect de ruta específica lo maneja el middleware de cada página)
+
   const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
 
   // Conteo de aprobaciones pendientes

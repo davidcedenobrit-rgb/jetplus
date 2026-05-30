@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
-  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload
+  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store
 } from 'lucide-react'
 
 const navItems = [
@@ -59,7 +59,20 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {/* Showroom — siempre visible primero para Arianna */}
+        {(() => {
+          const active = pathname === '/showroom' || pathname.startsWith('/showroom/')
+          return (
+            <Link href="/showroom" onClick={onClose}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+              <Store size={18} />
+              <span className="flex-1">Vehículo Showroom</span>
+            </Link>
+          )
+        })()}
+
+        {/* Resto del menú — oculto para Arianna */}
+        {rol !== 'arianna' && navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
@@ -78,8 +91,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )
         })}
 
-        {/* Aprobaciones — visible para todos, badge solo si hay pendientes */}
-        {(() => {
+        {/* Aprobaciones — oculto para Arianna */}
+        {rol !== 'arianna' && (() => {
           const active = pathname === '/aprobaciones' || pathname.startsWith('/aprobaciones/')
           return (
             <Link
@@ -102,7 +115,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )
         })()}
 
-        {/* Importar — solo directores */}
+        {/* Importar — solo directores, no Arianna */}
         {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
           const active = pathname === '/importar' || pathname.startsWith('/importar/')
           return (
@@ -155,6 +168,9 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )}
           {rol === 'carla' && (
             <span className="text-[10px] bg-teal-600/20 text-teal-600 font-semibold px-1.5 py-0.5 rounded">CARLA</span>
+          )}
+          {rol === 'arianna' && (
+            <span className="text-[10px] bg-orange-600/20 text-orange-500 font-semibold px-1.5 py-0.5 rounded">SHOWROOM</span>
           )}
         </div>
         <button

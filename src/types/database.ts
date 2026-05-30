@@ -3,7 +3,8 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-export type RolUsuario = 'jose' | 'mary' | 'leysdem' | 'carla' | 'admin'
+export type RolUsuario = 'jose' | 'mary' | 'leysdem' | 'carla' | 'admin' | 'arianna'
+export type EstadoShowroom = 'llegada' | 'por_enviar_pdi' | 'en_taller' | 'en_agencia' | 'reservado' | 'vendido'
 export type EstadoRecibo =
   | 'registrado' | 'pendiente_aprobacion' | 'aprobado' | 'rechazado'
   | 'correccion_requerida' | 'enviado_cliente' | 'enviado_carla'
@@ -170,6 +171,33 @@ export interface Archivo {
   es_empresa: boolean
   subido_por: string
   created_at: string
+}
+
+export interface VehiculoShowroom {
+  id: string
+  marca: string
+  modelo: string
+  version: string | null
+  anio: number | null
+  color: string | null
+  placa: string | null
+  vin: string | null
+  serial_motor: string | null
+  observaciones: string | null
+  estado: EstadoShowroom
+  ubicacion: 'showroom' | 'galpon' | 'otro' | null
+  ubicacion_descripcion: string | null
+  fecha_llegada: string | null
+  fecha_pdi: string | null
+  pdi_hecho: boolean
+  reservado_por: string | null
+  reserva_monto: number | null
+  reserva_vence: string | null
+  reserva_notas: string | null
+  cliente_id: string | null
+  vehiculo_id: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface Auditoria {
