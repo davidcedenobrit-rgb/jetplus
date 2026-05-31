@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, AlertCircle, FileText } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import DocumentosCliente from './DocumentosCliente'
-import RecordatorioWhatsApp from './RecordatorioWhatsApp'
+import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
 
 export default async function ClienteDetallePage({
   params,

@@ -6,6 +6,7 @@ import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, Circle
 import DeleteButton from '@/components/DeleteButton'
 import RevertirCuotaButton from './RevertirCuotaButton'
 import PrintButton from './PrintButton'
+import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
@@ -64,7 +65,7 @@ export default async function CreditoDetallePage({
   // Cargar el crédito principal (para obtener vehiculo_id y cliente)
   const { data: credito } = await supabase
     .from('creditos')
-    .select('*, clientes(id, nombre, cedula_rif, telefono), vehiculos(id, marca, modelo, placa, color, anio)')
+    .select('*, clientes(id, nombre, cedula_rif, telefono, whatsapp), vehiculos(id, marca, modelo, placa, color, anio)')
     .eq('id', id)
     .single()
 
@@ -283,10 +284,47 @@ export default async function CreditoDetallePage({
               <h2 className="font-bold text-oriental-black mb-3 flex items-center gap-2">
                 <User size={16} className="text-oriental-gray" /> Cliente
               </h2>
-              <Link href={`/clientes/${cliente.id}`} className="block p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-all">
+              <Link href={`/clientes/${cliente.id}`} className="block p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-all mb-3">
                 <p className="font-semibold text-oriental-black">{cliente.nombre}</p>
                 <p className="text-xs text-oriental-gray">{cliente.cedula_rif}</p>
               </Link>
+
+              {/* Botón recordatorio WhatsApp */}
+              {cliente.whatsapp && (cuotasVencidas > 0 || cuotasPorCobrar > 0) && (() => {
+                const hoyStr = new Date().toISOString().split('T')[0]
+                const vencidas = cuotasEnriquecidas
+                  .filter((c: any) => c.estado === 'vencida')
+                  .reduce((acc: any[], c: any) => {
+                    const cred = creditos.find((cr: any) => cr.id === c.credito_id)
+                    const label = `${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''}${vehiculo?.placa ? ` · ${vehiculo.placa}` : ''} (${planLabel(cred?.plan_tipo)})`
+                    const existing = acc.find(a => a.vehiculoLabel === label)
+                    const monto = Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0))
+                    if (existing) { existing.monto += monto; existing.cantidad++ }
+                    else acc.push({ vehiculoLabel: label, cantidad: 1, monto, moneda: cred?.moneda ?? 'USD' })
+                    return acc
+                  }, [])
+
+                const proximas = cuotasEnriquecidas
+                  .filter((c: any) => c.estado === 'pendiente' && c.fecha_vencimiento >= hoyStr && c.fecha_vencimiento <= en7Str)
+                  .map((c: any) => {
+                    const cred = creditos.find((cr: any) => cr.id === c.credito_id)
+                    return {
+                      vehiculoLabel: `${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''}${vehiculo?.placa ? ` · ${vehiculo.placa}` : ''} (${planLabel(cred?.plan_tipo)})`,
+                      monto: Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0)),
+                      moneda: cred?.moneda ?? 'USD',
+                      fecha: c.fecha_vencimiento,
+                    }
+                  })
+
+                return (
+                  <RecordatorioWhatsApp
+                    clienteNombre={cliente.nombre}
+                    whatsapp={cliente.whatsapp}
+                    cuotasVencidas={vencidas}
+                    cuotasProximas={proximas}
+                  />
+                )
+              })()}
             </div>
           )}
 
