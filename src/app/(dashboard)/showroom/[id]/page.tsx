@@ -140,14 +140,12 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
-                { label: 'Marca',   value: v.marca },
-                { label: 'Modelo',  value: v.modelo },
-                { label: 'Versión', value: v.version },
-                { label: 'Año',     value: v.anio?.toString() },
-                { label: 'Color',   value: v.color },
-                { label: 'Placa',   value: v.placa, mono: true },
-                { label: 'VIN',     value: v.vin, mono: true },
-                { label: 'Serial motor', value: v.serial_motor, mono: true },
+                { label: 'Marca',        value: v.marca },
+                { label: 'Modelo',       value: v.modelo },
+                { label: 'Versión',      value: v.version },
+                { label: 'Año',          value: v.anio?.toString() },
+                { label: 'Color',        value: v.color },
+                { label: 'Placa',        value: v.placa, mono: true },
                 { label: 'Fecha llegada', value: v.fecha_llegada ? new Date(v.fecha_llegada + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' }) : null },
               ].map(({ label, value, mono }) =>
                 value ? (
@@ -156,6 +154,21 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
                     <p className={`text-sm font-semibold text-oriental-black mt-0.5 ${mono ? 'font-mono' : ''}`}>{value}</p>
                   </div>
                 ) : null
+              )}
+            </div>
+            {/* VIN y Serial motor — ancho completo para evitar choque */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {v.vin && (
+                <div>
+                  <p className="text-xs text-oriental-gray">VIN / Chasis</p>
+                  <p className="text-sm font-semibold text-oriental-black mt-0.5 font-mono break-all">{v.vin}</p>
+                </div>
+              )}
+              {v.serial_motor && (
+                <div>
+                  <p className="text-xs text-oriental-gray">Serial motor</p>
+                  <p className="text-sm font-semibold text-oriental-black mt-0.5 font-mono break-all">{v.serial_motor}</p>
+                </div>
               )}
             </div>
             {v.observaciones && (
