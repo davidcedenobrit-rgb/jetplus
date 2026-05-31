@@ -89,7 +89,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors"
       >
         <MessageCircle size={16} />
-        Enviar recordatorio
+        Aviso de cobro
       </button>
 
       {open && (
@@ -100,7 +100,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
               <div className="flex items-center gap-2">
                 <MessageCircle size={18} className="text-green-600" />
                 <div>
-                  <p className="font-bold text-oriental-black">Recordatorio de pago</p>
+                  <p className="font-bold text-oriental-black">Aviso de cobro</p>
                   <p className="text-[11px] text-oriental-gray">Enviando como: <span className="font-semibold text-oriental-black">{remitente}</span></p>
                 </div>
               </div>
