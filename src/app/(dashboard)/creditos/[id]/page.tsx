@@ -7,6 +7,7 @@ import DeleteButton from '@/components/DeleteButton'
 import RevertirCuotaButton from './RevertirCuotaButton'
 import PrintButton from './PrintButton'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
+import { getNombreRemitente } from '@/lib/remitente'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
@@ -61,6 +62,7 @@ export default async function CreditoDetallePage({
     ? await supabase.from('usuarios').select('rol').eq('id', authUser.id).single()
     : { data: null }
   const esDirector = usuarioData ? ROL_DIRECTOR.includes(usuarioData.rol) : false
+  const remitente = getNombreRemitente(authUser?.email, authUser?.user_metadata?.rol)
 
   // Cargar el crédito principal (para obtener vehiculo_id y cliente)
   const { data: credito } = await supabase
@@ -322,6 +324,7 @@ export default async function CreditoDetallePage({
                     whatsapp={cliente.whatsapp}
                     cuotasVencidas={vencidas}
                     cuotasProximas={proximas}
+                    remitente={remitente}
                   />
                 )
               })()}

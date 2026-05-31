@@ -6,6 +6,7 @@ import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, AlertCircle, Fil
 import DeleteButton from '@/components/DeleteButton'
 import DocumentosCliente from './DocumentosCliente'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
+import { getNombreRemitente } from '@/lib/remitente'
 
 export default async function ClienteDetallePage({
   params,
@@ -14,6 +15,9 @@ export default async function ClienteDetallePage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  const remitente = getNombreRemitente(authUser?.email, authUser?.user_metadata?.rol)
 
   const { data: cliente } = await supabase
     .from('clientes')
@@ -208,6 +212,7 @@ export default async function ClienteDetallePage({
                 moneda: c.moneda,
               }))}
               cuotasProximas={cuotasProximasList}
+              remitente={remitente}
             />
           )}
 

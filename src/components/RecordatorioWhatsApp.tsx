@@ -22,6 +22,7 @@ interface Props {
   whatsapp: string
   cuotasVencidas: CuotaVencida[]
   cuotasProximas: CuotaProxima[]
+  remitente: string
 }
 
 function fmtMonto(monto: number, moneda: string) {
@@ -33,24 +34,22 @@ function fmtFecha(iso: string) {
 }
 
 function limpiarNumero(num: string) {
-  // Convierte a formato internacional para wa.me
   const solo = num.replace(/\D/g, '')
   if (solo.startsWith('58')) return solo
   if (solo.startsWith('0')) return '58' + solo.slice(1)
   return '58' + solo
 }
 
-export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVencidas, cuotasProximas }: Props) {
+export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVencidas, cuotasProximas, remitente }: Props) {
   const [open, setOpen] = useState(false)
   const [copiado, setCopiado] = useState(false)
 
-  const nombre = clienteNombre.split(' ')[0] // solo el primer nombre
+  const nombre = clienteNombre.split(' ')[0]
 
-  // Construir el mensaje
   const lineas: string[] = []
   lineas.push(`Hola ${nombre} 👋`)
   lineas.push('')
-  lineas.push(`Te saludamos de *La Oriental Automotors*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
+  lineas.push(`Te saluda *${remitente}* de *La Oriental Automotors*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
   lineas.push('')
 
   if (cuotasVencidas.length > 0) {
@@ -71,7 +70,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
 
   lineas.push(`Por favor coordina tu pago a la brevedad posible. Estamos a tu disposición para cualquier consulta. 🙏`)
   lineas.push('')
-  lineas.push(`_La Oriental Automotors · MG & Maxus · Maturín_`)
+  lineas.push(`_${remitente} · La Oriental Automotors · MG & Maxus · Maturín_`)
 
   const mensaje = lineas.join('\n')
   const numero  = limpiarNumero(whatsapp)
@@ -97,18 +96,19 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl flex flex-col max-h-[90vh]">
 
-            {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <MessageCircle size={18} className="text-green-600" />
-                <p className="font-bold text-oriental-black">Recordatorio de pago</p>
+                <div>
+                  <p className="font-bold text-oriental-black">Recordatorio de pago</p>
+                  <p className="text-[11px] text-oriental-gray">Enviando como: <span className="font-semibold text-oriental-black">{remitente}</span></p>
+                </div>
               </div>
               <button onClick={() => setOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
                 <X size={16} className="text-oriental-gray" />
               </button>
             </div>
 
-            {/* Mensaje preview */}
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <p className="text-xs text-oriental-gray font-semibold uppercase tracking-wider mb-2">
                 Mensaje para {clienteNombre}
@@ -124,7 +124,6 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
               </p>
             </div>
 
-            {/* Acciones */}
             <div className="px-5 py-4 border-t border-gray-100 space-y-2">
               <a
                 href={waUrl}
