@@ -46,6 +46,17 @@ export default function ShowroomAcciones({ vehiculo, esJose, userId }: Props) {
   const flujoActual = FLUJO[vehiculo.estado]
   const esVendido = vehiculo.estado === 'vendido'
 
+  async function logHistorial(estadoAnterior: string, estadoNuevo: string, notas?: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('showroom_historial').insert({
+      showroom_vehiculo_id: vehiculo.id,
+      estado_anterior: estadoAnterior,
+      estado_nuevo: estadoNuevo,
+      usuario_email: user?.email ?? null,
+      notas: notas ?? null,
+    })
+  }
+
   async function avanzarEstado() {
     if (!flujoActual) return
     const siguiente = flujoActual.siguiente
@@ -63,6 +74,7 @@ export default function ShowroomAcciones({ vehiculo, esJose, userId }: Props) {
         reservado_por: null, reserva_monto: null, reserva_vence: null, reserva_notas: null,
         updated_at: new Date().toISOString(),
       }).eq('id', vehiculo.id)
+      await logHistorial('reservado', 'en_agencia', 'Reserva cancelada')
       router.refresh()
       setLoading(false)
       return
@@ -70,7 +82,6 @@ export default function ShowroomAcciones({ vehiculo, esJose, userId }: Props) {
 
     setLoading(true)
     setError('')
-    const update: any = { estado: siguiente, updated_at: new Date().toISOString() }
 
     // Al regresar a agencia: requerir ubicación
     if (siguiente === 'en_agencia') {
@@ -79,9 +90,14 @@ export default function ShowroomAcciones({ vehiculo, esJose, userId }: Props) {
       return
     }
 
-    const { error: err } = await supabase.from('vehiculos_showroom').update(update).eq('id', vehiculo.id)
+    const { error: err } = await supabase.from('vehiculos_showroom')
+      .update({ estado: siguiente, updated_at: new Date().toISOString() })
+      .eq('id', vehiculo.id)
     if (err) setError(err.message)
-    else router.refresh()
+    else {
+      await logHistorial(vehiculo.estado, siguiente)
+      router.refresh()
+    }
     setLoading(false)
   }
 
@@ -94,7 +110,11 @@ export default function ShowroomAcciones({ vehiculo, esJose, userId }: Props) {
       updated_at: new Date().toISOString(),
     }).eq('id', vehiculo.id)
     if (err) setError(err.message)
-    else { setShowUbicacion(false); router.refresh() }
+    else {
+      await logHistorial(vehiculo.estado, 'en_agencia', `Ubicación: ${ubicacion === 'otro' ? ubicacionDesc : ubicacion}`)
+      setShowUbicacion(false)
+      router.refresh()
+    }
     setLoading(false)
   }
 
@@ -125,7 +145,11 @@ export default function ShowroomAcciones({ vehiculo, esJose, userId }: Props) {
       updated_at: new Date().toISOString(),
     }).eq('id', vehiculo.id)
     if (err) setError(err.message)
-    else { setShowReserva(false); router.refresh() }
+    else {
+      await logHistorial(vehiculo.estado, 'reservado', `Reserva $${montoReserva} · ${diasReserva} días${notasReserva ? ' · ' + notasReserva : ''}`)
+      setShowReserva(false)
+      router.refresh()
+    }
     setLoading(false)
   }
 

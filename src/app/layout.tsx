@@ -10,12 +10,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'LO CDM',
+  title: 'Centro de Mando · La Oriental',
   description: 'Control financiero — La Oriental Automotors MG & MAXUS',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'LO CDM',
+    title: 'LO Centro de Mando',
   },
   formatDetection: {
     telephone: false,

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Car, MapPin, CheckCircle2, Calendar, DollarSign, User, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Car, MapPin, CheckCircle2, DollarSign, User, ExternalLink, History } from 'lucide-react'
 import type { VehiculoShowroom } from '@/types/database'
 import ShowroomDocumentos from './ShowroomDocumentos'
 import ShowroomAcciones from './ShowroomAcciones'
@@ -83,6 +83,14 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
     const { data: cl } = await supabase.from('clientes').select('id, nombre, cedula_rif').eq('id', v.cliente_id).single()
     clienteVinculado = cl
   }
+
+  // Historial de estados
+  const { data: historial } = await supabase
+    .from('showroom_historial')
+    .select('*')
+    .eq('showroom_vehiculo_id', id)
+    .order('created_at', { ascending: false })
+    .limit(20)
 
   const esJose = ['jose', 'admin', 'director'].includes(rol)
   const hoy = new Date()
@@ -180,6 +188,40 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
 
           {/* Documentos preventa */}
           <ShowroomDocumentos showroomId={id} archivosIniciales={(archivos ?? []) as any} />
+
+          {/* Historial de estados */}
+          {(historial ?? []).length > 0 && (
+            <div className="card p-6">
+              <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
+                <History size={14} className="text-oriental-gray" />
+                Historial de cambios
+              </h2>
+              <div className="relative">
+                <div className="absolute left-3 top-0 bottom-0 w-px bg-gray-100" />
+                <div className="space-y-4">
+                  {(historial ?? []).map((h: any) => (
+                    <div key={h.id} className="flex items-start gap-3 pl-8 relative">
+                      <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full border-2 border-gray-300 bg-white" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {h.estado_anterior && (
+                            <span className="text-[11px] text-oriental-gray bg-gray-100 px-2 py-0.5 rounded-full">{h.estado_anterior}</span>
+                          )}
+                          {h.estado_anterior && <span className="text-[10px] text-gray-400">→</span>}
+                          <span className="text-[11px] font-bold text-oriental-black bg-oriental-bg px-2 py-0.5 rounded-full">{h.estado_nuevo}</span>
+                        </div>
+                        {h.notas && <p className="text-xs text-oriental-gray mt-0.5 italic">{h.notas}</p>}
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {new Date(h.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {h.usuario_email && <span className="ml-1">· {h.usuario_email}</span>}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Cliente vinculado */}
           {v.estado === 'vendido' && clienteVinculado && (

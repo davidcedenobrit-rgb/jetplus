@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Store, Plus, Car, MapPin, CheckCircle2, Lock, Tag, Wrench } from 'lucide-react'
+import PrintButton from './PrintButton'
 import type { VehiculoShowroom } from '@/types/database'
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
@@ -86,10 +87,13 @@ export default async function ShowroomPage({
             <p className="text-oriental-gray text-sm">Consignaciones de Vehimotors · {lista.length} vehículo{lista.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
-        <Link href="/showroom/nuevo" className="btn-primary flex items-center gap-2">
-          <Plus size={16} />
-          Registrar vehículo
-        </Link>
+        <div className="flex items-center gap-2">
+          <PrintButton />
+          <Link href="/showroom/nuevo" className="btn-primary flex items-center gap-2">
+            <Plus size={16} />
+            Registrar vehículo
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}
