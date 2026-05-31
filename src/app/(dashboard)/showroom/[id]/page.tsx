@@ -84,7 +84,7 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
     clienteVinculado = cl
   }
 
-  const esJose = ['jose', 'admin'].includes(rol)
+  const esJose = ['jose', 'admin', 'director'].includes(rol)
   const hoy = new Date()
   const reservaVencida = v.reserva_vence ? new Date(v.reserva_vence) < hoy : false
 
