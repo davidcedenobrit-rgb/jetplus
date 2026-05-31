@@ -2,9 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, FileText, AlertCircle } from 'lucide-react'
+import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, AlertCircle, FileText } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import DocumentosCliente from './DocumentosCliente'
+import RecordatorioWhatsApp from './RecordatorioWhatsApp'
 
 export default async function ClienteDetallePage({
   params,
@@ -73,6 +74,40 @@ export default async function ClienteDetallePage({
           moneda: credito.moneda,
           monto: data.monto,
           cantidad: data.cantidad,
+        }
+      })
+    }
+  }
+
+  // Cuotas próximas a vencer (7 días)
+  const en7dias = new Date()
+  en7dias.setDate(en7dias.getDate() + 7)
+  const en7diasStr = en7dias.toISOString().split('T')[0]
+
+  let cuotasProximasList: { vehiculoLabel: string; monto: number; moneda: string; fecha: string }[] = []
+
+  if (creditos && creditos.length > 0) {
+    const creditoIds = creditos.map(c => c.id)
+    const { data: proximas } = await supabase
+      .from('cuotas')
+      .select('credito_id, monto, monto_pagado, fecha_vencimiento')
+      .in('credito_id', creditoIds)
+      .eq('estado', 'pendiente')
+      .gte('fecha_vencimiento', hoy)
+      .lte('fecha_vencimiento', en7diasStr)
+      .order('fecha_vencimiento', { ascending: true })
+
+    if (proximas) {
+      cuotasProximasList = proximas.map(q => {
+        const credito = creditos.find(c => c.id === q.credito_id)!
+        const v = (credito as any).vehiculos
+        const planLabel = credito.plan_tipo === 'inicial_la_oriental' ? ' (Oriental)'
+          : credito.plan_tipo === 'financiamiento_vehimotors' ? ' (Vehimotors)' : ''
+        return {
+          vehiculoLabel: v ? `${v.marca} ${v.modelo}${v.placa ? ` · ${v.placa}` : ''}${planLabel}` : `Crédito${planLabel}`,
+          monto: Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0)),
+          moneda: credito.moneda,
+          fecha: q.fecha_vencimiento,
         }
       })
     }
@@ -159,6 +194,21 @@ export default async function ClienteDetallePage({
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Botón recordatorio WhatsApp */}
+          {cliente.whatsapp && (cuotasVencidasPorCredito.length > 0 || cuotasProximasList.length > 0) && (
+            <RecordatorioWhatsApp
+              clienteNombre={cliente.nombre}
+              whatsapp={cliente.whatsapp}
+              cuotasVencidas={cuotasVencidasPorCredito.map(c => ({
+                vehiculoLabel: c.vehiculoLabel,
+                cantidad: c.cantidad,
+                monto: c.monto,
+                moneda: c.moneda,
+              }))}
+              cuotasProximas={cuotasProximasList}
+            />
           )}
 
           <DeleteButton table="clientes" id={id} redirectTo="/clientes" label="Eliminar cliente" />
