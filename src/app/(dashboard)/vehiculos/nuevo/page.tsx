@@ -1303,22 +1303,22 @@ export default function NuevoVehiculoPage() {
                 </div>
 
                 {/* Cuota Especial (paralela a las mensuales) */}
-                <div className="border border-dashed border-teal-400/40 rounded-xl overflow-hidden">
+                <div className={`border-2 rounded-xl overflow-hidden ${ceActivo ? 'border-teal-400 bg-teal-50' : 'border-dashed border-teal-300'}`}>
                   <button
                     type="button"
                     onClick={() => setCeActivo(!ceActivo)}
-                    className={`w-full flex items-center justify-between px-5 py-3 transition-colors ${ceActivo ? 'bg-teal-900/40' : 'bg-teal-950/20 hover:bg-teal-900/20'}`}
+                    className={`w-full flex items-center justify-between px-5 py-3 transition-colors ${ceActivo ? 'bg-teal-100 hover:bg-teal-200' : 'bg-teal-50 hover:bg-teal-100'}`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full border-2 ${ceActivo ? 'bg-teal-400 border-teal-400' : 'border-teal-500'}`} />
-                      <span className="text-teal-300 font-semibold text-sm">Cuotas Especiales (paralelas)</span>
-                      <span className="text-teal-500 text-xs">— Corren simultáneamente con las cuotas mensuales</span>
+                      <span className={`w-2.5 h-2.5 rounded-full border-2 ${ceActivo ? 'bg-teal-600 border-teal-600' : 'border-teal-400'}`} />
+                      <span className="text-teal-800 font-bold text-sm">3 · Cuotas Especiales (paralelas)</span>
+                      <span className="text-teal-600 text-xs">— Ej: cuota trimestral que corre junto a las mensuales</span>
                     </div>
-                    <span className="text-teal-400 text-xs font-semibold">{ceActivo ? 'Quitar' : '+ Agregar'}</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ceActivo ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-700 border border-teal-300'}`}>{ceActivo ? 'Quitar' : '+ Agregar'}</span>
                   </button>
 
                   {ceActivo && (
-                    <div className="px-5 pb-5 pt-4 space-y-4 bg-teal-950/10">
+                    <div className="px-5 pb-5 pt-4 space-y-4 bg-teal-50">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="label">Monto total *</label>
@@ -1350,8 +1350,8 @@ export default function NuevoVehiculoPage() {
                               <button key={f} type="button"
                                 onClick={() => setCeFrecuencia(f)}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all capitalize ${ceFrecuencia === f
-                                  ? 'bg-teal-600 border-teal-600 text-white'
-                                  : 'border-teal-700 text-teal-400 hover:border-teal-500'
+                                  ? 'bg-teal-700 border-teal-700 text-white'
+                                  : 'border-gray-300 text-oriental-gray hover:border-teal-400'
                                 }`}>{f}</button>
                             ))}
                           </div>
@@ -1367,18 +1367,18 @@ export default function NuevoVehiculoPage() {
                           value={ceObs} onChange={e => setCeObs(e.target.value)} />
                       </div>
                       {calcCuotaEspecial.cuotas > 0 && calcCuotaEspecial.montoCuota > 0 && (
-                        <div className="bg-teal-800/50 rounded-lg p-4 grid grid-cols-3 gap-3">
+                        <div className="bg-teal-700 rounded-lg p-4 grid grid-cols-3 gap-3">
                           <div className="text-center">
-                            <p className="text-teal-300 text-[10px] uppercase tracking-wider">Monto total</p>
+                            <p className="text-teal-100 text-[10px] uppercase tracking-wider">Monto total</p>
                             <p className="text-white font-extrabold text-base">{formatUSD(calcCuotaEspecial.monto)}</p>
                           </div>
-                          <div className="text-center border-x border-teal-700">
-                            <p className="text-teal-300 text-[10px] uppercase tracking-wider">Cuota {ceFrecuencia}</p>
+                          <div className="text-center border-x border-teal-500">
+                            <p className="text-teal-100 text-[10px] uppercase tracking-wider">Cuota {ceFrecuencia}</p>
                             <p className="text-white font-extrabold text-base">{formatUSD(calcCuotaEspecial.montoCuota)}</p>
-                            <p className="text-teal-400 text-[10px]">{calcCuotaEspecial.cuotas} cuotas</p>
+                            <p className="text-teal-200 text-[10px]">{calcCuotaEspecial.cuotas} cuotas</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-teal-300 text-[10px] uppercase tracking-wider">Total cuotas</p>
+                            <p className="text-teal-100 text-[10px] uppercase tracking-wider">Total cuotas</p>
                             <p className="text-white font-extrabold text-base">{formatUSD(calcCuotaEspecial.totalCuotas)}</p>
                           </div>
                         </div>

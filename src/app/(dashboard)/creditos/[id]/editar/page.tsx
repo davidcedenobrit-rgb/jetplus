@@ -85,6 +85,11 @@ export default function EditarCreditoPage() {
   // Ediciones de cuotas (mapa: cuota_id → { estado, monto, fecha_vencimiento })
   const [edicionesCuotas, setEdicionesCuotas] = useState<Record<string, Partial<{ estado: EstadoCuota; monto: string; fecha_vencimiento: string }>>>({})
 
+  // Panel Crédito con Antigüedad
+  const [antiguedadCuotas, setAntiguedadCuotas] = useState('')
+  const [aplicandoAntiguedad, setAplicandoAntiguedad] = useState(false)
+  const [antiguedadMsg, setAntiguedadMsg] = useState('')
+
   // ── Poblar formulario desde un objeto crédito ──
   function poblarFormulario(cred: any) {
     setCredito(cred)
@@ -364,6 +369,35 @@ export default function EditarCreditoPage() {
     }
   }
 
+  async function aplicarAntiguedad() {
+    const n = parseInt(antiguedadCuotas)
+    if (!n || n <= 0) return
+    const cuotasAMarcar = [...cuotas]
+      .sort((a, b) => a.numero_cuota - b.numero_cuota)
+      .filter(c => c.estado !== 'pagada')
+      .slice(0, n)
+    if (cuotasAMarcar.length === 0) { setAntiguedadMsg('No hay cuotas pendientes para marcar'); return }
+    setAplicandoAntiguedad(true); setAntiguedadMsg('')
+    for (const c of cuotasAMarcar) {
+      await supabase.from('cuotas').update({
+        estado: 'pagada',
+        monto_pagado: c.monto,
+        fecha_pago: new Date().toISOString().split('T')[0],
+        updated_at: new Date().toISOString(),
+      }).eq('id', c.id)
+    }
+    // Actualizar saldo del crédito
+    const montoCobrado = cuotasAMarcar.reduce((s, c) => s + Number(c.monto), 0)
+    const nuevoSaldo = Math.max(0, (credito?.saldo ?? 0) - montoCobrado)
+    await supabase.from('creditos').update({ saldo: nuevoSaldo, updated_at: new Date().toISOString() }).eq('id', creditoActivoId)
+    // Reload cuotas
+    const { data: cs } = await supabase.from('cuotas').select('*').eq('credito_id', creditoActivoId).order('numero_cuota')
+    setCuotas(cs ?? [])
+    setAntiguedadMsg(`✓ ${cuotasAMarcar.length} cuota${cuotasAMarcar.length > 1 ? 's' : ''} marcada${cuotasAMarcar.length > 1 ? 's' : ''} como pagadas (sin ingreso)`)
+    setAntiguedadCuotas('')
+    setAplicandoAntiguedad(false)
+  }
+
   if (loading) {
     return (
       <div className="p-8 max-w-5xl">
@@ -478,6 +512,77 @@ export default function EditarCreditoPage() {
           </div>
         </div>
       )}
+
+      {/* ── PANEL CRÉDITO CON ANTIGÜEDAD — solo directores ── */}
+      {esDirector && cuotas.length > 0 && (() => {
+        const pagadas  = cuotas.filter(c => c.estado === 'pagada')
+        const pendientes = cuotas.filter(c => c.estado !== 'pagada')
+        const montoPagado = pagadas.reduce((s, c) => s + Number(c.monto_pagado ?? c.monto), 0)
+        const montoTotal  = Number(credito?.monto_financiado ?? 0)
+        const pct = montoTotal > 0 ? Math.min(100, Math.round((montoPagado / montoTotal) * 100)) : 0
+        return (
+          <div className="mb-6 border-2 border-amber-300 bg-amber-50 rounded-2xl p-6">
+            <h2 className="text-sm font-bold text-amber-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <span className="text-base">📋</span>
+              Crédito con Antigüedad — Cuotas históricas
+            </h2>
+            {/* Resumen */}
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              <div className="bg-white rounded-xl p-3 border border-amber-200 text-center">
+                <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider">Total financiado</p>
+                <p className="text-lg font-extrabold text-oriental-black mt-0.5">${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-oriental-gray">{cuotas.length} cuotas totales</p>
+              </div>
+              <div className="bg-white rounded-xl p-3 border border-green-200 text-center">
+                <p className="text-[10px] text-green-600 font-semibold uppercase tracking-wider">Pagado (sin ingreso)</p>
+                <p className="text-lg font-extrabold text-green-700 mt-0.5">${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-oriental-gray">{pagadas.length} cuotas pagadas</p>
+              </div>
+              <div className="bg-white rounded-xl p-3 border border-red-200 text-center">
+                <p className="text-[10px] text-red-600 font-semibold uppercase tracking-wider">Saldo pendiente</p>
+                <p className="text-lg font-extrabold text-oriental-red mt-0.5">${Math.max(0, montoTotal - montoPagado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-oriental-gray">{pendientes.length} cuotas pendientes</p>
+              </div>
+            </div>
+            {/* Barra de progreso */}
+            <div className="mb-5">
+              <div className="flex justify-between text-xs text-amber-700 mb-1">
+                <span>Progreso del crédito</span>
+                <span className="font-bold">{pct}%</span>
+              </div>
+              <div className="h-2 bg-amber-200 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-600 rounded-full" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+            {/* Marcar cuotas históricas */}
+            {pendientes.length > 0 && (
+              <div className="bg-white rounded-xl p-4 border border-amber-200">
+                <p className="text-xs font-bold text-amber-900 mb-1">Marcar cuotas como ya pagadas antes del sistema</p>
+                <p className="text-[11px] text-amber-700 mb-3">Se marcarán como pagadas las primeras N cuotas pendientes. <strong>No se crea ningún ingreso</strong> — solo refleja pagos anteriores al sistema.</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <input type="number" min="1" max={pendientes.length} className="input text-sm"
+                      placeholder={`1 – ${pendientes.length} cuotas`}
+                      value={antiguedadCuotas} onChange={e => setAntiguedadCuotas(e.target.value)} />
+                  </div>
+                  <button type="button" onClick={aplicarAntiguedad} disabled={aplicandoAntiguedad || !antiguedadCuotas}
+                    className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap">
+                    {aplicandoAntiguedad ? <><RefreshCw size={14} className="animate-spin" /> Aplicando…</> : '✓ Aplicar antigüedad'}
+                  </button>
+                </div>
+                {antiguedadMsg && (
+                  <p className={`text-xs mt-2 font-semibold ${antiguedadMsg.startsWith('✓') ? 'text-green-700' : 'text-red-600'}`}>{antiguedadMsg}</p>
+                )}
+              </div>
+            )}
+            {pendientes.length === 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                <p className="text-sm font-semibold text-green-700">✓ Todas las cuotas están pagadas</p>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
