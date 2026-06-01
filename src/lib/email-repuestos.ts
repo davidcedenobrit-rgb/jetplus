@@ -8,7 +8,7 @@ const APP_URL       = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.
 const CORREO_ARIANNA    = process.env.CORREO_ARIANNA    ?? 'arianna@laoriental.co'
 const CORREO_VEHIMOTORS = process.env.CORREO_VEHIMOTORS ?? 'vehimotors@laoriental.co'
 const CORREO_DIRECTOR   = process.env.CORREO_DIRECTOR   ?? 'jose@laoriental.co'
-const FROM = 'onboarding@resend.dev'
+const FROM = 'sistema@laoriental.co'
 
 interface Item { descripcion: string; referencia?: string | null; cantidad: number }
 
