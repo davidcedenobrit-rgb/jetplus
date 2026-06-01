@@ -3,7 +3,7 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-export type RolUsuario = 'jose' | 'mary' | 'leysdem' | 'carla' | 'admin' | 'arianna'
+export type RolUsuario = 'jose' | 'mary' | 'leysdem' | 'carla' | 'admin' | 'arianna' | 'almacenista'
 export type EstadoShowroom = 'llegada' | 'por_enviar_pdi' | 'en_taller' | 'en_agencia' | 'reservado' | 'vendido'
 export type EstadoRecibo =
   | 'registrado' | 'pendiente_aprobacion' | 'aprobado' | 'rechazado'

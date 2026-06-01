@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
-  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store
+  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -90,6 +90,18 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
               <Store size={18} />
               <span className="flex-1">Vehículo Showroom</span>
+            </Link>
+          )
+        })()}
+
+        {/* Repuestos — visible para todos */}
+        {(() => {
+          const active = pathname === '/repuestos' || pathname.startsWith('/repuestos/')
+          return (
+            <Link href="/repuestos" onClick={onClose}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+              <Package size={18} />
+              <span className="flex-1">Repuestos</span>
             </Link>
           )
         })()}

@@ -18,7 +18,8 @@ export function getNombreRemitente(email: string | undefined, rol: string | unde
     case 'mary':    return 'Mary'
     case 'leysdem': return 'Leysdem'
     case 'carla':   return 'Carla'
-    case 'arianna': return 'Arianna'
+    case 'arianna':      return 'Arianna'
+    case 'almacenista':  return 'José Manuel'
     default:        return 'La Oriental Automotors'
   }
 }
