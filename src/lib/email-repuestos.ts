@@ -1,6 +1,8 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY!)
+}
 
 const APP_URL       = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
 const CORREO_ARIANNA    = process.env.CORREO_ARIANNA    ?? 'arianna@laoriental.co'
@@ -101,7 +103,7 @@ export async function enviarSolicitudCotizacion(opts: {
     </div>
   `
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to: [CORREO_VEHIMOTORS],
     cc: [CORREO_DIRECTOR],
@@ -134,7 +136,7 @@ export async function enviarConfirmacionCotizacion(opts: {
     </div>
   `
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to: [CORREO_VEHIMOTORS],
     cc: [CORREO_DIRECTOR],
@@ -172,7 +174,7 @@ export async function notificarRespuestaVehimotors(opts: {
     </div>
   `
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to: [CORREO_ARIANNA],
     cc: [CORREO_DIRECTOR],
@@ -208,7 +210,7 @@ export async function enviarComprobantePago(opts: {
     </div>
   `
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to: [CORREO_VEHIMOTORS],
     cc: [CORREO_DIRECTOR],
