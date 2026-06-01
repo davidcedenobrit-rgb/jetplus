@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { enviarConfirmacionPago } from '@/lib/email-repuestos'
+import { enviarAprobacionCotizacion } from '@/lib/email-repuestos'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,8 +10,8 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { solicitudId, comprobanteUrl } = await req.json()
-    if (!solicitudId || !comprobanteUrl) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+    const { solicitudId, userEmail } = await req.json()
+    if (!solicitudId) return NextResponse.json({ error: 'solicitudId requerido' }, { status: 400 })
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
@@ -20,18 +20,25 @@ export async function POST(req: NextRequest) {
 
     if (!sol) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
+    await supabase.from('solicitudes_repuestos').update({
+      estado: 'cotizacion_aprobada',
+      cotizacion_aprobada_at: new Date().toISOString(),
+      cotizacion_aprobada_por: userEmail,
+      updated_at: new Date().toISOString(),
+    }).eq('id', solicitudId)
+
+    await supabase.from('repuestos_historial').insert({
+      solicitud_id: solicitudId, estado_nuevo: 'cotizacion_aprobada',
+      usuario_email: userEmail, notas: 'Cotización aprobada — email enviado a Vehimotors',
+    })
+
     const items = (sol.repuestos_items ?? []).map((i: any) => ({
       descripcion: i.descripcion, referencia: i.referencia, cantidad: i.cantidad,
     }))
 
-    await enviarConfirmacionPago({
-      numero: sol.numero, solicitudId, tokenPago: sol.token_pago,
-      comprobanteUrl, items,
+    await enviarAprobacionCotizacion({
+      numero: sol.numero, solicitudId, tokenFactura: sol.token_factura, items,
     })
-
-    await supabase.from('solicitudes_repuestos').update({
-      estado: 'pago_enviado', updated_at: new Date().toISOString(),
-    }).eq('id', solicitudId)
 
     return NextResponse.json({ ok: true })
   } catch (e: any) {

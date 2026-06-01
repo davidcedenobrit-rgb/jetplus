@@ -1,17 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Package, CheckCircle2, History, Mail, Upload, Truck } from 'lucide-react'
+import { ArrowLeft, Package, CheckCircle2, History, FileText, Truck, AlertCircle } from 'lucide-react'
 import RepuestosAcciones from './RepuestosAcciones'
 
 const PASOS = [
-  { key: 'solicitado',          label: 'Solicitado',          desc: 'José Manuel registró la solicitud' },
-  { key: 'verificado',          label: 'Verificado',          desc: 'Arianna aprobó la solicitud' },
-  { key: 'cotizacion_enviada',  label: 'Cotización enviada',  desc: 'Email enviado a Vehimotors' },
-  { key: 'cotizacion_recibida', label: 'Cot. recibida',       desc: 'Vehimotors confirmó disponibilidad' },
-  { key: 'pago_enviado',        label: 'Pago enviado',        desc: 'Comprobante enviado a Vehimotors' },
-  { key: 'guia_recibida',       label: 'Guía recibida',       desc: 'Número de guía de despacho registrado' },
-  { key: 'completado',          label: 'Completado',          desc: 'Pedido llegó a La Oriental' },
+  { key: 'solicitado',              label: 'Solicitado',         desc: 'José Manuel registró la solicitud' },
+  { key: 'verificado',              label: 'Verificado',         desc: 'Arianna aprobó la solicitud' },
+  { key: 'cotizacion_enviada',      label: 'Cot. enviada',       desc: 'Email enviado a Vehimotors' },
+  { key: 'cotizacion_recibida',     label: 'Cot. recibida',      desc: 'Vehimotors respondió' },
+  { key: 'cotizacion_aprobada',     label: 'Cot. aprobada',      desc: 'José/Arianna aprobaron' },
+  { key: 'factura_recibida',        label: 'Factura recibida',   desc: 'Vehimotors adjuntó factura' },
+  { key: 'pago_enviado',            label: 'Pago enviado',       desc: 'Comprobante enviado' },
+  { key: 'guia_recibida',           label: 'Guía recibida',      desc: 'Guía de despacho registrada' },
+  { key: 'completado',              label: 'Completado',         desc: 'Pedido llegó al taller' },
 ]
 
 function StepBar({ estado }: { estado: string }) {
@@ -159,6 +161,52 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
                   <p className="text-sm text-oriental-black">{solicitud.notas_arianna}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Rechazo */}
+          {solicitud.estado === 'rechazado_verificacion' && (
+            <div className="card p-5 border border-red-200 bg-red-50">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={15} className="text-red-600" />
+                <p className="font-bold text-red-800">Solicitud rechazada por Arianna</p>
+              </div>
+              <p className="text-sm text-red-700">{solicitud.rechazo_motivo}</p>
+            </div>
+          )}
+
+          {/* Cotización recibida */}
+          {solicitud.cotizacion_url && (
+            <div className="card p-5 border border-yellow-200 bg-yellow-50">
+              <h2 className="text-sm font-bold text-yellow-800 mb-2 flex items-center gap-2">
+                <FileText size={14} /> Cotización de Vehimotors
+              </h2>
+              {solicitud.cotizacion_observaciones && (
+                <p className="text-xs text-yellow-700 mb-3 italic">"{solicitud.cotizacion_observaciones}"</p>
+              )}
+              <a href={solicitud.cotizacion_url} target="_blank" rel="noopener noreferrer"
+                className="text-sm font-semibold text-yellow-800 hover:underline flex items-center gap-1">
+                📄 Ver archivo de cotización →
+              </a>
+            </div>
+          )}
+          {!solicitud.cotizacion_url && solicitud.cotizacion_observaciones && (
+            <div className="card p-5 border border-yellow-200 bg-yellow-50">
+              <p className="text-xs font-semibold text-yellow-800 mb-1">Observaciones de Vehimotors:</p>
+              <p className="text-sm text-yellow-700">{solicitud.cotizacion_observaciones}</p>
+            </div>
+          )}
+
+          {/* Factura */}
+          {solicitud.factura_url && (
+            <div className="card p-5 border border-purple-200 bg-purple-50">
+              <h2 className="text-sm font-bold text-purple-800 mb-2 flex items-center gap-2">
+                <FileText size={14} /> Factura de Vehimotors
+              </h2>
+              <a href={solicitud.factura_url} target="_blank" rel="noopener noreferrer"
+                className="text-sm font-semibold text-purple-800 hover:underline flex items-center gap-1">
+                📄 Ver factura →
+              </a>
             </div>
           )}
 

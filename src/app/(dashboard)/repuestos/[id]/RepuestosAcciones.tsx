@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronRight, Send, Upload, Loader2, CheckCircle2 } from 'lucide-react'
+import { Send, Upload, Loader2, CheckCircle2, X, ExternalLink, FileText, Truck } from 'lucide-react'
 
 interface Item { id: string; descripcion: string; referencia?: string | null; cantidad: number }
 interface Props {
@@ -14,198 +14,273 @@ interface Props {
   userEmail: string
 }
 
-const ROL_ARIANNA  = ['arianna', 'director', 'jose', 'admin', 'mary', 'leysdem']
-const ROL_DIRECTOR = ['director', 'jose', 'admin', 'mary', 'leysdem']
+const ROL_ARIANNA   = ['arianna', 'director', 'jose', 'admin', 'mary', 'leysdem']
+const ROL_DIRECTOR  = ['director', 'jose', 'admin', 'mary', 'leysdem']
+const ROL_PAGO      = ['director', 'jose', 'admin', 'mary']  // José + Mary revisan factura
 
 export default function RepuestosAcciones({ solicitud, items, rol, userId, userEmail }: Props) {
-  const supabase = createClient()
-  const router   = useRouter()
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [notasAri, setNotasAri] = useState(solicitud.notas_arianna ?? '')
-  const [guia, setGuia]         = useState(solicitud.numero_guia ?? '')
-  const [fechaLlegada, setFechaLlegada] = useState(solicitud.fecha_estimada_llegada ?? '')
-  const [uploading, setUploading] = useState(false)
+  const supabase  = createClient()
+  const router    = useRouter()
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
+  const [notasRec, setNotasRec]   = useState(solicitud.rechazo_motivo ?? '')
+  const [notasAri, setNotasAri]   = useState(solicitud.notas_arianna ?? '')
+  const [showRechazo, setShowRechazo] = useState(false)
+  const [uploading, setUploading] = useState<string | null>(null)
 
-  const estado = solicitud.estado
-  const esArianna   = ROL_ARIANNA.includes(rol)
-  const esAlmacenista = true // todos pueden ver, almacenista solo crea
-  const esCompleto  = estado === 'completado' || estado === 'cancelado'
+  const esArianna  = ROL_ARIANNA.includes(rol)
+  const esDirector = ROL_DIRECTOR.includes(rol)
+  const esPago     = ROL_PAGO.includes(rol)
+  const estado     = solicitud.estado
 
-  async function logHistorial(estadoNuevo: string, notas?: string) {
+  async function log(nuevoEstado: string, notas?: string) {
     await supabase.from('repuestos_historial').insert({
-      solicitud_id: solicitud.id,
-      estado_nuevo: estadoNuevo,
-      usuario_email: userEmail,
-      notas: notas ?? null,
+      solicitud_id: solicitud.id, estado_nuevo: nuevoEstado,
+      usuario_email: userEmail, notas: notas ?? null,
     })
   }
 
-  async function avanzarEstado(nuevoEstado: string, extra?: object, notaLog?: string) {
+  async function avanzar(nuevoEstado: string, extra?: object, notaLog?: string) {
     setLoading(true); setError('')
     const { error: err } = await supabase.from('solicitudes_repuestos').update({
-      estado: nuevoEstado,
-      updated_at: new Date().toISOString(),
-      ...extra,
+      estado: nuevoEstado, updated_at: new Date().toISOString(), ...extra,
     }).eq('id', solicitud.id)
     if (err) { setError(err.message); setLoading(false); return }
-    await logHistorial(nuevoEstado, notaLog)
+    await log(nuevoEstado, notaLog)
     router.refresh()
     setLoading(false)
   }
 
-  async function verificar() {
-    await avanzarEstado('verificado', { notas_arianna: notasAri || null }, 'Arianna verificó la solicitud')
-  }
-
-  async function enviarCotizacion() {
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('/api/repuestos/enviar-cotizacion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ solicitudId: solicitud.id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Error al enviar')
-      await logHistorial('cotizacion_enviada', 'Email de cotización enviado a Vehimotors')
-      router.refresh()
-    } catch (e: any) { setError(e.message) }
-    setLoading(false)
-  }
-
-  async function subirComprobante(file: File) {
-    setUploading(true); setError('')
+  // ── Upload helper ──────────────────────────────────────────────
+  async function subirArchivo(tipo: string, file: File): Promise<string | null> {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Sesión expirada'); setUploading(false); return }
-
-    const path = `repuestos/${solicitud.id}/comprobante-${Date.now()}.${file.name.split('.').pop()}`
+    if (!user) return null
+    const path = `repuestos/${solicitud.id}/${tipo}-${Date.now()}.${file.name.split('.').pop()}`
     const { error: upErr } = await supabase.storage.from('comprobantes').upload(path, file, { upsert: false })
-    if (upErr) { setError(`Error al subir: ${upErr.message}`); setUploading(false); return }
-
+    if (upErr) { setError(`Error al subir: ${upErr.message}`); return null }
     const { data: urlData } = supabase.storage.from('comprobantes').getPublicUrl(path)
+    return urlData.publicUrl
+  }
 
-    // Enviar comprobante por email y actualizar estado
+  async function handleSubirDoc(tipo: 'retencion_url' | 'comprobante_url' | 'otros_docs_url', file: File) {
+    setUploading(tipo); setError('')
+    const url = await subirArchivo(tipo, file)
+    if (url) {
+      await supabase.from('solicitudes_repuestos').update({ [tipo]: url, updated_at: new Date().toISOString() }).eq('id', solicitud.id)
+      await log(estado, `Documento cargado: ${tipo}`)
+      router.refresh()
+    }
+    setUploading(null)
+  }
+
+  async function handleEnviarPago() {
+    if (!solicitud.comprobante_url) { setError('Debes cargar el comprobante de pago primero'); return }
+    setLoading(true); setError('')
     const res = await fetch('/api/repuestos/enviar-pago', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, comprobanteUrl: urlData.publicUrl }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ solicitudId: solicitud.id, comprobanteUrl: solicitud.comprobante_url }),
     })
-    if (!res.ok) { setError('Error al enviar el comprobante'); setUploading(false); return }
-
-    await supabase.from('solicitudes_repuestos').update({ comprobante_pago_url: urlData.publicUrl, updated_at: new Date().toISOString() }).eq('id', solicitud.id)
-    await logHistorial('pago_enviado', 'Comprobante de pago enviado a Vehimotors')
-    router.refresh()
-    setUploading(false)
+    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
+    await log('pago_enviado', 'Pago enviado a Vehimotors')
+    router.refresh(); setLoading(false)
   }
 
-  async function registrarGuia() {
-    if (!guia.trim()) { setError('Ingresa el número de guía'); return }
-    await avanzarEstado('guia_recibida', { numero_guia: guia, fecha_estimada_llegada: fechaLlegada || null }, `Guía recibida: ${guia}`)
+  async function handleAprobarCotizacion() {
+    setLoading(true); setError('')
+    const res = await fetch('/api/repuestos/aprobar-cotizacion', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ solicitudId: solicitud.id, userEmail }),
+    })
+    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
+    router.refresh(); setLoading(false)
   }
 
-  async function confirmarLlegada() {
-    await avanzarEstado('completado', {}, 'Pedido recibido y confirmado en taller')
-  }
+  const pagoListo = solicitud.comprobante_url // mínimo el comprobante
 
   return (
     <div className="space-y-4">
       {error && <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{error}</div>}
 
-      {/* ── PASO 1 → 2: Arianna verifica ── */}
+      {/* ── PASO 1 → Arianna verifica o rechaza ── */}
       {estado === 'solicitado' && esArianna && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-3">Verificar solicitud</h3>
           <div className="mb-3">
-            <label className="label">Notas de verificación</label>
-            <textarea className="textarea text-sm" rows={2} placeholder="Observaciones opcionales…"
-              value={notasAri} onChange={e => setNotasAri(e.target.value)} />
+            <label className="label">Notas</label>
+            <textarea className="textarea text-sm" rows={2} value={notasAri} onChange={e => setNotasAri(e.target.value)} placeholder="Observaciones opcionales…" />
           </div>
-          <button onClick={verificar} disabled={loading}
-            className="w-full btn-primary flex items-center justify-center gap-2 py-2.5">
+          <button onClick={() => avanzar('verificado', { notas_arianna: notasAri || null }, 'Verificado por Arianna')}
+            disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 py-2.5 mb-2">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            Marcar como verificado
+            Verificar ✓
           </button>
+          <button onClick={() => setShowRechazo(true)} className="w-full btn-secondary py-2.5 text-oriental-red border-red-200 hover:bg-red-50">
+            Rechazar solicitud
+          </button>
+          {showRechazo && (
+            <div className="mt-3 space-y-2">
+              <textarea className="textarea text-sm" rows={2} placeholder="Motivo del rechazo *"
+                value={notasRec} onChange={e => setNotasRec(e.target.value)} />
+              <div className="flex gap-2">
+                <button disabled={!notasRec.trim() || loading}
+                  onClick={() => avanzar('rechazado_verificacion', { rechazo_motivo: notasRec }, `Rechazado: ${notasRec}`)}
+                  className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-colors disabled:opacity-50">
+                  {loading ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Confirmar rechazo'}
+                </button>
+                <button onClick={() => setShowRechazo(false)} className="flex-1 btn-secondary py-2 text-sm">Cancelar</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── PASO 2 → 3: Enviar cotización a Vehimotors ── */}
+      {/* ── Rechazada ── */}
+      {estado === 'rechazado_verificacion' && (
+        <div className="card p-5 border border-red-200 bg-red-50">
+          <p className="font-bold text-red-800 mb-1">Solicitud rechazada</p>
+          <p className="text-xs text-red-600">{solicitud.rechazo_motivo}</p>
+        </div>
+      )}
+
+      {/* ── PASO 2 → Enviar cotización a Vehimotors ── */}
       {estado === 'verificado' && esArianna && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Enviar cotización a Vehimotors</h3>
-          <p className="text-xs text-oriental-gray mb-4">Se enviará un email a Vehimotors con los repuestos y botones de respuesta.</p>
-          <button onClick={enviarCotizacion} disabled={loading}
-            className="w-full btn-primary flex items-center justify-center gap-2 py-2.5">
+          <p className="text-xs text-oriental-gray mb-4">Email con 3 botones de respuesta + formulario para adjuntar cotización.</p>
+          <button onClick={async () => {
+            setLoading(true); setError('')
+            const res = await fetch('/api/repuestos/enviar-cotizacion', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ solicitudId: solicitud.id }),
+            })
+            if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
+            await log('cotizacion_enviada', 'Email enviado a Vehimotors')
+            router.refresh(); setLoading(false)
+          }} disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 py-2.5">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             Enviar email a Vehimotors
           </button>
         </div>
       )}
 
-      {/* ── PASO 3: Esperando respuesta ── */}
+      {/* ── PASO 3 → Esperando respuesta ── */}
       {estado === 'cotizacion_enviada' && (
         <div className="card p-5 border border-yellow-200 bg-yellow-50">
           <p className="text-sm font-semibold text-yellow-800 flex items-center gap-2">
             <Loader2 size={14} className="animate-spin" /> Esperando respuesta de Vehimotors…
           </p>
-          <p className="text-xs text-yellow-600 mt-1">El sistema actualizará automáticamente cuando respondan.</p>
-          {solicitud.correo_enviado_at && (
-            <p className="text-[10px] text-yellow-600 mt-2">
-              Email enviado: {new Date(solicitud.correo_enviado_at).toLocaleString('es-VE')}
-            </p>
-          )}
+          <p className="text-xs text-yellow-600 mt-1">El sistema actualizará cuando respondan.</p>
         </div>
       )}
 
-      {/* ── PASO 4 → 5: Subir comprobante de pago ── */}
-      {estado === 'cotizacion_recibida' && esArianna && solicitud.respuesta_vehimotors !== 'no_hay' && (
+      {/* ── PASO 4 → Cotización recibida → aprobar ── */}
+      {estado === 'cotizacion_recibida' && (esArianna || esDirector) && (
         <div className="card p-5">
-          <h3 className="text-sm font-bold text-oriental-black mb-2">Enviar comprobante de pago</h3>
-          <p className="text-xs text-oriental-gray mb-4">Sube el comprobante — se enviará automáticamente a Vehimotors.</p>
-          <label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm font-semibold
-            ${uploading ? 'border-gray-300 text-gray-400 cursor-not-allowed' : 'border-oriental-red/30 text-oriental-red hover:border-oriental-red hover:bg-red-50'}`}>
-            {uploading ? <><Loader2 size={16} className="animate-spin" /> Subiendo…</> : <><Upload size={16} /> Cargar comprobante</>}
-            <input type="file" className="hidden" accept="image/*,.pdf" disabled={uploading}
-              onChange={e => { const f = e.target.files?.[0]; if (f) subirComprobante(f) }} />
-          </label>
-          {solicitud.comprobante_pago_url && (
-            <a href={solicitud.comprobante_pago_url} target="_blank" rel="noopener noreferrer"
-              className="mt-2 text-xs text-oriental-red font-semibold flex items-center gap-1 hover:underline">
-              Ver comprobante subido →
+          <h3 className="text-sm font-bold text-oriental-black mb-2">Revisar y aprobar cotización</h3>
+          {solicitud.cotizacion_url ? (
+            <a href={solicitud.cotizacion_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-oriental-red font-semibold hover:underline mb-4">
+              <FileText size={14} /> Ver cotización adjunta →
+            </a>
+          ) : (
+            <p className="text-xs text-oriental-gray mb-4">Vehimotors no adjuntó archivo — ver observaciones arriba.</p>
+          )}
+          {solicitud.cotizacion_observaciones && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs font-semibold text-yellow-800 mb-1">Observaciones de Vehimotors:</p>
+              <p className="text-sm text-yellow-700">{solicitud.cotizacion_observaciones}</p>
+            </div>
+          )}
+          <button onClick={handleAprobarCotizacion} disabled={loading}
+            className="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+            Aprobar cotización ✓
+          </button>
+        </div>
+      )}
+
+      {/* ── PASO 5 → Esperando factura ── */}
+      {estado === 'cotizacion_aprobada' && (
+        <div className="card p-5 border border-purple-200 bg-purple-50 text-center">
+          <Loader2 size={18} className="animate-spin text-purple-600 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-purple-800">Esperando factura de Vehimotors…</p>
+          <p className="text-xs text-purple-600 mt-1">Se les envió el enlace para adjuntar la factura.</p>
+        </div>
+      )}
+
+      {/* ── PASO 6 → Factura recibida → cargar docs + enviar pago ── */}
+      {(estado === 'factura_recibida' || (estado === 'pago_enviado' && !solicitud.comprobante_url)) && esPago && (
+        <div className="card p-5">
+          <h3 className="text-sm font-bold text-oriental-black mb-1">Documentos de pago</h3>
+          <p className="text-xs text-oriental-gray mb-4">Carga los documentos y luego envía el pago.</p>
+
+          {/* Ver factura */}
+          {solicitud.factura_url && (
+            <a href={solicitud.factura_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-oriental-red font-semibold hover:underline mb-4">
+              <FileText size={14} /> Ver factura →
             </a>
           )}
-        </div>
-      )}
 
-      {/* ── PASO 5 → 6: Registrar guía ── */}
-      {estado === 'pago_enviado' && esArianna && (
-        <div className="card p-5">
-          <h3 className="text-sm font-bold text-oriental-black mb-3">Registrar guía de despacho</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="label">Número de guía *</label>
-              <input type="text" className="input font-mono" placeholder="0000000000"
-                value={guia} onChange={e => setGuia(e.target.value)} />
+          {/* Documentos a cargar */}
+          {[
+            { campo: 'retencion_url',   label: 'Retenciones',       existente: solicitud.retencion_url },
+            { campo: 'comprobante_url', label: 'Comprobante de pago', existente: solicitud.comprobante_url },
+            { campo: 'otros_docs_url',  label: 'Otros documentos',  existente: solicitud.otros_docs_url },
+          ].map(({ campo, label, existente }) => (
+            <div key={campo} className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="label mb-0">{label}</label>
+                {existente && (
+                  <a href={existente} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] text-green-600 font-semibold flex items-center gap-1 hover:underline">
+                    <CheckCircle2 size={11} /> Cargado →
+                  </a>
+                )}
+              </div>
+              <label className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer text-xs font-medium transition-colors
+                ${uploading === campo ? 'border-gray-300 text-gray-400 cursor-not-allowed' : existente ? 'border-green-300 bg-green-50 text-green-700 hover:border-green-400' : 'border-oriental-red/30 text-oriental-red hover:border-oriental-red hover:bg-red-50'}`}>
+                {uploading === campo ? <><Loader2 size={12} className="animate-spin" /> Subiendo…</> : <><Upload size={12} /> {existente ? 'Reemplazar' : 'Cargar'}</>}
+                <input type="file" className="hidden" accept="image/*,.pdf" disabled={!!uploading}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleSubirDoc(campo as any, f) }} />
+              </label>
             </div>
-            <div>
-              <label className="label">Fecha estimada de llegada</label>
-              <input type="date" className="input" value={fechaLlegada} onChange={e => setFechaLlegada(e.target.value)} />
-            </div>
-            <button onClick={registrarGuia} disabled={loading}
-              className="w-full btn-primary flex items-center justify-center gap-2 py-2.5">
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
-              Registrar guía
+          ))}
+
+          {/* Botón enviar pago */}
+          {estado === 'factura_recibida' && (
+            <button onClick={handleEnviarPago} disabled={!pagoListo || loading}
+              className={`w-full mt-2 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2
+                ${pagoListo ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              {pagoListo ? 'Enviar pago a Vehimotors' : 'Carga el comprobante para continuar'}
             </button>
-          </div>
+          )}
         </div>
       )}
 
-      {/* ── PASO 6 → 7: Confirmar llegada ── */}
+      {/* ── PASO 7 → Pago enviado, esperando guía ── */}
+      {estado === 'pago_enviado' && (
+        <div className="card p-5 border border-blue-200 bg-blue-50">
+          <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin" /> Pago enviado — esperando guía de despacho…
+          </p>
+          <p className="text-xs text-blue-600 mt-1">Vehimotors confirmará recepción y cargará la guía.</p>
+        </div>
+      )}
+
+      {/* ── PASO 8 → Guía recibida → confirmar llegada ── */}
       {estado === 'guia_recibida' && esArianna && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Confirmar llegada del pedido</h3>
-          <p className="text-xs text-oriental-gray mb-4">Confirma que los repuestos llegaron al taller.</p>
-          <button onClick={confirmarLlegada} disabled={loading}
+          {solicitud.guia_url && (
+            <a href={solicitud.guia_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-oriental-red font-semibold hover:underline mb-3">
+              <Truck size={14} /> Ver guía de despacho →
+            </a>
+          )}
+          <button onClick={() => avanzar('completado', {}, 'Pedido recibido y confirmado en taller')}
+            disabled={loading}
             className="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
             Confirmar llegada ✓
