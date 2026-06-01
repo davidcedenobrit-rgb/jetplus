@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Package, CheckCircle2, History, FileText, Truck, AlertCircle } from 'lucide-react'
 import RepuestosAcciones from './RepuestosAcciones'
+import EliminarSolicitud from './EliminarSolicitud'
 
 const PASOS = [
   { key: 'solicitado',              label: 'Solicitado',         desc: 'José Manuel registró la solicitud' },
@@ -257,7 +258,7 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
         </div>
 
         {/* Panel de acciones */}
-        <div>
+        <div className="space-y-4">
           <RepuestosAcciones
             solicitud={solicitud}
             items={(items ?? []).map((i: any) => ({ id: i.id, descripcion: i.descripcion, referencia: i.referencia, cantidad: i.cantidad }))}
@@ -265,6 +266,10 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
             userId={user.id}
             userEmail={user.email ?? ''}
           />
+          {/* Eliminar solicitud — solo José y Arianna */}
+          {['jose', 'admin', 'director', 'arianna'].includes(rol) && (
+            <EliminarSolicitud solicitudId={solicitud.id} />
+          )}
         </div>
       </div>
     </div>
