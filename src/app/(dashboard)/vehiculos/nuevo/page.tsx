@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -28,7 +28,7 @@ function getCuotasFromPlan(p: PlanAC500): { numero: number; monto: number; dia: 
   const cuotas = all.slice(0, p.meses)
   return cuotas.map((monto, i) => ({
     numero: i + 1, monto,
-    dia: i === cuotas.length - 1 ? `Día ${cuotas.length * 30} (Entrega)` : i === 0 ? 'Día 0' : `Día ${i * 30}`,
+    dia: i === cuotas.length - 1 ? `DÃ­a ${cuotas.length * 30} (Entrega)` : i === 0 ? 'DÃ­a 0' : `DÃ­a ${i * 30}`,
   }))
 }
 
@@ -75,7 +75,7 @@ export default function NuevoVehiculoPage() {
   const [frecuencia, setFrecuencia] = useState('mensual')
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
 
-  // Sub-plan La Oriental (Crédito Inicial)
+  // Sub-plan La Oriental (CrÃ©dito Inicial)
   const [orMonto, setOrMonto] = useState('')
   const [orCuotas, setOrCuotas] = useState('12')
   const [orMontoCuota, setOrMontoCuota] = useState('')
@@ -83,7 +83,7 @@ export default function NuevoVehiculoPage() {
   const [orFecha, setOrFecha] = useState(new Date().toISOString().split('T')[0])
   const [orObs, setOrObs] = useState('')
   const [orMontoHistorico, setOrMontoHistorico] = useState('')
-  // Sub-plan Vehimotors (Crédito Financiamiento)
+  // Sub-plan Vehimotors (CrÃ©dito Financiamiento)
   const [vhMonto, setVhMonto] = useState('')
   const [vhCuotas, setVhCuotas] = useState('12')
   const [vhMontoCuota, setVhMontoCuota] = useState('')
@@ -91,16 +91,16 @@ export default function NuevoVehiculoPage() {
   const [vhFecha, setVhFecha] = useState(new Date().toISOString().split('T')[0])
   const [vhObs, setVhObs] = useState('')
   const [vhMontoHistorico, setVhMontoHistorico] = useState('')
-  // Resumen financiero del vehículo (plan personalizado)
+  // Resumen financiero del vehÃ­culo (plan personalizado)
   const [precioTotalVehiculo, setPrecioTotalVehiculo] = useState('')
   const [montoContado, setMontoContado] = useState('')
 
-  // Plan Vehimotors (40/60) — campos manuales editables
+  // Plan Vehimotors (40/60) â€” campos manuales editables
   const [vh4060Inicial, setVh4060Inicial] = useState('')
   const [vh4060NumCuotas, setVh4060NumCuotas] = useState('24')
   const [vh4060MontoCuota, setVh4060MontoCuota] = useState('')
 
-  // Cuota especial (tercer bloque opcional — corre en paralelo a los mensuales)
+  // Cuota especial (tercer bloque opcional â€” corre en paralelo a los mensuales)
   const [ceActivo, setCeActivo] = useState(false)
   const [ceMonto, setCeMonto] = useState('')
   const [ceCuotas, setCeCuotas] = useState('8')
@@ -109,13 +109,13 @@ export default function NuevoVehiculoPage() {
   const [ceFecha, setCeFecha] = useState(new Date().toISOString().split('T')[0])
   const [ceObs, setCeObs] = useState('')
 
-  // ── Calculadora de precio (Plan Personalizado) ──
+  // â”€â”€ Calculadora de precio (Plan Personalizado) â”€â”€
   const [calcBase, setCalcBase] = useState('')
   const [calcIvaPct, setCalcIvaPct] = useState('16')
   const [calcGastosContado, setCalcGastosContado] = useState('')
   const [calcGastosCredito, setCalcGastosCredito] = useState('')
   const [calcPctInicial, setCalcPctInicial] = useState('40')
-  const [calcTasaAnual, setCalcTasaAnual] = useState('')
+  const [calcTasaAnual, setCalcTasaAnual] = useState('24')
   const [calcNumCuotasVh, setCalcNumCuotasVh] = useState('24')
 
   useEffect(() => {
@@ -214,17 +214,23 @@ export default function NuevoVehiculoPage() {
   }, [orMonto, orCuotas, orMontoCuota])
 
   const calcVehimotors = useMemo(() => {
-    const monto       = parseFloat(vhMonto) || 0
-    const ceDeduccion = ceActivo ? (parseFloat(ceMonto) || 0) : 0
-    const montoMensual = Math.max(0, monto - ceDeduccion)   // lo que cubre las cuotas mensuales
-    const cuotas      = parseInt(vhCuotas) || 0
-    const montoCuota  = parseFloat(vhMontoCuota) || 0
-    const totalCuotas = cuotas * montoCuota
-    const showWarning = montoMensual > 0 && cuotas > 0 && montoCuota > 0 && Math.abs(totalCuotas - montoMensual) > 0.01
-    return { monto, ceDeduccion, montoMensual, cuotas, montoCuota, totalCuotas, showWarning }
-  }, [vhMonto, vhCuotas, vhMontoCuota, ceActivo, ceMonto])
+    const monto      = parseFloat(vhMonto) || 0
+    const cuotas     = parseInt(vhCuotas) || 0
+    const montoCuota = parseFloat(vhMontoCuota) || 0
+    const totalMensual = cuotas * montoCuota
 
-  // Auto-calcular monto por cuota — La Oriental (plan personalizado)
+    // Trimestrales
+    const nTrim     = ceActivo ? (parseInt(ceCuotas) || 0) : 0
+    const montoTrim = ceActivo ? (parseFloat(ceMontoCuota) || 0) : 0
+    const totalTrim = nTrim * montoTrim
+
+    const grandTotal  = totalMensual + totalTrim
+    const showWarning = !ceActivo && monto > 0 && cuotas > 0 && montoCuota > 0 && Math.abs(totalMensual - monto) > 0.01
+
+    return { monto, cuotas, montoCuota, totalMensual, nTrim, montoTrim, totalTrim, grandTotal, showWarning }
+  }, [vhMonto, vhCuotas, vhMontoCuota, ceActivo, ceCuotas, ceMontoCuota])
+
+  // Auto-calcular monto por cuota â€” La Oriental (plan personalizado)
   useEffect(() => {
     const monto = parseFloat(orMonto)
     const cuotas = parseInt(orCuotas)
@@ -235,27 +241,43 @@ export default function NuevoVehiculoPage() {
     }
   }, [orMonto, orCuotas])
 
-  // Auto-calcular monto por cuota — Vehimotors (descuenta cuotas especiales si activas)
+  // Auto-calcular monto por cuota â€” Vehimotors
+  // Sin cuotas trimestrales: PMT normal (sin cambios)
+  // Con cuotas trimestrales: cuota_mensual = (PMT_total - trimestral_total) / N
   useEffect(() => {
     const monto  = parseFloat(vhMonto)
     const cuotas = parseInt(vhCuotas)
-    const ceDeduccion = ceActivo ? (parseFloat(ceMonto) || 0) : 0
-    const montoMensual = Math.max(0, (monto || 0) - ceDeduccion)
-    if (montoMensual > 0 && cuotas > 0) {
-      const tasa = parseFloat(calcTasaAnual) || 0
-      if (tasa > 0) {
-        const r = tasa / 100 / 12
-        const pmt = montoMensual * r * Math.pow(1 + r, cuotas) / (Math.pow(1 + r, cuotas) - 1)
-        setVhMontoCuota(pmt.toFixed(2))
-      } else {
-        setVhMontoCuota((montoMensual / cuotas).toFixed(2))
-      }
-    } else {
-      setVhMontoCuota('')
-    }
-  }, [vhMonto, vhCuotas, calcTasaAnual, ceActivo, ceMonto])
+    if (!monto || monto <= 0 || !cuotas || cuotas <= 0) { setVhMontoCuota(''); return }
 
-  // ── Sincronizar fecha de entrega → fecha de inicio de cuotas ──────────────
+    const tasa = parseFloat(calcTasaAnual) || 0
+
+    // PMT sobre el monto completo (igual que antes cuando no hay trimestrales)
+    let pmtMensual: number
+    if (tasa > 0) {
+      const r = tasa / 100 / 12
+      pmtMensual = monto * r * Math.pow(1 + r, cuotas) / (Math.pow(1 + r, cuotas) - 1)
+    } else {
+      pmtMensual = monto / cuotas
+    }
+
+    // Si hay cuotas trimestrales activas: ajustar cuota mensual descontando el total trimestral
+    if (ceActivo) {
+      const nTrim      = parseInt(ceCuotas) || 0
+      const montoTrim  = parseFloat(ceMontoCuota) || 0
+      const totalTrim  = nTrim * montoTrim
+      if (totalTrim > 0) {
+        const totalConInteres = pmtMensual * cuotas          // total si todo fuera mensual
+        const mensualTotal    = Math.max(0, totalConInteres - totalTrim)
+        setVhMontoCuota((mensualTotal / cuotas).toFixed(2))
+        return
+      }
+    }
+
+    // Sin trimestrales: PMT normal (sin cambios respecto al cÃ³digo anterior)
+    setVhMontoCuota(pmtMensual.toFixed(2))
+  }, [vhMonto, vhCuotas, calcTasaAnual, ceActivo, ceCuotas, ceMontoCuota])
+
+  // â”€â”€ Sincronizar fecha de entrega â†’ fecha de inicio de cuotas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (fechaEntrega) {
       setOrFecha(fechaEntrega)
@@ -276,11 +298,11 @@ export default function NuevoVehiculoPage() {
   const resumenFinanciero = useMemo(() => {
     const precioBase = parseFloat(precioTotalVehiculo) || 0
 
-    // La Oriental: usar monto directo (el total que cobra La Oriental, independiente de cuántas cuotas)
+    // La Oriental: usar monto directo (el total que cobra La Oriental, independiente de cuÃ¡ntas cuotas)
     const totalOr = calcInicialOriental.monto
 
-    // Vehimotors: total de cuotas (incluye interés si hay); si no hay montoCuota, usar monto base
-    const totalVh = calcVehimotors.totalCuotas > 0 ? calcVehimotors.totalCuotas : calcVehimotors.monto
+    // Vehimotors: total de cuotas (incluye interÃ©s si hay); si no hay montoCuota, usar monto base
+    const totalVh = calcVehimotors.totalMensual > 0 ? calcVehimotors.totalMensual : calcVehimotors.monto
 
     // Cuota especial (paralela)
     const totalCe = ceActivo ? (calcCuotaEspecial.totalCuotas > 0 ? calcCuotaEspecial.totalCuotas : calcCuotaEspecial.monto) : 0
@@ -288,9 +310,9 @@ export default function NuevoVehiculoPage() {
     const totalComprometido = totalOr + totalVh + totalCe
 
     return { precioBase, totalOr, totalVh, totalCe, totalComprometido }
-  }, [precioTotalVehiculo, calcInicialOriental.monto, calcVehimotors.totalCuotas, calcVehimotors.monto, calcCuotaEspecial, ceActivo])
+  }, [precioTotalVehiculo, calcInicialOriental.monto, calcVehimotors.totalMensual, calcVehimotors.monto, calcCuotaEspecial, ceActivo])
 
-  // ── Calculadora de precio (live) ──
+  // â”€â”€ Calculadora de precio (live) â”€â”€
   const calculadora = useMemo(() => {
     const base = parseFloat(calcBase) || 0
     if (base <= 0) return null
@@ -303,10 +325,10 @@ export default function NuevoVehiculoPage() {
     // Modalidad contado
     const contadoTotal = base + iva + gastosContado
 
-    // Modalidad crédito
+    // Modalidad crÃ©dito
     const inicialBase = base * pctInicial            // ej: 40% precio base
     const totalInicialLaOriental = inicialBase + iva + gastosCredito  // total inicial a pagar
-    const financiamientoVh = base * (1 - pctInicial) // 60% precio base → Vehimotors
+    const financiamientoVh = base * (1 - pctInicial) // 60% precio base â†’ Vehimotors
     const n = parseInt(calcNumCuotasVh) || 24
     const tasaAnual = parseFloat(calcTasaAnual) || 0
     let cuotaVh: number
@@ -314,7 +336,7 @@ export default function NuevoVehiculoPage() {
       const r = tasaAnual / 100 / 12  // tasa mensual
       cuotaVh = financiamientoVh * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1)
     } else {
-      cuotaVh = financiamientoVh / n  // sin interés
+      cuotaVh = financiamientoVh / n  // sin interÃ©s
     }
 
     return { base, iva, ivaPct, pctInicial, gastosContado, gastosCredito, contadoTotal, inicialBase, totalInicialLaOriental, financiamientoVh, cuotaVh, n, tasaAnual }
@@ -332,7 +354,7 @@ export default function NuevoVehiculoPage() {
     setVhMonto(calculadora.financiamientoVh.toFixed(2))
     setVhCuotas(String(calculadora.n))
     setVhMontoCuota(calculadora.cuotaVh.toFixed(2))
-    // Precio de referencia del vehículo
+    // Precio de referencia del vehÃ­culo
     setPrecioTotalVehiculo(calculadora.base.toFixed(2))
   }
 
@@ -347,7 +369,7 @@ export default function NuevoVehiculoPage() {
       tipo_compra: tipoCompra, fecha_entrega: fechaEntrega || null, estado: 'activo',
       observaciones: observaciones || null,
     })
-    if (!parsed.success) { setError(parsed.error.errors[0]?.message ?? 'Datos inválidos'); return }
+    if (!parsed.success) { setError(parsed.error.errors[0]?.message ?? 'Datos invÃ¡lidos'); return }
 
     setLoading(true)
     setError('')
@@ -362,7 +384,7 @@ export default function NuevoVehiculoPage() {
 
     if (insertError || !vehiculo) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
 
-    // Vincular showroom si se seleccionó uno
+    // Vincular showroom si se seleccionÃ³ uno
     if (showroomSeleccionado) {
       await supabase.from('vehiculos_showroom').update({
         estado: 'vendido',
@@ -372,18 +394,18 @@ export default function NuevoVehiculoPage() {
       }).eq('id', showroomSeleccionado.id)
     }
 
-    // Si es financiado, crear crédito automáticamente
+    // Si es financiado, crear crÃ©dito automÃ¡ticamente
     if (tipoCompra === 'financiado') {
 
-      // --- Plan Personalizado: crear DOS créditos (uno o ambos activos) ---
+      // --- Plan Personalizado: crear DOS crÃ©ditos (uno o ambos activos) ---
       if (plan === 'personalizado') {
-        const orActivo = calcInicialOriental.monto > 0   // activo si hay monto, aunque cuotas = 0 (pago único)
+        const orActivo = calcInicialOriental.monto > 0   // activo si hay monto, aunque cuotas = 0 (pago Ãºnico)
         const vhActivo = calcVehimotors.cuotas > 0
         if (!orActivo && !vhActivo) {
-          setError('Completa al menos un bloque de crédito'); setLoading(false); return
+          setError('Completa al menos un bloque de crÃ©dito'); setLoading(false); return
         }
 
-        // Distribuye montoHistorico entre cuotas: completas primero, última con abono parcial
+        // Distribuye montoHistorico entre cuotas: completas primero, Ãºltima con abono parcial
         function buildCuotas(creditoId: string, cuotas: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string, montoHistorico = 0) {
           let restante = montoHistorico
           return Array.from({ length: cuotas }, (_, i) => {
@@ -429,20 +451,20 @@ export default function NuevoVehiculoPage() {
             num_cuotas: calcInicialOriental.cuotas,
             frecuencia_pago: orFrecuencia, fecha_inicio: orFecha,
             moneda: 'USD', estado: 'activo', plan_tipo: 'inicial_la_oriental',
-            observaciones: orObs || 'Crédito de Inicial — La Oriental',
+            observaciones: orObs || 'CrÃ©dito de Inicial â€” La Oriental',
           }).select().single()
-          if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
+          if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crÃ©dito La Oriental'); setLoading(false); return }
           if (calcInicialOriental.cuotas > 0) {
-            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental', orHistorico))
+            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'CrÃ©dito de Inicial â€” La Oriental', orHistorico))
           } else {
-            // Pago único — crear 1 cuota por el monto completo para que aparezca en el selector de pagos
+            // Pago Ãºnico â€” crear 1 cuota por el monto completo para que aparezca en el selector de pagos
             await supabase.from('cuotas').insert([{
               credito_id: creditoOr.id,
               numero_cuota: 1,
               fecha_vencimiento: orFecha,
               monto: orTotalMonto,
               mora: 0,
-              concepto: 'Crédito de Inicial — La Oriental',
+              concepto: 'CrÃ©dito de Inicial â€” La Oriental',
               estado: 'pendiente',
               monto_pagado: 0,
             }])
@@ -452,8 +474,8 @@ export default function NuevoVehiculoPage() {
 
         if (vhActivo) {
           const vhHistorico   = parseFloat(vhMontoHistorico) || 0
-          // Si hay cuota especial, el crédito mensual Vehimotors es sobre montoMensual (ya descontado)
-          const vhTotalMonto  = calcVehimotors.totalCuotas > 0 ? calcVehimotors.totalCuotas : calcVehimotors.montoMensual
+          // Si hay cuota especial, el crÃ©dito mensual Vehimotors es sobre montoMensual (ya descontado)
+          const vhTotalMonto  = calcVehimotors.totalMensual > 0 ? calcVehimotors.totalMensual : calcVehimotors.totalMensual
           const vhSaldoInicial = Math.max(0, vhTotalMonto - vhHistorico)
           const { data: creditoVh, error: errVh } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
@@ -463,14 +485,14 @@ export default function NuevoVehiculoPage() {
             num_cuotas: calcVehimotors.cuotas,
             frecuencia_pago: vhFrecuencia, fecha_inicio: vhFecha,
             moneda: 'USD', estado: 'activo', plan_tipo: 'financiamiento_vehimotors',
-            observaciones: vhObs || 'Crédito Financiamiento — Vehimotors',
+            observaciones: vhObs || 'CrÃ©dito Financiamiento â€” Vehimotors',
           }).select().single()
-          if (errVh || !creditoVh) { setError(errVh?.message ?? 'Error creando crédito Vehimotors'); setLoading(false); return }
-          await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento — Vehimotors', vhHistorico))
+          if (errVh || !creditoVh) { setError(errVh?.message ?? 'Error creando crÃ©dito Vehimotors'); setLoading(false); return }
+          await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'CrÃ©dito Financiamiento â€” Vehimotors', vhHistorico))
           if (!primerCreditoId) primerCreditoId = creditoVh.id
         }
 
-        // Cuota especial (tercer bloque paralelo — ej: trimestral simultánea)
+        // Cuota especial (tercer bloque paralelo â€” ej: trimestral simultÃ¡nea)
         const ceActivo2 = ceActivo && calcCuotaEspecial.cuotas > 0 && calcCuotaEspecial.montoCuota > 0
         if (ceActivo2) {
           const ceTotalMonto  = calcCuotaEspecial.monto || calcCuotaEspecial.totalCuotas
@@ -495,7 +517,7 @@ export default function NuevoVehiculoPage() {
         return
       }
 
-      // --- Planes estándar (un solo crédito) ---
+      // --- Planes estÃ¡ndar (un solo crÃ©dito) ---
       let inicial = 0, saldo = 0, numCuotas = 0, montoFinanciado = 0
 
       if (plan === 'credito_40_60' && (calc4060 || vh4060Inicial || vh4060MontoCuota)) {
@@ -517,10 +539,10 @@ export default function NuevoVehiculoPage() {
         frecuencia_pago: 'mensual',
         fecha_inicio: fechaInicio, moneda: 'USD', observaciones: null,
       })
-      if (!creditoParsed.success) { setError(creditoParsed.error.errors[0]?.message ?? 'Datos del crédito inválidos'); setLoading(false); return }
+      if (!creditoParsed.success) { setError(creditoParsed.error.errors[0]?.message ?? 'Datos del crÃ©dito invÃ¡lidos'); setLoading(false); return }
 
       const planLabel = plan === 'credito_40_60' ? 'Vehimotors (Planta)'
-        : `Asegúrate $500 (${cuotasAsegurate}m) — ${planAC500Sel?.modelo}`
+        : `AsegÃºrate $500 (${cuotasAsegurate}m) â€” ${planAC500Sel?.modelo}`
 
       const desglose = `Base: ${formatUSD(precioCalc.base)} | IVA: ${formatUSD(precioCalc.iva)} | Admin: ${formatUSD(precioCalc.admin)}`
       const obsCompleta = [`Plan: ${planLabel}`, desglose, observaciones].filter(Boolean).join('. ')
@@ -570,7 +592,7 @@ export default function NuevoVehiculoPage() {
           <ArrowLeft size={18} className="text-oriental-gray" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-oriental-black">Nuevo vehículo</h1>
+          <h1 className="text-2xl font-bold text-oriental-black">Nuevo vehÃ­culo</h1>
           <p className="text-oriental-gray text-sm mt-0.5">Registrar unidad MG o MAXUS</p>
         </div>
       </div>
@@ -586,7 +608,7 @@ export default function NuevoVehiculoPage() {
             <label className="label">Buscar cliente *</label>
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray" />
-              <input type="text" className="input pl-9 pr-9" placeholder="Nombre o cédula..." value={clienteQuery}
+              <input type="text" className="input pl-9 pr-9" placeholder="Nombre o cÃ©dula..." value={clienteQuery}
                 onChange={e => { setClienteQuery(e.target.value); setClienteSeleccionado(null) }}
                 onFocus={() => clientes.length > 0 && setShowDropdown(true)} />
               {clienteSeleccionado && (
@@ -608,7 +630,7 @@ export default function NuevoVehiculoPage() {
             )}
             {clienteSeleccionado && (
               <div className="mt-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-800">
-                Seleccionado: <span className="font-semibold">{clienteSeleccionado.nombre}</span> — {clienteSeleccionado.cedula_rif}
+                Seleccionado: <span className="font-semibold">{clienteSeleccionado.nombre}</span> â€” {clienteSeleccionado.cedula_rif}
               </div>
             )}
           </div>
@@ -620,14 +642,14 @@ export default function NuevoVehiculoPage() {
             <div className="w-1 h-4 bg-orange-400 rounded-full" />
             Vincular del Showroom
           </h2>
-          <p className="text-xs text-oriental-gray mb-4">Opcional — selecciona si el vehículo viene de consignación</p>
+          <p className="text-xs text-oriental-gray mb-4">Opcional â€” selecciona si el vehÃ­culo viene de consignaciÃ³n</p>
 
           {loadingShowroom ? (
-            <p className="text-sm text-oriental-gray">Cargando showroom…</p>
+            <p className="text-sm text-oriental-gray">Cargando showroomâ€¦</p>
           ) : vehiculosShowroom.length === 0 ? (
             <div className="rounded-xl border-2 border-dashed border-gray-200 p-4 text-center">
               <Store size={22} className="text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-oriental-gray">No hay vehículos disponibles en showroom</p>
+              <p className="text-sm text-oriental-gray">No hay vehÃ­culos disponibles en showroom</p>
             </div>
           ) : showroomSeleccionado ? (
             <div className="rounded-xl border-2 border-orange-200 bg-orange-50 p-4 flex items-center justify-between">
@@ -645,7 +667,7 @@ export default function NuevoVehiculoPage() {
                         <MapPin size={10} /> {showroomSeleccionado.ubicacion === 'otro' ? showroomSeleccionado.ubicacion_descripcion : showroomSeleccionado.ubicacion}
                       </span>
                     )}
-                    {showroomSeleccionado.pdi_hecho && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">PDI ✓</span>}
+                    {showroomSeleccionado.pdi_hecho && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">PDI âœ“</span>}
                   </div>
                 </div>
                 <CheckCircle2 size={20} className="text-orange-500 flex-shrink-0" />
@@ -663,7 +685,7 @@ export default function NuevoVehiculoPage() {
                   <div className="flex items-center justify-between mb-1.5">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{v.marca}</span>
                     <div className="flex items-center gap-1">
-                      {v.pdi_hecho && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">PDI ✓</span>}
+                      {v.pdi_hecho && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">PDI âœ“</span>}
                       {v.estado === 'reservado' && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">Reservado</span>}
                     </div>
                   </div>
@@ -671,8 +693,8 @@ export default function NuevoVehiculoPage() {
                   <div className="mt-1 space-y-0.5">
                     <p className="text-xs text-oriental-gray flex items-center gap-1.5">
                       {v.placa && <span className="font-mono font-bold text-oriental-black">{v.placa}</span>}
-                      {v.color && <span>· {v.color}</span>}
-                      {v.anio && <span>· {v.anio}</span>}
+                      {v.color && <span>Â· {v.color}</span>}
+                      {v.anio && <span>Â· {v.anio}</span>}
                     </p>
                     {v.ubicacion && (
                       <p className="text-xs text-orange-600 font-semibold flex items-center gap-1">
@@ -688,11 +710,11 @@ export default function NuevoVehiculoPage() {
           )}
         </div>
 
-        {/* Vehículo */}
+        {/* VehÃ­culo */}
         <div className="card p-6">
           <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
             <div className="w-1 h-4 bg-oriental-red rounded-full" />
-            Datos del vehículo
+            Datos del vehÃ­culo
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -716,7 +738,7 @@ export default function NuevoVehiculoPage() {
               </select>
             </div>
             <div>
-              <label className="label">Año</label>
+              <label className="label">AÃ±o</label>
               <input type="number" className="input" min="2020" max="2030" value={anio} onChange={e => setAnio(e.target.value)} />
             </div>
             <div>
@@ -762,7 +784,7 @@ export default function NuevoVehiculoPage() {
           {tipoCompra === 'contado' && (
             <div className="mt-4">
               <label className="label">Observaciones</label>
-              <textarea className="textarea" rows={3} placeholder="Notas del vehículo..." value={observaciones} onChange={e => setObservaciones(e.target.value)} />
+              <textarea className="textarea" rows={3} placeholder="Notas del vehÃ­culo..." value={observaciones} onChange={e => setObservaciones(e.target.value)} />
             </div>
           )}
         </div>
@@ -777,7 +799,7 @@ export default function NuevoVehiculoPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
               {[
-                { value: 'asegurate_500', title: 'Asegúrate con $500', desc: '$500 reserva + cuotas según modelo' },
+                { value: 'asegurate_500', title: 'AsegÃºrate con $500', desc: '$500 reserva + cuotas segÃºn modelo' },
                 { value: 'personalizado', title: 'Personalizado "La Oriental"', desc: 'Define el plan libremente' },
               ].map(p => (
                 <button key={p.value} type="button"
@@ -817,7 +839,7 @@ export default function NuevoVehiculoPage() {
                   </div>
                 )}
                 <div className="bg-oriental-black rounded-xl p-5">
-                  <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-4">Condiciones del crédito — edita si los valores difieren</p>
+                  <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-4">Condiciones del crÃ©dito â€” edita si los valores difieren</p>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="text-gray-400 text-[10px] uppercase tracking-wider block mb-1.5">Inicial ($)</label>
@@ -896,7 +918,7 @@ export default function NuevoVehiculoPage() {
                       onChange={e => setPlanAC500Sel(planesAC500.find(p => p.id === e.target.value) ?? null)} required>
                       <option value="">Seleccionar modelo...</option>
                       {planesAC500.map(p => (
-                        <option key={p.id} value={p.id}>{p.marca} — {p.modelo} ({formatUSD(p.total)})</option>
+                        <option key={p.id} value={p.id}>{p.marca} â€” {p.modelo} ({formatUSD(p.total)})</option>
                       ))}
                     </select>
                   </div>
@@ -908,18 +930,18 @@ export default function NuevoVehiculoPage() {
                       <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">{cuotasAsegurate} meses</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-gray-400 text-sm">Cuota 0 — Reserva / Gastos</p>
+                      <p className="text-gray-400 text-sm">Cuota 0 â€” Reserva / Gastos</p>
                       <p className="text-white font-bold">{formatUSD(planAC500Sel.cuota_0)}</p>
                     </div>
                     <div className="border-t border-gray-700" />
                     {cuotasAC500.map((c, i) => (
                       <div key={i} className="flex items-center justify-between">
-                        <p className="text-gray-300 text-sm">Cuota {c.numero} — <span className="text-gray-500">{c.dia}</span></p>
+                        <p className="text-gray-300 text-sm">Cuota {c.numero} â€” <span className="text-gray-500">{c.dia}</span></p>
                         <p className={`font-bold ${i === cuotasAC500.length - 1 ? 'text-oriental-red' : 'text-white'}`}>{formatUSD(c.monto)}</p>
                       </div>
                     ))}
                     <div className="border-t border-gray-700 pt-3 flex items-center justify-between">
-                      <p className="text-gray-400 text-sm font-semibold uppercase">Total · Entrega mes {cuotasAsegurate}</p>
+                      <p className="text-gray-400 text-sm font-semibold uppercase">Total Â· Entrega mes {cuotasAsegurate}</p>
                       <p className="text-oriental-red font-extrabold text-xl">{formatUSD(planAC500Sel.total)}</p>
                     </div>
                   </div>
@@ -933,17 +955,17 @@ export default function NuevoVehiculoPage() {
               </div>
             )}
 
-            {/* Plan Personalizado — Dos sub-créditos */}
+            {/* Plan Personalizado â€” Dos sub-crÃ©ditos */}
             {plan === 'personalizado' && (
               <div className="space-y-5">
 
-                {/* ── CALCULADORA DE PRECIO ── */}
+                {/* â”€â”€ CALCULADORA DE PRECIO â”€â”€ */}
                 <div className="border-2 border-amber-200 rounded-xl bg-amber-50/30">
                   <div className="px-5 pt-4 pb-3 border-b border-amber-200">
                     <p className="text-sm font-bold text-amber-900 flex items-center gap-2">
-                      <span className="text-base">🧮</span>
+                      <span className="text-base">ðŸ§®</span>
                       Calculadora de precio
-                      <span className="text-xs font-normal text-amber-700 ml-1">— Los resultados precargan los campos automáticamente</span>
+                      <span className="text-xs font-normal text-amber-700 ml-1">â€” Los resultados precargan los campos automÃ¡ticamente</span>
                     </p>
                   </div>
                   <div className="p-5 space-y-4">
@@ -970,22 +992,22 @@ export default function NuevoVehiculoPage() {
                         <label className="label">Gastos (contado)</label>
                         <input type="number" step="0.01" min="0" className="input"
                           placeholder="4,600.00" value={calcGastosContado} onChange={e => setCalcGastosContado(e.target.value)} />
-                        <p className="text-[10px] text-oriental-gray mt-0.5">Póliza + Traslado + INTT + Notaría + Honorarios</p>
+                        <p className="text-[10px] text-oriental-gray mt-0.5">PÃ³liza + Traslado + INTT + NotarÃ­a + Honorarios</p>
                       </div>
                       <div>
-                        <label className="label">Gastos (crédito)</label>
+                        <label className="label">Gastos (crÃ©dito)</label>
                         <input type="number" step="0.01" min="0" className="input"
                           placeholder="7,332.00" value={calcGastosCredito} onChange={e => setCalcGastosCredito(e.target.value)} />
-                        <p className="text-[10px] text-oriental-gray mt-0.5">Póliza + Traslado + INTT + Notaría + Honorarios</p>
+                        <p className="text-[10px] text-oriental-gray mt-0.5">PÃ³liza + Traslado + INTT + NotarÃ­a + Honorarios</p>
                       </div>
                       <div>
                         <label className="label">Tasa Vehimotors (% anual)</label>
                         <input type="number" step="0.01" min="0" className="input"
                           placeholder="Ej: 15.6" value={calcTasaAnual} onChange={e => setCalcTasaAnual(e.target.value)} />
-                        <p className="text-[10px] text-oriental-gray mt-0.5">Vacío = sin interés (monto ÷ cuotas)</p>
+                        <p className="text-[10px] text-oriental-gray mt-0.5">VacÃ­o = sin interÃ©s (monto Ã· cuotas)</p>
                       </div>
                       <div>
-                        <label className="label">N° cuotas Vehimotors</label>
+                        <label className="label">NÂ° cuotas Vehimotors</label>
                         <input type="number" step="1" min="1" max="120" className="input"
                           placeholder="24" value={calcNumCuotasVh} onChange={e => setCalcNumCuotasVh(e.target.value)} />
                       </div>
@@ -1019,10 +1041,10 @@ export default function NuevoVehiculoPage() {
                           </div>
                         </div>
 
-                        {/* Columna CRÉDITO */}
+                        {/* Columna CRÃ‰DITO */}
                         <div className="bg-white border border-amber-200 rounded-xl overflow-hidden">
                           <div className="bg-amber-100 px-4 py-2">
-                            <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Modalidad Crédito ({Math.round(calculadora.pctInicial * 100)}% Inicial)</p>
+                            <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Modalidad CrÃ©dito ({Math.round(calculadora.pctInicial * 100)}% Inicial)</p>
                           </div>
                           <div className="px-4 py-3 space-y-2 text-sm">
                             <div className="flex justify-between">
@@ -1034,7 +1056,7 @@ export default function NuevoVehiculoPage() {
                               <span className="font-semibold text-oriental-black">{formatUSD(calculadora.iva)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-oriental-gray">Gastos crédito</span>
+                              <span className="text-oriental-gray">Gastos crÃ©dito</span>
                               <span className="font-semibold text-oriental-black">{formatUSD(calculadora.gastosCredito)}</span>
                             </div>
                             <div className="flex justify-between border-t border-amber-200 pt-2">
@@ -1042,11 +1064,11 @@ export default function NuevoVehiculoPage() {
                               <span className="font-extrabold text-purple-700 text-base">{formatUSD(calculadora.totalInicialLaOriental)}</span>
                             </div>
                             <div className="flex justify-between bg-indigo-50 rounded-lg px-3 py-2 mt-1">
-                              <span className="text-indigo-700 font-semibold text-xs">Financiamiento {Math.round((1 - calculadora.pctInicial) * 100)}% — Vehimotors</span>
+                              <span className="text-indigo-700 font-semibold text-xs">Financiamiento {Math.round((1 - calculadora.pctInicial) * 100)}% â€” Vehimotors</span>
                               <span className="font-bold text-indigo-800">{formatUSD(calculadora.financiamientoVh)}</span>
                             </div>
                             <div className="flex justify-between bg-indigo-50 rounded-lg px-3 py-2">
-                              <span className="text-indigo-700 font-semibold text-xs">{calculadora.n} cuotas {calculadora.tasaAnual > 0 ? `(${calculadora.tasaAnual}% anual)` : '(sin interés)'}</span>
+                              <span className="text-indigo-700 font-semibold text-xs">{calculadora.n} cuotas {calculadora.tasaAnual > 0 ? `(${calculadora.tasaAnual}% anual)` : '(sin interÃ©s)'}</span>
                               <span className="font-extrabold text-indigo-800">{formatUSD(calculadora.cuotaVh)} / cuota</span>
                             </div>
                           </div>
@@ -1054,28 +1076,28 @@ export default function NuevoVehiculoPage() {
                       </div>
                     )}
 
-                    {/* Botón aplicar */}
+                    {/* BotÃ³n aplicar */}
                     {calculadora && (
                       <button
                         type="button"
                         onClick={aplicarCalculadora}
                         className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-colors text-sm"
                       >
-                        ↓ Aplicar al Plan Personalizado
+                        â†“ Aplicar al Plan Personalizado
                       </button>
                     )}
                     {!calculadora && (
-                      <p className="text-xs text-amber-700 text-center py-2">Ingresa el precio base para ver los cálculos</p>
+                      <p className="text-xs text-amber-700 text-center py-2">Ingresa el precio base para ver los cÃ¡lculos</p>
                     )}
                   </div>
                 </div>
 
-                {/* Precio del vehículo */}
+                {/* Precio del vehÃ­culo */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                  <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider mb-3">Precio del vehículo</p>
+                  <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider mb-3">Precio del vehÃ­culo</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="label">Precio base del vehículo (USD)</label>
+                      <label className="label">Precio base del vehÃ­culo (USD)</label>
                       <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
                         placeholder="0.00" value={precioTotalVehiculo} onChange={e => setPrecioTotalVehiculo(e.target.value)} />
                       <p className="text-xs text-oriental-gray mt-1">Se precarga con la calculadora. Referencia para el resumen financiero.</p>
@@ -1092,7 +1114,7 @@ export default function NuevoVehiculoPage() {
                 <div className="border-2 border-purple-200 rounded-xl p-5 bg-purple-50/40">
                   <p className="font-bold text-purple-800 text-sm mb-4 flex items-center gap-2">
                     <span className="w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">1</span>
-                    Crédito de Inicial — La Oriental
+                    CrÃ©dito de Inicial â€” La Oriental
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                     <div>
@@ -1101,7 +1123,7 @@ export default function NuevoVehiculoPage() {
                         value={orMonto} onChange={e => setOrMonto(e.target.value)} />
                     </div>
                     <div>
-                      <label className="label">N° de cuotas <span className="text-purple-500 text-[10px] font-normal">(0 = pago único)</span></label>
+                      <label className="label">NÂ° de cuotas <span className="text-purple-500 text-[10px] font-normal">(0 = pago Ãºnico)</span></label>
                       <input type="number" min="0" max="120" className="input" placeholder="12"
                         value={orCuotas} onChange={e => setOrCuotas(e.target.value)} />
                     </div>
@@ -1109,7 +1131,7 @@ export default function NuevoVehiculoPage() {
                       {parseInt(orCuotas) === 0 ? (
                         <div className="h-full flex flex-col justify-end">
                           <div className="bg-purple-100 border-2 border-purple-300 border-dashed rounded-xl px-4 py-3 text-center">
-                            <p className="text-purple-800 font-bold text-sm">Pago único</p>
+                            <p className="text-purple-800 font-bold text-sm">Pago Ãºnico</p>
                             <p className="text-purple-600 text-[11px] mt-0.5">La Oriental cobra el monto completo sin cuotas</p>
                           </div>
                         </div>
@@ -1121,7 +1143,7 @@ export default function NuevoVehiculoPage() {
                           </label>
                           <input type="number" step="0.01" min="0"
                             className={`input font-bold ${orMontoCuota ? 'bg-purple-50 text-purple-900 border-purple-300 cursor-not-allowed' : ''}`}
-                            placeholder="Se calcula automático"
+                            placeholder="Se calcula automÃ¡tico"
                             value={orMontoCuota}
                             readOnly />
                         </>
@@ -1147,10 +1169,10 @@ export default function NuevoVehiculoPage() {
                   </div>
                   <div>
                     <label className="label">Observaciones</label>
-                    <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este crédito..."
+                    <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este crÃ©dito..."
                       value={orObs} onChange={e => setOrObs(e.target.value)} />
                   </div>
-                  {/* Monto histórico La Oriental */}
+                  {/* Monto histÃ³rico La Oriental */}
                   {calcInicialOriental.cuotas > 0 && (() => {
                     const hist = parseFloat(orMontoHistorico) || 0
                     const mc   = calcInicialOriental.montoCuota || 0
@@ -1160,22 +1182,22 @@ export default function NuevoVehiculoPage() {
                     return (
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                         <div className="flex items-start gap-2 mb-3">
-                          <span className="text-amber-500 text-base">📋</span>
+                          <span className="text-amber-500 text-base">ðŸ“‹</span>
                           <div>
-                            <p className="text-xs font-bold text-amber-800">¿Cliente con pagos previos al sistema?</p>
-                            <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado. El sistema distribuye automáticamente las cuotas pagadas y el abono parcial.</p>
+                            <p className="text-xs font-bold text-amber-800">Â¿Cliente con pagos previos al sistema?</p>
+                            <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado. El sistema distribuye automÃ¡ticamente las cuotas pagadas y el abono parcial.</p>
                           </div>
                         </div>
                         <div className="relative mb-3">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
                           <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
-                            placeholder="0.00 — monto total ya cobrado"
+                            placeholder="0.00 â€” monto total ya cobrado"
                             value={orMontoHistorico} onChange={e => setOrMontoHistorico(e.target.value)} />
                         </div>
                         {hist > 0 && mc > 0 && (
                           <div className="space-y-1.5">
-                            {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
-                            {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
+                            {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">âœ“ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
+                            {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">âš¡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} Â· pendiente {formatUSD(mc - sobrante)}</p>}
                             <p className="text-[11px] text-red-700 font-semibold">Saldo restante a cobrar: {formatUSD(saldoRest)}</p>
                           </div>
                         )}
@@ -1186,8 +1208,8 @@ export default function NuevoVehiculoPage() {
                   {calcInicialOriental.cuotas === 0 && calcInicialOriental.monto > 0 && (
                     <div className="mt-3 bg-purple-700 rounded-lg p-4 flex items-center justify-between">
                       <div>
-                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Pago único — La Oriental</p>
-                        <p className="text-purple-300 text-[11px] mt-0.5">Sin cuotas — cobro total al inicio</p>
+                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Pago Ãºnico â€” La Oriental</p>
+                        <p className="text-purple-300 text-[11px] mt-0.5">Sin cuotas â€” cobro total al inicio</p>
                       </div>
                       <p className="text-white font-extrabold text-xl">{formatUSD(calcInicialOriental.monto)}</p>
                     </div>
@@ -1212,7 +1234,7 @@ export default function NuevoVehiculoPage() {
                   {calcInicialOriental.showWarning && (
                     <div className="mt-2 flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
                       <AlertCircle size={14} className="text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcInicialOriental.totalCuotas)}) no coincide con el monto financiado ({formatUSD(calcInicialOriental.monto)}). Verifica si es una condición especial.</p>
+                      <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcInicialOriental.totalCuotas)}) no coincide con el monto financiado ({formatUSD(calcInicialOriental.monto)}). Verifica si es una condiciÃ³n especial.</p>
                     </div>
                   )}
                 </div>
@@ -1221,34 +1243,32 @@ export default function NuevoVehiculoPage() {
                 <div className="border-2 border-indigo-200 rounded-xl p-5 bg-indigo-50/40">
                   <p className="font-bold text-indigo-800 text-sm mb-4 flex items-center gap-2">
                     <span className="w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs">2</span>
-                    Crédito Financiamiento — Vehimotors
+                    CrÃ©dito Financiamiento â€” Vehimotors
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                     <div>
                       <label className="label">
                         Monto total Vehimotors (USD)
-                        {ceActivo && calcVehimotors.ceDeduccion > 0 && (
+                        {ceActivo && calcVehimotors.totalTrim > 0 && (
                           <span className="ml-2 text-[10px] font-normal text-teal-600">
-                            — incluye cuotas especiales
+                            â€” incluye cuotas trimestrales
                           </span>
                         )}
                       </label>
                       <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
                         value={vhMonto} onChange={e => setVhMonto(e.target.value)} />
-                      {ceActivo && calcVehimotors.ceDeduccion > 0 && calcVehimotors.montoMensual > 0 && (
+                      {ceActivo && calcVehimotors.totalTrim > 0 && calcVehimotors.totalMensual > 0 && (
                         <div className="mt-1.5 bg-teal-50 border border-teal-200 rounded-lg px-2.5 py-1.5 text-[11px]">
                           <span className="text-teal-700">
-                            <strong>${calcVehimotors.monto.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> total
-                            &nbsp;—&nbsp;
-                            <strong className="text-teal-600">${calcVehimotors.ceDeduccion.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> cuotas especiales
-                            &nbsp;=&nbsp;
-                            <strong className="text-indigo-700">${calcVehimotors.montoMensual.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> en cuotas mensuales
+                            <strong>${calcVehimotors.monto.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> principal
+                            &nbsp;Â·&nbsp;
+                            cuota mensual calculada descontando <strong className="text-teal-600">${calcVehimotors.totalTrim.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> en trimestrales
                           </span>
                         </div>
                       )}
                     </div>
                     <div>
-                      <label className="label">N° de cuotas</label>
+                      <label className="label">NÂ° de cuotas</label>
                       <input type="number" min="1" max="120" className="input" placeholder="12"
                         value={vhCuotas} onChange={e => setVhCuotas(e.target.value)} />
                     </div>
@@ -1259,7 +1279,7 @@ export default function NuevoVehiculoPage() {
                       </label>
                       <input type="number" step="0.01" min="0"
                         className={`input font-bold ${vhMontoCuota ? 'bg-indigo-50 text-indigo-900 border-indigo-300 cursor-not-allowed' : ''}`}
-                        placeholder="Se calcula automático"
+                        placeholder="Se calcula automÃ¡tico"
                         value={vhMontoCuota}
                         readOnly />
                     </div>
@@ -1286,32 +1306,32 @@ export default function NuevoVehiculoPage() {
                     <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este financiamiento..."
                       value={vhObs} onChange={e => setVhObs(e.target.value)} />
                   </div>
-                  {/* Monto histórico Vehimotors */}
+                  {/* Monto histÃ³rico Vehimotors */}
                   {calcVehimotors.cuotas > 0 && (() => {
                     const hist = parseFloat(vhMontoHistorico) || 0
                     const mc   = calcVehimotors.montoCuota || 0
                     const completas = hist > 0 ? Math.min(Math.floor(hist / mc), calcVehimotors.cuotas) : 0
                     const sobrante  = hist > 0 ? hist - completas * mc : 0
-                    const saldoRest = Math.max(0, calcVehimotors.totalCuotas - hist)
+                    const saldoRest = Math.max(0, calcVehimotors.totalMensual - hist)
                     return (
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                         <div className="flex items-start gap-2 mb-3">
-                          <span className="text-amber-500 text-base">📋</span>
+                          <span className="text-amber-500 text-base">ðŸ“‹</span>
                           <div>
-                            <p className="text-xs font-bold text-amber-800">¿Cliente con pagos previos al sistema?</p>
-                            <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado por Vehimotors. El sistema distribuye cuotas pagadas y abono parcial automáticamente.</p>
+                            <p className="text-xs font-bold text-amber-800">Â¿Cliente con pagos previos al sistema?</p>
+                            <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado por Vehimotors. El sistema distribuye cuotas pagadas y abono parcial automÃ¡ticamente.</p>
                           </div>
                         </div>
                         <div className="relative mb-3">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
                           <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
-                            placeholder="0.00 — monto total ya cobrado"
+                            placeholder="0.00 â€” monto total ya cobrado"
                             value={vhMontoHistorico} onChange={e => setVhMontoHistorico(e.target.value)} />
                         </div>
                         {hist > 0 && mc > 0 && (
                           <div className="space-y-1.5">
-                            {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
-                            {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
+                            {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">âœ“ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
+                            {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">âš¡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} Â· pendiente {formatUSD(mc - sobrante)}</p>}
                             <p className="text-[11px] text-red-700 font-semibold">Saldo restante a cobrar: {formatUSD(saldoRest)}</p>
                           </div>
                         )}
@@ -1320,40 +1340,26 @@ export default function NuevoVehiculoPage() {
                     )
                   })()}
                   {calcVehimotors.cuotas > 0 && calcVehimotors.montoCuota > 0 && (
-                    <div className="mt-3 bg-indigo-700 rounded-lg p-4">
-                      {/* Desglose si hay cuotas especiales */}
-                      {ceActivo && calcVehimotors.ceDeduccion > 0 && (
-                        <div className="bg-indigo-800/50 rounded-lg px-3 py-2 mb-3 text-[11px] text-indigo-200 flex items-center justify-between">
-                          <span>Total Vehimotors: <strong className="text-white">{formatUSD(calcVehimotors.monto)}</strong></span>
-                          <span>Cuotas especiales: <strong className="text-teal-300">− {formatUSD(calcVehimotors.ceDeduccion)}</strong></span>
-                          <span>Mensual: <strong className="text-indigo-100">{formatUSD(calcVehimotors.montoMensual)}</strong></span>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="text-center">
-                          <p className="text-indigo-200 text-[10px] uppercase tracking-wider">
-                            {ceActivo && calcVehimotors.ceDeduccion > 0 ? 'Monto mensual' : 'Monto financiado'}
-                          </p>
-                          <p className="text-white font-extrabold text-base">
-                            {formatUSD(ceActivo && calcVehimotors.ceDeduccion > 0 ? calcVehimotors.montoMensual : calcVehimotors.monto)}
-                          </p>
-                        </div>
-                        <div className="text-center border-x border-indigo-500">
-                          <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Cuota {vhFrecuencia}</p>
-                          <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.montoCuota)}</p>
-                          <p className="text-indigo-300 text-[10px]">{calcVehimotors.cuotas} cuotas</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Total cuotas mens.</p>
-                          <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.totalCuotas)}</p>
-                        </div>
+                    <div className="mt-3 bg-indigo-700 rounded-lg p-4 grid grid-cols-3 gap-3">
+                      <div className="text-center">
+                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Principal</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.monto)}</p>
+                      </div>
+                      <div className="text-center border-x border-indigo-500">
+                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Cuota mensual</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.montoCuota)}</p>
+                        <p className="text-indigo-300 text-[10px]">{calcVehimotors.cuotas} cuotas</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Total mensual</p>
+                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.totalMensual)}</p>
                       </div>
                     </div>
                   )}
                   {calcVehimotors.showWarning && (
                     <div className="mt-2 flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
                       <AlertCircle size={14} className="text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-yellow-800">El total de cuotas mensuales ({formatUSD(calcVehimotors.totalCuotas)}) no coincide con el monto mensual ({formatUSD(calcVehimotors.montoMensual)}). Verifica.</p>
+                      <p className="text-xs text-yellow-800">El total de cuotas mensuales ({formatUSD(calcVehimotors.totalMensual)}) no coincide con el monto mensual ({formatUSD(calcVehimotors.totalMensual)}). Verifica.</p>
                     </div>
                   )}
                 </div>
@@ -1367,8 +1373,8 @@ export default function NuevoVehiculoPage() {
                   >
                     <div className="flex items-center gap-2">
                       <span className={`w-2.5 h-2.5 rounded-full border-2 ${ceActivo ? 'bg-teal-600 border-teal-600' : 'border-teal-400'}`} />
-                      <span className="text-teal-800 font-bold text-sm">3 · Cuotas Especiales (paralelas)</span>
-                      <span className="text-teal-600 text-xs">— Ej: cuota trimestral que corre junto a las mensuales</span>
+                      <span className="text-teal-800 font-bold text-sm">3 Â· Cuotas Especiales (paralelas)</span>
+                      <span className="text-teal-600 text-xs">â€” Ej: cuota trimestral que corre junto a las mensuales</span>
                     </div>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ceActivo ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-700 border border-teal-300'}`}>{ceActivo ? 'Quitar' : '+ Agregar'}</span>
                   </button>
@@ -1385,7 +1391,7 @@ export default function NuevoVehiculoPage() {
                           </div>
                         </div>
                         <div>
-                          <label className="label">N° cuotas *</label>
+                          <label className="label">NÂ° cuotas *</label>
                           <input type="number" className="input" placeholder="ej: 4"
                             value={ceCuotas} onChange={e => setCeCuotas(e.target.value)} />
                         </div>
@@ -1449,20 +1455,52 @@ export default function NuevoVehiculoPage() {
                   )}
                 </div>
 
-                {/* Resumen financiero del vehículo */}
+                {/* â”€â”€ RESUMEN PLAN VEHIMOTORS â€” solo cuando hay trimestrales activas â”€â”€ */}
+                {ceActivo && calcVehimotors.totalTrim > 0 && calcVehimotors.totalMensual > 0 && (
+                  <div className="border-2 border-indigo-300 bg-indigo-50 rounded-xl p-5">
+                    <p className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <span>ðŸ“Š</span> Plan de financiamiento Vehimotors â€” Resumen
+                    </p>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center justify-between py-2 border-b border-indigo-200">
+                        <div>
+                          <p className="text-sm font-semibold text-oriental-black">Cuotas trimestrales especiales</p>
+                          <p className="text-xs text-oriental-gray">{calcVehimotors.nTrim} cuotas Ã— {formatUSD(calcVehimotors.montoTrim)} cada una</p>
+                        </div>
+                        <p className="text-sm font-bold text-teal-700">{formatUSD(calcVehimotors.totalTrim)}</p>
+                      </div>
+                      <div className="flex items-center justify-between py-2 border-b border-indigo-200">
+                        <div>
+                          <p className="text-sm font-semibold text-oriental-black">Cuotas mensuales de financiamiento</p>
+                          <p className="text-xs text-oriental-gray">{calcVehimotors.cuotas} cuotas Ã— {formatUSD(calcVehimotors.montoCuota)} cada una</p>
+                        </div>
+                        <p className="text-sm font-bold text-indigo-700">{formatUSD(calcVehimotors.totalMensual)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between bg-indigo-700 rounded-xl px-4 py-3">
+                      <p className="text-indigo-100 text-sm font-bold uppercase tracking-wide">Total a pagar Vehimotors</p>
+                      <p className="text-white font-extrabold text-xl">{formatUSD(calcVehimotors.grandTotal)}</p>
+                    </div>
+                    <p className="text-[10px] text-indigo-600 mt-2">
+                      Principal: {formatUSD(calcVehimotors.monto)} Â· InterÃ©s estimado: {formatUSD(Math.max(0, calcVehimotors.grandTotal - calcVehimotors.monto))} Â· Tasa {calcTasaAnual}% anual
+                    </p>
+                  </div>
+                )}
+
+                {/* Resumen financiero del vehÃ­culo */}
                 {(resumenFinanciero.totalOr > 0 || resumenFinanciero.totalVh > 0 || resumenFinanciero.totalCe > 0) && (
                   <div className="bg-oriental-black rounded-xl p-5">
-                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Resumen financiero del vehículo</p>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Resumen financiero del vehÃ­culo</p>
                     <div className="space-y-2 mb-4">
                       {resumenFinanciero.precioBase > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Precio base del vehículo</span>
+                          <span className="text-gray-400">Precio base del vehÃ­culo</span>
                           <span className="text-gray-300 font-semibold">{formatUSD(resumenFinanciero.precioBase)}</span>
                         </div>
                       )}
                       {resumenFinanciero.totalOr > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-purple-300">Inicial — La Oriental (incl. IVA + gastos)</span>
+                          <span className="text-purple-300">Inicial â€” La Oriental (incl. IVA + gastos)</span>
                           <span className="text-purple-300 font-semibold">{formatUSD(resumenFinanciero.totalOr)}</span>
                         </div>
                       )}
@@ -1488,11 +1526,11 @@ export default function NuevoVehiculoPage() {
               </div>
             )}
 
-            {/* Fecha inicio (solo para planes estándar) */}
+            {/* Fecha inicio (solo para planes estÃ¡ndar) */}
             {plan !== 'personalizado' && (
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Fecha inicio del crédito *</label>
+                  <label className="label">Fecha inicio del crÃ©dito *</label>
                   <input type="date" className="input" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required />
                 </div>
                 <div>
@@ -1514,7 +1552,7 @@ export default function NuevoVehiculoPage() {
 
         <div className="flex items-center gap-3">
           <button type="submit" className="btn-primary flex items-center gap-2 py-3 px-6" disabled={loading}>
-            <Save size={16} /> {loading ? 'Guardando...' : tipoCompra === 'financiado' ? 'Registrar vehículo y crear crédito' : 'Registrar vehículo'}
+            <Save size={16} /> {loading ? 'Guardando...' : tipoCompra === 'financiado' ? 'Registrar vehÃ­culo y crear crÃ©dito' : 'Registrar vehÃ­culo'}
           </button>
           <Link href="/vehiculos" className="btn-secondary py-3 px-6">Cancelar</Link>
         </div>
