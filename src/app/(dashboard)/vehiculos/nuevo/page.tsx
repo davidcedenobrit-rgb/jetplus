@@ -110,6 +110,10 @@ export default function NuevoVehiculoPage() {
   const [ceObs, setCeObs] = useState('')
   const [ceCuotasPagadas, setCeCuotasPagadas] = useState('0')
 
+  // Abono parcial en la cuota siguiente a las históricas
+  const [orAbonoMonto, setOrAbonoMonto] = useState('')
+  const [vhAbonoMonto, setVhAbonoMonto] = useState('')
+
   // ── Calculadora de precio (Plan Personalizado) ──
   const [calcBase, setCalcBase] = useState('')
   const [calcIvaPct, setCalcIvaPct] = useState('16')
@@ -381,7 +385,7 @@ export default function NuevoVehiculoPage() {
           setError('Completa al menos un bloque de crédito'); setLoading(false); return
         }
 
-        function buildCuotas(creditoId: string, cuotas: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string, yaPagedas = 0) {
+        function buildCuotas(creditoId: string, cuotas: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string, yaPagedas = 0, abonoMonto = 0) {
           return Array.from({ length: cuotas }, (_, i) => {
             const f = new Date(fechaBase)
             if (frecuencia === 'semanal') f.setDate(f.getDate() + 7 * (i + 1))
@@ -389,12 +393,14 @@ export default function NuevoVehiculoPage() {
             else if (frecuencia === 'trimestral') f.setMonth(f.getMonth() + 3 * (i + 1))
             else f.setMonth(f.getMonth() + (i + 1))
             const yaPagada = i < yaPagedas
+            // Abono parcial: cuota inmediatamente después de las ya pagadas
+            const esAbono = !yaPagada && i === yaPagedas && abonoMonto > 0
             return {
               credito_id: creditoId, numero_cuota: i + 1,
               fecha_vencimiento: f.toISOString().split('T')[0],
               monto: montoCuota, mora: 0, concepto,
-              estado: yaPagada ? 'pagada' : 'pendiente',
-              monto_pagado: yaPagada ? montoCuota : 0,
+              estado: yaPagada ? 'pagada' : esAbono ? 'abono_parcial' : 'pendiente',
+              monto_pagado: yaPagada ? montoCuota : esAbono ? abonoMonto : 0,
             }
           })
         }
@@ -418,7 +424,8 @@ export default function NuevoVehiculoPage() {
           if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
           if (calcInicialOriental.cuotas > 0) {
             // Plan con múltiples cuotas
-            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental', orPagadasN))
+            const orAbono = parseFloat(orAbonoMonto) || 0
+            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental', orPagadasN, orAbono))
           } else {
             // Pago único — crear 1 cuota por el monto completo para que aparezca en el selector de pagos
             await supabase.from('cuotas').insert([{
@@ -450,7 +457,8 @@ export default function NuevoVehiculoPage() {
             observaciones: vhObs || 'Crédito Financiamiento — Vehimotors',
           }).select().single()
           if (errVh || !creditoVh) { setError(errVh?.message ?? 'Error creando crédito Vehimotors'); setLoading(false); return }
-          await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento — Vehimotors', vhPagadasN))
+          const vhAbono = parseFloat(vhAbonoMonto) || 0
+          await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento — Vehimotors', vhPagadasN, vhAbono))
           if (!primerCreditoId) primerCreditoId = creditoVh.id
         }
 
