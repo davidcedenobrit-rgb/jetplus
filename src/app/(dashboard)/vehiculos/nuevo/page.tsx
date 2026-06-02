@@ -1148,9 +1148,9 @@ export default function NuevoVehiculoPage() {
                       value={orObs} onChange={e => setOrObs(e.target.value)} />
                   </div>
                   {/* Monto histórico La Oriental */}
-                  {calcInicialOriental.cuotas > 0 && calcInicialOriental.montoCuota > 0 && (() => {
+                  {calcInicialOriental.cuotas > 0 && (() => {
                     const hist = parseFloat(orMontoHistorico) || 0
-                    const mc   = calcInicialOriental.montoCuota
+                    const mc   = calcInicialOriental.montoCuota || 0
                     const completas = hist > 0 ? Math.min(Math.floor(hist / mc), calcInicialOriental.cuotas) : 0
                     const sobrante  = hist > 0 ? hist - completas * mc : 0
                     const saldoRest = Math.max(0, calcInicialOriental.totalCuotas - hist)
@@ -1169,13 +1169,14 @@ export default function NuevoVehiculoPage() {
                             placeholder="0.00 — monto total ya cobrado"
                             value={orMontoHistorico} onChange={e => setOrMontoHistorico(e.target.value)} />
                         </div>
-                        {hist > 0 && (
+                        {hist > 0 && mc > 0 && (
                           <div className="space-y-1.5">
                             {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
                             {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
                             <p className="text-[11px] text-red-700 font-semibold">Saldo restante a cobrar: {formatUSD(saldoRest)}</p>
                           </div>
                         )}
+                        {hist > 0 && mc === 0 && <p className="text-[11px] text-amber-600">Completa el monto por cuota arriba para ver el preview.</p>}
                       </div>
                     )
                   })()}
@@ -1265,9 +1266,9 @@ export default function NuevoVehiculoPage() {
                       value={vhObs} onChange={e => setVhObs(e.target.value)} />
                   </div>
                   {/* Monto histórico Vehimotors */}
-                  {calcVehimotors.cuotas > 0 && calcVehimotors.montoCuota > 0 && (() => {
+                  {calcVehimotors.cuotas > 0 && (() => {
                     const hist = parseFloat(vhMontoHistorico) || 0
-                    const mc   = calcVehimotors.montoCuota
+                    const mc   = calcVehimotors.montoCuota || 0
                     const completas = hist > 0 ? Math.min(Math.floor(hist / mc), calcVehimotors.cuotas) : 0
                     const sobrante  = hist > 0 ? hist - completas * mc : 0
                     const saldoRest = Math.max(0, calcVehimotors.totalCuotas - hist)
@@ -1286,13 +1287,14 @@ export default function NuevoVehiculoPage() {
                             placeholder="0.00 — monto total ya cobrado"
                             value={vhMontoHistorico} onChange={e => setVhMontoHistorico(e.target.value)} />
                         </div>
-                        {hist > 0 && (
+                        {hist > 0 && mc > 0 && (
                           <div className="space-y-1.5">
                             {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
                             {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
                             <p className="text-[11px] text-red-700 font-semibold">Saldo restante a cobrar: {formatUSD(saldoRest)}</p>
                           </div>
                         )}
+                        {hist > 0 && mc === 0 && <p className="text-[11px] text-amber-600">Completa el monto por cuota arriba para ver el preview.</p>}
                       </div>
                     )
                   })()}
