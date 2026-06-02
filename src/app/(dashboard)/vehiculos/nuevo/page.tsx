@@ -82,7 +82,7 @@ export default function NuevoVehiculoPage() {
   const [orFrecuencia, setOrFrecuencia] = useState('mensual')
   const [orFecha, setOrFecha] = useState(new Date().toISOString().split('T')[0])
   const [orObs, setOrObs] = useState('')
-  const [orCuotasPagadas, setOrCuotasPagadas] = useState('0')
+  const [orMontoHistorico, setOrMontoHistorico] = useState('')
   // Sub-plan Vehimotors (Crédito Financiamiento)
   const [vhMonto, setVhMonto] = useState('')
   const [vhCuotas, setVhCuotas] = useState('12')
@@ -90,7 +90,7 @@ export default function NuevoVehiculoPage() {
   const [vhFrecuencia, setVhFrecuencia] = useState('mensual')
   const [vhFecha, setVhFecha] = useState(new Date().toISOString().split('T')[0])
   const [vhObs, setVhObs] = useState('')
-  const [vhCuotasPagadas, setVhCuotasPagadas] = useState('0')
+  const [vhMontoHistorico, setVhMontoHistorico] = useState('')
   // Resumen financiero del vehículo (plan personalizado)
   const [precioTotalVehiculo, setPrecioTotalVehiculo] = useState('')
   const [montoContado, setMontoContado] = useState('')
@@ -108,11 +108,6 @@ export default function NuevoVehiculoPage() {
   const [ceFrecuencia, setCeFrecuencia] = useState('trimestral')
   const [ceFecha, setCeFecha] = useState(new Date().toISOString().split('T')[0])
   const [ceObs, setCeObs] = useState('')
-  const [ceCuotasPagadas, setCeCuotasPagadas] = useState('0')
-
-  // Abono parcial en la cuota siguiente a las históricas
-  const [orAbonoMonto, setOrAbonoMonto] = useState('')
-  const [vhAbonoMonto, setVhAbonoMonto] = useState('')
 
   // ── Calculadora de precio (Plan Personalizado) ──
   const [calcBase, setCalcBase] = useState('')
@@ -385,22 +380,34 @@ export default function NuevoVehiculoPage() {
           setError('Completa al menos un bloque de crédito'); setLoading(false); return
         }
 
-        function buildCuotas(creditoId: string, cuotas: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string, yaPagedas = 0, abonoMonto = 0) {
+        // Distribuye montoHistorico entre cuotas: completas primero, última con abono parcial
+        function buildCuotas(creditoId: string, cuotas: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string, montoHistorico = 0) {
+          let restante = montoHistorico
           return Array.from({ length: cuotas }, (_, i) => {
             const f = new Date(fechaBase)
             if (frecuencia === 'semanal') f.setDate(f.getDate() + 7 * (i + 1))
             else if (frecuencia === 'quincenal') f.setDate(f.getDate() + 15 * (i + 1))
             else if (frecuencia === 'trimestral') f.setMonth(f.getMonth() + 3 * (i + 1))
             else f.setMonth(f.getMonth() + (i + 1))
-            const yaPagada = i < yaPagedas
-            // Abono parcial: cuota inmediatamente después de las ya pagadas
-            const esAbono = !yaPagada && i === yaPagedas && abonoMonto > 0
+
+            let estado = 'pendiente'
+            let monto_pagado = 0
+
+            if (restante >= montoCuota) {
+              estado = 'pagada'
+              monto_pagado = montoCuota
+              restante -= montoCuota
+            } else if (restante > 0) {
+              estado = 'abono_parcial'
+              monto_pagado = restante
+              restante = 0
+            }
+
             return {
               credito_id: creditoId, numero_cuota: i + 1,
               fecha_vencimiento: f.toISOString().split('T')[0],
               monto: montoCuota, mora: 0, concepto,
-              estado: yaPagada ? 'pagada' : esAbono ? 'abono_parcial' : 'pendiente',
-              monto_pagado: yaPagada ? montoCuota : esAbono ? abonoMonto : 0,
+              estado, monto_pagado,
             }
           })
         }
@@ -408,9 +415,9 @@ export default function NuevoVehiculoPage() {
         let primerCreditoId = ''
 
         if (orActivo) {
-          const orPagadasN   = Math.min(Math.max(0, parseInt(orCuotasPagadas) || 0), calcInicialOriental.cuotas)
+          const orHistorico  = parseFloat(orMontoHistorico) || 0
           const orTotalMonto = calcInicialOriental.cuotas > 0 ? calcInicialOriental.totalCuotas : calcInicialOriental.monto
-          const orSaldoInicial = orTotalMonto - orPagadasN * calcInicialOriental.montoCuota
+          const orSaldoInicial = Math.max(0, orTotalMonto - orHistorico)
           const { data: creditoOr, error: errOr } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
             monto_financiado: orTotalMonto,
@@ -423,9 +430,7 @@ export default function NuevoVehiculoPage() {
           }).select().single()
           if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
           if (calcInicialOriental.cuotas > 0) {
-            // Plan con múltiples cuotas
-            const orAbono = parseFloat(orAbonoMonto) || 0
-            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental', orPagadasN, orAbono))
+            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental', orHistorico))
           } else {
             // Pago único — crear 1 cuota por el monto completo para que aparezca en el selector de pagos
             await supabase.from('cuotas').insert([{
@@ -443,9 +448,9 @@ export default function NuevoVehiculoPage() {
         }
 
         if (vhActivo) {
-          const vhPagadasN    = Math.min(Math.max(0, parseInt(vhCuotasPagadas) || 0), calcVehimotors.cuotas)
+          const vhHistorico   = parseFloat(vhMontoHistorico) || 0
           const vhTotalMonto  = calcVehimotors.totalCuotas > 0 ? calcVehimotors.totalCuotas : calcVehimotors.monto
-          const vhSaldoInicial = vhTotalMonto - vhPagadasN * calcVehimotors.montoCuota
+          const vhSaldoInicial = Math.max(0, vhTotalMonto - vhHistorico)
           const { data: creditoVh, error: errVh } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
             monto_financiado: vhTotalMonto,
@@ -457,17 +462,15 @@ export default function NuevoVehiculoPage() {
             observaciones: vhObs || 'Crédito Financiamiento — Vehimotors',
           }).select().single()
           if (errVh || !creditoVh) { setError(errVh?.message ?? 'Error creando crédito Vehimotors'); setLoading(false); return }
-          const vhAbono = parseFloat(vhAbonoMonto) || 0
-          await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento — Vehimotors', vhPagadasN, vhAbono))
+          await supabase.from('cuotas').insert(buildCuotas(creditoVh.id, calcVehimotors.cuotas, calcVehimotors.montoCuota, vhFrecuencia, vhFecha, 'Crédito Financiamiento — Vehimotors', vhHistorico))
           if (!primerCreditoId) primerCreditoId = creditoVh.id
         }
 
         // Cuota especial (tercer bloque paralelo — ej: trimestral simultánea)
         const ceActivo2 = ceActivo && calcCuotaEspecial.cuotas > 0 && calcCuotaEspecial.montoCuota > 0
         if (ceActivo2) {
-          const cePagadasN    = Math.min(Math.max(0, parseInt(ceCuotasPagadas) || 0), calcCuotaEspecial.cuotas)
           const ceTotalMonto  = calcCuotaEspecial.monto || calcCuotaEspecial.totalCuotas
-          const ceSaldoInicial = calcCuotaEspecial.totalCuotas - cePagadasN * calcCuotaEspecial.montoCuota
+          const ceSaldoInicial = ceTotalMonto
           const { data: creditoCe, error: errCe } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
             monto_financiado: ceTotalMonto,
@@ -479,7 +482,7 @@ export default function NuevoVehiculoPage() {
             observaciones: ceObs || `Cuota especial ${ceFrecuencia}`,
           }).select().single()
           if (errCe || !creditoCe) { setError(errCe?.message ?? 'Error creando cuota especial'); setLoading(false); return }
-          await supabase.from('cuotas').insert(buildCuotas(creditoCe.id, calcCuotaEspecial.cuotas, calcCuotaEspecial.montoCuota, ceFrecuencia, ceFecha, `Cuota especial ${ceFrecuencia}`, cePagadasN))
+          await supabase.from('cuotas').insert(buildCuotas(creditoCe.id, calcCuotaEspecial.cuotas, calcCuotaEspecial.montoCuota, ceFrecuencia, ceFecha, `Cuota especial ${ceFrecuencia}`))
           if (!primerCreditoId) primerCreditoId = creditoCe.id
         }
 
@@ -1144,34 +1147,38 @@ export default function NuevoVehiculoPage() {
                     <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este crédito..."
                       value={orObs} onChange={e => setOrObs(e.target.value)} />
                   </div>
-                  {/* Cuotas ya pagadas al registrar — para clientes históricos */}
-                  {calcInicialOriental.cuotas > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                      <div className="flex items-start gap-2 mb-3">
-                        <span className="text-amber-500 text-base">📋</span>
-                        <div>
-                          <p className="text-xs font-bold text-amber-800">¿Cliente histórico con pagos previos?</p>
-                          <p className="text-[11px] text-amber-600">Indica cuántas cuotas ya fueron pagadas antes de registrar este crédito. Se marcarán automáticamente como pagadas y el saldo se ajustará.</p>
+                  {/* Monto histórico La Oriental */}
+                  {calcInicialOriental.cuotas > 0 && calcInicialOriental.montoCuota > 0 && (() => {
+                    const hist = parseFloat(orMontoHistorico) || 0
+                    const mc   = calcInicialOriental.montoCuota
+                    const completas = hist > 0 ? Math.min(Math.floor(hist / mc), calcInicialOriental.cuotas) : 0
+                    const sobrante  = hist > 0 ? hist - completas * mc : 0
+                    const saldoRest = Math.max(0, calcInicialOriental.totalCuotas - hist)
+                    return (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <div className="flex items-start gap-2 mb-3">
+                          <span className="text-amber-500 text-base">📋</span>
+                          <div>
+                            <p className="text-xs font-bold text-amber-800">¿Cliente con pagos previos al sistema?</p>
+                            <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado. El sistema distribuye automáticamente las cuotas pagadas y el abono parcial.</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <label className="label text-amber-700">Cuotas ya pagadas al registrar</label>
-                          <input type="number" min="0" max={calcInicialOriental.cuotas} className="input border-amber-300 bg-white"
-                            placeholder="0" value={orCuotasPagadas} onChange={e => setOrCuotasPagadas(e.target.value)} />
+                        <div className="relative mb-3">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
+                          <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
+                            placeholder="0.00 — monto total ya cobrado"
+                            value={orMontoHistorico} onChange={e => setOrMontoHistorico(e.target.value)} />
                         </div>
-                        {parseInt(orCuotasPagadas) > 0 && (
-                          <div className="bg-amber-100 rounded-lg p-3 text-center min-w-[140px] border border-amber-200">
-                            <p className="text-[10px] text-amber-600 font-semibold">Saldo que quedará</p>
-                            <p className="text-base font-extrabold text-amber-900">
-                              {formatUSD(Math.max(0, calcInicialOriental.totalCuotas - (parseInt(orCuotasPagadas) || 0) * calcInicialOriental.montoCuota))}
-                            </p>
-                            <p className="text-[10px] text-amber-500">{calcInicialOriental.cuotas - (parseInt(orCuotasPagadas) || 0)} cuotas restantes</p>
+                        {hist > 0 && (
+                          <div className="space-y-1.5">
+                            {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
+                            {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
+                            <p className="text-[11px] text-red-700 font-semibold">Saldo restante a cobrar: {formatUSD(saldoRest)}</p>
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                   {calcInicialOriental.cuotas === 0 && calcInicialOriental.monto > 0 && (
                     <div className="mt-3 bg-purple-700 rounded-lg p-4 flex items-center justify-between">
                       <div>
@@ -1257,34 +1264,38 @@ export default function NuevoVehiculoPage() {
                     <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este financiamiento..."
                       value={vhObs} onChange={e => setVhObs(e.target.value)} />
                   </div>
-                  {/* Cuotas ya pagadas al registrar — para clientes históricos */}
-                  {calcVehimotors.cuotas > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                      <div className="flex items-start gap-2 mb-3">
-                        <span className="text-amber-500 text-base">📋</span>
-                        <div>
-                          <p className="text-xs font-bold text-amber-800">¿Cliente histórico con pagos previos?</p>
-                          <p className="text-[11px] text-amber-600">Indica cuántas cuotas Vehimotors ya fueron pagadas antes de registrar. Se marcarán como pagadas y el saldo se ajustará.</p>
+                  {/* Monto histórico Vehimotors */}
+                  {calcVehimotors.cuotas > 0 && calcVehimotors.montoCuota > 0 && (() => {
+                    const hist = parseFloat(vhMontoHistorico) || 0
+                    const mc   = calcVehimotors.montoCuota
+                    const completas = hist > 0 ? Math.min(Math.floor(hist / mc), calcVehimotors.cuotas) : 0
+                    const sobrante  = hist > 0 ? hist - completas * mc : 0
+                    const saldoRest = Math.max(0, calcVehimotors.totalCuotas - hist)
+                    return (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <div className="flex items-start gap-2 mb-3">
+                          <span className="text-amber-500 text-base">📋</span>
+                          <div>
+                            <p className="text-xs font-bold text-amber-800">¿Cliente con pagos previos al sistema?</p>
+                            <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado por Vehimotors. El sistema distribuye cuotas pagadas y abono parcial automáticamente.</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <label className="label text-amber-700">Cuotas ya pagadas al registrar</label>
-                          <input type="number" min="0" max={calcVehimotors.cuotas} className="input border-amber-300 bg-white"
-                            placeholder="0" value={vhCuotasPagadas} onChange={e => setVhCuotasPagadas(e.target.value)} />
+                        <div className="relative mb-3">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
+                          <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
+                            placeholder="0.00 — monto total ya cobrado"
+                            value={vhMontoHistorico} onChange={e => setVhMontoHistorico(e.target.value)} />
                         </div>
-                        {parseInt(vhCuotasPagadas) > 0 && (
-                          <div className="bg-amber-100 rounded-lg p-3 text-center min-w-[140px] border border-amber-200">
-                            <p className="text-[10px] text-amber-600 font-semibold">Saldo que quedará</p>
-                            <p className="text-base font-extrabold text-amber-900">
-                              {formatUSD(Math.max(0, calcVehimotors.totalCuotas - (parseInt(vhCuotasPagadas) || 0) * calcVehimotors.montoCuota))}
-                            </p>
-                            <p className="text-[10px] text-amber-500">{calcVehimotors.cuotas - (parseInt(vhCuotasPagadas) || 0)} cuotas restantes</p>
+                        {hist > 0 && (
+                          <div className="space-y-1.5">
+                            {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
+                            {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
+                            <p className="text-[11px] text-red-700 font-semibold">Saldo restante a cobrar: {formatUSD(saldoRest)}</p>
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                   {calcVehimotors.cuotas > 0 && calcVehimotors.montoCuota > 0 && (
                     <div className="mt-3 bg-indigo-700 rounded-lg p-4 grid grid-cols-3 gap-3">
                       <div className="text-center">
