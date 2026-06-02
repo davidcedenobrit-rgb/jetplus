@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Search, X, Car, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import type { Cliente, Vehiculo } from '@/types/database'
 import { CreditoSchema } from '@/lib/validations'
+import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
@@ -76,6 +77,28 @@ export default function NuevoCreditoPage() {
   const [vehimotorsFrecuencia, setVehimotorsFrecuencia] = useState('mensual')
   const [vehimotorsFecha, setVehimotorsFecha] = useState(new Date().toISOString().split('T')[0])
   const [vehimotorsObs, setVehimotorsObs] = useState('')
+
+  // Cuota especial (trimestral paralela)
+  const [ceActivo, setCeActivo] = useState(false)
+  const [ceMonto, setCeMonto] = useState('')
+  const [ceCuotas, setCeCuotas] = useState('8')
+  const [ceMontoCuota, setCeMontoCuota] = useState('')
+  const [ceFrecuencia, setCeFrecuencia] = useState('trimestral')
+  const [ceFecha, setCeFecha] = useState(new Date().toISOString().split('T')[0])
+  const [ceObs, setCeObs] = useState('')
+
+  // Historial de pagos previos
+  const [orMontoHistorico, setOrMontoHistorico] = useState('')
+  const [vhMontoHistorico, setVhMontoHistorico] = useState('')
+
+  // Calculadora de precio
+  const [calcBase, setCalcBase] = useState('')
+  const [calcIvaPct, setCalcIvaPct] = useState('16')
+  const [calcGastosContado, setCalcGastosContado] = useState('')
+  const [calcGastosCredito, setCalcGastosCredito] = useState('')
+  const [calcPctInicial, setCalcPctInicial] = useState('40')
+  const [calcTasaAnual, setCalcTasaAnual] = useState('24')
+  const [calcNumCuotasVh, setCalcNumCuotasVh] = useState('24')
 
   // Cliente
   const [clienteQuery, setClienteQuery] = useState('')
@@ -205,16 +228,60 @@ export default function NuevoCreditoPage() {
     }
   }, [inicialOrientalMonto, inicialOrientalCuotas])
 
-  // Auto-calcular monto por cuota — Vehimotors
+  // Auto-calcular cuota Vehimotors con PMT + descuento trimestral
   useEffect(() => {
     const monto  = parseFloat(vehimotorsMonto)
     const cuotas = parseInt(vehimotorsCuotas)
-    if (monto > 0 && cuotas > 0) {
-      setVehimotorsMontoCuota((monto / cuotas).toFixed(2))
+    if (!monto || monto <= 0 || !cuotas || cuotas <= 0) { setVehimotorsMontoCuota(''); return }
+    const tasa = parseFloat(calcTasaAnual) || 0
+    let pmt: number
+    if (tasa > 0) {
+      const r = tasa / 100 / 12
+      pmt = monto * r * Math.pow(1 + r, cuotas) / (Math.pow(1 + r, cuotas) - 1)
     } else {
-      setVehimotorsMontoCuota('')
+      pmt = monto / cuotas
     }
-  }, [vehimotorsMonto, vehimotorsCuotas])
+    if (ceActivo) {
+      const totalTrim = (parseInt(ceCuotas) || 0) * (parseFloat(ceMontoCuota) || 0)
+      if (totalTrim > 0) {
+        const total = pmt * cuotas
+        setVehimotorsMontoCuota((Math.max(0, total - totalTrim) / cuotas).toFixed(2))
+        return
+      }
+    }
+    setVehimotorsMontoCuota(pmt.toFixed(2))
+  }, [vehimotorsMonto, vehimotorsCuotas, calcTasaAnual, ceActivo, ceCuotas, ceMontoCuota])
+
+  // Calculadora de precio (live)
+  const calculadora = useMemo(() => {
+    const base = parseFloat(calcBase) || 0
+    if (base <= 0) return null
+    const ivaPct = parseFloat(calcIvaPct) || 16
+    const iva = base * ivaPct / 100
+    const pctInicial = (parseFloat(calcPctInicial) || 40) / 100
+    const gastosCredito = parseFloat(calcGastosCredito) || 0
+    const inicialBase = base * pctInicial
+    const totalInicialLaOriental = inicialBase + iva + gastosCredito
+    const financiamientoVh = base * (1 - pctInicial)
+    const n = parseInt(calcNumCuotasVh) || 24
+    const tasaAnual = parseFloat(calcTasaAnual) || 0
+    let cuotaVh: number
+    if (tasaAnual > 0) {
+      const r = tasaAnual / 100 / 12
+      cuotaVh = financiamientoVh * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1)
+    } else {
+      cuotaVh = financiamientoVh / n
+    }
+    return { base, iva, ivaPct, pctInicial, gastosCredito, inicialBase, totalInicialLaOriental, financiamientoVh, cuotaVh, n, tasaAnual }
+  }, [calcBase, calcIvaPct, calcGastosCredito, calcPctInicial, calcTasaAnual, calcNumCuotasVh])
+
+  function aplicarCalculadora() {
+    if (!calculadora) return
+    setInicialOrientalMonto(calculadora.totalInicialLaOriental.toFixed(2))
+    setVehimotorsMonto(calculadora.financiamientoVh.toFixed(2))
+    setVehimotorsCuotas(String(calculadora.n))
+    setVehimotorsMontoCuota(calculadora.cuotaVh.toFixed(2))
+  }
 
   // Plan personalizado — cálculos
   const calcInicialOriental = useMemo(() => {
@@ -280,14 +347,19 @@ export default function NuevoCreditoPage() {
         return
       }
 
-      function buildCuotas(creditoId: string, n: number, monto: number, frecuencia: string, fechaBase: string, concepto: string) {
+      // Distribución histórica: completas primero, última con abono parcial
+      function buildCuotas(creditoId: string, n: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string, montoHistorico = 0) {
+        let restante = montoHistorico
         return Array.from({ length: n }, (_, i) => {
           const fecha = new Date(fechaBase)
           if (frecuencia === 'semanal') fecha.setDate(fecha.getDate() + (i + 1) * 7)
           else if (frecuencia === 'quincenal') fecha.setDate(fecha.getDate() + (i + 1) * 15)
           else if (frecuencia === 'trimestral') fecha.setMonth(fecha.getMonth() + 3 * (i + 1))
           else fecha.setMonth(fecha.getMonth() + (i + 1))
-          return { credito_id: creditoId, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto, estado: 'pendiente', mora: 0, concepto }
+          let estado = 'pendiente', monto_pagado = 0
+          if (restante >= montoCuota) { estado = 'pagada'; monto_pagado = montoCuota; restante -= montoCuota }
+          else if (restante > 0) { estado = 'abono_parcial'; monto_pagado = restante; restante = 0 }
+          return { credito_id: creditoId, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: montoCuota, estado, monto_pagado, mora: 0, concepto }
         })
       }
 
@@ -307,7 +379,7 @@ export default function NuevoCreditoPage() {
           observaciones: inicialOrientalObs || 'Crédito de Inicial — La Oriental',
         }).select().single()
         if (errO || !resO) { setError(errO?.message ?? 'Error crédito inicial'); setLoading(false); return }
-        await supabase.from('cuotas').insert(buildCuotas(resO.id, calcInicialOriental.numCuotas, calcInicialOriental.montoCuota, inicialOrientalFrecuencia, inicialOrientalFecha, 'Crédito de Inicial — La Oriental'))
+        await supabase.from('cuotas').insert(buildCuotas(resO.id, calcInicialOriental.numCuotas, calcInicialOriental.montoCuota, inicialOrientalFrecuencia, inicialOrientalFecha, 'Crédito de Inicial — La Oriental', parseFloat(orMontoHistorico) || 0))
         primerCreditoId = resO.id
       }
 
@@ -325,7 +397,20 @@ export default function NuevoCreditoPage() {
           observaciones: vehimotorsObs || 'Crédito Financiamiento — Vehimotors',
         }).select().single()
         if (errV || !resV) { setError(errV?.message ?? 'Error crédito Vehimotors'); setLoading(false); return }
-        await supabase.from('cuotas').insert(buildCuotas(resV.id, calcVehimotors.numCuotas, calcVehimotors.montoCuota, vehimotorsFrecuencia, vehimotorsFecha, 'Crédito Financiamiento — Vehimotors'))
+        await supabase.from('cuotas').insert(buildCuotas(resV.id, calcVehimotors.numCuotas, calcVehimotors.montoCuota, vehimotorsFrecuencia, vehimotorsFecha, 'Crédito Financiamiento — Vehimotors', parseFloat(vhMontoHistorico) || 0))
+        // Cuota especial trimestral
+        if (ceActivo && parseInt(ceCuotas) > 0 && parseFloat(ceMontoCuota) > 0) {
+          const ceTotalMonto = (parseInt(ceCuotas) || 0) * (parseFloat(ceMontoCuota) || 0)
+          const { data: resCe } = await supabase.from('creditos').insert({
+            cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculoSeleccionado.id,
+            placa: vehiculoSeleccionado.placa,
+            monto_financiado: ceTotalMonto, inicial: 0, saldo: ceTotalMonto,
+            num_cuotas: parseInt(ceCuotas), frecuencia_pago: ceFrecuencia,
+            fecha_inicio: ceFecha, moneda: 'USD', estado: 'activo', plan_tipo: 'cuota_especial',
+            observaciones: ceObs || `Cuota especial ${ceFrecuencia}`,
+          }).select().single()
+          if (resCe) await supabase.from('cuotas').insert(buildCuotas(resCe.id, parseInt(ceCuotas), parseFloat(ceMontoCuota), ceFrecuencia, ceFecha, `Cuota especial ${ceFrecuencia}`))
+        }
         if (!primerCreditoId) primerCreditoId = resV.id
       }
 

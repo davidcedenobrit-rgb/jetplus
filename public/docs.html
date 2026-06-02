@@ -442,6 +442,110 @@
   </div>
 </div>
 
+<!-- GUÍA DE REGISTRO DE CLIENTES -->
+<div class="section">
+  <div class="section-label">Guía Operativa</div>
+  <div class="section-title">Cómo registrar los 3 tipos de clientes</div>
+  <div class="section-desc">Instrucciones paso a paso para cargar clientes nuevos, clientes con historial de pagos y clientes con cuotas especiales trimestrales.</div>
+
+  <style>
+    .guide-block { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 20px; }
+    .guide-block:hover { border-color: rgba(211,31,42,0.25); }
+    .guide-num { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--red); color: white; font-weight: 800; font-size: 14px; border-radius: 50%; margin-bottom: 14px; flex-shrink: 0; }
+    .guide-title { font-size: 17px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+    .guide-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+    .steps { display: flex; flex-direction: column; gap: 10px; }
+    .step { display: flex; gap: 12px; align-items: flex-start; }
+    .step-n { background: rgba(211,31,42,0.15); color: var(--red); font-size: 11px; font-weight: 800; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .step-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .step-text strong { color: var(--white); }
+    .step-text code { background: rgba(255,255,255,0.07); color: #10b981; padding: 1px 7px; border-radius: 5px; font-size: 12px; font-family: monospace; }
+    .guide-note { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; padding: 12px 16px; margin-top: 14px; font-size: 12px; color: #6ee7b7; }
+    .guide-warn { background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2); border-radius: 8px; padding: 12px 16px; margin-top: 14px; font-size: 12px; color: #fbbf24; }
+    .preview-box { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-top: 14px; font-size: 12px; font-family: monospace; line-height: 1.8; color: var(--muted); }
+    .preview-box .g { color: #10b981; } .preview-box .y { color: #fbbf24; } .preview-box .w { color: var(--white); font-weight: 700; } .preview-box .r { color: #f87171; }
+  </style>
+
+  <!-- TIPO 1 -->
+  <div class="guide-block">
+    <div class="guide-num">1</div>
+    <div class="guide-title">Cliente nuevo — sin historial previo</div>
+    <div class="guide-sub">Para clientes que están comprando ahora por primera vez y no tienen pagos anteriores.</div>
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div><div class="step-text">Ir a <strong>Clientes → Nuevo cliente</strong> y llenar todos los datos del cliente.</div></div>
+      <div class="step"><div class="step-n">2</div><div class="step-text">Ir a <strong>Vehículos → Nuevo vehículo</strong>, buscar el cliente y llenar los datos del vehículo (marca, modelo, versión, placa, color, año).</div></div>
+      <div class="step"><div class="step-n">3</div><div class="step-text">Seleccionar tipo de compra: <strong>Contado</strong> o <strong>Financiado</strong>.</div></div>
+      <div class="step"><div class="step-n">4</div><div class="step-text">Si es financiado: elegir <strong>Asegúrate con $500</strong> o <strong>Personalizado "La Oriental"</strong>. Llenar los montos.</div></div>
+      <div class="step"><div class="step-n">5</div><div class="step-text"><strong>No tocar</strong> el campo "¿Cliente con pagos previos?". Dejar en cero. Guardar.</div></div>
+    </div>
+    <div class="guide-note">✓ Las cuotas se generan todas como "Pendiente". Los ingresos se registran normalmente desde ese día.</div>
+  </div>
+
+  <!-- TIPO 2 -->
+  <div class="guide-block">
+    <div class="guide-num">2</div>
+    <div class="guide-title">Cliente antiguo — crédito ya corriendo con pagos previos</div>
+    <div class="guide-sub">Para clientes que llevan tiempo pagando y se van a incorporar al sistema. Ejemplo: pagaron $4,772 antes de hoy.</div>
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div><div class="step-text">Registrar el cliente y el vehículo normalmente como si fuera nuevo (sin tocar pagos previos por ahora).</div></div>
+      <div class="step"><div class="step-n">2</div><div class="step-text">Ir al crédito recién creado → <strong>Editar crédito</strong>.</div></div>
+      <div class="step"><div class="step-n">3</div><div class="step-text">Al tope del formulario aparece el <strong>Panel ámbar "Crédito con Antigüedad"</strong>. En el campo de monto escribir el total exacto que el cliente ha pagado. Ejemplo: <code>4772.00</code></div></div>
+      <div class="step"><div class="step-n">4</div><div class="step-text">El sistema muestra el preview automáticamente antes de aplicar.</div></div>
+      <div class="step"><div class="step-n">5</div><div class="step-text">Hacer clic en <strong>"Aplicar pagos históricos"</strong>. Las cuotas anteriores quedan marcadas como pagadas.</div></div>
+    </div>
+    <div class="preview-box">
+      Monto ingresado: <span class="w">$4,772.00</span><br>
+      <span class="g">✓ Cuotas 1–4 pagadas completamente ($954 c/u)</span><br>
+      <span class="y">⚡ Cuota #5 con abono de $908 · pendiente $46</span><br>
+      <span class="r">Saldo restante a cobrar: $24,319.24</span>
+    </div>
+    <div class="guide-warn">⚠ Estos pagos NO generan ingresos en el sistema. Solo reflejan lo cobrado antes de entrar al Centro de Mando. Desde la cuota con abono parcial, los ingresos se cobran normalmente.</div>
+  </div>
+
+  <!-- TIPO 3 -->
+  <div class="guide-block">
+    <div class="guide-num">3</div>
+    <div class="guide-title">Cliente antiguo — con cuotas especiales trimestrales ya corriendo</div>
+    <div class="guide-sub">Para clientes cuyo plan incluye cuotas trimestrales paralelas a las mensuales (como el ejemplo del MG3 con 8 trimestrales + 30 mensuales).</div>
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div><div class="step-text">Ir a <strong>Vehículos → Nuevo vehículo → Plan Personalizado "La Oriental"</strong>.</div></div>
+      <div class="step"><div class="step-n">2</div><div class="step-text">Llenar el bloque <strong>La Oriental</strong> si aplica (inicial).</div></div>
+      <div class="step"><div class="step-n">3</div><div class="step-text">En el bloque <strong>Vehimotors</strong> poner el monto total financiado. Ejemplo: <code>23000</code>. La tasa 24% ya viene precargada.</div></div>
+      <div class="step"><div class="step-n">4</div><div class="step-text">Activar el bloque <strong>"3 · Cuotas Especiales (paralelas)"</strong> al fondo. Poner el N° de trimestrales y el monto de cada una. Ejemplo: <code>8 cuotas × $1,496.06</code></div></div>
+      <div class="step"><div class="step-n">5</div><div class="step-text">La cuota mensual se recalcula sola. Verificar en el resumen que trimestral + mensual = total esperado.</div></div>
+      <div class="step"><div class="step-n">6</div><div class="step-text">En el campo <strong>"¿Cliente con pagos previos? (Vehimotors)"</strong> poner el total ya cobrado. Ejemplo si pagó 3 trimestrales: <code>4488.18</code></div></div>
+      <div class="step"><div class="step-n">7</div><div class="step-text">Revisar el preview y guardar.</div></div>
+    </div>
+    <div class="preview-box">
+      Total Vehimotors (24% anual): <span class="w">$27,545.68</span><br>
+      <span class="g">Cuotas trimestrales:  8 × $1,496.06 = $11,968.48</span><br>
+      <span class="g">Cuotas mensuales:    30 ×   $519.24 = $15,577.20</span><br>
+      <span class="w">─────────────────────────────────────────</span><br>
+      <span class="w">Total a pagar Vehimotors:   $27,545.68 ✓</span>
+    </div>
+    <div class="guide-note">✓ Las cuotas trimestrales ya pagadas quedan marcadas sin generar ingresos. Las pendientes (trimestrales y mensuales) se cobran normalmente desde el sistema.</div>
+  </div>
+
+  <!-- RESUMEN RÁPIDO -->
+  <div style="background:rgba(211,31,42,0.08);border:1px solid rgba(211,31,42,0.2);border-radius:12px;padding:20px 24px;margin-top:8px;">
+    <p style="color:var(--white);font-weight:700;font-size:14px;margin-bottom:14px;">Resumen rápido</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:12px;">
+      <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:12px;">
+        <p style="color:var(--red);font-weight:700;margin-bottom:6px;">Tipo 1 — Nuevo</p>
+        <p style="color:var(--muted);">Nuevo vehículo → no tocar pagos previos → guardar.</p>
+      </div>
+      <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:12px;">
+        <p style="color:#fbbf24;font-weight:700;margin-bottom:6px;">Tipo 2 — Antiguo simple</p>
+        <p style="color:var(--muted);">Crear normal → Editar crédito → Panel ámbar → monto total cobrado.</p>
+      </div>
+      <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:12px;">
+        <p style="color:#10b981;font-weight:700;margin-bottom:6px;">Tipo 3 — Con trimestrales</p>
+        <p style="color:var(--muted);">Nuevo vehículo → Cuotas especiales → pagos previos → guardar.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- SOPORTE -->
 <div class="section">
   <div class="section-label">Soporte</div>

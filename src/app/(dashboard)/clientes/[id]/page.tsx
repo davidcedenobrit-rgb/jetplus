@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, AlertCircle, FileText } from 'lucide-react'
+import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, AlertCircle, FileText, Edit3 } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import DocumentosCliente from './DocumentosCliente'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
@@ -135,6 +135,10 @@ export default async function ClienteDetallePage({
           <h1 className="text-2xl font-bold text-oriental-black">{cliente.nombre}</h1>
           <p className="text-oriental-gray text-sm mt-0.5">{cliente.cedula_rif} · {cliente.tipo === 'juridico' ? 'Persona jurídica' : 'Persona natural'}</p>
         </div>
+        <Link href={`/clientes/${id}/editar`}
+          className="flex items-center gap-2 px-4 py-2 bg-oriental-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors">
+          <Edit3 size={15} /> Editar
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

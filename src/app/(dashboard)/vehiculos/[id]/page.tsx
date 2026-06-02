@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Car, User, Calendar, Hash, CreditCard, TrendingUp, ExternalLink, CheckCircle2, Clock, AlertCircle, CircleDot } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import VehiculoDocumentos from './VehiculoDocumentos'
+import DesvincularCliente from './DesvincularCliente'
 
 export default async function VehiculoDetallePage({
   params,
@@ -21,6 +22,10 @@ export default async function VehiculoDetallePage({
     .single()
 
   if (!vehiculo) notFound()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const rol = user?.user_metadata?.rol as string ?? ''
+  const puedeDesvincular = ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol)
 
   const cliente = (vehiculo as any).clientes
 
@@ -123,14 +128,15 @@ export default async function VehiculoDetallePage({
           {/* Propietario */}
           {cliente && (
             <div className="card p-6">
-              <h2 className="font-bold text-oriental-black mb-4 flex items-center gap-2">
+              <h2 className="font-bold text-oriental-black mb-3 flex items-center gap-2">
                 <User size={16} className="text-oriental-gray" /> Propietario
               </h2>
-              <Link href={`/clientes/${cliente.id}`} className="block p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-oriental-bg/50 transition-all">
+              <Link href={`/clientes/${cliente.id}`} className="block p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-oriental-bg/50 transition-all mb-3">
                 <p className="font-semibold text-oriental-black">{cliente.nombre}</p>
                 <p className="text-xs text-oriental-gray">{cliente.cedula_rif}</p>
                 {cliente.telefono && <p className="text-xs text-oriental-gray mt-1">{cliente.telefono}</p>}
               </Link>
+              {puedeDesvincular && <DesvincularCliente vehiculoId={id} />}
             </div>
           )}
 
