@@ -214,13 +214,15 @@ export default function NuevoVehiculoPage() {
   }, [orMonto, orCuotas, orMontoCuota])
 
   const calcVehimotors = useMemo(() => {
-    const monto = parseFloat(vhMonto) || 0
-    const cuotas = parseInt(vhCuotas) || 0
-    const montoCuota = parseFloat(vhMontoCuota) || 0
+    const monto       = parseFloat(vhMonto) || 0
+    const ceDeduccion = ceActivo ? (parseFloat(ceMonto) || 0) : 0
+    const montoMensual = Math.max(0, monto - ceDeduccion)   // lo que cubre las cuotas mensuales
+    const cuotas      = parseInt(vhCuotas) || 0
+    const montoCuota  = parseFloat(vhMontoCuota) || 0
     const totalCuotas = cuotas * montoCuota
-    const showWarning = monto > 0 && cuotas > 0 && montoCuota > 0 && Math.abs(totalCuotas - monto) > 0.01
-    return { monto, cuotas, montoCuota, totalCuotas, showWarning }
-  }, [vhMonto, vhCuotas, vhMontoCuota])
+    const showWarning = montoMensual > 0 && cuotas > 0 && montoCuota > 0 && Math.abs(totalCuotas - montoMensual) > 0.01
+    return { monto, ceDeduccion, montoMensual, cuotas, montoCuota, totalCuotas, showWarning }
+  }, [vhMonto, vhCuotas, vhMontoCuota, ceActivo, ceMonto])
 
   // Auto-calcular monto por cuota — La Oriental (plan personalizado)
   useEffect(() => {
@@ -233,24 +235,25 @@ export default function NuevoVehiculoPage() {
     }
   }, [orMonto, orCuotas])
 
-  // Auto-calcular monto por cuota — Vehimotors (plan personalizado)
-  // Si hay tasa anual en la calculadora, usa PMT; si no, división simple
+  // Auto-calcular monto por cuota — Vehimotors (descuenta cuotas especiales si activas)
   useEffect(() => {
     const monto  = parseFloat(vhMonto)
     const cuotas = parseInt(vhCuotas)
-    if (monto > 0 && cuotas > 0) {
+    const ceDeduccion = ceActivo ? (parseFloat(ceMonto) || 0) : 0
+    const montoMensual = Math.max(0, (monto || 0) - ceDeduccion)
+    if (montoMensual > 0 && cuotas > 0) {
       const tasa = parseFloat(calcTasaAnual) || 0
       if (tasa > 0) {
         const r = tasa / 100 / 12
-        const pmt = monto * r * Math.pow(1 + r, cuotas) / (Math.pow(1 + r, cuotas) - 1)
+        const pmt = montoMensual * r * Math.pow(1 + r, cuotas) / (Math.pow(1 + r, cuotas) - 1)
         setVhMontoCuota(pmt.toFixed(2))
       } else {
-        setVhMontoCuota((monto / cuotas).toFixed(2))
+        setVhMontoCuota((montoMensual / cuotas).toFixed(2))
       }
     } else {
       setVhMontoCuota('')
     }
-  }, [vhMonto, vhCuotas, calcTasaAnual])
+  }, [vhMonto, vhCuotas, calcTasaAnual, ceActivo, ceMonto])
 
   // ── Sincronizar fecha de entrega → fecha de inicio de cuotas ──────────────
   useEffect(() => {
@@ -449,7 +452,8 @@ export default function NuevoVehiculoPage() {
 
         if (vhActivo) {
           const vhHistorico   = parseFloat(vhMontoHistorico) || 0
-          const vhTotalMonto  = calcVehimotors.totalCuotas > 0 ? calcVehimotors.totalCuotas : calcVehimotors.monto
+          // Si hay cuota especial, el crédito mensual Vehimotors es sobre montoMensual (ya descontado)
+          const vhTotalMonto  = calcVehimotors.totalCuotas > 0 ? calcVehimotors.totalCuotas : calcVehimotors.montoMensual
           const vhSaldoInicial = Math.max(0, vhTotalMonto - vhHistorico)
           const { data: creditoVh, error: errVh } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
@@ -1221,9 +1225,27 @@ export default function NuevoVehiculoPage() {
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                     <div>
-                      <label className="label">Monto financiado Vehimotors (USD)</label>
+                      <label className="label">
+                        Monto total Vehimotors (USD)
+                        {ceActivo && calcVehimotors.ceDeduccion > 0 && (
+                          <span className="ml-2 text-[10px] font-normal text-teal-600">
+                            — incluye cuotas especiales
+                          </span>
+                        )}
+                      </label>
                       <input type="number" step="0.01" min="0" className="input" placeholder="0.00"
                         value={vhMonto} onChange={e => setVhMonto(e.target.value)} />
+                      {ceActivo && calcVehimotors.ceDeduccion > 0 && calcVehimotors.montoMensual > 0 && (
+                        <div className="mt-1.5 bg-teal-50 border border-teal-200 rounded-lg px-2.5 py-1.5 text-[11px]">
+                          <span className="text-teal-700">
+                            <strong>${calcVehimotors.monto.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> total
+                            &nbsp;—&nbsp;
+                            <strong className="text-teal-600">${calcVehimotors.ceDeduccion.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> cuotas especiales
+                            &nbsp;=&nbsp;
+                            <strong className="text-indigo-700">${calcVehimotors.montoMensual.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> en cuotas mensuales
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="label">N° de cuotas</label>
@@ -1298,26 +1320,40 @@ export default function NuevoVehiculoPage() {
                     )
                   })()}
                   {calcVehimotors.cuotas > 0 && calcVehimotors.montoCuota > 0 && (
-                    <div className="mt-3 bg-indigo-700 rounded-lg p-4 grid grid-cols-3 gap-3">
-                      <div className="text-center">
-                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Monto financiado</p>
-                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.monto)}</p>
-                      </div>
-                      <div className="text-center border-x border-indigo-500">
-                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Cuota {vhFrecuencia}</p>
-                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.montoCuota)}</p>
-                        <p className="text-indigo-300 text-[10px]">{calcVehimotors.cuotas} cuotas</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Total cuotas</p>
-                        <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.totalCuotas)}</p>
+                    <div className="mt-3 bg-indigo-700 rounded-lg p-4">
+                      {/* Desglose si hay cuotas especiales */}
+                      {ceActivo && calcVehimotors.ceDeduccion > 0 && (
+                        <div className="bg-indigo-800/50 rounded-lg px-3 py-2 mb-3 text-[11px] text-indigo-200 flex items-center justify-between">
+                          <span>Total Vehimotors: <strong className="text-white">{formatUSD(calcVehimotors.monto)}</strong></span>
+                          <span>Cuotas especiales: <strong className="text-teal-300">− {formatUSD(calcVehimotors.ceDeduccion)}</strong></span>
+                          <span>Mensual: <strong className="text-indigo-100">{formatUSD(calcVehimotors.montoMensual)}</strong></span>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center">
+                          <p className="text-indigo-200 text-[10px] uppercase tracking-wider">
+                            {ceActivo && calcVehimotors.ceDeduccion > 0 ? 'Monto mensual' : 'Monto financiado'}
+                          </p>
+                          <p className="text-white font-extrabold text-base">
+                            {formatUSD(ceActivo && calcVehimotors.ceDeduccion > 0 ? calcVehimotors.montoMensual : calcVehimotors.monto)}
+                          </p>
+                        </div>
+                        <div className="text-center border-x border-indigo-500">
+                          <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Cuota {vhFrecuencia}</p>
+                          <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.montoCuota)}</p>
+                          <p className="text-indigo-300 text-[10px]">{calcVehimotors.cuotas} cuotas</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-indigo-200 text-[10px] uppercase tracking-wider">Total cuotas mens.</p>
+                          <p className="text-white font-extrabold text-base">{formatUSD(calcVehimotors.totalCuotas)}</p>
+                        </div>
                       </div>
                     </div>
                   )}
                   {calcVehimotors.showWarning && (
                     <div className="mt-2 flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
                       <AlertCircle size={14} className="text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcVehimotors.totalCuotas)}) no coincide con el monto financiado ({formatUSD(calcVehimotors.monto)}). Verifica si es una condición especial.</p>
+                      <p className="text-xs text-yellow-800">El total de cuotas mensuales ({formatUSD(calcVehimotors.totalCuotas)}) no coincide con el monto mensual ({formatUSD(calcVehimotors.montoMensual)}). Verifica.</p>
                     </div>
                   )}
                 </div>
