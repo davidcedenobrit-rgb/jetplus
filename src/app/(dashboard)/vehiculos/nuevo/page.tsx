@@ -62,7 +62,7 @@ export default function NuevoVehiculoPage() {
   const [observaciones, setObservaciones] = useState('')
 
   // Financiamiento
-  const [plan, setPlan] = useState<Plan>('credito_40_60')
+  const [plan, setPlan] = useState<Plan>('asegurate_500')
   const [precioBase, setPrecioBase] = useState('')
   const [gastosAdmin, setGastosAdmin] = useState('')
   const [cuotasAsegurate, setCuotasAsegurate] = useState<6 | 9>(6)
@@ -771,9 +771,8 @@ export default function NuevoVehiculoPage() {
               Plan de financiamiento
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
               {[
-                { value: 'credito_40_60', title: 'Vehimotors (Planta)', desc: '40% inicial + 24 cuotas mensuales' },
                 { value: 'asegurate_500', title: 'Asegúrate con $500', desc: '$500 reserva + cuotas según modelo' },
                 { value: 'personalizado', title: 'Personalizado "La Oriental"', desc: 'Define el plan libremente' },
               ].map(p => (
