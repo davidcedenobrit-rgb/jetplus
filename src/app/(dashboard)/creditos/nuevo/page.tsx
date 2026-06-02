@@ -51,7 +51,7 @@ export default function NuevoCreditoPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const [plan, setPlan] = useState<Plan>('credito_40_60')
+  const [plan, setPlan] = useState<Plan>('asegurate_500')
 
   // Precio desglosado (40/60 y AC500)
   const [precioBase, setPrecioBase] = useState('')
@@ -594,9 +594,8 @@ export default function NuevoCreditoPage() {
             Plan de financiamiento
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
             {[
-              { value: 'credito_40_60', title: 'Vehimotors (Planta)', desc: '40% inicial + 24 cuotas mensuales' },
               { value: 'asegurate_500', title: 'Asegúrate con $500', desc: '$500 reserva + cuotas según modelo' },
               { value: 'personalizado', title: 'Personalizado "La Oriental"', desc: 'Define el plan libremente' },
             ].map(p => (
@@ -746,6 +745,79 @@ export default function NuevoCreditoPage() {
                   <p className="text-sm text-yellow-800">Selecciona el modelo del plan para ver el cronograma de cuotas</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── CALCULADORA DE PRECIO (plan personalizado) ── */}
+          {plan === 'personalizado' && (
+            <div className="border-2 border-amber-200 rounded-xl bg-amber-50/30">
+              <div className="px-5 pt-4 pb-3 border-b border-amber-200">
+                <p className="text-sm font-bold text-amber-900 flex items-center gap-2">
+                  <span className="text-base">🧮</span> Calculadora de precio
+                  <span className="text-xs font-normal text-amber-700 ml-1">— Los resultados precargan los campos automáticamente</span>
+                </p>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="md:col-span-2">
+                    <label className="label">Precio base (USD) *</label>
+                    <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
+                      placeholder="23,000.00" value={calcBase} onChange={e => setCalcBase(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">IVA (%)</label>
+                    <input type="number" step="0.01" min="0" max="100" className="input"
+                      placeholder="16" value={calcIvaPct} onChange={e => setCalcIvaPct(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">% Inicial (La Oriental)</label>
+                    <input type="number" step="1" min="1" max="99" className="input"
+                      placeholder="40" value={calcPctInicial} onChange={e => setCalcPctInicial(e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label">Gastos (crédito)</label>
+                    <input type="number" step="0.01" min="0" className="input"
+                      placeholder="0.00" value={calcGastosCredito} onChange={e => setCalcGastosCredito(e.target.value)} />
+                    <p className="text-[10px] text-oriental-gray mt-0.5">Póliza + Traslado + INTT + Notaría</p>
+                  </div>
+                  <div>
+                    <label className="label">Tasa Vehimotors (% anual)</label>
+                    <input type="number" step="0.01" min="0" className="input"
+                      placeholder="24" value={calcTasaAnual} onChange={e => setCalcTasaAnual(e.target.value)} />
+                    <p className="text-[10px] text-oriental-gray mt-0.5">Vacío = sin interés</p>
+                  </div>
+                  <div>
+                    <label className="label">N° cuotas Vehimotors</label>
+                    <input type="number" step="1" min="1" max="120" className="input"
+                      placeholder="24" value={calcNumCuotasVh} onChange={e => setCalcNumCuotasVh(e.target.value)} />
+                  </div>
+                </div>
+                {calculadora && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white border border-amber-200 rounded-xl p-4 space-y-2 text-sm">
+                      <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Total Inicial — La Oriental</p>
+                      <div className="flex justify-between"><span className="text-oriental-gray">{Math.round(calculadora.pctInicial * 100)}% Precio base</span><span className="font-semibold">{formatUSD(calculadora.inicialBase)}</span></div>
+                      <div className="flex justify-between"><span className="text-oriental-gray">IVA ({calculadora.ivaPct}%)</span><span className="font-semibold">{formatUSD(calculadora.iva)}</span></div>
+                      <div className="flex justify-between"><span className="text-oriental-gray">Gastos</span><span className="font-semibold">{formatUSD(calculadora.gastosCredito)}</span></div>
+                      <div className="flex justify-between border-t border-amber-200 pt-2"><span className="font-bold text-purple-800 text-xs uppercase">Total inicial</span><span className="font-extrabold text-purple-700 text-base">{formatUSD(calculadora.totalInicialLaOriental)}</span></div>
+                    </div>
+                    <div className="bg-white border border-amber-200 rounded-xl p-4 space-y-2 text-sm">
+                      <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Financiamiento Vehimotors</p>
+                      <div className="flex justify-between"><span className="text-oriental-gray">Principal</span><span className="font-semibold">{formatUSD(calculadora.financiamientoVh)}</span></div>
+                      <div className="flex justify-between bg-indigo-50 rounded-lg px-2 py-1.5"><span className="text-indigo-700 font-semibold text-xs">{calculadora.n} cuotas{calculadora.tasaAnual > 0 ? ` (${calculadora.tasaAnual}% anual)` : ''}</span><span className="font-extrabold text-indigo-800">{formatUSD(calculadora.cuotaVh)} / cuota</span></div>
+                    </div>
+                  </div>
+                )}
+                {calculadora && (
+                  <button type="button" onClick={aplicarCalculadora}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm transition-colors">
+                    ↓ Aplicar al Plan Personalizado
+                  </button>
+                )}
+                {!calculadora && <p className="text-xs text-amber-700 text-center py-2">Ingresa el precio base para ver los cálculos</p>}
+              </div>
             </div>
           )}
 
