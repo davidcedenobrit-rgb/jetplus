@@ -984,6 +984,89 @@ export default function NuevoCreditoPage() {
                 )}
               </div>
 
+              {/* ── CUOTAS ESPECIALES (paralelas) ── */}
+              <div className={`border-2 rounded-xl overflow-hidden ${ceActivo ? 'border-teal-400 bg-teal-50' : 'border-dashed border-teal-300'}`}>
+                <button type="button" onClick={() => setCeActivo(!ceActivo)}
+                  className={`w-full flex items-center justify-between px-5 py-3 transition-colors ${ceActivo ? 'bg-teal-100 hover:bg-teal-200' : 'bg-teal-50 hover:bg-teal-100'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full border-2 ${ceActivo ? 'bg-teal-600 border-teal-600' : 'border-teal-400'}`} />
+                    <span className="text-teal-800 font-bold text-sm">3 · Cuotas Especiales (paralelas)</span>
+                    <span className="text-teal-600 text-xs">— Se descuentan del total Vehimotors, reduciendo la cuota mensual</span>
+                  </div>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ceActivo ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-700 border border-teal-300'}`}>
+                    {ceActivo ? 'Quitar' : '+ Agregar'}
+                  </span>
+                </button>
+                {ceActivo && (
+                  <div className="px-5 pb-5 pt-4 space-y-4 bg-teal-50">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="label">N° cuotas especiales *</label>
+                        <input type="number" className="input" placeholder="ej: 8"
+                          value={ceCuotas} onChange={e => setCeCuotas(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="label">Monto por cuota *</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray text-sm">$</span>
+                          <input type="number" step="0.01" className="input pl-7" placeholder="0.00"
+                            value={ceMontoCuota} onChange={e => setCeMontoCuota(e.target.value)} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="label">Total trimestrales</label>
+                        <div className="input bg-teal-100 text-teal-900 font-bold cursor-not-allowed">
+                          {formatUSD((parseInt(ceCuotas) || 0) * (parseFloat(ceMontoCuota) || 0))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="label">Frecuencia</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {(['mensual', 'trimestral', 'semestral', 'anual'] as const).map(f => (
+                            <button key={f} type="button" onClick={() => setCeFrecuencia(f)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all capitalize ${ceFrecuencia === f ? 'bg-teal-700 border-teal-700 text-white' : 'border-gray-300 text-oriental-gray hover:border-teal-400'}`}>
+                              {f}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="label">Fecha inicio</label>
+                        <input type="date" className="input" value={ceFecha} onChange={e => setCeFecha(e.target.value)} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Observaciones</label>
+                      <textarea className="textarea" rows={2} placeholder="Condiciones especiales de esta cuota paralela..."
+                        value={ceObs} onChange={e => setCeObs(e.target.value)} />
+                    </div>
+                    {/* Resumen trimestral vs mensual */}
+                    {ceActivo && (parseInt(ceCuotas) || 0) > 0 && (parseFloat(ceMontoCuota) || 0) > 0 && calcVehimotors.montoCuota > 0 && (
+                      <div className="bg-teal-700 rounded-lg p-4">
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                          <div>
+                            <p className="text-teal-100 text-[10px] uppercase tracking-wider">Trimestrales</p>
+                            <p className="text-white font-extrabold">{formatUSD((parseInt(ceCuotas)||0)*(parseFloat(ceMontoCuota)||0))}</p>
+                            <p className="text-teal-200 text-[10px]">{ceCuotas} cuotas</p>
+                          </div>
+                          <div className="border-x border-teal-500">
+                            <p className="text-teal-100 text-[10px] uppercase tracking-wider">Cuota mensual</p>
+                            <p className="text-white font-extrabold">{formatUSD(calcVehimotors.montoCuota)}</p>
+                            <p className="text-teal-200 text-[10px]">{vehimotorsCuotas} cuotas</p>
+                          </div>
+                          <div>
+                            <p className="text-teal-100 text-[10px] uppercase tracking-wider">Total Vehimotors</p>
+                            <p className="text-white font-extrabold">{formatUSD((parseInt(ceCuotas)||0)*(parseFloat(ceMontoCuota)||0) + calcVehimotors.totalCuotas)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Resumen total financiado */}
               {(resumenPersonalizado.totalOr > 0 || resumenPersonalizado.totalVh > 0) && (
                 <div className="bg-oriental-black rounded-xl p-5">
