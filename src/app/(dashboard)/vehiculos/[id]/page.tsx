@@ -6,6 +6,7 @@ import { ArrowLeft, Car, User, Calendar, Hash, CreditCard, TrendingUp, ExternalL
 import DeleteButton from '@/components/DeleteButton'
 import VehiculoDocumentos from './VehiculoDocumentos'
 import DesvincularCliente from './DesvincularCliente'
+import VincularCliente from './VincularCliente'
 
 export default async function VehiculoDetallePage({
   params,
@@ -124,6 +125,17 @@ export default async function VehiculoDetallePage({
               <InfoRow icon={Calendar} label="Entrega" value={vehiculo.fecha_entrega ? formatDate(vehiculo.fecha_entrega) : 'Pendiente'} />
             </div>
           </div>
+
+          {/* Vincular cliente — cuando no tiene propietario */}
+          {!cliente && (
+            <div className="card p-6">
+              <h2 className="font-bold text-oriental-black mb-3 flex items-center gap-2">
+                <User size={16} className="text-oriental-gray" /> Propietario
+              </h2>
+              <p className="text-xs text-oriental-gray mb-3">Sin cliente asignado</p>
+              <VincularCliente vehiculoId={id} />
+            </div>
+          )}
 
           {/* Propietario */}
           {cliente && (
