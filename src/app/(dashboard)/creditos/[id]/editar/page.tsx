@@ -88,8 +88,7 @@ export default function EditarCreditoPage() {
   // Panel Crédito con Antigüedad
   const [aplicandoAntiguedad, setAplicandoAntiguedad] = useState(false)
   const [antiguedadMsg, setAntiguedadMsg] = useState('')
-  // Por cuota: monto a aplicar (vacío = no tocar, 'full' = pago completo, número = abono parcial)
-  const [pagosAntiguedad, setPagosAntiguedad] = useState<Record<string, string>>({})
+  const [montoHistorico, setMontoHistorico] = useState('')
 
   // ── Poblar formulario desde un objeto crédito ──
   function poblarFormulario(cred: any) {
@@ -371,40 +370,64 @@ export default function EditarCreditoPage() {
   }
 
   async function aplicarAntiguedad() {
-    const cambios = Object.entries(pagosAntiguedad).filter(([, v]) => v && v !== '')
-    if (cambios.length === 0) { setAntiguedadMsg('Indica al menos un pago para aplicar'); return }
+    const totalPagado = parseFloat(montoHistorico)
+    if (!totalPagado || totalPagado <= 0) { setAntiguedadMsg('Ingresa el monto total ya cobrado'); return }
+
+    // Cuotas pendientes ordenadas
+    const pendientes = [...cuotas]
+      .filter(c => c.estado !== 'pagada')
+      .sort((a, b) => a.numero_cuota - b.numero_cuota)
+
+    if (pendientes.length === 0) { setAntiguedadMsg('No hay cuotas pendientes'); return }
+
     setAplicandoAntiguedad(true); setAntiguedadMsg('')
-    let montoCobrado = 0
+
+    let restante = totalPagado
     let aplicadas = 0
+    let cuotaAbono: any = null
+    let montoAbono = 0
 
-    for (const [cuotaId, valor] of cambios) {
-      const cuota = cuotas.find(c => c.id === cuotaId)
-      if (!cuota) continue
+    for (const cuota of pendientes) {
       const montoCuota = Number(cuota.monto)
-      const montoPago = valor === 'full' ? montoCuota : parseFloat(valor)
-      if (!montoPago || montoPago <= 0) continue
+      if (restante <= 0) break
 
-      const esParcial = montoPago < montoCuota
-      await supabase.from('cuotas').update({
-        estado: esParcial ? 'abono_parcial' : 'pagada',
-        monto_pagado: montoPago,
-        fecha_pago: new Date().toISOString().split('T')[0],
-        updated_at: new Date().toISOString(),
-      }).eq('id', cuotaId)
-
-      montoCobrado += montoPago
-      aplicadas++
+      if (restante >= montoCuota) {
+        // Cuota completa
+        await supabase.from('cuotas').update({
+          estado: 'pagada',
+          monto_pagado: montoCuota,
+          fecha_pago: cuota.fecha_vencimiento,
+          updated_at: new Date().toISOString(),
+        }).eq('id', cuota.id)
+        restante -= montoCuota
+        aplicadas++
+      } else {
+        // Abono parcial — lo que queda del monto histórico
+        cuotaAbono = cuota
+        montoAbono = restante
+        await supabase.from('cuotas').update({
+          estado: 'abono_parcial',
+          monto_pagado: montoAbono,
+          fecha_pago: cuota.fecha_vencimiento,
+          updated_at: new Date().toISOString(),
+        }).eq('id', cuota.id)
+        restante = 0
+        aplicadas++
+      }
     }
 
-    // Actualizar saldo
-    const nuevoSaldo = Math.max(0, (credito?.saldo ?? 0) - montoCobrado)
+    // Actualizar saldo del crédito
+    const nuevoSaldo = Math.max(0, (credito?.saldo ?? 0) - totalPagado)
     await supabase.from('creditos').update({ saldo: nuevoSaldo, updated_at: new Date().toISOString() }).eq('id', creditoActivoId)
 
     // Reload cuotas
     const { data: cs } = await supabase.from('cuotas').select('*').eq('credito_id', creditoActivoId).order('numero_cuota')
     setCuotas(cs ?? [])
-    setPagosAntiguedad({})
-    setAntiguedadMsg(`✓ ${aplicadas} cuota${aplicadas > 1 ? 's' : ''} actualizada${aplicadas > 1 ? 's' : ''} — $${montoCobrado.toFixed(2)} aplicado sin generar ingreso`)
+    setMontoHistorico('')
+
+    let msg = `✓ $${totalPagado.toFixed(2)} distribuidos: ${aplicadas - (cuotaAbono ? 1 : 0)} cuota${aplicadas - (cuotaAbono ? 1 : 0) !== 1 ? 's' : ''} pagadas completamente`
+    if (cuotaAbono) msg += `, cuota #${cuotaAbono.numero_cuota} con abono de $${montoAbono.toFixed(2)} (pendiente $${(Number(cuotaAbono.monto) - montoAbono).toFixed(2)})`
+    setAntiguedadMsg(msg)
     setAplicandoAntiguedad(false)
   }
 
@@ -526,144 +549,146 @@ export default function EditarCreditoPage() {
       {/* ── PANEL CRÉDITO CON ANTIGÜEDAD — solo directores ── */}
       {esDirector && cuotas.length > 0 && (() => {
         const cuotasOrdenadas = [...cuotas].sort((a, b) => a.numero_cuota - b.numero_cuota)
-        const pagadas    = cuotas.filter(c => c.estado === 'pagada')
-        const parciales  = cuotas.filter(c => c.estado === 'abono_parcial')
-        const pendientes = cuotas.filter(c => !['pagada'].includes(c.estado))
-        const montoPagado = pagadas.reduce((s, c) => s + Number(c.monto_pagado ?? c.monto), 0)
-                          + parciales.reduce((s, c) => s + Number(c.monto_pagado ?? 0), 0)
+        const pagadas   = cuotas.filter(c => c.estado === 'pagada')
+        const parciales = cuotas.filter(c => c.estado === 'abono_parcial')
+        const montoCobrado = pagadas.reduce((s, c) => s + Number(c.monto_pagado ?? c.monto), 0)
+                           + parciales.reduce((s, c) => s + Number(c.monto_pagado ?? 0), 0)
         const montoTotal = Number(credito?.monto_financiado ?? 0)
-        const pct = montoTotal > 0 ? Math.min(100, Math.round((montoPagado / montoTotal) * 100)) : 0
-        const hayPagosNuevos = Object.values(pagosAntiguedad).some(v => v && v !== '')
+        const pct = montoTotal > 0 ? Math.min(100, Math.round((montoCobrado / montoTotal) * 100)) : 0
+
+        // Preview: cómo se distribuirá el monto histórico ingresado
+        const totalInput = parseFloat(montoHistorico) || 0
+        const pendientesOrdenadas = cuotasOrdenadas.filter(c => c.estado !== 'pagada')
+        let preview: { cuota: any; tipo: 'pagada' | 'parcial'; monto: number }[] = []
+        if (totalInput > 0) {
+          let rest = totalInput
+          for (const c of pendientesOrdenadas) {
+            if (rest <= 0) break
+            const mc = Number(c.monto)
+            if (rest >= mc) { preview.push({ cuota: c, tipo: 'pagada', monto: mc }); rest -= mc }
+            else { preview.push({ cuota: c, tipo: 'parcial', monto: rest }); rest = 0 }
+          }
+        }
 
         return (
           <div className="mb-6 border-2 border-amber-300 bg-amber-50 rounded-2xl p-6">
             <h2 className="text-sm font-bold text-amber-900 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="text-base">📋</span>
-              Crédito con Antigüedad — Historial de pagos
+              Crédito con Antigüedad — Pagos anteriores al sistema
             </h2>
 
-            {/* Resumen */}
+            {/* Resumen actual */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="bg-white rounded-xl p-3 border border-amber-200 text-center">
-                <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider">Total financiado</p>
-                <p className="text-base font-extrabold text-oriental-black mt-0.5">${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
-                <p className="text-[10px] text-oriental-gray">{cuotas.length} cuotas totales</p>
+                <p className="text-[10px] text-amber-600 font-semibold uppercase">Total financiado</p>
+                <p className="text-base font-extrabold text-oriental-black">${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-oriental-gray">{cuotas.length} cuotas · ${Number(credito?.saldo ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })} saldo</p>
               </div>
               <div className="bg-white rounded-xl p-3 border border-green-200 text-center">
-                <p className="text-[10px] text-green-600 font-semibold uppercase tracking-wider">Cobrado históricamente</p>
-                <p className="text-base font-extrabold text-green-700 mt-0.5">${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
-                <p className="text-[10px] text-oriental-gray">{pagadas.length} pagadas · {parciales.length} parciales</p>
+                <p className="text-[10px] text-green-600 font-semibold uppercase">Ya cobrado</p>
+                <p className="text-base font-extrabold text-green-700">${montoCobrado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-oriental-gray">{pagadas.length} pagadas · {parciales.length} parcial{parciales.length !== 1 ? 'es' : ''}</p>
               </div>
               <div className="bg-white rounded-xl p-3 border border-red-200 text-center">
-                <p className="text-[10px] text-red-600 font-semibold uppercase tracking-wider">Saldo real pendiente</p>
-                <p className="text-base font-extrabold text-oriental-red mt-0.5">${Math.max(0, montoTotal - montoPagado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
-                <p className="text-[10px] text-oriental-gray">{pendientes.length} cuotas pendientes</p>
+                <p className="text-[10px] text-red-600 font-semibold uppercase">Pendiente real</p>
+                <p className="text-base font-extrabold text-oriental-red">${Math.max(0, montoTotal - montoCobrado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-oriental-gray">{pendientesOrdenadas.length} cuotas por cobrar</p>
               </div>
             </div>
 
-            {/* Barra */}
+            {/* Barra de progreso */}
             <div className="mb-5">
               <div className="flex justify-between text-xs text-amber-700 mb-1">
-                <span>Progreso del crédito</span>
-                <span className="font-bold">{pct}%</span>
+                <span>Progreso actual</span><span className="font-bold">{pct}%</span>
               </div>
               <div className="h-2 bg-amber-200 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                <div className="h-full bg-amber-600 rounded-full" style={{ width: `${pct}%` }} />
               </div>
             </div>
 
-            {/* Tabla de cuotas */}
-            <div className="bg-white rounded-xl border border-amber-200 overflow-hidden mb-4">
-              <div className="px-4 py-2 bg-amber-100 border-b border-amber-200">
-                <p className="text-xs font-bold text-amber-900">Cuotas — indica el pago histórico por cuota (sin crear ingreso)</p>
+            {/* Input: monto total ya cobrado */}
+            {pendientesOrdenadas.length > 0 && (
+              <div className="bg-white rounded-xl border border-amber-200 p-4 mb-4">
+                <label className="text-xs font-bold text-amber-900 block mb-1">
+                  ¿Cuánto ha pagado el cliente en total antes de hoy? (USD)
+                </label>
+                <p className="text-[11px] text-amber-700 mb-3">
+                  El sistema calcula automáticamente cuáles cuotas quedan pagadas y cuál queda con abono parcial.
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
+                    <input type="number" step="0.01" min="0"
+                      className="input pl-7 font-bold text-lg"
+                      placeholder="0.00"
+                      value={montoHistorico}
+                      onChange={e => { setMontoHistorico(e.target.value); setAntiguedadMsg('') }} />
+                  </div>
+                  <button type="button" onClick={aplicarAntiguedad}
+                    disabled={aplicandoAntiguedad || !montoHistorico || parseFloat(montoHistorico) <= 0}
+                    className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap">
+                    {aplicandoAntiguedad ? <><RefreshCw size={14} className="animate-spin" />Aplicando…</> : '✓ Aplicar'}
+                  </button>
+                </div>
+
+                {/* Preview de cómo quedarán las cuotas */}
+                {preview.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Vista previa:</p>
+                    {preview.map(({ cuota, tipo, monto }) => (
+                      <div key={cuota.id} className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs ${tipo === 'pagada' ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+                        <span className="font-semibold text-oriental-black">Cuota #{cuota.numero_cuota} — {cuota.fecha_vencimiento}</span>
+                        <span className={`font-bold ${tipo === 'pagada' ? 'text-green-700' : 'text-yellow-700'}`}>
+                          {tipo === 'pagada'
+                            ? `✓ Pagada completa ($${monto.toFixed(2)})`
+                            : `⚡ Abono parcial $${monto.toFixed(2)} · Pendiente $${(Number(cuota.monto) - monto).toFixed(2)}`}
+                        </span>
+                      </div>
+                    ))}
+                    {pendientesOrdenadas.length > preview.length && (
+                      <p className="text-[10px] text-oriental-gray pl-1">
+                        + {pendientesOrdenadas.length - preview.length} cuota{pendientesOrdenadas.length - preview.length !== 1 ? 's' : ''} quedan pendientes para cobro en el sistema
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+            )}
+
+            {/* Cuotas ya configuradas */}
+            <div className="bg-white rounded-xl border border-amber-100 overflow-hidden">
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider">Estado actual de cuotas</p>
+              </div>
+              <div className="divide-y divide-gray-50 max-h-52 overflow-y-auto">
                 {cuotasOrdenadas.map(cuota => {
-                  const yaPageada  = cuota.estado === 'pagada'
-                  const esParcial  = cuota.estado === 'abono_parcial'
-                  const montoCuota = Number(cuota.monto)
-                  const montoPagadoCuota = Number(cuota.monto_pagado ?? 0)
-                  const pagoLocal  = pagosAntiguedad[cuota.id] ?? ''
-
+                  const mp = Number(cuota.monto_pagado ?? 0)
                   return (
-                    <div key={cuota.id} className={`flex items-center gap-3 px-4 py-2.5 ${yaPageada ? 'bg-green-50' : esParcial ? 'bg-yellow-50' : ''}`}>
-                      {/* N° cuota */}
-                      <span className="text-xs font-bold text-oriental-gray w-6 flex-shrink-0">#{cuota.numero_cuota}</span>
-
-                      {/* Monto original */}
-                      <span className="text-xs text-oriental-black font-semibold w-20 flex-shrink-0">
-                        ${montoCuota.toFixed(2)}
-                      </span>
-
-                      {/* Fecha */}
-                      <span className="text-[10px] text-oriental-gray flex-shrink-0 w-20">
-                        {cuota.fecha_vencimiento}
-                      </span>
-
-                      {/* Estado actual */}
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                        yaPageada ? 'bg-green-100 text-green-700' :
-                        esParcial ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-500'
+                    <div key={cuota.id} className={`flex items-center gap-3 px-4 py-2 ${cuota.estado === 'pagada' ? 'bg-green-50' : cuota.estado === 'abono_parcial' ? 'bg-yellow-50' : ''}`}>
+                      <span className="text-[11px] font-bold text-oriental-gray w-7">#{cuota.numero_cuota}</span>
+                      <span className="text-[11px] text-oriental-gray w-20">{cuota.fecha_vencimiento}</span>
+                      <span className="text-[11px] font-semibold text-oriental-black">${Number(cuota.monto).toFixed(2)}</span>
+                      <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        cuota.estado === 'pagada' ? 'bg-green-100 text-green-700' :
+                        cuota.estado === 'abono_parcial' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-400'
                       }`}>
-                        {yaPageada ? '✓ Pagada' : esParcial ? `Parcial $${montoPagadoCuota.toFixed(2)}` : 'Pendiente'}
+                        {cuota.estado === 'pagada' ? '✓ Pagada'
+                          : cuota.estado === 'abono_parcial' ? `Abono $${mp.toFixed(2)}`
+                          : 'Pendiente'}
                       </span>
-
-                      {/* Input de pago histórico */}
-                      {!yaPageada && (
-                        <div className="flex items-center gap-1.5 ml-auto">
-                          <button type="button"
-                            onClick={() => setPagosAntiguedad(prev => ({ ...prev, [cuota.id]: pagoLocal === 'full' ? '' : 'full' }))}
-                            className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-colors ${
-                              pagoLocal === 'full'
-                                ? 'bg-green-600 text-white border-green-600'
-                                : 'border-gray-300 text-oriental-gray hover:border-green-400 hover:text-green-700'
-                            }`}>
-                            Completa
-                          </button>
-                          <span className="text-[10px] text-oriental-gray">o</span>
-                          <div className="relative w-24">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-oriental-gray text-xs">$</span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max={montoCuota}
-                              placeholder="Abono"
-                              value={pagoLocal === 'full' ? '' : pagoLocal}
-                              disabled={pagoLocal === 'full'}
-                              onChange={e => setPagosAntiguedad(prev => ({ ...prev, [cuota.id]: e.target.value }))}
-                              className="input pl-5 text-xs py-1.5 h-8 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )
                 })}
               </div>
             </div>
 
-            {/* Botón aplicar */}
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={aplicarAntiguedad}
-                disabled={aplicandoAntiguedad || !hayPagosNuevos}
-                className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                {aplicandoAntiguedad
-                  ? <><RefreshCw size={14} className="animate-spin" /> Aplicando…</>
-                  : '✓ Aplicar pagos históricos (sin generar ingreso)'}
-              </button>
-              {hayPagosNuevos && (
-                <button type="button" onClick={() => setPagosAntiguedad({})}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-oriental-gray text-sm hover:bg-gray-50 transition-colors">
-                  Limpiar
-                </button>
-              )}
-            </div>
             {antiguedadMsg && (
-              <p className={`text-xs mt-2 font-semibold ${antiguedadMsg.startsWith('✓') ? 'text-green-700' : 'text-red-600'}`}>{antiguedadMsg}</p>
+              <div className={`mt-3 px-4 py-3 rounded-xl text-xs font-semibold ${antiguedadMsg.startsWith('✓') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                {antiguedadMsg}
+              </div>
             )}
-            <p className="text-[10px] text-amber-700 mt-2">⚠ Estos pagos <strong>no generan ingresos</strong> en el sistema — solo reflejan cobros previos al registro en Centro de Mando.</p>
+            <p className="text-[10px] text-amber-700 mt-3">⚠ Estos pagos <strong>no generan ingresos</strong> — solo reflejan cobros previos al sistema. Desde la última cuota pendiente el sistema cobra normalmente.</p>
           </div>
         )
       })()}
