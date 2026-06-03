@@ -470,7 +470,7 @@ export default function NuevoVehiculoPage() {
           const { data: creditoVh, error: errVh } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
             monto_financiado: vhTotalMonto,
-            inicial: calcVehimotors.monto,
+            inicial: 0,
             saldo: vhSaldoInicial,
             num_cuotas: calcVehimotors.cuotas,
             frecuencia_pago: vhFrecuencia, fecha_inicio: vhFecha,

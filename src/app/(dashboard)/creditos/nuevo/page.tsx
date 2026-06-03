@@ -390,7 +390,7 @@ export default function NuevoCreditoPage() {
           cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculoSeleccionado.id,
           placa: vehiculoSeleccionado.placa,
           monto_financiado: calcVehimotors.totalCuotas,
-          inicial: calcVehimotors.montoTotal,
+          inicial: 0,
           saldo: calcVehimotors.totalCuotas,
           num_cuotas: calcVehimotors.numCuotas,
           frecuencia_pago: vehimotorsFrecuencia,
