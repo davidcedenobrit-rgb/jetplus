@@ -27,13 +27,15 @@ export async function POST(req: NextRequest) {
     const tokenAlmacen = randomUUID()
     const correosStr   = correosAlmacen.join(',')
 
-    await supabase.from('solicitudes_repuestos').update({
+    const { error: updateErr } = await supabase.from('solicitudes_repuestos').update({
       estado: 'enviado_almacen',
       correos_almacen: correosStr,
       numero_cotizacion_vehimotors: numeroCotizacion,
       token_almacen: tokenAlmacen,
       updated_at: new Date().toISOString(),
     }).eq('id', solicitudId)
+
+    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
 
     await supabase.from('repuestos_historial').insert({
       solicitud_id: solicitudId,
