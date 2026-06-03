@@ -996,8 +996,8 @@ export default function NuevoVehiculoPage() {
                       </div>
                       <div>
                         <label className="label">Tasa Vehimotors (% anual)</label>
-                        <input type="number" step="0.01" min="0" className="input"
-                          placeholder="Ej: 15.6" value={calcTasaAnual} onChange={e => setCalcTasaAnual(e.target.value)} />
+                        <input type="number" step="0.0001" min="0" className="input"
+                          placeholder="Ej: 15.6789" value={calcTasaAnual} onChange={e => setCalcTasaAnual(e.target.value)} />
                         <p className="text-[10px] text-oriental-gray mt-0.5">Vacío = sin interés (monto ÷ cuotas)</p>
                       </div>
                       <div>

@@ -784,8 +784,8 @@ export default function NuevoCreditoPage() {
                   </div>
                   <div>
                     <label className="label">Tasa Vehimotors (% anual)</label>
-                    <input type="number" step="0.01" min="0" className="input"
-                      placeholder="24" value={calcTasaAnual} onChange={e => setCalcTasaAnual(e.target.value)} />
+                    <input type="number" step="0.0001" min="0" className="input"
+                      placeholder="Ej: 24.5678" value={calcTasaAnual} onChange={e => setCalcTasaAnual(e.target.value)} />
                     <p className="text-[10px] text-oriental-gray mt-0.5">Vacío = sin interés</p>
                   </div>
                   <div>
