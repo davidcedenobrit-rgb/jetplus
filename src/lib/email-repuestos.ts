@@ -7,7 +7,7 @@ const CORREO_ARIANNA    = process.env.CORREO_ARIANNA    ?? 'arianna@laoriental.c
 const CORREO_VEHIMOTORS = process.env.CORREO_VEHIMOTORS ?? 'vehimotors@laoriental.co'
 const CORREO_DIRECTOR   = process.env.CORREO_DIRECTOR   ?? 'jose@laoriental.co'
 const CORREO_MARY       = process.env.CORREO_MARY       ?? 'mary@laoriental.co'
-const FROM = 'sistema@laoriental.co'
+const FROM = 'repuestos@laoriental.co'
 
 export interface Item { descripcion: string; referencia?: string | null; cantidad: number }
 
@@ -134,9 +134,9 @@ export async function notificarFacturaRecibida(opts: { numero: string; solicitud
 // ── 5. Pago enviado a Vehimotors con botones Confirmar + Guía ─────
 export async function enviarConfirmacionPago(opts: {
   numero: string; solicitudId: string; tokenPago: string
-  comprobanteUrl: string; items: Item[]
+  comprobanteUrl: string; items: Item[]; retencionUrl?: string | null
 }) {
-  const { numero, solicitudId, tokenPago, comprobanteUrl, items } = opts
+  const { numero, solicitudId, tokenPago, comprobanteUrl, items, retencionUrl } = opts
   const urlConfirmar = `${APP_URL}/api/repuestos/confirmar-pago?id=${solicitudId}&token=${tokenPago}&accion=confirmar`
   const urlGuia      = `${APP_URL}/api/repuestos/confirmar-pago?id=${solicitudId}&token=${tokenPago}&accion=guia`
 
@@ -147,6 +147,7 @@ export async function enviarConfirmacionPago(opts: {
     ${itemsTable(items)}
     <div style="text-align:center;margin-bottom:16px">
       <a href="${comprobanteUrl}" style="${btnStyle('#16a34a')}">📄 Ver comprobante</a>
+      ${retencionUrl ? `<a href="${retencionUrl}" style="${btnStyle('#7c3aed')}">📋 Ver retenciones</a>` : ''}
     </div>
     <p style="font-family:sans-serif;font-size:15px;font-weight:700;color:#111;margin:16px 0;text-align:center">¿Qué desea hacer?</p>
     <div style="text-align:center;margin-bottom:16px">

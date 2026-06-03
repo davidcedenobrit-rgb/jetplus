@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     await enviarConfirmacionPago({
       numero: sol.numero, solicitudId, tokenPago: sol.token_pago,
-      comprobanteUrl, items,
+      comprobanteUrl, items, retencionUrl: sol.retencion_url ?? null,
     })
 
     await supabase.from('solicitudes_repuestos').update({

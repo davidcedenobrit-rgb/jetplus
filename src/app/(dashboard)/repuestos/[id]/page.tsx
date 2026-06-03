@@ -211,6 +211,35 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
             </div>
           )}
 
+          {/* Documentos de pago */}
+          {(solicitud.retencion_url || solicitud.comprobante_url || solicitud.otros_docs_url) && (
+            <div className="card p-5 border border-green-200 bg-green-50">
+              <h2 className="text-sm font-bold text-green-800 mb-3 flex items-center gap-2">
+                <FileText size={14} /> Documentos de pago
+              </h2>
+              <div className="space-y-2">
+                {solicitud.retencion_url && (
+                  <a href={solicitud.retencion_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-green-800 hover:underline flex items-center gap-1.5">
+                    📋 Ver retenciones →
+                  </a>
+                )}
+                {solicitud.comprobante_url && (
+                  <a href={solicitud.comprobante_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-green-800 hover:underline flex items-center gap-1.5">
+                    📄 Ver comprobante de pago →
+                  </a>
+                )}
+                {solicitud.otros_docs_url && (
+                  <a href={solicitud.otros_docs_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-green-800 hover:underline flex items-center gap-1.5">
+                    📎 Ver otros documentos →
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Guía de despacho */}
           {solicitud.numero_guia && (
             <div className="card p-5 border border-teal-200 bg-teal-50">
