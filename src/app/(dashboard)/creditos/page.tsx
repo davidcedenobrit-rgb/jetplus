@@ -12,7 +12,7 @@ const planBadge = (tipo: string | null) =>
 const planLabel = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'La Oriental' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
-  tipo === 'cuota_especial' ? 'Cuota Especial' : 'Sin clasificar'
+  tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' : 'Sin clasificar'
 
 export default async function CreditosPage({
   searchParams,

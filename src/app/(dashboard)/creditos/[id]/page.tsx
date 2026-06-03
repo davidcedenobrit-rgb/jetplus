@@ -14,7 +14,7 @@ const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const planLabel = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'La Oriental' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
-  tipo === 'cuota_especial' ? 'Cuota Especial' : 'Sin clasificar'
+  tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' : 'Sin clasificar'
 
 const planBadge = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-800' :
