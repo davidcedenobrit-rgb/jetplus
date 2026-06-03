@@ -125,21 +125,39 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
             </h2>
             <div className="space-y-2">
               {(items ?? []).map((item: any) => (
-                <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-oriental-black">{item.descripcion}</p>
-                    {item.referencia && <p className="text-xs font-mono text-oriental-gray mt-0.5">{item.referencia}</p>}
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-bold text-oriental-black">×{item.cantidad}</span>
-                    {item.precio_cotizado && (
-                      <p className="text-xs text-green-700 font-semibold">${Number(item.precio_cotizado).toFixed(2)}</p>
+                <div key={item.id} className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-oriental-black">{item.descripcion}</p>
+                      {item.referencia && <p className="text-xs font-mono text-oriental-gray mt-0.5">{item.referencia}</p>}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-oriental-black">×{item.cantidad}</span>
+                      {item.cantidad_disponible !== null && item.disponible && (
+                        <p className="text-xs text-green-700 font-semibold">Disp: {item.cantidad_disponible}</p>
+                      )}
+                      {item.precio_cotizado && (
+                        <p className="text-xs text-green-700 font-semibold">${Number(item.precio_cotizado).toFixed(2)}</p>
+                      )}
+                    </div>
+                    {item.disponible !== null && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${item.disponible ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {item.disponible ? '✓ Hay' : '✗ No hay'}
+                      </span>
                     )}
                   </div>
-                  {item.disponible !== null && (
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.disponible ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {item.disponible ? '✓' : '✗'}
-                    </span>
+                  {item.disponible === false && (item.tiempo_importacion || item.cotizacion_importacion_url) && (
+                    <div className="mt-2 pt-2 border-t border-gray-200 flex flex-col gap-1">
+                      {item.tiempo_importacion && (
+                        <p className="text-xs text-orange-700 font-semibold">⏱ Importación: {item.tiempo_importacion}</p>
+                      )}
+                      {item.cotizacion_importacion_url && (
+                        <a href={item.cotizacion_importacion_url} target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-blue-700 font-semibold hover:underline">
+                          📦 Ver cotización de importación →
+                        </a>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
@@ -176,64 +194,53 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
             </div>
           )}
 
-          {/* Cotización recibida */}
-          {solicitud.cotizacion_url && (
-            <div className="card p-5 border border-yellow-200 bg-yellow-50">
-              <h2 className="text-sm font-bold text-yellow-800 mb-2 flex items-center gap-2">
-                <FileText size={14} /> Cotización de Vehimotors
-              </h2>
-              {solicitud.cotizacion_observaciones && (
-                <p className="text-xs text-yellow-700 mb-3 italic">"{solicitud.cotizacion_observaciones}"</p>
-              )}
-              <a href={solicitud.cotizacion_url} target="_blank" rel="noopener noreferrer"
-                className="text-sm font-semibold text-yellow-800 hover:underline flex items-center gap-1">
-                📄 Ver archivo de cotización →
-              </a>
-            </div>
-          )}
-          {!solicitud.cotizacion_url && solicitud.cotizacion_observaciones && (
-            <div className="card p-5 border border-yellow-200 bg-yellow-50">
-              <p className="text-xs font-semibold text-yellow-800 mb-1">Observaciones de Vehimotors:</p>
-              <p className="text-sm text-yellow-700">{solicitud.cotizacion_observaciones}</p>
-            </div>
-          )}
-
-          {/* Factura */}
-          {solicitud.factura_url && (
-            <div className="card p-5 border border-purple-200 bg-purple-50">
-              <h2 className="text-sm font-bold text-purple-800 mb-2 flex items-center gap-2">
-                <FileText size={14} /> Factura de Vehimotors
-              </h2>
-              <a href={solicitud.factura_url} target="_blank" rel="noopener noreferrer"
-                className="text-sm font-semibold text-purple-800 hover:underline flex items-center gap-1">
-                📄 Ver factura →
-              </a>
-            </div>
-          )}
-
-          {/* Documentos de pago */}
-          {(solicitud.retencion_url || solicitud.comprobante_url || solicitud.otros_docs_url) && (
-            <div className="card p-5 border border-green-200 bg-green-50">
-              <h2 className="text-sm font-bold text-green-800 mb-3 flex items-center gap-2">
-                <FileText size={14} /> Documentos de pago
+          {/* Documentos: cotización + factura + pago consolidados */}
+          {(solicitud.cotizacion_url || solicitud.cotizacion_observaciones || solicitud.cotizacion_importacion_url || solicitud.cotizacion_importacion_obs || solicitud.factura_url || solicitud.retencion_url || solicitud.comprobante_url || solicitud.otros_docs_url) && (
+            <div className="card p-5 border border-blue-200 bg-blue-50">
+              <h2 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+                <FileText size={14} /> Documentos
               </h2>
               <div className="space-y-2">
-                {solicitud.retencion_url && (
-                  <a href={solicitud.retencion_url} target="_blank" rel="noopener noreferrer"
-                    className="text-sm font-semibold text-green-800 hover:underline flex items-center gap-1.5">
-                    📋 Ver retenciones →
+                {solicitud.cotizacion_url && (
+                  <a href={solicitud.cotizacion_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-blue-800 hover:underline flex items-center gap-1.5">
+                    📄 Cotización de Vehimotors →
+                  </a>
+                )}
+                {solicitud.cotizacion_observaciones && (
+                  <p className="text-xs text-blue-700 italic pl-5">"{solicitud.cotizacion_observaciones}"</p>
+                )}
+                {solicitud.cotizacion_importacion_url && (
+                  <a href={solicitud.cotizacion_importacion_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-blue-800 hover:underline flex items-center gap-1.5">
+                    📦 Cotización de importación →
+                  </a>
+                )}
+                {solicitud.cotizacion_importacion_obs && (
+                  <p className="text-xs text-blue-700 italic pl-5">"{solicitud.cotizacion_importacion_obs}"</p>
+                )}
+                {solicitud.factura_url && (
+                  <a href={solicitud.factura_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-blue-800 hover:underline flex items-center gap-1.5">
+                    🧾 Factura de Vehimotors →
                   </a>
                 )}
                 {solicitud.comprobante_url && (
                   <a href={solicitud.comprobante_url} target="_blank" rel="noopener noreferrer"
-                    className="text-sm font-semibold text-green-800 hover:underline flex items-center gap-1.5">
-                    📄 Ver comprobante de pago →
+                    className="text-sm font-semibold text-blue-800 hover:underline flex items-center gap-1.5">
+                    💳 Comprobante de pago →
+                  </a>
+                )}
+                {solicitud.retencion_url && (
+                  <a href={solicitud.retencion_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-blue-800 hover:underline flex items-center gap-1.5">
+                    📋 Retenciones →
                   </a>
                 )}
                 {solicitud.otros_docs_url && (
                   <a href={solicitud.otros_docs_url} target="_blank" rel="noopener noreferrer"
-                    className="text-sm font-semibold text-green-800 hover:underline flex items-center gap-1.5">
-                    📎 Ver otros documentos →
+                    className="text-sm font-semibold text-blue-800 hover:underline flex items-center gap-1.5">
+                    📎 Otros documentos →
                   </a>
                 )}
               </div>
