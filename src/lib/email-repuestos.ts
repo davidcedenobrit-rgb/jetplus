@@ -188,3 +188,35 @@ export async function enviarConfirmacionPago(opts: {
 
   return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], bcc: BCC_JEFE, subject: `💰 Pago realizado — Repuestos ${numero}`, html: wrap(body) })
 }
+
+// ── 8. Email a almacén para cargar guía ──────────────────────────
+export async function enviarEmailAlmacen(opts: {
+  numero: string; solicitudId: string; tokenAlmacen: string
+  numeroCotizacion: string; correosAlmacen: string[]
+}) {
+  const { numero, solicitudId, tokenAlmacen, numeroCotizacion, correosAlmacen } = opts
+  const urlAlmacen = `${APP_URL}/api/repuestos/almacen?id=${solicitudId}&token=${tokenAlmacen}`
+
+  const body = `
+    <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#2563eb;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Envío de Repuestos</p>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">📦 Pedido listo para despacho — ${numero}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 16px">Se ha procesado el pago del pedido <strong>${numero}</strong>. Por favor registre los datos de envío una vez despachado.</p>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin-bottom:24px">
+      <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">Número de cotización</p>
+      <p style="font-family:monospace;font-size:20px;font-weight:900;color:#0c4a6e;margin:0">${numeroCotizacion}</p>
+    </div>
+    <p style="font-family:sans-serif;font-size:15px;font-weight:700;color:#111;margin:0 0 16px;text-align:center">Al despachar, registre los datos de envío:</p>
+    <div style="text-align:center;margin-bottom:16px">
+      <a href="${urlAlmacen}" style="${btnStyle('#2563eb')}">📦 Registrar datos de envío</a>
+    </div>
+    <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic podrá cargar la empresa de envío, número de guía y comprobante.</p>`
+
+  return getResend().emails.send({
+    from: FROM,
+    to: correosAlmacen,
+    cc: [CORREO_DIRECTOR],
+    bcc: BCC_JEFE,
+    subject: `📦 Pedido ${numero} — Registrar datos de envío`,
+    html: wrap(body),
+  })
+}

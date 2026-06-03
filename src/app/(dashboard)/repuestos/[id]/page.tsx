@@ -13,6 +13,7 @@ const PASOS = [
   { key: 'cotizacion_aprobada',     label: 'Cot. aprobada',      desc: 'José/Arianna aprobaron' },
   { key: 'factura_recibida',        label: 'Factura recibida',   desc: 'Vehimotors adjuntó factura' },
   { key: 'pago_enviado',            label: 'Pago enviado',       desc: 'Comprobante enviado' },
+  { key: 'enviado_almacen',         label: 'En almacén',         desc: 'Enviado a almacén para despacho' },
   { key: 'guia_recibida',           label: 'Guía recibida',      desc: 'Guía de despacho registrada' },
   { key: 'completado',              label: 'Completado',         desc: 'Pedido llegó al taller' },
 ]
@@ -195,7 +196,7 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
           )}
 
           {/* Documentos: cotización + factura + pago consolidados */}
-          {(solicitud.cotizacion_url || solicitud.cotizacion_observaciones || solicitud.cotizacion_importacion_url || solicitud.cotizacion_importacion_obs || solicitud.factura_url || solicitud.retencion_url || solicitud.comprobante_url || solicitud.otros_docs_url) && (
+          {(solicitud.cotizacion_url || solicitud.cotizacion_observaciones || solicitud.cotizacion_importacion_url || solicitud.cotizacion_importacion_obs || solicitud.factura_url || solicitud.retencion_url || solicitud.comprobante_url || solicitud.otros_docs_url || solicitud.comprobante_almacen_url) && (
             <div className="card p-5 border border-blue-200 bg-blue-50">
               <h2 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
                 <FileText size={14} /> Documentos
@@ -243,7 +244,28 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
                     📎 Otros documentos →
                   </a>
                 )}
+                {solicitud.comprobante_almacen_url && (
+                  <a href={solicitud.comprobante_almacen_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-blue-800 hover:underline flex items-center gap-1.5">
+                    🏪 Comprobante almacén →
+                  </a>
+                )}
               </div>
+            </div>
+          )}
+
+          {/* Datos de almacén */}
+          {(solicitud.correos_almacen || solicitud.numero_cotizacion_vehimotors) && (
+            <div className="card p-5 border border-blue-200 bg-blue-50">
+              <h2 className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
+                <Truck size={14} /> Envío a almacén
+              </h2>
+              {solicitud.numero_cotizacion_vehimotors && (
+                <p className="text-sm font-mono font-bold text-blue-900 mb-1">Cot: {solicitud.numero_cotizacion_vehimotors}</p>
+              )}
+              {solicitud.correos_almacen && (
+                <p className="text-xs text-blue-700">Notificado a: {solicitud.correos_almacen}</p>
+              )}
             </div>
           )}
 

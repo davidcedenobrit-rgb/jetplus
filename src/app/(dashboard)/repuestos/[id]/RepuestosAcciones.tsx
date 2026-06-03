@@ -27,6 +27,7 @@ const TODOS_ESTADOS = [
   { key: 'cotizacion_aprobada',    label: 'Cotización aprobada' },
   { key: 'factura_recibida',       label: 'Factura recibida' },
   { key: 'pago_enviado',           label: 'Pago enviado' },
+  { key: 'enviado_almacen',        label: 'Enviado a almacén' },
   { key: 'guia_recibida',          label: 'Guía recibida' },
   { key: 'completado',             label: 'Completado' },
   { key: 'rechazado_verificacion', label: 'Rechazado' },
@@ -42,6 +43,12 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [notasAri, setNotasAri]   = useState(solicitud.notas_arianna ?? '')
   const [showRechazo, setShowRechazo] = useState(false)
   const [uploading, setUploading] = useState<string | null>(null)
+
+  // Enviar a almacén
+  const [showAlmacen, setShowAlmacen] = useState(false)
+  const [correosAlmacen, setCorreosAlmacen] = useState('')
+  const [numCotizacion, setNumCotizacion] = useState('')
+  const [enviandoAlmacen, setEnviandoAlmacen] = useState(false)
 
   // Novedad de recepción
   const [showNovedad, setShowNovedad] = useState(false)
@@ -134,6 +141,21 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
     if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoReporte(false); return }
     router.refresh()
     setEnviandoReporte(false)
+  }
+
+  async function handleEnviarAlmacen() {
+    const emails = correosAlmacen.split(/[\s,;]+/).map(e => e.trim()).filter(Boolean)
+    if (!emails.length || !numCotizacion.trim()) {
+      setError('Completa los correos y el número de cotización'); return
+    }
+    setEnviandoAlmacen(true); setError('')
+    const res = await fetch('/api/repuestos/enviar-almacen', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ solicitudId: solicitud.id, correosAlmacen: emails, numeroCotizacion: numCotizacion.trim(), userEmail }),
+    })
+    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoAlmacen(false); return }
+    setShowAlmacen(false); router.refresh()
+    setEnviandoAlmacen(false)
   }
 
   return (
@@ -298,13 +320,64 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
         </div>
       )}
 
-      {/* ── PASO 7 → Pago enviado, esperando guía ── */}
-      {estado === 'pago_enviado' && (
+      {/* ── PASO 7 → Pago enviado → enviar a almacén ── */}
+      {estado === 'pago_enviado' && ROL_ADMIN.includes(rol) && (
+        <div className="card p-5">
+          {!showAlmacen ? (
+            <>
+              <div className="card p-4 border border-blue-200 bg-blue-50 mb-3">
+                <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" /> Pago enviado a Vehimotors
+                </p>
+                <p className="text-xs text-blue-600 mt-1">Cuando tengas los datos, envía al almacén para que registren el despacho.</p>
+              </div>
+              <button onClick={() => setShowAlmacen(true)}
+                className="w-full btn-primary flex items-center justify-center gap-2 py-2.5">
+                <Send size={16} /> Enviar a almacén
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-sm font-bold text-oriental-black mb-3">Enviar a almacén</h3>
+              <div className="mb-3">
+                <label className="label">Correos del almacén *</label>
+                <textarea className="textarea text-sm" rows={2}
+                  placeholder="almacen@empresa.com, otro@empresa.com"
+                  value={correosAlmacen} onChange={e => setCorreosAlmacen(e.target.value)} />
+                <p className="text-[11px] text-oriental-gray -mt-2 mb-3">Separa múltiples correos con coma o salto de línea.</p>
+              </div>
+              <div className="mb-4">
+                <label className="label">Número de cotización (código Vehimotors) *</label>
+                <input className="input text-sm" type="text"
+                  placeholder="Ej: COT-2026-00123"
+                  value={numCotizacion} onChange={e => setNumCotizacion(e.target.value)} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleEnviarAlmacen} disabled={enviandoAlmacen}
+                  className="flex-1 btn-primary flex items-center justify-center gap-2 py-2.5 disabled:opacity-60">
+                  {enviandoAlmacen ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                  Enviar email
+                </button>
+                <button onClick={() => { setShowAlmacen(false); setError('') }}
+                  className="flex-1 btn-secondary py-2.5 text-sm">Cancelar</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── PASO 7.5 → Enviado a almacén, esperando guía ── */}
+      {estado === 'enviado_almacen' && (
         <div className="card p-5 border border-blue-200 bg-blue-50">
           <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin" /> Pago enviado — esperando guía de despacho…
+            <Loader2 size={14} className="animate-spin" /> Enviado a almacén — esperando guía…
           </p>
-          <p className="text-xs text-blue-600 mt-1">Vehimotors confirmará recepción y cargará la guía.</p>
+          {solicitud.correos_almacen && (
+            <p className="text-xs text-blue-600 mt-1">Notificado a: {solicitud.correos_almacen}</p>
+          )}
+          {solicitud.numero_cotizacion_vehimotors && (
+            <p className="text-xs text-blue-600 mt-0.5 font-mono font-bold">Cot: {solicitud.numero_cotizacion_vehimotors}</p>
+          )}
         </div>
       )}
 
