@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Store, Plus, Car, MapPin, CheckCircle2, Lock, Tag, Wrench } from 'lucide-react'
+import { Store, Plus, Car, MapPin, CheckCircle2, Lock, Tag, Wrench, Pencil } from 'lucide-react'
 import PrintButton from './PrintButton'
+import ShowroomDeleteButton from './ShowroomDeleteButton'
 import type { VehiculoShowroom } from '@/types/database'
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
@@ -52,6 +53,7 @@ export default async function ShowroomPage({
   if (!user) redirect('/login')
 
   const rol = user.user_metadata?.rol as string
+  const puedeEditar = ['jose', 'arianna', 'admin'].includes(rol)
   const params = await searchParams
   const tab = params.tab ?? 'todos'
 
@@ -137,91 +139,105 @@ export default async function ShowroomPage({
             const reservaVencida = vence && vence < hoy
 
             return (
-              <Link key={v.id} href={`/showroom/${v.id}`} className="card p-5 hover:shadow-md transition-shadow block">
-                {/* Header card */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {v.marca}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est.bg} ${est.color}`}>
-                      {est.label}
-                    </span>
-                  </div>
-                  {v.pdi_hecho && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
-                      <CheckCircle2 size={10} /> PDI ✓
-                    </span>
-                  )}
-                </div>
-
-                {/* Info principal */}
-                <h3 className="font-bold text-oriental-black text-base leading-tight">{v.modelo}</h3>
-
-                <div className="mt-2 space-y-1.5">
-                  {v.placa && (
-                    <p className="text-xs text-oriental-gray flex items-center gap-1.5">
-                      <Car size={11} className="flex-shrink-0" />
-                      <span className="font-mono font-bold text-oriental-black">{v.placa}</span>
-                      {v.color && <span>· {v.color}</span>}
-                      {v.anio && <span>· {v.anio}</span>}
-                    </p>
-                  )}
-                  {/* Ubicación destacada */}
-                  {v.ubicacion && (
-                    <div className="inline-flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
-                      <MapPin size={11} className="text-oriental-red flex-shrink-0" />
-                      <span className="text-xs font-semibold text-oriental-black capitalize">
-                        {v.ubicacion === 'otro' ? (v.ubicacion_descripcion ?? 'Otro') : v.ubicacion}
+              <div key={v.id} className="card hover:shadow-md transition-shadow overflow-hidden">
+                {/* Área clickeable → detalle */}
+                <Link href={`/showroom/${v.id}`} className="block p-5">
+                  {/* Header card */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {v.marca}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est.bg} ${est.color}`}>
+                        {est.label}
                       </span>
                     </div>
-                  )}
-                  {/* PDI */}
-                  <div className="flex items-center gap-1.5">
-                    <Wrench size={11} className={v.pdi_hecho ? 'text-green-600' : 'text-gray-300'} />
-                    <span className={`text-[11px] font-semibold ${v.pdi_hecho ? 'text-green-700' : 'text-gray-400'}`}>
-                      {v.pdi_hecho ? 'PDI completado' : 'PDI pendiente'}
-                    </span>
-                  </div>
-                  {v.vin && (
-                    <p className="text-[10px] font-mono text-oriental-gray truncate">VIN: {v.vin}</p>
-                  )}
-                  {v.serial_motor && (
-                    <p className="text-[10px] font-mono text-oriental-gray truncate">Motor: {v.serial_motor}</p>
-                  )}
-                </div>
-
-                {/* Reserva */}
-                {v.estado === 'reservado' && v.reserva_monto && (
-                  <div className={`mt-3 rounded-lg px-3 py-2 ${reservaVencida ? 'bg-red-50 border border-red-200' : 'bg-purple-50 border border-purple-100'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-purple-700">
-                        <Lock size={10} /> Reservado
+                    {v.pdi_hecho && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+                        <CheckCircle2 size={10} /> PDI ✓
                       </span>
-                      <span className="text-[11px] font-bold text-purple-800">
-                        ${v.reserva_monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    {vence && (
-                      <p className={`text-[10px] mt-0.5 ${reservaVencida ? 'text-red-600 font-semibold' : 'text-purple-600'}`}>
-                        {reservaVencida ? '⚠ Reserva vencida' : `Vence: ${vence.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}`}
-                      </p>
                     )}
                   </div>
-                )}
 
-                {/* Vendido */}
-                {v.estado === 'vendido' && (
-                  <div className="mt-3 rounded-lg px-3 py-2 bg-gray-50 border border-gray-200">
-                    <p className="text-[11px] font-semibold text-gray-500 flex items-center gap-1">
-                      <Tag size={10} /> Vendido · ciclo cerrado
-                    </p>
+                  {/* Info principal */}
+                  <h3 className="font-bold text-oriental-black text-base leading-tight">{v.modelo}</h3>
+
+                  <div className="mt-2 space-y-1.5">
+                    {v.placa && (
+                      <p className="text-xs text-oriental-gray flex items-center gap-1.5">
+                        <Car size={11} className="flex-shrink-0" />
+                        <span className="font-mono font-bold text-oriental-black">{v.placa}</span>
+                        {v.color && <span>· {v.color}</span>}
+                        {v.anio && <span>· {v.anio}</span>}
+                      </p>
+                    )}
+                    {v.ubicacion && (
+                      <div className="inline-flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                        <MapPin size={11} className="text-oriental-red flex-shrink-0" />
+                        <span className="text-xs font-semibold text-oriental-black capitalize">
+                          {v.ubicacion === 'otro' ? (v.ubicacion_descripcion ?? 'Otro') : v.ubicacion}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <Wrench size={11} className={v.pdi_hecho ? 'text-green-600' : 'text-gray-300'} />
+                      <span className={`text-[11px] font-semibold ${v.pdi_hecho ? 'text-green-700' : 'text-gray-400'}`}>
+                        {v.pdi_hecho ? 'PDI completado' : 'PDI pendiente'}
+                      </span>
+                    </div>
+                    {v.vin && (
+                      <p className="text-[10px] font-mono text-oriental-gray truncate">VIN: {v.vin}</p>
+                    )}
+                    {v.serial_motor && (
+                      <p className="text-[10px] font-mono text-oriental-gray truncate">Motor: {v.serial_motor}</p>
+                    )}
+                  </div>
+
+                  {/* Reserva */}
+                  {v.estado === 'reservado' && v.reserva_monto && (
+                    <div className={`mt-3 rounded-lg px-3 py-2 ${reservaVencida ? 'bg-red-50 border border-red-200' : 'bg-purple-50 border border-purple-100'}`}>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-purple-700">
+                          <Lock size={10} /> Reservado
+                        </span>
+                        <span className="text-[11px] font-bold text-purple-800">
+                          ${v.reserva_monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      {vence && (
+                        <p className={`text-[10px] mt-0.5 ${reservaVencida ? 'text-red-600 font-semibold' : 'text-purple-600'}`}>
+                          {reservaVencida ? '⚠ Reserva vencida' : `Vence: ${vence.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}`}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Vendido */}
+                  {v.estado === 'vendido' && (
+                    <div className="mt-3 rounded-lg px-3 py-2 bg-gray-50 border border-gray-200">
+                      <p className="text-[11px] font-semibold text-gray-500 flex items-center gap-1">
+                        <Tag size={10} /> Vendido · ciclo cerrado
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Barra de progreso */}
+                  <ProgressBar estado={v.estado} />
+                </Link>
+
+                {/* Botones Editar / Eliminar — solo jose y arianna */}
+                {puedeEditar && (
+                  <div className="px-5 pb-4 flex gap-2 border-t border-gray-100 pt-3">
+                    <Link
+                      href={`/showroom/${v.id}/editar`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-gray-200 text-oriental-gray hover:bg-gray-50 text-xs font-semibold transition-colors"
+                    >
+                      <Pencil size={13} /> Editar
+                    </Link>
+                    <ShowroomDeleteButton id={v.id} modelo={v.modelo} placa={v.placa} />
                   </div>
                 )}
-
-                {/* Barra de progreso */}
-                <ProgressBar estado={v.estado} />
-              </Link>
+              </div>
             )
           })}
         </div>
