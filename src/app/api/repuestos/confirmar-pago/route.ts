@@ -42,11 +42,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const formData  = await req.formData()
-    const id        = formData.get('id') as string
-    const token     = formData.get('token') as string
+    const formData   = await req.formData()
+    const id         = formData.get('id') as string
+    const token      = formData.get('token') as string
     const numeroGuia = formData.get('numero_guia') as string
-    const fileGuia  = formData.get('guia_archivo') as File | null
+    const empresaEnvio = formData.get('empresa_envio') as string | null
+    const fileGuia   = formData.get('guia_archivo') as File | null
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
       estado: 'guia_recibida',
       numero_guia: numeroGuia || null,
       guia_url: guiaUrl,
+      empresa_envio: empresaEnvio || null,
       pago_confirmado_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq('id', id)
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
     await supabase.from('repuestos_historial').insert({
       solicitud_id: id, estado_nuevo: 'guia_recibida',
       usuario_email: 'vehimotors@externo',
-      notas: `Guía cargada por Vehimotors${numeroGuia ? ': ' + numeroGuia : ''}`,
+      notas: `Guía cargada por Vehimotors${numeroGuia ? ': ' + numeroGuia : ''}${empresaEnvio ? ' · ' + empresaEnvio : ''}`,
     })
 
     return new NextResponse(paginaGuiaGracias(sol.numero), { headers: { 'Content-Type': 'text/html' } })
@@ -125,10 +127,12 @@ function paginaConfirmado(numero: string) {
 
 function paginaGuia(numero: string, id: string, token: string) {
   return shell(`<div class="emoji">📦</div><h2>Cargar guía de despacho — ${numero}</h2>
-    <p>Por favor indique el número de guía y adjunte el documento si lo tiene disponible.</p>
+    <p>Por favor complete los datos de envío y adjunte el documento si lo tiene disponible.</p>
     <form method="POST" enctype="multipart/form-data" action="/api/repuestos/confirmar-pago">
       <input type="hidden" name="id" value="${id}"/>
       <input type="hidden" name="token" value="${token}"/>
+      <label>Empresa de envío *</label>
+      <input type="text" name="empresa_envio" placeholder="Ej: MRW, Zoom, Tealca…" required/>
       <label>Número de guía *</label>
       <input type="text" name="numero_guia" placeholder="Ej: 00123456789" required/>
       <label>Documento de guía (opcional)</label>

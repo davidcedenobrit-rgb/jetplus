@@ -247,6 +247,9 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
                 <Truck size={16} className="text-teal-600" />
                 <div>
                   <p className="text-sm font-bold text-teal-800">Guía de despacho</p>
+                  {solicitud.empresa_envio && (
+                    <p className="text-xs text-teal-600 font-semibold">{solicitud.empresa_envio}</p>
+                  )}
                   <p className="text-sm font-mono font-bold text-teal-700">{solicitud.numero_guia}</p>
                   {solicitud.fecha_estimada_llegada && (
                     <p className="text-xs text-teal-600 mt-0.5">
@@ -255,6 +258,28 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
                   )}
                 </div>
               </div>
+              {solicitud.guia_url && (
+                <a href={solicitud.guia_url} target="_blank" rel="noopener noreferrer"
+                  className="text-xs font-semibold text-teal-700 hover:underline flex items-center gap-1 mt-2">
+                  📄 Ver guía →
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Novedad de recepción */}
+          {solicitud.novedad_recepcion && (
+            <div className="card p-5 border border-orange-200 bg-orange-50">
+              <h2 className="text-sm font-bold text-orange-800 mb-2 flex items-center gap-2">
+                ⚠️ Novedad reportada al recibir
+              </h2>
+              <p className="text-sm text-orange-700">{solicitud.novedad_recepcion}</p>
+              {solicitud.novedad_foto_url && (
+                <a href={solicitud.novedad_foto_url} target="_blank" rel="noopener noreferrer"
+                  className="text-xs font-semibold text-orange-700 hover:underline flex items-center gap-1 mt-2">
+                  📷 Ver foto →
+                </a>
+              )}
             </div>
           )}
 

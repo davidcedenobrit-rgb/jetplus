@@ -28,6 +28,12 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [showRechazo, setShowRechazo] = useState(false)
   const [uploading, setUploading] = useState<string | null>(null)
 
+  // Novedad de recepción
+  const [showNovedad, setShowNovedad] = useState(false)
+  const [novedadTexto, setNovedadTexto] = useState('')
+  const [novedadFoto, setNovedadFoto] = useState<File | null>(null)
+  const [enviandoReporte, setEnviandoReporte] = useState(false)
+
   const esArianna  = ROL_ARIANNA.includes(rol)
   const esDirector = ROL_DIRECTOR.includes(rol)
   const esPago     = ROL_PAGO.includes(rol)
@@ -96,6 +102,20 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   }
 
   const pagoListo = solicitud.comprobante_url // mínimo el comprobante
+
+  async function handleReporteRecepcion(tieneNovedad: boolean) {
+    setEnviandoReporte(true); setError('')
+    const fd = new FormData()
+    fd.append('solicitudId', solicitud.id)
+    fd.append('tieneNovedad', String(tieneNovedad))
+    fd.append('userEmail', userEmail)
+    if (tieneNovedad && novedadTexto) fd.append('notas', novedadTexto)
+    if (tieneNovedad && novedadFoto)  fd.append('foto', novedadFoto)
+    const res = await fetch('/api/repuestos/reportar-recepcion', { method: 'POST', body: fd })
+    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoReporte(false); return }
+    router.refresh()
+    setEnviandoReporte(false)
+  }
 
   return (
     <div className="space-y-4">
@@ -269,7 +289,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
         </div>
       )}
 
-      {/* ── PASO 8 → Guía recibida → confirmar llegada ── */}
+      {/* ── PASO 8 → Guía recibida → confirmar llegada + reporte a Vehimotors ── */}
       {estado === 'guia_recibida' && esArianna && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Confirmar llegada del pedido</h3>
@@ -279,12 +299,53 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
               <Truck size={14} /> Ver guía de despacho →
             </a>
           )}
-          <button onClick={() => avanzar('completado', {}, 'Pedido recibido y confirmado en taller')}
-            disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            Confirmar llegada ✓
-          </button>
+
+          {!showNovedad ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => handleReporteRecepcion(false)}
+                disabled={enviandoReporte}
+                className="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                {enviandoReporte ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                Recibido sin novedad — notificar a Vehimotors
+              </button>
+              <button
+                onClick={() => setShowNovedad(true)}
+                className="w-full py-2.5 rounded-xl border-2 border-dashed border-orange-300 text-orange-700 hover:bg-orange-50 font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                ⚠️ Reportar novedad
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-oriental-gray">Describe la novedad y adjunta una foto si es necesario. Se enviará a Vehimotors.</p>
+              <div>
+                <label className="label">Descripción de la novedad *</label>
+                <textarea className="textarea text-sm" rows={3} placeholder="Ej: Llegaron 2 piezas en mal estado, falta 1 filtro…"
+                  value={novedadTexto} onChange={e => setNovedadTexto(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">Foto (opcional)</label>
+                <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed border-orange-300 cursor-pointer text-xs font-medium text-orange-700 hover:bg-orange-50 transition-colors">
+                  <Upload size={12} /> {novedadFoto ? novedadFoto.name : 'Adjuntar foto'}
+                  <input type="file" className="hidden" accept="image/*,.pdf"
+                    onChange={e => setNovedadFoto(e.target.files?.[0] ?? null)} />
+                </label>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleReporteRecepcion(true)}
+                  disabled={!novedadTexto.trim() || enviandoReporte}
+                  className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  {enviandoReporte ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  Enviar novedad
+                </button>
+                <button onClick={() => { setShowNovedad(false); setNovedadTexto(''); setNovedadFoto(null) }}
+                  className="flex-1 btn-secondary py-2.5 text-sm">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

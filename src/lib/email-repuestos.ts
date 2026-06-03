@@ -131,7 +131,35 @@ export async function notificarFacturaRecibida(opts: { numero: string; solicitud
   return getResend().emails.send({ from: FROM, to: [CORREO_DIRECTOR, CORREO_MARY ?? CORREO_DIRECTOR], cc: [CORREO_ARIANNA], subject: `📄 Factura recibida — Solicitud ${numero}`, html: wrap(body) })
 }
 
-// ── 5. Pago enviado a Vehimotors con botones Confirmar + Guía ─────
+// ── 6. Reporte de recepción a Vehimotors (Arianna) ────────────────
+export async function enviarReporteRecepcion(opts: {
+  numero: string; solicitudId: string
+  tieneNovedad: boolean; notas?: string | null; fotoUrl?: string | null
+}) {
+  const { numero, solicitudId, tieneNovedad, notas, fotoUrl } = opts
+
+  const body = tieneNovedad ? `
+    <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#d97706;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Recepción</p>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">⚠️ Novedad en pedido — ${numero}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 16px">Se reporta una novedad en la recepción del pedido <strong>${numero}</strong>. Por favor tomar nota y coordinar solución.</p>
+    ${notas ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px;margin-bottom:20px">
+      <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#92400e;margin:0 0 6px">Detalles de la novedad:</p>
+      <p style="font-family:sans-serif;font-size:14px;color:#78350f;margin:0">${notas}</p>
+    </div>` : ''}
+    ${fotoUrl ? `<div style="text-align:center;margin-bottom:20px"><a href="${fotoUrl}" style="${btnStyle('#d97706')}">📷 Ver foto adjunta</a></div>` : ''}
+    <div style="text-align:center"><a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>`
+  : `
+    <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#16a34a;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Recepción</p>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">✅ Pedido recibido sin novedad — ${numero}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">El pedido <strong>${numero}</strong> fue recibido en nuestro taller en perfectas condiciones. Sin novedades. Gracias.</p>
+    <div style="text-align:center"><a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>`
+
+  const asunto = tieneNovedad
+    ? `⚠️ Novedad en pedido ${numero} — La Oriental Automotors`
+    : `✅ Pedido ${numero} recibido sin novedad — La Oriental Automotors`
+
+  return getResend().emails.send({ from: FROM, to: [CORREO_VEHIMOTORS], cc: [CORREO_DIRECTOR], subject: asunto, html: wrap(body) })
+}
 export async function enviarConfirmacionPago(opts: {
   numero: string; solicitudId: string; tokenPago: string
   comprobanteUrl: string; items: Item[]; retencionUrl?: string | null
