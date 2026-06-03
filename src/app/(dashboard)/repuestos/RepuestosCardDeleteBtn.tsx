@@ -10,12 +10,16 @@ export default function RepuestosCardDeleteBtn({ solicitudId, numero }: { solici
   const router   = useRouter()
   const [confirmar, setConfirmar] = useState(false)
   const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
 
   async function eliminar(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     setLoading(true)
-    await supabase.from('solicitudes_repuestos').delete().eq('id', solicitudId)
+    setError('')
+    const { error: err } = await supabase.from('solicitudes_repuestos').delete().eq('id', solicitudId)
+    if (err) { setError(err.message); setLoading(false); return }
+    router.push('/repuestos')
     router.refresh()
   }
 
@@ -36,6 +40,7 @@ export default function RepuestosCardDeleteBtn({ solicitudId, numero }: { solici
       <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center gap-3 z-10 p-4"
         onClick={e => e.preventDefault()}>
         <p className="text-sm font-semibold text-gray-800 text-center">¿Eliminar {numero}?</p>
+        {error && <p className="text-xs text-red-600 text-center">{error}</p>}
         <div className="flex gap-2">
           <button onClick={eliminar} disabled={loading}
             className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 disabled:opacity-60">
