@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Plus, CheckCircle2, Clock, AlertCircle, Truck } from 'lucide-react'
+import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
+
+const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin']
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
   solicitado:           { label: 'Solicitado',         color: 'text-blue-700',   bg: 'bg-blue-100',   step: 1 },
@@ -32,6 +35,9 @@ export default async function RepuestosPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const rol = (user.user_metadata?.rol as string) ?? ''
+  const puedeEliminar = ROL_ADMIN.includes(rol)
 
   const { data: solicitudes } = await supabase
     .from('solicitudes_repuestos')
@@ -77,24 +83,27 @@ export default async function RepuestosPage() {
                   const est = ESTADOS[s.estado]
                   const itemCount = (s.repuestos_items ?? []).length
                   return (
-                    <Link key={s.id} href={`/repuestos/${s.id}`} className="card p-5 hover:shadow-md transition-shadow block">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">{s.numero}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est?.bg} ${est?.color}`}>{est?.label}</span>
-                      </div>
-                      <p className="text-sm font-semibold text-oriental-black mt-2">{itemCount} repuesto{itemCount !== 1 ? 's' : ''}</p>
-                      <p className="text-xs text-oriental-gray mt-0.5">
-                        {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </p>
-                      {s.respuesta_vehimotors && (
-                        <div className={`mt-2 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
-                          ${s.respuesta_vehimotors === 'hay_todo' ? 'bg-green-50 text-green-700' :
-                            s.respuesta_vehimotors === 'no_hay' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                          {s.respuesta_vehimotors === 'hay_todo' ? '✅ Hay todo' : s.respuesta_vehimotors === 'no_hay' ? '❌ Sin stock' : '⚠️ Parcial'}
+                    <div key={s.id} className="relative card hover:shadow-md transition-shadow">
+                      {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
+                      <Link href={`/repuestos/${s.id}`} className="block p-5">
+                        <div className="flex items-start justify-between mb-2 pr-6">
+                          <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">{s.numero}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est?.bg} ${est?.color}`}>{est?.label}</span>
                         </div>
-                      )}
-                      <ProgressBar estado={s.estado} />
-                    </Link>
+                        <p className="text-sm font-semibold text-oriental-black mt-2">{itemCount} repuesto{itemCount !== 1 ? 's' : ''}</p>
+                        <p className="text-xs text-oriental-gray mt-0.5">
+                          {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                        {s.respuesta_vehimotors && (
+                          <div className={`mt-2 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
+                            ${s.respuesta_vehimotors === 'hay_todo' ? 'bg-green-50 text-green-700' :
+                              s.respuesta_vehimotors === 'no_hay' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>
+                            {s.respuesta_vehimotors === 'hay_todo' ? '✅ Hay todo' : s.respuesta_vehimotors === 'no_hay' ? '❌ Sin stock' : '⚠️ Parcial'}
+                          </div>
+                        )}
+                        <ProgressBar estado={s.estado} />
+                      </Link>
+                    </div>
                   )
                 })}
               </div>
@@ -110,16 +119,19 @@ export default async function RepuestosPage() {
                 {completas.map(s => {
                   const itemCount = (s.repuestos_items ?? []).length
                   return (
-                    <Link key={s.id} href={`/repuestos/${s.id}`} className="card p-5 hover:shadow-md transition-shadow block opacity-70">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">{s.numero}</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Completado</span>
-                      </div>
-                      <p className="text-sm font-semibold text-oriental-black mt-2">{itemCount} repuesto{itemCount !== 1 ? 's' : ''}</p>
-                      <p className="text-xs text-oriental-gray mt-0.5">
-                        {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </p>
-                    </Link>
+                    <div key={s.id} className="relative card hover:shadow-md transition-shadow opacity-70">
+                      {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
+                      <Link href={`/repuestos/${s.id}`} className="block p-5">
+                        <div className="flex items-start justify-between mb-2 pr-6">
+                          <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">{s.numero}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Completado</span>
+                        </div>
+                        <p className="text-sm font-semibold text-oriental-black mt-2">{itemCount} repuesto{itemCount !== 1 ? 's' : ''}</p>
+                        <p className="text-xs text-oriental-gray mt-0.5">
+                          {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                      </Link>
+                    </div>
                   )
                 })}
               </div>
