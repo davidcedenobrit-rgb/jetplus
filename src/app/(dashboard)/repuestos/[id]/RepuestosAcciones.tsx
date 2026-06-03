@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Send, Upload, Loader2, CheckCircle2, X, ExternalLink, FileText, Truck } from 'lucide-react'
+import { Send, Upload, Loader2, CheckCircle2, X, ExternalLink, FileText, Truck, Settings } from 'lucide-react'
 
 interface Item { id: string; descripcion: string; referencia?: string | null; cantidad: number }
 interface Props {
@@ -16,7 +16,22 @@ interface Props {
 
 const ROL_ARIANNA   = ['arianna', 'director', 'jose', 'admin', 'mary', 'leysdem']
 const ROL_DIRECTOR  = ['director', 'jose', 'admin', 'mary', 'leysdem']
-const ROL_PAGO      = ['director', 'jose', 'admin', 'mary']  // José + Mary revisan factura
+const ROL_PAGO      = ['director', 'jose', 'admin', 'mary']
+const ROL_ADMIN     = ['jose', 'arianna', 'director', 'admin']
+
+const TODOS_ESTADOS = [
+  { key: 'solicitado',             label: 'Solicitado' },
+  { key: 'verificado',             label: 'Verificado' },
+  { key: 'cotizacion_enviada',     label: 'Cotización enviada' },
+  { key: 'cotizacion_recibida',    label: 'Cotización recibida' },
+  { key: 'cotizacion_aprobada',    label: 'Cotización aprobada' },
+  { key: 'factura_recibida',       label: 'Factura recibida' },
+  { key: 'pago_enviado',           label: 'Pago enviado' },
+  { key: 'guia_recibida',          label: 'Guía recibida' },
+  { key: 'completado',             label: 'Completado' },
+  { key: 'rechazado_verificacion', label: 'Rechazado' },
+  { key: 'cancelado',              label: 'Cancelado' },
+]
 
 export default function RepuestosAcciones({ solicitud, items, rol, userId, userEmail }: Props) {
   const supabase  = createClient()
@@ -33,6 +48,10 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [novedadTexto, setNovedadTexto] = useState('')
   const [novedadFoto, setNovedadFoto] = useState<File | null>(null)
   const [enviandoReporte, setEnviandoReporte] = useState(false)
+
+  // Panel admin
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [adminEstado, setAdminEstado] = useState(solicitud.estado)
 
   const esArianna  = ROL_ARIANNA.includes(rol)
   const esDirector = ROL_DIRECTOR.includes(rol)
@@ -355,6 +374,37 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
           <CheckCircle2 size={28} className="text-green-600 mx-auto mb-2" />
           <p className="font-bold text-green-800">Pedido completado</p>
           <p className="text-xs text-green-600 mt-1">Los repuestos fueron recibidos en el taller.</p>
+        </div>
+      )}
+
+      {/* ── PANEL ADMIN: editar cualquier paso ── */}
+      {ROL_ADMIN.includes(rol) && (
+        <div className="card p-5 border border-dashed border-gray-300">
+          <button
+            onClick={() => setShowAdmin(v => !v)}
+            className="w-full flex items-center justify-between text-sm font-semibold text-oriental-gray hover:text-oriental-black transition-colors">
+            <span className="flex items-center gap-2"><Settings size={14} /> Gestión de trazabilidad</span>
+            <span className="text-xs">{showAdmin ? '▲' : '▼'}</span>
+          </button>
+          {showAdmin && (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-oriental-gray">Cambia manualmente el estado de esta solicitud.</p>
+              <select
+                className="input text-sm"
+                value={adminEstado}
+                onChange={e => setAdminEstado(e.target.value)}>
+                {TODOS_ESTADOS.map(e => (
+                  <option key={e.key} value={e.key}>{e.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => avanzar(adminEstado, {}, `Estado ajustado manualmente por ${userEmail}`)}
+                disabled={loading || adminEstado === estado}
+                className="w-full btn-secondary py-2 text-sm disabled:opacity-40">
+                {loading ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Aplicar cambio de estado'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

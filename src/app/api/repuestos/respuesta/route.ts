@@ -45,24 +45,26 @@ export async function GET(req: NextRequest) {
 
   // Si no hay → página simple
   if (tipo === 'no_hay') {
-    return new NextResponse(paginaSimple(solicitud.numero, 'no_hay'), { headers: { 'Content-Type': 'text/html' } })
+    return new NextResponse(paginaSimple(solicitud.numero), { headers: { 'Content-Type': 'text/html' } })
   }
 
   // Si hay todo o parcial → página con formulario de cotización
+  const items = (solicitud.repuestos_items ?? []) as { id: string; descripcion: string; referencia: string | null; cantidad: number }[]
   return new NextResponse(
-    paginaCotizacion(solicitud.numero, id, token, tipo),
+    paginaCotizacion(solicitud.numero, id, token, tipo, items),
     { headers: { 'Content-Type': 'text/html' } }
   )
 }
 
-// POST: recibir cotización (observaciones + archivo)
+// POST: recibir cotización (observaciones + archivo + disponibilidad por ítem)
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData()
-    const id    = formData.get('id') as string
-    const token = formData.get('token') as string
-    const obs   = formData.get('observaciones') as string | null
-    const file  = formData.get('cotizacion') as File | null
+    const formData  = await req.formData()
+    const id        = formData.get('id') as string
+    const token     = formData.get('token') as string
+    const obs       = formData.get('observaciones') as string | null
+    const file      = formData.get('cotizacion') as File | null
+    const itemIds   = formData.getAll('item_id') as string[]
 
     if (!id || !token) return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
 
@@ -73,13 +75,19 @@ export async function POST(req: NextRequest) {
 
     if (!solicitud) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-    let cotizacionUrl: string | null = null
+    // Guardar disponibilidad por ítem (para el caso parcial)
+    if (itemIds.length > 0) {
+      for (const itemId of itemIds) {
+        const disponible = formData.get(`disp_${itemId}`) === 'on'
+        await supabase.from('repuestos_items').update({ disponible }).eq('id', itemId)
+      }
+    }
 
+    let cotizacionUrl: string | null = null
     if (file && file.size > 0) {
       const bytes  = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
       const path   = `repuestos/${id}/cotizacion-${Date.now()}.${file.name.split('.').pop()}`
-
       const { error: upErr } = await supabase.storage.from('comprobantes').upload(path, buffer, {
         contentType: file.type, upsert: false,
       })
@@ -136,21 +144,39 @@ function shell(titulo: string, color: string, cuerpo: string) {
 </div></body></html>`
 }
 
-function paginaCotizacion(numero: string, id: string, token: string, tipo: 'hay_todo' | 'parcial') {
+function paginaCotizacion(
+  numero: string, id: string, token: string, tipo: 'hay_todo' | 'parcial',
+  items: { id: string; descripcion: string; referencia: string | null; cantidad: number }[]
+) {
   const esParcial = tipo === 'parcial'
+
+  const checksHtml = esParcial && items.length > 0
+    ? `<p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 10px">Marque los repuestos disponibles:</p>
+       <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:16px">
+       ${items.map((it, i) => `
+         <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;${i < items.length - 1 ? 'border-bottom:1px solid #f3f4f6' : ''};background:#fff">
+           <input type="hidden" name="item_id" value="${it.id}"/>
+           <input type="checkbox" name="disp_${it.id}" style="width:18px;height:18px;accent-color:#16a34a;cursor:pointer" checked/>
+           <span style="flex:1;font-size:14px;color:#111">${it.descripcion}${it.referencia ? `<span style="color:#9ca3af;font-size:12px;font-family:monospace;margin-left:8px">${it.referencia}</span>` : ''}</span>
+           <span style="font-size:13px;font-weight:700;color:#6b7280">×${it.cantidad}</span>
+         </label>`).join('')}
+       </div>`
+    : ''
+
   const cuerpo = `
     <div class="emoji">${esParcial ? '⚠️' : '✅'}</div>
     <div class="badge">${esParcial ? 'Disponibilidad parcial' : 'Hay todo disponible'} — ${numero}</div>
     <h2>Gracias por su respuesta</h2>
     <p>${esParcial
-      ? 'Indique qué repuestos están disponibles y adjunte la cotización con precios.'
+      ? 'Indique cuáles repuestos están disponibles y adjunte la cotización con precios.'
       : 'Por favor adjunte su cotización con los precios para proceder con la aprobación.'
     }</p>
     <form method="POST" enctype="multipart/form-data" action="/api/repuestos/respuesta">
       <input type="hidden" name="id" value="${id}"/>
       <input type="hidden" name="token" value="${token}"/>
-      ${esParcial ? `<label>Observaciones (indique qué hay disponible)</label>
-      <textarea name="observaciones" placeholder="Ej: Tenemos filtros de aceite y pastillas, no hay sensor de oxígeno..."></textarea>` : ''}
+      ${checksHtml}
+      ${esParcial ? `<label>Observaciones adicionales (opcional)</label>
+      <textarea name="observaciones" placeholder="Ej: El sensor de oxígeno llega en 3 días hábiles..."></textarea>` : ''}
       <label>Adjuntar cotización (PDF, imagen, Excel)</label>
       <input type="file" name="cotizacion" accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls"/>
       <button type="submit" class="btn">📤 Enviar cotización</button>
@@ -158,7 +184,7 @@ function paginaCotizacion(numero: string, id: string, token: string, tipo: 'hay_
   return shell('Enviar cotización', esParcial ? '#d97706' : '#16a34a', cuerpo)
 }
 
-function paginaSimple(numero: string, tipo: string) {
+function paginaSimple(numero: string) {
   const cuerpo = `<div class="emoji">❌</div>
     <div class="badge" style="background:#fee2e2;color:#dc2626">Sin disponibilidad — ${numero}</div>
     <h2>Respuesta registrada</h2>
