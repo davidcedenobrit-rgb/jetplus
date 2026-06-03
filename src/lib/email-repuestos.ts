@@ -3,12 +3,13 @@ import { Resend } from 'resend'
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
 const APP_URL           = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
-const CORREO_ARIANNA    = process.env.CORREO_ARIANNA    ?? 'arianna@laoriental.co'
+const CORREO_ARIANNA    = process.env.CORREO_ARIANNA    ?? 'repuestos.laoriental.mun@gmail.com'
 const CORREO_VEHIMOTORS  = process.env.CORREO_VEHIMOTORS   ?? 'vehimotors@laoriental.co'
 const CORREO_VEHIMOTORS2 = process.env.CORREO_VEHIMOTORS2  ?? 'rojasjgx@gmail.com'
 const TO_VEHIMOTORS = [CORREO_VEHIMOTORS, CORREO_VEHIMOTORS2]
 const CORREO_DIRECTOR   = process.env.CORREO_DIRECTOR   ?? 'jose@laoriental.co'
 const CORREO_MARY       = process.env.CORREO_MARY       ?? 'mary@laoriental.co'
+const BCC_JEFE          = [CORREO_VEHIMOTORS2]
 const FROM = 'repuestos@laoriental.co'
 
 export interface Item { descripcion: string; referencia?: string | null; cantidad: number }
@@ -74,7 +75,7 @@ export async function enviarSolicitudCotizacion(opts: {
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic, podrán agregar observaciones y adjuntar su cotización.</p>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], bcc: BCC_JEFE, subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
 }
 
 // ── 2. Notificación interna cuando Vehimotors responde ─────────────
@@ -94,7 +95,7 @@ export async function notificarRespuestaVehimotors(opts: {
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">Vehimotors respondió a la solicitud <strong>${numero}</strong>. Revisa la cotización adjunta en el Centro de Mando y apruébala para continuar.</p>
     <div style="text-align:center"><a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>`
 
-  return getResend().emails.send({ from: FROM, to: [CORREO_ARIANNA], cc: [CORREO_DIRECTOR], subject: `${t.emoji} Vehimotors respondió — Solicitud ${numero}`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: [CORREO_ARIANNA], cc: [CORREO_DIRECTOR], bcc: BCC_JEFE, subject: `${t.emoji} Vehimotors respondió — Solicitud ${numero}`, html: wrap(body) })
 }
 
 // ── 3. Cotización aprobada → Vehimotors con botón Anexar factura ───
@@ -115,7 +116,7 @@ export async function enviarAprobacionCotizacion(opts: {
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic podrá cargar la factura directamente en nuestro sistema.</p>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], subject: `✅ Cotización aprobada ${numero} — La Oriental Automotors`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], bcc: BCC_JEFE, subject: `✅ Cotización aprobada ${numero} — La Oriental Automotors`, html: wrap(body) })
 }
 
 // ── 4. Notificación interna: factura recibida ──────────────────────
@@ -130,7 +131,7 @@ export async function notificarFacturaRecibida(opts: { numero: string; solicitud
       <a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Centro de Mando →</a>
     </div>`
 
-  return getResend().emails.send({ from: FROM, to: [CORREO_DIRECTOR, CORREO_MARY ?? CORREO_DIRECTOR], cc: [CORREO_ARIANNA], subject: `📄 Factura recibida — Solicitud ${numero}`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: [CORREO_DIRECTOR, CORREO_MARY ?? CORREO_DIRECTOR], cc: [CORREO_ARIANNA], bcc: BCC_JEFE, subject: `📄 Factura recibida — Solicitud ${numero}`, html: wrap(body) })
 }
 
 // ── 6. Reporte de recepción a Vehimotors (Arianna) ────────────────
@@ -160,7 +161,7 @@ export async function enviarReporteRecepcion(opts: {
     ? `⚠️ Novedad en pedido ${numero} — La Oriental Automotors`
     : `✅ Pedido ${numero} recibido sin novedad — La Oriental Automotors`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], subject: asunto, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], bcc: BCC_JEFE, subject: asunto, html: wrap(body) })
 }
 export async function enviarConfirmacionPago(opts: {
   numero: string; solicitudId: string; tokenPago: string
@@ -185,5 +186,5 @@ export async function enviarConfirmacionPago(opts: {
       <a href="${urlGuia}"      style="${btnStyle('#2563eb')}">📦 Cargar guía de despacho</a>
     </div>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], subject: `💰 Pago realizado — Repuestos ${numero}`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_DIRECTOR], bcc: BCC_JEFE, subject: `💰 Pago realizado — Repuestos ${numero}`, html: wrap(body) })
 }
