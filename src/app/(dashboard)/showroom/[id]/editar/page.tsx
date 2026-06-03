@@ -9,7 +9,7 @@ export default async function EditarShowroomPage({ params }: { params: Promise<{
   if (!user) redirect('/login')
 
   const rol = user.user_metadata?.rol as string
-  if (!['jose', 'arianna', 'admin'].includes(rol)) redirect('/showroom')
+  if (!['jose', 'arianna', 'admin', 'director'].includes(rol)) redirect('/showroom')
 
   const { id } = await params
   const { data: vehiculo } = await supabase
