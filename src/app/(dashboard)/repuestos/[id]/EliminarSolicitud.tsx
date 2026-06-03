@@ -14,6 +14,8 @@ export default function EliminarSolicitud({ solicitudId }: { solicitudId: string
 
   async function eliminar() {
     setLoading(true); setError('')
+    await supabase.from('repuestos_historial').delete().eq('solicitud_id', solicitudId)
+    await supabase.from('repuestos_items').delete().eq('solicitud_id', solicitudId)
     const { error: err } = await supabase.from('solicitudes_repuestos').delete().eq('id', solicitudId)
     if (err) { setError(err.message); setLoading(false); return }
     router.push('/repuestos')
