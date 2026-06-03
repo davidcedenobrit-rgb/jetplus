@@ -203,12 +203,12 @@ export default async function CreditoDetallePage({
                 <span className="font-bold text-oriental-black">{formatCurrency(totalFinanciado, credito.moneda)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-oriental-gray">Inicial pagada</span>
-                <span className="font-medium text-oriental-black">{formatCurrency(totalInicial, credito.moneda)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
                 <span className="text-oriental-gray">Saldo pendiente</span>
                 <span className="font-bold text-oriental-red">{formatCurrency(totalSaldo, credito.moneda)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-oriental-gray">Ya pagado</span>
+                <span className="font-bold text-green-600">{formatCurrency(Math.max(0, totalFinanciado - totalSaldo), credito.moneda)}</span>
               </div>
             </div>
 
