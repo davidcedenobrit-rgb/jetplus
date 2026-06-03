@@ -303,11 +303,13 @@ export default function NuevoCreditoPage() {
   }, [vehimotorsMonto, vehimotorsCuotas, vehimotorsMontoCuota])
 
   const resumenPersonalizado = useMemo(() => {
-    const totalOr = calcInicialOriental.totalCuotas
-    const totalVh = calcVehimotors.totalCuotas
+    const totalOr  = calcInicialOriental.totalCuotas
+    const totalVhMensual = calcVehimotors.totalCuotas
+    const totalCe  = ceActivo ? (parseInt(ceCuotas) || 0) * (parseFloat(ceMontoCuota) || 0) : 0
+    const totalVh  = totalVhMensual + totalCe          // Vehimotors completo
     const totalFinanciado = totalOr + totalVh
-    return { totalOr, totalVh, totalFinanciado }
-  }, [calcInicialOriental.totalCuotas, calcVehimotors.totalCuotas])
+    return { totalOr, totalVhMensual, totalCe, totalVh, totalFinanciado }
+  }, [calcInicialOriental.totalCuotas, calcVehimotors.totalCuotas, ceActivo, ceCuotas, ceMontoCuota])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -838,7 +840,7 @@ export default function NuevoCreditoPage() {
                   </div>
                   <div>
                     <label className="label">N° de cuotas</label>
-                    <input type="number" min="1" max="120" className="input" placeholder="12"
+                    <input type="number" min="0" max="120" className="input" placeholder="12 (0 = pago único)"
                       value={inicialOrientalCuotas} onChange={e => setInicialOrientalCuotas(e.target.value)} />
                   </div>
                   <div>
@@ -1079,10 +1081,24 @@ export default function NuevoCreditoPage() {
                       </div>
                     )}
                     {resumenPersonalizado.totalVh > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-indigo-300">Crédito Financiamiento — Vehimotors</span>
-                        <span className="text-indigo-300 font-semibold">{formatUSD(resumenPersonalizado.totalVh)}</span>
-                      </div>
+                      <>
+                        {resumenPersonalizado.totalCe > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-teal-300">Cuotas trimestrales — Vehimotors</span>
+                            <span className="text-teal-300 font-semibold">{formatUSD(resumenPersonalizado.totalCe)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm">
+                          <span className="text-indigo-300">Cuotas mensuales — Vehimotors</span>
+                          <span className="text-indigo-300 font-semibold">{formatUSD(resumenPersonalizado.totalVhMensual)}</span>
+                        </div>
+                        {resumenPersonalizado.totalCe > 0 && (
+                          <div className="flex justify-between text-sm bg-indigo-900/30 rounded-lg px-3 py-1.5">
+                            <span className="text-indigo-200 font-semibold">Total Vehimotors</span>
+                            <span className="text-indigo-200 font-bold">{formatUSD(resumenPersonalizado.totalVh)}</span>
+                          </div>
+                        )}
+                      </>
                     )}
                     <div className="border-t border-gray-700 pt-2 flex justify-between">
                       <span className="text-gray-300 font-semibold text-sm">Total financiado general</span>
