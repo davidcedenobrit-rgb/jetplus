@@ -45,8 +45,9 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [uploading, setUploading] = useState<string | null>(null)
 
   // Enviar a almacén
+  const CORREOS_ALMACEN = ['jrodriguez@saicve.com', 'armando.eminca@gmail.com']
   const [showAlmacen, setShowAlmacen] = useState(false)
-  const [correosAlmacen, setCorreosAlmacen] = useState('')
+  const [correosAlmacen, setCorreosAlmacen] = useState<boolean[]>([true, true])
   const [numCotizacion, setNumCotizacion] = useState('')
   const [enviandoAlmacen, setEnviandoAlmacen] = useState(false)
 
@@ -127,7 +128,36 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
     router.refresh(); setLoading(false)
   }
 
-  const pagoListo = solicitud.comprobante_url // mínimo el comprobante
+  const pagoListo = solicitud.comprobante_url
+
+  async function handleReporteRecepcion(tieneNovedad: boolean) {
+    setEnviandoReporte(true); setError('')
+    const fd = new FormData()
+    fd.append('solicitudId', solicitud.id)
+    fd.append('tieneNovedad', String(tieneNovedad))
+    fd.append('userEmail', userEmail)
+    if (tieneNovedad && novedadTexto) fd.append('notas', novedadTexto)
+    if (tieneNovedad && novedadFoto)  fd.append('foto', novedadFoto)
+    const res = await fetch('/api/repuestos/reportar-recepcion', { method: 'POST', body: fd })
+    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoReporte(false); return }
+    router.refresh()
+    setEnviandoReporte(false)
+  }
+
+  async function handleEnviarAlmacen() {
+    const emails = CORREOS_ALMACEN.filter((_, i) => correosAlmacen[i])
+    if (!emails.length || !numCotizacion.trim()) {
+      setError('Selecciona al menos un correo e ingresa el número de cotización'); return
+    }
+    setEnviandoAlmacen(true); setError('')
+    const res = await fetch('/api/repuestos/enviar-almacen', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ solicitudId: solicitud.id, correosAlmacen: emails, numeroCotizacion: numCotizacion.trim(), userEmail }),
+    })
+    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoAlmacen(false); return }
+    setShowAlmacen(false); router.refresh()
+    setEnviandoAlmacen(false)
+  }
 
   async function handleReporteRecepcion(tieneNovedad: boolean) {
     setEnviandoReporte(true); setError('')
@@ -275,7 +305,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
           <h3 className="text-sm font-bold text-oriental-black mb-1">Documentos de pago</h3>
           <p className="text-xs text-oriental-gray mb-4">Carga los documentos y luego envía el pago.</p>
 
-          {/* Ver factura */}
           {solicitud.factura_url && (
             <a href={solicitud.factura_url} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-oriental-red font-semibold hover:underline mb-4">
@@ -283,11 +312,10 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
             </a>
           )}
 
-          {/* Documentos a cargar */}
           {[
-            { campo: 'retencion_url',   label: 'Retenciones',       existente: solicitud.retencion_url },
-            { campo: 'comprobante_url', label: 'Comprobante de pago', existente: solicitud.comprobante_url },
-            { campo: 'otros_docs_url',  label: 'Otros documentos',  existente: solicitud.otros_docs_url },
+            { campo: 'retencion_url',   label: 'Retenciones',         existente: solicitud.retencion_url },
+            { campo: 'comprobante_url', label: 'Comprobante de pago',  existente: solicitud.comprobante_url },
+            { campo: 'otros_docs_url',  label: 'Otros documentos',     existente: solicitud.otros_docs_url },
           ].map(({ campo, label, existente }) => (
             <div key={campo} className="mb-3">
               <div className="flex items-center justify-between mb-1">
@@ -308,7 +336,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
             </div>
           ))}
 
-          {/* Botón enviar pago */}
           {estado === 'factura_recibida' && (
             <button onClick={handleEnviarPago} disabled={!pagoListo || loading}
               className={`w-full mt-2 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2
@@ -340,11 +367,28 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
             <>
               <h3 className="text-sm font-bold text-oriental-black mb-3">Enviar a almacén</h3>
               <div className="mb-3">
+<<<<<<< HEAD
                 <label className="label">Correos del almacén *</label>
                 <textarea className="textarea text-sm" rows={2}
                   placeholder="almacen@empresa.com, otro@empresa.com"
                   value={correosAlmacen} onChange={e => setCorreosAlmacen(e.target.value)} />
                 <p className="text-[11px] text-oriental-gray -mt-2 mb-3">Separa múltiples correos con coma o salto de línea.</p>
+=======
+                <label className="label">Destinatarios *</label>
+                <div className="space-y-2">
+                  {CORREOS_ALMACEN.map((email, i) => (
+                    <label key={email} className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={correosAlmacen[i]}
+                        onChange={e => setCorreosAlmacen(prev => prev.map((v, idx) => idx === i ? e.target.checked : v))}
+                        className="w-4 h-4 accent-blue-600 cursor-pointer"
+                      />
+                      <span className="text-sm font-medium text-oriental-black">{email}</span>
+                    </label>
+                  ))}
+                </div>
+>>>>>>> a70209c (feat(repuestos): correos de almacén con checkboxes predefinidos)
               </div>
               <div className="mb-4">
                 <label className="label">Número de cotización (código Vehimotors) *</label>
@@ -358,7 +402,11 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                   {enviandoAlmacen ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                   Enviar email
                 </button>
+<<<<<<< HEAD
                 <button onClick={() => { setShowAlmacen(false); setError('') }}
+=======
+                <button onClick={() => { setShowAlmacen(false); setCorreosAlmacen([true, true]); setNumCotizacion(''); setError('') }}
+>>>>>>> a70209c (feat(repuestos): correos de almacén con checkboxes predefinidos)
                   className="flex-1 btn-secondary py-2.5 text-sm">Cancelar</button>
               </div>
             </>
