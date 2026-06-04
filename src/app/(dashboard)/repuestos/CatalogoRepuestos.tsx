@@ -26,6 +26,65 @@ const frecuenciaColor: Record<string, string> = {
 
 const EMPTY_FORM = { nombre: '', codigo: '', modelo: '', categoria: '', frecuencia: '' }
 
+// Select con categorías existentes + opción de escribir una nueva
+function CategoriaInput({
+  value,
+  onChange,
+  categorias,
+  placeholder = 'Categoría',
+}: {
+  value: string
+  onChange: (v: string) => void
+  categorias: string[]
+  placeholder?: string
+}) {
+  const isCustom = value !== '' && !categorias.includes(value)
+  const [mode, setMode] = useState<'select' | 'text'>(isCustom ? 'text' : 'select')
+
+  if (mode === 'text') {
+    return (
+      <div className="flex gap-1">
+        <input
+          className="input text-sm py-1.5 flex-1"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Nueva categoría"
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={() => { onChange(''); setMode('select') }}
+          title="Volver a la lista"
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 text-oriental-gray text-xs font-bold flex-shrink-0">
+          ↩
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      <select
+        className="input text-sm py-1.5 pr-8 appearance-none"
+        value={value}
+        onChange={e => {
+          if (e.target.value === '__nueva__') {
+            onChange('')
+            setMode('text')
+          } else {
+            onChange(e.target.value)
+          }
+        }}
+      >
+        <option value="">— {placeholder} —</option>
+        {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+        <option value="__nueva__">+ Escribir nueva…</option>
+      </select>
+      <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-oriental-gray" />
+    </div>
+  )
+}
+
 function ItemRow({
   item,
   categorias,
@@ -101,16 +160,11 @@ function ItemRow({
           />
         </td>
         <td className="px-3 py-2">
-          <input
-            className="input text-sm py-1.5"
-            list="categorias-list"
+          <CategoriaInput
             value={form.categoria}
-            onChange={e => setForm(p => ({ ...p, categoria: e.target.value }))}
-            placeholder="Categoría"
+            onChange={v => setForm(p => ({ ...p, categoria: v }))}
+            categorias={categorias}
           />
-          <datalist id="categorias-list">
-            {categorias.map(c => <option key={c} value={c} />)}
-          </datalist>
         </td>
         <td className="px-3 py-2">
           <div className="relative">
@@ -230,16 +284,11 @@ function AddRow({
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          className="input text-sm py-1.5"
-          list="categorias-list-add"
+        <CategoriaInput
           value={form.categoria}
-          onChange={e => setForm(p => ({ ...p, categoria: e.target.value }))}
-          placeholder="Categoría"
+          onChange={v => setForm(p => ({ ...p, categoria: v }))}
+          categorias={categorias}
         />
-        <datalist id="categorias-list-add">
-          {categorias.map(c => <option key={c} value={c} />)}
-        </datalist>
       </td>
       <td className="px-3 py-2">
         <div className="relative">
@@ -277,6 +326,7 @@ export default function CatalogoRepuestos() {
   const [marca, setMarca] = useState<'MG' | 'MAXUS'>('MG')
   const [showAdd, setShowAdd] = useState(false)
   const [busqueda, setBusqueda] = useState('')
+  const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -291,9 +341,14 @@ export default function CatalogoRepuestos() {
 
   useEffect(() => { load() }, [load])
 
+  const categorias = [...new Set(
+    items.filter(it => it.marca === marca).map(it => it.categoria).filter(Boolean) as string[]
+  )].sort()
+
   const q = busqueda.trim().toLowerCase()
   const filtrados = items.filter(it => {
     if (it.marca !== marca) return false
+    if (categoriaFiltro && it.categoria !== categoriaFiltro) return false
     if (!q) return true
     return (
       it.nombre.toLowerCase().includes(q) ||
@@ -302,10 +357,14 @@ export default function CatalogoRepuestos() {
       (it.categoria ?? '').toLowerCase().includes(q)
     )
   })
-  const categorias = [...new Set(items.filter(it => it.marca === marca).map(it => it.categoria).filter(Boolean) as string[])].sort()
 
-  const mgCount   = items.filter(it => it.marca === 'MG').length
+  const mgCount    = items.filter(it => it.marca === 'MG').length
   const maxusCount = items.filter(it => it.marca === 'MAXUS').length
+
+  function resetFiltros() {
+    setBusqueda('')
+    setCategoriaFiltro('')
+  }
 
   async function handleSave(id: string, data: Partial<CatalogoItem>) {
     setError('')
@@ -338,6 +397,8 @@ export default function CatalogoRepuestos() {
     setItems(prev => [...prev, inserted])
   }
 
+  const hayFiltros = q || categoriaFiltro
+
   return (
     <div className="mt-12">
       <div className="flex items-center justify-between mb-4">
@@ -355,7 +416,7 @@ export default function CatalogoRepuestos() {
         {/* Tabs MG / MAXUS */}
         <div className="flex border-b border-gray-100 bg-gray-50">
           {(['MG', 'MAXUS'] as const).map(m => (
-            <button key={m} onClick={() => { setMarca(m); setShowAdd(false); setBusqueda('') }}
+            <button key={m} onClick={() => { setMarca(m); setShowAdd(false); resetFiltros() }}
               className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${
                 marca === m
                   ? m === 'MG'
@@ -375,14 +436,28 @@ export default function CatalogoRepuestos() {
           ))}
         </div>
 
-        {/* Buscador */}
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="relative">
+        {/* Filtros: categoría + buscador */}
+        <div className="px-4 py-3 border-b border-gray-100 flex gap-3">
+          {/* Filtro categoría */}
+          <div className="relative w-52 flex-shrink-0">
+            <select
+              className="input text-sm py-2 pr-8 appearance-none"
+              value={categoriaFiltro}
+              onChange={e => setCategoriaFiltro(e.target.value)}
+            >
+              <option value="">Todas las categorías</option>
+              {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-oriental-gray" />
+          </div>
+
+          {/* Buscador */}
+          <div className="relative flex-1">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray pointer-events-none" />
             <input
               type="text"
               className="input pl-9 text-sm py-2"
-              placeholder="Buscar por nombre, código, modelo o categoría…"
+              placeholder="Buscar por nombre, código o modelo…"
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
             />
@@ -406,10 +481,10 @@ export default function CatalogoRepuestos() {
           <div className="p-12 text-center text-oriental-gray text-sm">Cargando catálogo…</div>
         ) : filtrados.length === 0 && !showAdd ? (
           <div className="p-12 text-center">
-            {q ? (
+            {hayFiltros ? (
               <>
-                <p className="text-oriental-gray text-sm">Sin resultados para <span className="font-semibold">"{busqueda}"</span></p>
-                <button onClick={() => setBusqueda('')} className="mt-2 text-oriental-red text-sm font-semibold hover:underline">Limpiar búsqueda</button>
+                <p className="text-oriental-gray text-sm">Sin resultados para los filtros actuales</p>
+                <button onClick={resetFiltros} className="mt-2 text-oriental-red text-sm font-semibold hover:underline">Limpiar filtros</button>
               </>
             ) : (
               <>
@@ -457,14 +532,19 @@ export default function CatalogoRepuestos() {
           </div>
         )}
 
-        {/* Footer count */}
+        {/* Footer */}
         {filtrados.length > 0 && (
-          <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/50">
+          <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
             <p className="text-xs text-oriental-gray">
-              {q
+              {hayFiltros
                 ? `${filtrados.length} resultado${filtrados.length !== 1 ? 's' : ''} de ${items.filter(it => it.marca === marca).length} en catálogo ${marca}`
                 : `${filtrados.length} repuesto${filtrados.length !== 1 ? 's' : ''} en catálogo ${marca}`}
             </p>
+            {hayFiltros && (
+              <button onClick={resetFiltros} className="text-xs text-oriental-red font-semibold hover:underline">
+                Limpiar filtros
+              </button>
+            )}
           </div>
         )}
       </div>
