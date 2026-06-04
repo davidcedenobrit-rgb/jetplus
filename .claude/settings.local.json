@@ -18,7 +18,8 @@
       "mcp__claude_ai_Vercel__deploy_to_vercel",
       "Bash(timeout 90 cmd /c \"echo Esperando build...\")",
       "Bash(ping -n 75 127.0.0.1)",
-      "Bash(ping -n 90 127.0.0.1)"
+      "Bash(ping -n 90 127.0.0.1)",
+      "mcp__Vercel__get_runtime_logs"
     ]
   }
 }
