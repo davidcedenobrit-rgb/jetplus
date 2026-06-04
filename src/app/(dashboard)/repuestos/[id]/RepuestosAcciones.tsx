@@ -367,13 +367,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
             <>
               <h3 className="text-sm font-bold text-oriental-black mb-3">Enviar a almacén</h3>
               <div className="mb-3">
-<<<<<<< HEAD
-                <label className="label">Correos del almacén *</label>
-                <textarea className="textarea text-sm" rows={2}
-                  placeholder="almacen@empresa.com, otro@empresa.com"
-                  value={correosAlmacen} onChange={e => setCorreosAlmacen(e.target.value)} />
-                <p className="text-[11px] text-oriental-gray -mt-2 mb-3">Separa múltiples correos con coma o salto de línea.</p>
-=======
                 <label className="label">Destinatarios *</label>
                 <div className="space-y-2">
                   {CORREOS_ALMACEN.map((email, i) => (
@@ -388,7 +381,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                     </label>
                   ))}
                 </div>
->>>>>>> a70209c (feat(repuestos): correos de almacén con checkboxes predefinidos)
               </div>
               <div className="mb-4">
                 <label className="label">Número de cotización (código Vehimotors) *</label>
@@ -402,11 +394,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                   {enviandoAlmacen ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                   Enviar email
                 </button>
-<<<<<<< HEAD
-                <button onClick={() => { setShowAlmacen(false); setError('') }}
-=======
                 <button onClick={() => { setShowAlmacen(false); setCorreosAlmacen([true, true]); setNumCotizacion(''); setError('') }}
->>>>>>> a70209c (feat(repuestos): correos de almacén con checkboxes predefinidos)
                   className="flex-1 btn-secondary py-2.5 text-sm">Cancelar</button>
               </div>
             </>
