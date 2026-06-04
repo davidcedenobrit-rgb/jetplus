@@ -19,7 +19,7 @@ const CORREO_OPS     = process.env.CORREO_OPS     ?? 'repuestos.laoriental.mun@g
 // Reciben cuando llega guía, confirmación de pago o recepción
 const EQUIPO_INTERNO = [CORREO_MARY, CORREO_ROJAS, CORREO_OPS]
 
-const FROM = 'repuestos@laoriental.co'
+const FROM = 'Repuestos La Oriental <repuestos@laoriental.co>'
 
 export interface Item { descripcion: string; referencia?: string | null; cantidad: number }
 
