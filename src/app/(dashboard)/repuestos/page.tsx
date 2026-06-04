@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Plus, CheckCircle2, Clock, AlertCircle, Truck } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
+import CatalogoRepuestos from './CatalogoRepuestos'
 
 const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin']
 
@@ -139,6 +140,8 @@ export default async function RepuestosPage() {
           )}
         </div>
       )}
+
+      <CatalogoRepuestos />
     </div>
   )
 }

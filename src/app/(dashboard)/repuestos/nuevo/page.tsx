@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Plus, Trash2, Save, Search, X, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, Search, X, ChevronDown, BookmarkPlus, Check } from 'lucide-react'
 import Link from 'next/link'
 
 interface CatalogoItem {
@@ -14,6 +14,122 @@ interface CatalogoItem {
   frecuencia: string
   codigo: string | null
   nombre: string
+}
+
+const FRECUENCIAS = ['ALTA ROTACION', 'MEDIA ROTACION', 'BAJA ROTACION', 'CARROCERIA']
+
+function GuardarCatalogoModal({
+  nombre,
+  codigo,
+  onSave,
+  onClose,
+}: {
+  nombre: string
+  codigo: string
+  onSave: (id: string) => void
+  onClose: () => void
+}) {
+  const supabase = createClient()
+  const [form, setForm] = useState({
+    nombre: nombre,
+    codigo: codigo,
+    marca: 'MG' as 'MG' | 'MAXUS',
+    modelo: '',
+    categoria: '',
+    frecuencia: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    if (!form.nombre.trim()) { setError('El nombre es requerido'); return }
+    setSaving(true)
+    setError('')
+    const { data, error: err } = await supabase
+      .from('catalogo_repuestos')
+      .insert({
+        nombre: form.nombre.trim(),
+        codigo: form.codigo.trim() || null,
+        marca: form.marca,
+        modelo: form.modelo.trim() || null,
+        categoria: form.categoria.trim() || null,
+        frecuencia: form.frecuencia || null,
+        activo: true,
+      })
+      .select().single()
+    if (err || !data) { setError(err?.message ?? 'Error al guardar'); setSaving(false); return }
+    onSave(data.id)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h3 className="font-bold text-oriental-black flex items-center gap-2">
+            <BookmarkPlus size={16} className="text-oriental-red" /> Guardar en catálogo
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
+            <X size={16} className="text-oriental-gray" />
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div>
+            <label className="label">Nombre *</label>
+            <input className="input" value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">Código</label>
+            <input className="input font-mono text-sm" value={form.codigo} onChange={e => setForm(p => ({ ...p, codigo: e.target.value }))} placeholder="Código opcional" />
+          </div>
+          <div>
+            <label className="label">Marca *</label>
+            <div className="flex gap-2">
+              {(['MG', 'MAXUS'] as const).map(m => (
+                <button key={m} type="button"
+                  onClick={() => setForm(p => ({ ...p, marca: m }))}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                    form.marca === m
+                      ? m === 'MG' ? 'bg-red-600 text-white border-red-600' : 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                  }`}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="label">Modelo</label>
+            <input className="input" value={form.modelo} onChange={e => setForm(p => ({ ...p, modelo: e.target.value }))} placeholder="Ej: MG ZS, Maxus T60" />
+          </div>
+          <div>
+            <label className="label">Categoría</label>
+            <input className="input" value={form.categoria} onChange={e => setForm(p => ({ ...p, categoria: e.target.value }))} placeholder="Ej: Motor, Frenos, Suspensión" />
+          </div>
+          <div>
+            <label className="label">Frecuencia</label>
+            <div className="relative">
+              <select className="input pr-8 appearance-none" value={form.frecuencia} onChange={e => setForm(p => ({ ...p, frecuencia: e.target.value }))}>
+                <option value="">— Seleccionar —</option>
+                {FRECUENCIAS.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-oriental-gray" />
+            </div>
+          </div>
+          {error && <p className="text-oriental-red text-sm">{error}</p>}
+        </div>
+        <div className="flex items-center gap-3 px-5 py-4 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !form.nombre.trim()}
+            className="btn-primary flex items-center gap-2 flex-1 justify-center disabled:opacity-50">
+            <Save size={14} /> {saving ? 'Guardando…' : 'Guardar en catálogo'}
+          </button>
+          <button type="button" onClick={onClose} className="btn-secondary px-4">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 interface Item {
@@ -167,7 +283,8 @@ export default function NuevaSolicitudPage() {
   const [notas, setNotas] = useState('')
   const [items, setItems] = useState<Item[]>([{ descripcion: '', referencia: '', cantidad: 1 }])
   const [catalogo, setCatalogo] = useState<CatalogoItem[]>([])
-  const [modalAbierto, setModalAbierto] = useState<number | null>(null) // índice del ítem que abrió el modal
+  const [modalAbierto, setModalAbierto] = useState<number | null>(null)
+  const [guardarCatalogoIdx, setGuardarCatalogoIdx] = useState<number | null>(null)
 
   useEffect(() => {
     supabase.from('catalogo_repuestos').select('*').eq('activo', true)
@@ -250,6 +367,19 @@ export default function NuevaSolicitudPage() {
         />
       )}
 
+      {/* Modal guardar en catálogo */}
+      {guardarCatalogoIdx !== null && (
+        <GuardarCatalogoModal
+          nombre={items[guardarCatalogoIdx]?.descripcion ?? ''}
+          codigo={items[guardarCatalogoIdx]?.referencia ?? ''}
+          onSave={(id) => {
+            setItems(prev => prev.map((it, i) => i === guardarCatalogoIdx ? { ...it, catalogoId: id } : it))
+            setGuardarCatalogoIdx(null)
+          }}
+          onClose={() => setGuardarCatalogoIdx(null)}
+        />
+      )}
+
       <div className="p-8 max-w-2xl">
         <div className="flex items-center gap-4 mb-8">
           <Link href="/repuestos" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50">
@@ -329,10 +459,25 @@ export default function NuevaSolicitudPage() {
                         <input type="text" className="input font-mono text-sm" placeholder="Código opcional" value={item.referencia}
                           onChange={e => updateItem(i, 'referencia', e.target.value)} />
                       </div>
-                      <button type="button" onClick={() => clearItem(i)}
-                        className="text-xs text-oriental-gray hover:text-oriental-red font-semibold flex items-center gap-1">
-                        <X size={11} /> Seleccionar del catálogo en cambio
-                      </button>
+                      <div className="flex items-center justify-between pt-1">
+                        <button type="button" onClick={() => clearItem(i)}
+                          className="text-xs text-oriental-gray hover:text-oriental-red font-semibold flex items-center gap-1">
+                          <X size={11} /> Seleccionar del catálogo en cambio
+                        </button>
+                        {item.descripcion && item.descripcion !== 'manual' && (
+                          item.catalogoId ? (
+                            <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                              <Check size={11} /> Guardado en catálogo
+                            </span>
+                          ) : (
+                            <button type="button"
+                              onClick={() => setGuardarCatalogoIdx(i)}
+                              className="text-xs text-oriental-red font-semibold hover:underline flex items-center gap-1">
+                              <BookmarkPlus size={11} /> Guardar en catálogo
+                            </button>
+                          )
+                        )}
+                      </div>
                     </div>
                   )}
 
