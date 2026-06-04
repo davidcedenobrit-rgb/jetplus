@@ -16,134 +16,79 @@ interface CatalogoItem {
   nombre: string
 }
 
-const FRECUENCIAS = ['ALTA ROTACION', 'MEDIA ROTACION', 'BAJA ROTACION', 'CARROCERIA']
-
-function GuardarCatalogoModal({
-  nombre,
-  codigo,
-  onSave,
-  onClose,
-}: {
-  nombre: string
-  codigo: string
-  onSave: (id: string) => void
-  onClose: () => void
-}) {
-  const supabase = createClient()
-  const [form, setForm] = useState({
-    nombre: nombre,
-    codigo: codigo,
-    marca: 'MG' as 'MG' | 'MAXUS',
-    modelo: '',
-    categoria: '',
-    frecuencia: '',
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  async function handleSave() {
-    if (!form.nombre.trim()) { setError('El nombre es requerido'); return }
-    setSaving(true)
-    setError('')
-    const { data, error: err } = await supabase
-      .from('catalogo_repuestos')
-      .insert({
-        nombre: form.nombre.trim(),
-        codigo: form.codigo.trim() || null,
-        marca: form.marca,
-        modelo: form.modelo.trim() || null,
-        categoria: form.categoria.trim() || null,
-        frecuencia: form.frecuencia || null,
-        activo: true,
-      })
-      .select().single()
-    if (err || !data) { setError(err?.message ?? 'Error al guardar'); setSaving(false); return }
-    onSave(data.id)
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h3 className="font-bold text-oriental-black flex items-center gap-2">
-            <BookmarkPlus size={16} className="text-oriental-red" /> Guardar en catálogo
-          </h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
-            <X size={16} className="text-oriental-gray" />
-          </button>
-        </div>
-        <div className="px-5 py-4 space-y-3">
-          <div>
-            <label className="label">Nombre *</label>
-            <input className="input" value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))} />
-          </div>
-          <div>
-            <label className="label">Código</label>
-            <input className="input font-mono text-sm" value={form.codigo} onChange={e => setForm(p => ({ ...p, codigo: e.target.value }))} placeholder="Código opcional" />
-          </div>
-          <div>
-            <label className="label">Marca *</label>
-            <div className="flex gap-2">
-              {(['MG', 'MAXUS'] as const).map(m => (
-                <button key={m} type="button"
-                  onClick={() => setForm(p => ({ ...p, marca: m }))}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                    form.marca === m
-                      ? m === 'MG' ? 'bg-red-600 text-white border-red-600' : 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
-                  }`}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="label">Modelo</label>
-            <input className="input" value={form.modelo} onChange={e => setForm(p => ({ ...p, modelo: e.target.value }))} placeholder="Ej: MG ZS, Maxus T60" />
-          </div>
-          <div>
-            <label className="label">Categoría</label>
-            <input className="input" value={form.categoria} onChange={e => setForm(p => ({ ...p, categoria: e.target.value }))} placeholder="Ej: Motor, Frenos, Suspensión" />
-          </div>
-          <div>
-            <label className="label">Frecuencia</label>
-            <div className="relative">
-              <select className="input pr-8 appearance-none" value={form.frecuencia} onChange={e => setForm(p => ({ ...p, frecuencia: e.target.value }))}>
-                <option value="">— Seleccionar —</option>
-                {FRECUENCIAS.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-oriental-gray" />
-            </div>
-          </div>
-          {error && <p className="text-oriental-red text-sm">{error}</p>}
-        </div>
-        <div className="flex items-center gap-3 px-5 py-4 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || !form.nombre.trim()}
-            className="btn-primary flex items-center gap-2 flex-1 justify-center disabled:opacity-50">
-            <Save size={14} /> {saving ? 'Guardando…' : 'Guardar en catálogo'}
-          </button>
-          <button type="button" onClick={onClose} className="btn-secondary px-4">Cancelar</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 interface Item {
   descripcion: string
   referencia: string
   cantidad: number
+  // campos catálogo (para manual)
+  marca: 'MG' | 'MAXUS' | ''
+  modelo: string
+  categoria: string
+  frecuencia: string
   catalogoId?: string
 }
+
+const ITEM_VACIO: Item = { descripcion: '', referencia: '', cantidad: 1, marca: '', modelo: '', categoria: '', frecuencia: '' }
+
+const FRECUENCIAS = ['ALTA ROTACION', 'MEDIA ROTACION', 'BAJA ROTACION', 'CARROCERIA']
 
 const frecuenciaColor: Record<string, string> = {
   'ALTA ROTACION':  'bg-red-100 text-red-700',
   'MEDIA ROTACION': 'bg-yellow-100 text-yellow-700',
   'BAJA ROTACION':  'bg-blue-100 text-blue-700',
   'CARROCERIA':     'bg-purple-100 text-purple-700',
+}
+
+// Select de categoría: lista existente + opción de escribir
+function CategoriaInput({
+  value,
+  onChange,
+  categorias,
+}: {
+  value: string
+  onChange: (v: string) => void
+  categorias: string[]
+}) {
+  const isCustom = value !== '' && !categorias.includes(value)
+  const [mode, setMode] = useState<'select' | 'text'>(isCustom ? 'text' : 'select')
+
+  if (mode === 'text') {
+    return (
+      <div className="flex gap-1">
+        <input
+          className="input flex-1"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Nueva categoría"
+          autoFocus
+        />
+        <button type="button"
+          onClick={() => { onChange(''); setMode('select') }}
+          title="Volver a la lista"
+          className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 text-oriental-gray font-bold">
+          ↩
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      <select
+        className="input pr-8 appearance-none"
+        value={value}
+        onChange={e => {
+          if (e.target.value === '__nueva__') { onChange(''); setMode('text') }
+          else onChange(e.target.value)
+        }}
+      >
+        <option value="">— Categoría —</option>
+        {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+        <option value="__nueva__">+ Escribir nueva…</option>
+      </select>
+      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-oriental-gray" />
+    </div>
+  )
 }
 
 // Modal de selección del catálogo
@@ -157,11 +102,10 @@ function CatalogoModal({
   onClose: () => void
 }) {
   const [marcaFiltro, setMarcaFiltro] = useState<'TODOS' | 'MG' | 'MAXUS'>('TODOS')
-  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('')
+  const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [busqueda, setBusqueda] = useState('')
 
-  const marcas = ['TODOS', 'MG', 'MAXUS']
-  const categorias = ['', ...Array.from(new Set(catalogo.map(c => c.categoria))).sort()]
+  const categorias = [...new Set(catalogo.map(c => c.categoria))].sort()
 
   const filtrados = catalogo.filter(c => {
     if (marcaFiltro !== 'TODOS' && c.marca !== marcaFiltro) return false
@@ -178,8 +122,6 @@ function CatalogoModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl flex flex-col" style={{ maxHeight: '85vh' }}>
-
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h3 className="font-bold text-oriental-black">Seleccionar del catálogo</h3>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
@@ -187,14 +129,11 @@ function CatalogoModal({
           </button>
         </div>
 
-        {/* Filtros */}
         <div className="px-5 py-3 border-b border-gray-100 space-y-3">
-
-          {/* Marca */}
           <div className="flex gap-2">
-            {marcas.map(m => (
+            {(['TODOS', 'MG', 'MAXUS'] as const).map(m => (
               <button key={m} type="button"
-                onClick={() => setMarcaFiltro(m as any)}
+                onClick={() => setMarcaFiltro(m)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
                   marcaFiltro === m
                     ? m === 'MG' ? 'bg-red-600 text-white border-red-600'
@@ -207,32 +146,18 @@ function CatalogoModal({
             ))}
           </div>
 
-          {/* Categoría */}
           <div className="relative">
-            <select
-              className="input text-sm pr-8 appearance-none"
-              value={categoriaFiltro}
-              onChange={e => setCategoriaFiltro(e.target.value)}
-            >
-              <option value="">— Todas las categorías ({categorias.length - 1}) —</option>
-              {categorias.slice(1).map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+            <select className="input text-sm pr-8 appearance-none" value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}>
+              <option value="">— Todas las categorías ({categorias.length}) —</option>
+              {categorias.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-oriental-gray pointer-events-none" />
           </div>
 
-          {/* Búsqueda */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray" />
-            <input
-              type="text"
-              className="input pl-9 text-sm"
-              placeholder="Buscar por nombre, modelo o código…"
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              autoFocus
-            />
+            <input type="text" className="input pl-9 text-sm" placeholder="Buscar por nombre, modelo o código…"
+              value={busqueda} onChange={e => setBusqueda(e.target.value)} autoFocus />
           </div>
 
           <p className="text-xs text-oriental-gray">
@@ -240,10 +165,9 @@ function CatalogoModal({
           </p>
         </div>
 
-        {/* Lista */}
         <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
           {filtrados.length === 0 ? (
-            <div className="p-8 text-center text-oriental-gray text-sm">Sin resultados para los filtros actuales</div>
+            <div className="p-8 text-center text-oriental-gray text-sm">Sin resultados</div>
           ) : filtrados.map(r => (
             <button key={r.id} type="button"
               onClick={() => { onSelect(r); onClose() }}
@@ -252,10 +176,8 @@ function CatalogoModal({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-oriental-black">{r.nombre}</p>
                   <p className="text-xs text-oriental-gray mt-0.5">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-1 ${r.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {r.marca}
-                    </span>
-                    {r.modelo} · <span className="text-oriental-gray">{r.categoria}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-1 ${r.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{r.marca}</span>
+                    {r.modelo} · {r.categoria}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
@@ -281,10 +203,11 @@ export default function NuevaSolicitudPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notas, setNotas] = useState('')
-  const [items, setItems] = useState<Item[]>([{ descripcion: '', referencia: '', cantidad: 1 }])
+  const [items, setItems] = useState<Item[]>([{ ...ITEM_VACIO }])
   const [catalogo, setCatalogo] = useState<CatalogoItem[]>([])
   const [modalAbierto, setModalAbierto] = useState<number | null>(null)
-  const [guardarCatalogoIdx, setGuardarCatalogoIdx] = useState<number | null>(null)
+
+  const categoriasCatalogo = [...new Set(catalogo.map(c => c.categoria).filter(Boolean))].sort()
 
   useEffect(() => {
     supabase.from('catalogo_repuestos').select('*').eq('activo', true)
@@ -292,38 +215,55 @@ export default function NuevaSolicitudPage() {
       .then(({ data }) => setCatalogo(data ?? []))
   }, [])
 
-  function seleccionarDelCatalogo(item: CatalogoItem, idx: number) {
+  function seleccionarDelCatalogo(cat: CatalogoItem, idx: number) {
     setItems(prev => prev.map((it, i) => i === idx ? {
       ...it,
-      descripcion: item.nombre,
-      referencia: item.codigo ?? '',
-      catalogoId: item.id,
+      descripcion: cat.nombre,
+      referencia: cat.codigo ?? '',
+      marca: cat.marca as 'MG' | 'MAXUS',
+      modelo: cat.modelo,
+      categoria: cat.categoria,
+      frecuencia: cat.frecuencia,
+      catalogoId: cat.id,
     } : it))
     setModalAbierto(null)
   }
 
   function clearItem(i: number) {
-    setItems(prev => prev.map((it, idx) => idx === i
-      ? { descripcion: '', referencia: '', cantidad: it.cantidad }
-      : it
-    ))
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...ITEM_VACIO, cantidad: it.cantidad } : it))
   }
 
   function addItem() {
-    setItems(prev => [...prev, { descripcion: '', referencia: '', cantidad: 1 }])
+    setItems(prev => [...prev, { ...ITEM_VACIO }])
   }
 
   function removeItem(i: number) {
     setItems(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  function updateItem(i: number, field: keyof Item, val: string | number) {
-    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: val } : it))
+  function updateItem(i: number, fields: Partial<Item>) {
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, ...fields } : it))
+  }
+
+  async function guardarEnCatalogo(i: number) {
+    const it = items[i]
+    if (!it.marca) { alert('Selecciona la marca (MG o MAXUS) antes de guardar en catálogo'); return }
+    const { data, error: err } = await supabase.from('catalogo_repuestos').insert({
+      nombre: it.descripcion.trim(),
+      codigo: it.referencia.trim() || null,
+      marca: it.marca,
+      modelo: it.modelo.trim() || null,
+      categoria: it.categoria.trim() || null,
+      frecuencia: it.frecuencia || null,
+      activo: true,
+    }).select().single()
+    if (err || !data) { alert(err?.message ?? 'Error al guardar'); return }
+    updateItem(i, { catalogoId: data.id })
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const validos = items.filter(it => it.descripcion.trim())
+    const validos = items.filter(it => it.descripcion.trim() && it.descripcion !== 'manual')
     if (validos.length === 0) { setError('Agrega al menos un repuesto'); return }
 
     setLoading(true); setError('')
@@ -358,25 +298,11 @@ export default function NuevaSolicitudPage() {
 
   return (
     <>
-      {/* Modal catálogo */}
       {modalAbierto !== null && (
         <CatalogoModal
           catalogo={catalogo}
-          onSelect={(item) => seleccionarDelCatalogo(item, modalAbierto)}
+          onSelect={(cat) => seleccionarDelCatalogo(cat, modalAbierto)}
           onClose={() => setModalAbierto(null)}
-        />
-      )}
-
-      {/* Modal guardar en catálogo */}
-      {guardarCatalogoIdx !== null && (
-        <GuardarCatalogoModal
-          nombre={items[guardarCatalogoIdx]?.descripcion ?? ''}
-          codigo={items[guardarCatalogoIdx]?.referencia ?? ''}
-          onSave={(id) => {
-            setItems(prev => prev.map((it, i) => i === guardarCatalogoIdx ? { ...it, catalogoId: id } : it))
-            setGuardarCatalogoIdx(null)
-          }}
-          onClose={() => setGuardarCatalogoIdx(null)}
         />
       )}
 
@@ -412,33 +338,37 @@ export default function NuevaSolicitudPage() {
                   </div>
 
                   {!item.descripcion ? (
-                    /* Sin selección: botón para abrir catálogo */
+                    /* Sin selección */
                     <div className="space-y-2">
                       <button type="button"
                         onClick={() => setModalAbierto(i)}
                         className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 border-dashed border-oriental-red/30 hover:border-oriental-red hover:bg-red-50 transition-all text-sm font-semibold text-oriental-red">
-                        <span className="flex items-center gap-2">
-                          <Search size={15} /> Seleccionar del catálogo
-                        </span>
+                        <span className="flex items-center gap-2"><Search size={15} /> Seleccionar del catálogo</span>
                         <ChevronDown size={15} />
                       </button>
                       <p className="text-xs text-oriental-gray text-center">
                         o{' '}
                         <button type="button" className="text-oriental-red font-semibold hover:underline"
-                          onClick={() => updateItem(i, 'descripcion', 'manual')}>
+                          onClick={() => updateItem(i, { descripcion: 'manual' })}>
                           escribir manualmente
                         </button>
                       </p>
                     </div>
-                  ) : item.catalogoId ? (
-                    /* Seleccionado del catálogo */
+
+                  ) : item.catalogoId && item.descripcion !== 'manual' ? (
+                    /* Del catálogo */
                     <div className="mb-3">
                       <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-oriental-black truncate">{item.descripcion}</p>
-                          {item.referencia && item.referencia !== 'N/A' && (
-                            <p className="text-xs font-mono text-oriental-gray mt-0.5">Cód: {item.referencia}</p>
-                          )}
+                          <p className="text-xs text-oriental-gray mt-0.5 flex items-center gap-1.5">
+                            {item.marca && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {item.marca}
+                              </span>
+                            )}
+                            {item.referencia && item.referencia !== 'N/A' && `Cód: ${item.referencia}`}
+                          </p>
                         </div>
                         <button type="button" onClick={() => clearItem(i)}
                           className="ml-2 text-xs text-oriental-gray hover:text-oriental-red font-semibold flex items-center gap-1 flex-shrink-0">
@@ -446,23 +376,83 @@ export default function NuevaSolicitudPage() {
                         </button>
                       </div>
                     </div>
+
                   ) : (
-                    /* Manual */
-                    <div className="space-y-2 mb-3">
-                      <div>
-                        <label className="label">Descripción *</label>
-                        <input type="text" className="input" placeholder="Nombre del repuesto" value={item.descripcion === 'manual' ? '' : item.descripcion}
-                          onChange={e => updateItem(i, 'descripcion', e.target.value)} autoFocus />
+                    /* Manual — mismos campos que el catálogo */
+                    <div className="space-y-3 mb-3">
+                      {/* Nombre y código */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="col-span-2">
+                          <label className="label">Nombre del repuesto *</label>
+                          <input type="text" className="input"
+                            placeholder="Ej: Filtro de aceite"
+                            value={item.descripcion === 'manual' ? '' : item.descripcion}
+                            onChange={e => updateItem(i, { descripcion: e.target.value })}
+                            autoFocus />
+                        </div>
+                        <div>
+                          <label className="label">Código / Referencia</label>
+                          <input type="text" className="input font-mono text-sm"
+                            placeholder="Opcional"
+                            value={item.referencia}
+                            onChange={e => updateItem(i, { referencia: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="label">Marca</label>
+                          <div className="flex gap-1.5 h-10 items-center">
+                            {(['MG', 'MAXUS'] as const).map(m => (
+                              <button key={m} type="button"
+                                onClick={() => updateItem(i, { marca: item.marca === m ? '' : m })}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                                  item.marca === m
+                                    ? m === 'MG' ? 'bg-red-600 text-white border-red-600' : 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                                }`}>
+                                {m}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <label className="label">Referencia / Código</label>
-                        <input type="text" className="input font-mono text-sm" placeholder="Código opcional" value={item.referencia}
-                          onChange={e => updateItem(i, 'referencia', e.target.value)} />
+
+                      {/* Modelo y categoría */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="label">Modelo</label>
+                          <input type="text" className="input text-sm"
+                            placeholder="Ej: ZS, T60"
+                            value={item.modelo}
+                            onChange={e => updateItem(i, { modelo: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="label">Categoría</label>
+                          <CategoriaInput
+                            value={item.categoria}
+                            onChange={v => updateItem(i, { categoria: v })}
+                            categorias={categoriasCatalogo}
+                          />
+                        </div>
                       </div>
+
+                      {/* Frecuencia */}
+                      <div>
+                        <label className="label">Frecuencia</label>
+                        <div className="relative">
+                          <select className="input pr-8 appearance-none text-sm"
+                            value={item.frecuencia}
+                            onChange={e => updateItem(i, { frecuencia: e.target.value })}>
+                            <option value="">— Seleccionar —</option>
+                            {FRECUENCIAS.map(f => <option key={f} value={f}>{f}</option>)}
+                          </select>
+                          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-oriental-gray" />
+                        </div>
+                      </div>
+
+                      {/* Acciones */}
                       <div className="flex items-center justify-between pt-1">
                         <button type="button" onClick={() => clearItem(i)}
                           className="text-xs text-oriental-gray hover:text-oriental-red font-semibold flex items-center gap-1">
-                          <X size={11} /> Seleccionar del catálogo en cambio
+                          <X size={11} /> Seleccionar del catálogo
                         </button>
                         {item.descripcion && item.descripcion !== 'manual' && (
                           item.catalogoId ? (
@@ -471,7 +461,7 @@ export default function NuevaSolicitudPage() {
                             </span>
                           ) : (
                             <button type="button"
-                              onClick={() => setGuardarCatalogoIdx(i)}
+                              onClick={() => guardarEnCatalogo(i)}
                               className="text-xs text-oriental-red font-semibold hover:underline flex items-center gap-1">
                               <BookmarkPlus size={11} /> Guardar en catálogo
                             </button>
@@ -482,14 +472,14 @@ export default function NuevaSolicitudPage() {
                   )}
 
                   {/* Cantidad */}
-                  {item.descripcion && (
-                    <div className="flex items-center gap-3 mt-2">
+                  {item.descripcion && item.descripcion !== 'manual' && (
+                    <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100">
                       <span className="text-xs text-oriental-gray font-semibold">Cantidad:</span>
                       <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => updateItem(i, 'cantidad', Math.max(1, item.cantidad - 1))}
+                        <button type="button" onClick={() => updateItem(i, { cantidad: Math.max(1, item.cantidad - 1) })}
                           className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-100 font-bold text-oriental-black text-sm">−</button>
                         <span className="w-8 text-center font-bold text-oriental-black text-sm">{item.cantidad}</span>
-                        <button type="button" onClick={() => updateItem(i, 'cantidad', item.cantidad + 1)}
+                        <button type="button" onClick={() => updateItem(i, { cantidad: item.cantidad + 1 })}
                           className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-100 font-bold text-oriental-black text-sm">+</button>
                       </div>
                     </div>
@@ -509,7 +499,8 @@ export default function NuevaSolicitudPage() {
               <div className="w-1 h-4 bg-oriental-red rounded-full" />
               Notas adicionales
             </h2>
-            <textarea className="textarea" rows={3} placeholder="Observaciones, urgencia, detalles del vehículo, etc."
+            <textarea className="textarea" rows={3}
+              placeholder="Observaciones, urgencia, detalles del vehículo, etc."
               value={notas} onChange={e => setNotas(e.target.value)} />
           </div>
 
