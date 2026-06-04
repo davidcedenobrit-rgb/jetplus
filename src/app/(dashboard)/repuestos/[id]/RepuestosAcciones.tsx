@@ -159,35 +159,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
     setEnviandoAlmacen(false)
   }
 
-  async function handleReporteRecepcion(tieneNovedad: boolean) {
-    setEnviandoReporte(true); setError('')
-    const fd = new FormData()
-    fd.append('solicitudId', solicitud.id)
-    fd.append('tieneNovedad', String(tieneNovedad))
-    fd.append('userEmail', userEmail)
-    if (tieneNovedad && novedadTexto) fd.append('notas', novedadTexto)
-    if (tieneNovedad && novedadFoto)  fd.append('foto', novedadFoto)
-    const res = await fetch('/api/repuestos/reportar-recepcion', { method: 'POST', body: fd })
-    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoReporte(false); return }
-    router.refresh()
-    setEnviandoReporte(false)
-  }
-
-  async function handleEnviarAlmacen() {
-    const emails = correosAlmacen.split(/[\s,;]+/).map(e => e.trim()).filter(Boolean)
-    if (!emails.length || !numCotizacion.trim()) {
-      setError('Completa los correos y el número de cotización'); return
-    }
-    setEnviandoAlmacen(true); setError('')
-    const res = await fetch('/api/repuestos/enviar-almacen', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, correosAlmacen: emails, numeroCotizacion: numCotizacion.trim(), userEmail }),
-    })
-    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoAlmacen(false); return }
-    setShowAlmacen(false); router.refresh()
-    setEnviandoAlmacen(false)
-  }
-
   return (
     <div className="space-y-4">
       {error && <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{error}</div>}
