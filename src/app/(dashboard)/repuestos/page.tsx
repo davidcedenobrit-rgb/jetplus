@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Package, Plus, CheckCircle2, Clock, AlertCircle, Truck } from 'lucide-react'
+import { Package, Plus, CheckCircle2, Clock } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import CatalogoRepuestos from './CatalogoRepuestos'
 
 const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin']
+const COMPLETAS_LIMIT = 10
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
   solicitado:           { label: 'Solicitado',         color: 'text-blue-700',   bg: 'bg-blue-100',   step: 1 },
@@ -32,22 +33,46 @@ function ProgressBar({ estado }: { estado: string }) {
   )
 }
 
-export default async function RepuestosPage() {
+export default async function RepuestosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ todas?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const rol = (user.user_metadata?.rol as string) ?? ''
   const puedeEliminar = ROL_ADMIN.includes(rol)
+  const isAdmin = ROL_ADMIN.includes(rol)
 
-  const { data: solicitudes } = await supabase
+  const { todas } = await searchParams
+  const mostrarTodas = todas === '1'
+
+  // Activas: sin límite (suelen ser pocas)
+  const { data: activasData } = await supabase
     .from('solicitudes_repuestos')
     .select('*, repuestos_items(id)')
+    .not('estado', 'in', '(completado,cancelado)')
     .order('created_at', { ascending: false })
 
-  const lista = solicitudes ?? []
-  const activas   = lista.filter(s => !['completado', 'cancelado'].includes(s.estado))
-  const completas = lista.filter(s => s.estado === 'completado')
+  // Completadas: paginadas
+  const completadasQuery = supabase
+    .from('solicitudes_repuestos')
+    .select('*, repuestos_items(id)', { count: 'exact' })
+    .eq('estado', 'completado')
+    .order('created_at', { ascending: false })
+
+  if (!mostrarTodas) {
+    completadasQuery.limit(COMPLETAS_LIMIT)
+  }
+
+  const { data: completasData, count: totalCompletas } = await completadasQuery
+
+  const activas  = activasData ?? []
+  const completas = completasData ?? []
+  const hayMasCompletas = !mostrarTodas && (totalCompletas ?? 0) > COMPLETAS_LIMIT
+  const totalActivas = activas.length
 
   return (
     <div className="p-8">
@@ -58,7 +83,7 @@ export default async function RepuestosPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Repuestos</h1>
-            <p className="text-oriental-gray text-sm">Solicitudes a Vehimotors · {activas.length} activa{activas.length !== 1 ? 's' : ''}</p>
+            <p className="text-oriental-gray text-sm">Solicitudes a Vehimotors · {totalActivas} activa{totalActivas !== 1 ? 's' : ''}</p>
           </div>
         </div>
         <Link href="/repuestos/nuevo" className="btn-primary flex items-center gap-2">
@@ -66,7 +91,7 @@ export default async function RepuestosPage() {
         </Link>
       </div>
 
-      {lista.length === 0 ? (
+      {activas.length === 0 && completas.length === 0 ? (
         <div className="card p-16 text-center">
           <Package size={40} className="text-gray-300 mx-auto mb-3" />
           <p className="text-oriental-gray font-medium">No hay solicitudes de repuestos</p>
@@ -115,6 +140,9 @@ export default async function RepuestosPage() {
             <div>
               <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-green-600" /> Completadas
+                {totalCompletas != null && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 ml-1">{totalCompletas}</span>
+                )}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {completas.map(s => {
@@ -136,12 +164,32 @@ export default async function RepuestosPage() {
                   )
                 })}
               </div>
+
+              {/* Paginación completadas */}
+              {hayMasCompletas && (
+                <div className="mt-4 text-center">
+                  <Link
+                    href="/repuestos?todas=1"
+                    className="text-sm text-oriental-red font-semibold hover:underline">
+                    Ver todas las completadas ({totalCompletas})
+                  </Link>
+                </div>
+              )}
+              {mostrarTodas && (totalCompletas ?? 0) > COMPLETAS_LIMIT && (
+                <div className="mt-4 text-center">
+                  <Link
+                    href="/repuestos"
+                    className="text-sm text-oriental-gray font-semibold hover:underline">
+                    Ver menos
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      <CatalogoRepuestos />
+      <CatalogoRepuestos isAdmin={isAdmin} />
     </div>
   )
 }

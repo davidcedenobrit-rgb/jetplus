@@ -90,11 +90,13 @@ function ItemRow({
   categorias,
   onSave,
   onDelete,
+  isAdmin,
 }: {
   item: CatalogoItem
   categorias: string[]
   onSave: (id: string, data: Partial<CatalogoItem>) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  isAdmin: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
@@ -211,16 +213,18 @@ function ItemRow({
           : <span className="text-gray-300 text-xs">—</span>}
       </td>
       <td className="px-3 py-2.5">
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setEditing(true)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-blue-50">
-            <Pencil size={13} className="text-blue-500" />
-          </button>
-          <button onClick={() => onDelete(item.id)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50">
-            <Trash2 size={13} className="text-red-400" />
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => setEditing(true)}
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-blue-50">
+              <Pencil size={13} className="text-blue-500" />
+            </button>
+            <button onClick={() => onDelete(item.id)}
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50">
+              <Trash2 size={13} className="text-red-400" />
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   )
@@ -319,7 +323,7 @@ function AddRow({
   )
 }
 
-export default function CatalogoRepuestos() {
+export default function CatalogoRepuestos({ isAdmin = false }: { isAdmin?: boolean }) {
   const supabase = createClient()
   const [items, setItems] = useState<CatalogoItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -405,11 +409,13 @@ export default function CatalogoRepuestos() {
         <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider flex items-center gap-2">
           <BookOpen size={14} className="text-oriental-red" /> Catálogo de repuestos
         </h2>
-        <button
-          onClick={() => setShowAdd(v => !v)}
-          className="flex items-center gap-1.5 text-sm font-semibold text-oriental-red hover:underline">
-          <Plus size={14} /> Agregar repuesto
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowAdd(v => !v)}
+            className="flex items-center gap-1.5 text-sm font-semibold text-oriental-red hover:underline">
+            <Plus size={14} /> Agregar repuesto
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden">
@@ -517,9 +523,10 @@ export default function CatalogoRepuestos() {
                     categorias={categorias}
                     onSave={handleSave}
                     onDelete={handleDelete}
+                    isAdmin={isAdmin}
                   />
                 ))}
-                {showAdd && (
+                {isAdmin && showAdd && (
                   <AddRow
                     marca={marca}
                     categorias={categorias}

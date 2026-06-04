@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { notificarFacturaRecibida } from '@/lib/email-repuestos'
+import { revalidatePath } from 'next/cache'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,6 +68,8 @@ export async function POST(req: NextRequest) {
 
     await notificarFacturaRecibida({ numero: sol.numero, solicitudId: id, facturaUrl: urlData.publicUrl })
 
+    revalidatePath('/repuestos')
+    revalidatePath(`/repuestos/${id}`)
     return new NextResponse(paginaGracias(sol.numero), { headers: { 'Content-Type': 'text/html' } })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
