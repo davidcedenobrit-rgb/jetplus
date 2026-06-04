@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { notificarGuiaRegistrada } from '@/lib/email-repuestos'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -100,6 +101,8 @@ export async function POST(req: NextRequest) {
       usuario_email: 'almacen@externo',
       notas: `Datos de envío registrados por almacén${numeroGuia ? ': guía ' + numeroGuia : ''}${empresaEnvio ? ' · ' + empresaEnvio : ''}`,
     })
+
+    await notificarGuiaRegistrada({ numero: sol.numero, solicitudId: id, numeroGuia: numeroGuia || null, empresaEnvio: empresaEnvio || null })
 
     return new NextResponse(paginaGracias(sol.numero), { headers: { 'Content-Type': 'text/html' } })
   } catch {

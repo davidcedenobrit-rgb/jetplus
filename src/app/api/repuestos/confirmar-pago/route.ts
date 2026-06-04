@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { notificarPagoConfirmado, notificarGuiaRegistrada } from '@/lib/email-repuestos'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
       usuario_email: 'vehimotors@externo', notas: 'Pago confirmado por Vehimotors',
     })
 
+    await notificarPagoConfirmado({ numero: sol.numero, solicitudId: id })
     return new NextResponse(paginaConfirmado(sol.numero), { headers: { 'Content-Type': 'text/html' } })
   }
 
@@ -92,6 +94,7 @@ export async function POST(req: NextRequest) {
       notas: `Guía cargada por Vehimotors${numeroGuia ? ': ' + numeroGuia : ''}${empresaEnvio ? ' · ' + empresaEnvio : ''}`,
     })
 
+    await notificarGuiaRegistrada({ numero: sol.numero, solicitudId: id, numeroGuia: numeroGuia || null, empresaEnvio: empresaEnvio || null })
     revalidatePath('/repuestos')
     revalidatePath(`/repuestos/${id}`)
     return new NextResponse(paginaGuiaGracias(sol.numero), { headers: { 'Content-Type': 'text/html' } })
