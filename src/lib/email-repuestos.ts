@@ -48,7 +48,7 @@ function itemsTable(items: Item[]) {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin:20px 0">
     <thead><tr style="background:#f9fafb">
       <th style="padding:10px 14px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em">Repuesto</th>
-      <th style="padding:10px 14px;text-align:center;font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em">Referencia</th>
+      <th style="padding:10px 14px;text-align:center;font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em">Código</th>
       <th style="padding:10px 14px;text-align:center;font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em">Cant.</th>
     </tr></thead><tbody>${rows}</tbody></table>`
 }
