@@ -10,6 +10,9 @@ const supabase = createClient(
 )
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MIME_PERMITIDOS = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const id    = searchParams.get('id')
@@ -36,6 +39,8 @@ export async function POST(req: NextRequest) {
 
     if (!id || !token || !file || file.size === 0)
       return NextResponse.json({ error: 'Archivo requerido' }, { status: 400 })
+    if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: 'El archivo supera el límite de 10 MB' }, { status: 400 })
+    if (!MIME_PERMITIDOS.has(file.type)) return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 400 })
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
@@ -72,8 +77,8 @@ export async function POST(req: NextRequest) {
     revalidatePath('/repuestos')
     revalidatePath(`/repuestos/${id}`)
     return new NextResponse(paginaGracias(sol.numero), { headers: { 'Content-Type': 'text/html' } })
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
 

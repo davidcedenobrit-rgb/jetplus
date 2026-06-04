@@ -9,6 +9,9 @@ const supabase = createClient(
 )
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MIME_PERMITIDOS = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const id     = searchParams.get('id')
@@ -60,6 +63,8 @@ export async function POST(req: NextRequest) {
 
     let guiaUrl: string | null = null
     if (fileGuia && fileGuia.size > 0) {
+      if (fileGuia.size > MAX_FILE_SIZE) return NextResponse.json({ error: 'El archivo supera el límite de 10 MB' }, { status: 400 })
+      if (!MIME_PERMITIDOS.has(fileGuia.type)) return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 400 })
       const bytes  = await fileGuia.arrayBuffer()
       const buffer = Buffer.from(bytes)
       const path   = `repuestos/${id}/guia-${Date.now()}.${fileGuia.name.split('.').pop()}`
@@ -90,8 +95,8 @@ export async function POST(req: NextRequest) {
     revalidatePath('/repuestos')
     revalidatePath(`/repuestos/${id}`)
     return new NextResponse(paginaGuiaGracias(sol.numero), { headers: { 'Content-Type': 'text/html' } })
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
 
