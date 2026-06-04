@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { notificarRespuestaVehimotors } from '@/lib/email-repuestos'
+import { notificarRespuestaVehimotors, notificarSinStock } from '@/lib/email-repuestos'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -111,18 +111,18 @@ export async function POST(req: NextRequest) {
         }
       }
       await supabase.from('solicitudes_repuestos').update({
-        estado: 'cotizacion_recibida',
+        estado: 'sin_stock',
         respuesta_vehimotors: 'no_hay',
         cotizacion_importacion_url: cotImpUrl,
         cotizacion_importacion_obs: obs || null,
         updated_at: new Date().toISOString(),
       }).eq('id', id)
       await supabase.from('repuestos_historial').insert({
-        solicitud_id: id, estado_nuevo: 'cotizacion_recibida',
+        solicitud_id: id, estado_nuevo: 'sin_stock',
         usuario_email: 'vehimotors@externo',
-        notas: `Vehimotors respondió: no_hay${obs ? ' · ' + obs : ''}`,
+        notas: `Vehimotors sin stock${obs ? ': ' + obs : ''}`,
       })
-      await notificarRespuestaVehimotors({ numero: solicitud.numero, tipo: 'no_hay', solicitudId: id })
+      await notificarSinStock({ numero: solicitud.numero, solicitudId: id, obs })
       return new NextResponse(paginaGracias(solicitud.numero, null), { headers: { 'Content-Type': 'text/html' } })
     }
 

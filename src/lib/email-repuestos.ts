@@ -229,6 +229,22 @@ export async function enviarEmailAlmacen(opts: {
   })
 }
 
+// ── Notificación interna: sin stock — buscar alternativa ─────────────
+export async function notificarSinStock(opts: { numero: string; solicitudId: string; obs?: string | null }) {
+  const { numero, solicitudId, obs } = opts
+  const body = `
+    <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#dc2626;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Sin Stock — Acción Requerida</p>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">❌ Vehimotors sin stock — ${numero}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 20px">Vehimotors confirmó que <strong>no tiene disponibilidad</strong> para los repuestos de la solicitud <strong>${numero}</strong>. Se requiere buscar una solución alternativa para el cliente.</p>
+    ${obs ? `<div style="background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-bottom:20px">
+      <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;margin:0 0 4px">Observaciones de Vehimotors</p>
+      <p style="font-family:sans-serif;font-size:14px;color:#7f1d1d;margin:0">${obs}</p>
+    </div>` : ''}
+    <div style="text-align:center"><a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>`
+
+  return getResend().emails.send({ from: FROM, to: EQUIPO_INTERNO, subject: `❌ Sin stock — ${numero} — Buscar alternativa`, html: wrap(body) })
+}
+
 // ── Notificación interna: guía registrada por almacén / Vehimotors ──
 export async function notificarGuiaRegistrada(opts: { numero: string; solicitudId: string; numeroGuia?: string | null; empresaEnvio?: string | null }) {
   const { numero, solicitudId, numeroGuia, empresaEnvio } = opts

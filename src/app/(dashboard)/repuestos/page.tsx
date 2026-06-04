@@ -17,6 +17,7 @@ const ESTADOS: Record<string, { label: string; color: string; bg: string; step: 
   guia_recibida:        { label: 'Guía recibida',      color: 'text-teal-700',   bg: 'bg-teal-100',   step: 6 },
   completado:           { label: 'Completado',         color: 'text-green-700',  bg: 'bg-green-100',  step: 7 },
   cancelado:            { label: 'Cancelado',          color: 'text-gray-500',   bg: 'bg-gray-100',   step: 0 },
+  sin_stock:            { label: 'Sin stock',          color: 'text-red-700',    bg: 'bg-red-100',    step: 0 },
 }
 
 function ProgressBar({ estado }: { estado: string }) {
@@ -25,7 +26,7 @@ function ProgressBar({ estado }: { estado: string }) {
   return (
     <div className="mt-3">
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${estado === 'completado' ? 'bg-green-500' : estado === 'cancelado' ? 'bg-gray-300' : 'bg-oriental-red'}`}
+        <div className={`h-full rounded-full ${estado === 'completado' ? 'bg-green-500' : (estado === 'cancelado' || estado === 'sin_stock') ? 'bg-gray-300' : 'bg-oriental-red'}`}
           style={{ width: `${Math.max(pct, 3)}%`, transition: 'width 0.3s' }} />
       </div>
       <p className="text-[10px] text-oriental-gray mt-0.5">{pct}% completado</p>
