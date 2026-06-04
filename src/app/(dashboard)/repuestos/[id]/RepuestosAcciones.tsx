@@ -208,7 +208,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
       {estado === 'verificado' && esArianna && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Enviar cotización a Vehimotors</h3>
-          <p className="text-xs text-oriental-gray mb-4">Email con 3 botones de respuesta + formulario para adjuntar cotización.</p>
           <button onClick={async () => {
             setLoading(true); setError('')
             const res = await fetch('/api/repuestos/enviar-cotizacion', {
