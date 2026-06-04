@@ -14,10 +14,14 @@ interface Props {
   userEmail: string
 }
 
-const ROL_ARIANNA   = ['arianna', 'director', 'jose', 'admin', 'mary', 'leysdem']
-const ROL_DIRECTOR  = ['director', 'jose', 'admin', 'mary', 'leysdem']
-const ROL_PAGO      = ['director', 'jose', 'admin', 'mary']
-const ROL_ADMIN     = ['jose', 'arianna', 'director', 'admin']
+// Verificar, rechazar, enviar cotización, cargar pago, solicitar guía — Ari/Mary/Leysdm/Rojas (NO José)
+const ROL_OPERADOR  = ['arianna', 'director', 'admin', 'mary', 'leysdem']
+// Aprobar cotización — solo Rojas
+const ROL_DIRECTOR  = ['director', 'admin']
+// Cargar pago y retención — mismo nivel que operador
+const ROL_PAGO      = ['arianna', 'director', 'admin', 'mary', 'leysdem']
+// Panel admin y acciones internas
+const ROL_ADMIN     = ['arianna', 'director', 'admin', 'mary', 'leysdem']
 
 const TODOS_ESTADOS = [
   { key: 'solicitado',             label: 'Solicitado' },
@@ -61,7 +65,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [showAdmin, setShowAdmin] = useState(false)
   const [adminEstado, setAdminEstado] = useState(solicitud.estado)
 
-  const esArianna  = ROL_ARIANNA.includes(rol)
+  const esOperador = ROL_OPERADOR.includes(rol)
   const esDirector = ROL_DIRECTOR.includes(rol)
   const esPago     = ROL_PAGO.includes(rol)
   const estado     = solicitud.estado
@@ -164,7 +168,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
       {error && <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{error}</div>}
 
       {/* ── PASO 1 → Arianna verifica o rechaza ── */}
-      {estado === 'solicitado' && esArianna && (
+      {estado === 'solicitado' && esOperador && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-3">Verificar solicitud</h3>
           <div className="mb-3">
@@ -205,7 +209,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
       )}
 
       {/* ── PASO 2 → Enviar cotización a Vehimotors ── */}
-      {estado === 'verificado' && esArianna && (
+      {estado === 'verificado' && esOperador && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Enviar cotización a Vehimotors</h3>
           <button onClick={async () => {
@@ -234,8 +238,8 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
         </div>
       )}
 
-      {/* ── PASO 4 → Cotización recibida → aprobar ── */}
-      {estado === 'cotizacion_recibida' && (esArianna || esDirector) && (
+      {/* ── PASO 4 → Cotización recibida → aprobar — SOLO Rojas ── */}
+      {estado === 'cotizacion_recibida' && esDirector && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Revisar y aprobar cotización</h3>
           {solicitud.cotizacion_url ? (
@@ -388,7 +392,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
       )}
 
       {/* ── PASO 8 → Guía recibida → confirmar llegada + reporte a Vehimotors ── */}
-      {estado === 'guia_recibida' && esArianna && (
+      {estado === 'guia_recibida' && esOperador && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Confirmar llegada del pedido</h3>
           {solicitud.guia_url && (

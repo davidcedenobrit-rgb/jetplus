@@ -5,7 +5,7 @@ import { Package, Plus, CheckCircle2, Clock } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import CatalogoRepuestos from './CatalogoRepuestos'
 
-const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin']
+const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem']
 const COMPLETAS_LIMIT = 10
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
