@@ -62,8 +62,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {/* Resto del menú — oculto para Arianna */}
-        {rol !== 'arianna' && navItemsTop.map(({ href, label, icon: Icon }) => {
+        {/* Resto del menú — oculto para Arianna y Almacén */}
+        {!['arianna', 'almacen'].includes(rol) && navItemsTop.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
@@ -82,8 +82,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )
         })}
 
-        {/* Vehículo Showroom — entre Dashboard y Clientes */}
-        {(() => {
+        {/* Vehículo Showroom — oculto para Arianna y Almacén */}
+        {!['arianna', 'almacen'].includes(rol) && (() => {
           const active = pathname === '/showroom' || pathname.startsWith('/showroom/')
           return (
             <Link href="/showroom" onClick={onClose}
@@ -106,8 +106,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )
         })()}
 
-        {/* Clientes en adelante — oculto para Arianna */}
-        {rol !== 'arianna' && navItemsBottom.map(({ href, label, icon: Icon }) => {
+        {/* Clientes en adelante — oculto para Arianna y Almacén */}
+        {!['arianna', 'almacen'].includes(rol) && navItemsBottom.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link key={href} href={href} onClick={onClose}
@@ -118,8 +118,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )
         })}
 
-        {/* Aprobaciones — oculto para Arianna */}
-        {rol !== 'arianna' && (() => {
+        {/* Aprobaciones — oculto para Arianna y Almacén */}
+        {!['arianna', 'almacen'].includes(rol) && (() => {
           const active = pathname === '/aprobaciones' || pathname.startsWith('/aprobaciones/')
           return (
             <Link
@@ -198,6 +198,9 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )}
           {rol === 'arianna' && (
             <span className="text-[10px] bg-orange-600/20 text-orange-500 font-semibold px-1.5 py-0.5 rounded">SHOWROOM</span>
+          )}
+          {rol === 'almacen' && (
+            <span className="text-[10px] bg-blue-600/20 text-blue-600 font-semibold px-1.5 py-0.5 rounded">ALMACÉN</span>
           )}
         </div>
         <button
