@@ -15,10 +15,10 @@ const FROM = 'repuestos@laoriental.co'
 export interface Item { descripcion: string; referencia?: string | null; cantidad: number }
 
 function headerHTML() {
-  return `<div style="background:#C41E3A;padding:24px 32px;border-radius:12px 12px 0 0">
+  const logoUrl = `${APP_URL}/logo-la-oriental-blanco.png`
+  return `<div style="background:#C41E3A;padding:20px 32px;border-radius:12px 12px 0 0">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td><div style="background:rgba(255,255,255,0.15);width:44px;height:44px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center">
-        <span style="color:#fff;font-weight:900;font-size:16px;font-family:sans-serif">LO</span></div></td>
+      <td style="vertical-align:middle"><img src="${logoUrl}" alt="La Oriental Automotors" style="height:48px;width:auto;display:block" /></td>
       <td style="padding-left:14px;vertical-align:middle">
         <p style="margin:0;color:#fff;font-weight:800;font-size:16px;font-family:sans-serif">LA ORIENTAL AUTOMOTORS</p>
         <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px;font-family:sans-serif">MG & Maxus · Maturín, Venezuela</p>

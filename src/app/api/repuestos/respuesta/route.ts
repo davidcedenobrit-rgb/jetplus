@@ -161,8 +161,6 @@ function shell(titulo: string, color: string, cuerpo: string) {
   body{margin:0;background:#f9fafb;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
   .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;max-width:560px;width:100%;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
   .hdr{background:#C41E3A;padding:20px 28px;display:flex;align-items:center;gap:12px}
-  .logo{width:40px;height:40px;border-radius:9px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center}
-  .logo span{color:#fff;font-weight:900;font-size:14px}
   .hname{color:#fff;font-weight:800;font-size:15px;margin:0}
   .hsub{color:rgba(255,255,255,0.75);font-size:11px;margin:0}
   .body{padding:28px}
@@ -191,7 +189,7 @@ function shell(titulo: string, color: string, cuerpo: string) {
   .divider{border:none;border-top:1px solid #f3f4f6;margin:16px 0}
 </style></head><body>
 <div class="card">
-  <div class="hdr"><div class="logo"><span>LO</span></div><div><p class="hname">LA ORIENTAL AUTOMOTORS</p><p class="hsub">MG & Maxus · Maturín, Venezuela</p></div></div>
+  <div class="hdr"><img src="${APP_URL}/logo-la-oriental-blanco.png" alt="La Oriental" style="height:40px;width:auto"/><div style="padding-left:12px"><p class="hname">LA ORIENTAL AUTOMOTORS</p><p class="hsub">MG & Maxus · Maturín, Venezuela</p></div></div>
   <div class="body">${cuerpo}</div>
   <div class="ftr">La Oriental Automotors · MG & Maxus · Maturín, Venezuela</div>
 </div></body></html>`

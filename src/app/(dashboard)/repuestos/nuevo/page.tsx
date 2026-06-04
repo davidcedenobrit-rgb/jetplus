@@ -270,7 +270,20 @@ export default function NuevaSolicitudPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('Sesión expirada'); setLoading(false); return }
 
-    const numero = `REP-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`
+    const año = new Date().getFullYear()
+    const { data: lastSol } = await supabase
+      .from('solicitudes_repuestos')
+      .select('numero')
+      .ilike('numero', `SORE-${año}-%`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    let seq = 1
+    if (lastSol?.numero) {
+      const n = parseInt(lastSol.numero.split('-')[2] ?? '0', 10)
+      if (!isNaN(n)) seq = n + 1
+    }
+    const numero = `SORE-${año}-${String(seq).padStart(5, '0')}`
     const { data: solicitud, error: err } = await supabase
       .from('solicitudes_repuestos')
       .insert({ numero, estado: 'solicitado', solicitado_por_id: user.id, solicitado_por_email: user.email, notas_almacenista: notas || null })
