@@ -84,7 +84,7 @@ export async function enviarSolicitudCotizacion(opts: {
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic, podrán agregar observaciones y adjuntar su cotización.</p>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_ROJAS], subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
 }
 
 // ── 2. Notificación interna cuando Vehimotors responde ─────────────
@@ -104,7 +104,7 @@ export async function notificarRespuestaVehimotors(opts: {
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">Vehimotors respondió a la solicitud <strong>${numero}</strong>. Revisa la cotización adjunta en el Centro de Mando y apruébala para continuar.</p>
     <div style="text-align:center"><a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>`
 
-  return getResend().emails.send({ from: FROM, to: [CORREO_OPS], cc: [CORREO_ROJAS], subject: `${t.emoji} Vehimotors respondió — Solicitud ${numero}`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: [CORREO_OPS], cc: [CORREO_ROJAS, CORREO_MARY], subject: `${t.emoji} Vehimotors respondió — Solicitud ${numero}`, html: wrap(body) })
 }
 
 // ── 3. Cotización aprobada → Vehimotors con botón Anexar factura ───
@@ -125,7 +125,7 @@ export async function enviarAprobacionCotizacion(opts: {
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic podrá cargar la factura directamente en nuestro sistema.</p>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_ROJAS], subject: `✅ Cotización aprobada ${numero} — La Oriental Automotors`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: `✅ Cotización aprobada ${numero} — La Oriental Automotors`, html: wrap(body) })
 }
 
 // ── 4. Notificación interna: factura recibida ──────────────────────
@@ -140,7 +140,7 @@ export async function notificarFacturaRecibida(opts: { numero: string; solicitud
       <a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Centro de Mando →</a>
     </div>`
 
-  return getResend().emails.send({ from: FROM, to: [CORREO_MARY, CORREO_ROJAS], subject: `📄 Factura recibida — Solicitud ${numero}`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: [CORREO_MARY, CORREO_ROJAS], cc: [CORREO_OPS], subject: `📄 Factura recibida — Solicitud ${numero}`, html: wrap(body) })
 }
 
 // ── 6. Reporte de recepción a Vehimotors (Arianna) ────────────────
@@ -170,7 +170,7 @@ export async function enviarReporteRecepcion(opts: {
     ? `⚠️ Novedad en pedido ${numero} — La Oriental Automotors`
     : `✅ Pedido ${numero} recibido sin novedad — La Oriental Automotors`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_ROJAS], subject: asunto, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: asunto, html: wrap(body) })
 }
 export async function enviarConfirmacionPago(opts: {
   numero: string; solicitudId: string; tokenPago: string
@@ -195,7 +195,7 @@ export async function enviarConfirmacionPago(opts: {
       <a href="${urlGuia}"      style="${btnStyle('#2563eb')}">📦 Cargar guía de despacho</a>
     </div>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: [CORREO_ROJAS], subject: `💰 Pago realizado — Repuestos ${numero}`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: `💰 Pago realizado — Repuestos ${numero}`, html: wrap(body) })
 }
 
 // ── 8. Email a almacén para cargar guía ──────────────────────────
@@ -223,7 +223,7 @@ export async function enviarEmailAlmacen(opts: {
   return getResend().emails.send({
     from: FROM,
     to: correosAlmacen,
-    cc: [CORREO_ROJAS],
+    cc: EQUIPO_INTERNO,
     subject: `📦 Pedido ${numero} — Registrar datos de envío`,
     html: wrap(body),
   })
