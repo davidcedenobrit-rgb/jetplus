@@ -410,5 +410,17 @@ export async function enviarCorreosPrueba(testTo: string[]) {
     <div style="text-align:center"><a href="${APP_URL}/repuestos/${fakeId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center;margin-top:16px"><em>[Destino real: Vehimotors × 3 + CC Rojas]</em></p>`))
 
+  // NUEVO: Sin stock — buscar alternativa
+  await send(`[PRUEBA 10/9] ❌ Sin stock — ${numero} — Buscar alternativa`, wrap(`
+    <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#dc2626;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Sin Stock — Acción Requerida</p>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">❌ Vehimotors sin stock — ${numero}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 20px">Vehimotors confirmó que <strong>no tiene disponibilidad</strong> para los repuestos de la solicitud <strong>${numero}</strong>. Se requiere buscar una solución alternativa para el cliente.</p>
+    <div style="background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-bottom:20px">
+      <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;margin:0 0 4px">Observaciones de Vehimotors</p>
+      <p style="font-family:sans-serif;font-size:14px;color:#7f1d1d;margin:0">No manejamos ese modelo en inventario. Podríamos importar en 45 días hábiles.</p>
+    </div>
+    <div style="text-align:center"><a href="${APP_URL}/repuestos/${fakeId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>
+    <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center;margin-top:16px"><em>[Destino real: Mary + Rojas + Ari]</em></p>`))
+
   return results
 }
