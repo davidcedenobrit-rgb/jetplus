@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { BookOpen, Plus, Pencil, Check, X, Trash2, ChevronDown } from 'lucide-react'
+import { BookOpen, Plus, Pencil, Check, X, Trash2, ChevronDown, Search } from 'lucide-react'
 
 interface CatalogoItem {
   id: string
@@ -276,6 +276,7 @@ export default function CatalogoRepuestos() {
   const [loading, setLoading] = useState(true)
   const [marca, setMarca] = useState<'MG' | 'MAXUS'>('MG')
   const [showAdd, setShowAdd] = useState(false)
+  const [busqueda, setBusqueda] = useState('')
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -290,7 +291,17 @@ export default function CatalogoRepuestos() {
 
   useEffect(() => { load() }, [load])
 
-  const filtrados = items.filter(it => it.marca === marca)
+  const q = busqueda.trim().toLowerCase()
+  const filtrados = items.filter(it => {
+    if (it.marca !== marca) return false
+    if (!q) return true
+    return (
+      it.nombre.toLowerCase().includes(q) ||
+      (it.codigo ?? '').toLowerCase().includes(q) ||
+      (it.modelo ?? '').toLowerCase().includes(q) ||
+      (it.categoria ?? '').toLowerCase().includes(q)
+    )
+  })
   const categorias = [...new Set(items.filter(it => it.marca === marca).map(it => it.categoria).filter(Boolean) as string[])].sort()
 
   const mgCount   = items.filter(it => it.marca === 'MG').length
@@ -344,7 +355,7 @@ export default function CatalogoRepuestos() {
         {/* Tabs MG / MAXUS */}
         <div className="flex border-b border-gray-100 bg-gray-50">
           {(['MG', 'MAXUS'] as const).map(m => (
-            <button key={m} onClick={() => { setMarca(m); setShowAdd(false) }}
+            <button key={m} onClick={() => { setMarca(m); setShowAdd(false); setBusqueda('') }}
               className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${
                 marca === m
                   ? m === 'MG'
@@ -364,6 +375,27 @@ export default function CatalogoRepuestos() {
           ))}
         </div>
 
+        {/* Buscador */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray pointer-events-none" />
+            <input
+              type="text"
+              className="input pl-9 text-sm py-2"
+              placeholder="Buscar por nombre, código, modelo o categoría…"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+            />
+            {busqueda && (
+              <button
+                onClick={() => setBusqueda('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-oriental-gray hover:text-oriental-black">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+
         {error && (
           <div className="px-4 py-2 bg-red-50 border-b border-red-100">
             <p className="text-sm text-oriental-red">{error}</p>
@@ -374,11 +406,20 @@ export default function CatalogoRepuestos() {
           <div className="p-12 text-center text-oriental-gray text-sm">Cargando catálogo…</div>
         ) : filtrados.length === 0 && !showAdd ? (
           <div className="p-12 text-center">
-            <p className="text-oriental-gray text-sm">No hay repuestos {marca} en el catálogo</p>
-            <button onClick={() => setShowAdd(true)}
-              className="mt-3 text-oriental-red text-sm font-semibold hover:underline flex items-center gap-1 mx-auto">
-              <Plus size={13} /> Agregar el primero
-            </button>
+            {q ? (
+              <>
+                <p className="text-oriental-gray text-sm">Sin resultados para <span className="font-semibold">"{busqueda}"</span></p>
+                <button onClick={() => setBusqueda('')} className="mt-2 text-oriental-red text-sm font-semibold hover:underline">Limpiar búsqueda</button>
+              </>
+            ) : (
+              <>
+                <p className="text-oriental-gray text-sm">No hay repuestos {marca} en el catálogo</p>
+                <button onClick={() => setShowAdd(true)}
+                  className="mt-3 text-oriental-red text-sm font-semibold hover:underline flex items-center gap-1 mx-auto">
+                  <Plus size={13} /> Agregar el primero
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -419,7 +460,11 @@ export default function CatalogoRepuestos() {
         {/* Footer count */}
         {filtrados.length > 0 && (
           <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/50">
-            <p className="text-xs text-oriental-gray">{filtrados.length} repuesto{filtrados.length !== 1 ? 's' : ''} en catálogo {marca}</p>
+            <p className="text-xs text-oriental-gray">
+              {q
+                ? `${filtrados.length} resultado${filtrados.length !== 1 ? 's' : ''} de ${items.filter(it => it.marca === marca).length} en catálogo ${marca}`
+                : `${filtrados.length} repuesto${filtrados.length !== 1 ? 's' : ''} en catálogo ${marca}`}
+            </p>
           </div>
         )}
       </div>
