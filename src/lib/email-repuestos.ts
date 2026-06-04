@@ -79,7 +79,7 @@ export async function enviarSolicitudCotizacion(opts: {
     <p style="font-family:sans-serif;font-size:15px;font-weight:700;color:#111;margin:0 0 16px;text-align:center">¿Tienen disponibilidad?</p>
     <div style="text-align:center;margin-bottom:24px">
       <a href="${urlHay}"     style="${btnStyle('#16a34a')}">✅ Sí, hay todo</a>
-      <a href="${urlParcial}" style="${btnStyle('#d97706')}">⚠️ No hay todos</a>
+      <a href="${urlParcial}" style="${btnStyle('#d97706')}">⚠️ Parcial / Otras Cantds.</a>
       <a href="${urlNoHay}"   style="${btnStyle('#dc2626')}">❌ No hay</a>
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic, podrán agregar observaciones y adjuntar su cotización.</p>`

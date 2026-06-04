@@ -47,6 +47,12 @@ export async function GET(req: NextRequest) {
     return new NextResponse(paginaYaRespondida(solicitud.numero), { headers: { 'Content-Type': 'text/html' } })
   }
 
+  // Para "no_hay": mostrar form primero, actualizar DB solo al enviar
+  if (tipo === 'no_hay') {
+    return new NextResponse(paginaNoHay(solicitud.numero, id, token), { headers: { 'Content-Type': 'text/html' } })
+  }
+
+  // Para hay_todo / parcial: registrar respuesta y mostrar form de cotización
   await supabase.from('solicitudes_repuestos').update({
     estado: 'cotizacion_recibida',
     respuesta_vehimotors: tipo,
@@ -64,10 +70,6 @@ export async function GET(req: NextRequest) {
   const items = (solicitud.repuestos_items ?? []) as {
     id: string; descripcion: string; referencia: string | null; cantidad: number
   }[]
-
-  if (tipo === 'no_hay') {
-    return new NextResponse(paginaNoHay(solicitud.numero, id, token), { headers: { 'Content-Type': 'text/html' } })
-  }
 
   return new NextResponse(
     paginaCotizacion(solicitud.numero, id, token, tipo, items),
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest) {
 
     if (!solicitud) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-    // ── Caso "no_hay": guardar cotización de importación ─────────────
+    // ── Caso "no_hay": registrar respuesta + guardar observaciones ────
     if (tipoForm === 'no_hay') {
       const obs  = formData.get('observaciones') as string | null
       const file = formData.get('cotizacion_importacion') as File | null
@@ -109,10 +111,18 @@ export async function POST(req: NextRequest) {
         }
       }
       await supabase.from('solicitudes_repuestos').update({
+        estado: 'cotizacion_recibida',
+        respuesta_vehimotors: 'no_hay',
         cotizacion_importacion_url: cotImpUrl,
         cotizacion_importacion_obs: obs || null,
         updated_at: new Date().toISOString(),
       }).eq('id', id)
+      await supabase.from('repuestos_historial').insert({
+        solicitud_id: id, estado_nuevo: 'cotizacion_recibida',
+        usuario_email: 'vehimotors@externo',
+        notas: `Vehimotors respondió: no_hay${obs ? ' · ' + obs : ''}`,
+      })
+      await notificarRespuestaVehimotors({ numero: solicitud.numero, tipo: 'no_hay', solicitudId: id })
       return new NextResponse(paginaGracias(solicitud.numero, null), { headers: { 'Content-Type': 'text/html' } })
     }
 
@@ -286,17 +296,17 @@ function paginaNoHay(numero: string, id: string, token: string) {
   const cuerpo = `
     <div class="emoji">❌</div>
     <div class="badge" style="background:#fee2e2;color:#dc2626">Sin disponibilidad — ${numero}</div>
-    <h2>Respuesta registrada</h2>
-    <p>Hemos notificado a La Oriental. Si manejan cotización de importación, pueden adjuntarla a continuación.</p>
+    <h2>Confirmar respuesta</h2>
+    <p>Agregue observaciones si lo desea (tiempos de importación, alternativas, etc.) y haga clic en <strong>Enviar respuesta</strong> para confirmar.</p>
     <form method="POST" enctype="multipart/form-data" action="/api/repuestos/respuesta">
       <input type="hidden" name="id" value="${id}"/>
       <input type="hidden" name="token" value="${token}"/>
       <input type="hidden" name="tipo_form" value="no_hay"/>
       <label class="lbl">Observaciones (opcional)</label>
-      <textarea name="observaciones" placeholder="Ej: Podemos conseguirlos por importación en 30 días..."></textarea>
+      <textarea name="observaciones" placeholder="Ej: Podemos conseguirlos por importación en 30 días hábiles..."></textarea>
       <label class="lbl">Cotización de importación (opcional)</label>
       <input type="file" name="cotizacion_importacion" accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls"/>
-      <button type="submit" class="btn" style="background:#dc2626">📤 Enviar información</button>
+      <button type="submit" class="btn" style="background:#dc2626">📤 Enviar respuesta</button>
     </form>`
   return shell('Sin disponibilidad', '#dc2626', cuerpo)
 }
