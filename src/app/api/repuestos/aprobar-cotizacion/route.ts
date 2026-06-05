@@ -11,7 +11,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { solicitudId, userEmail } = await req.json()
+    const { solicitudId, userEmail, numeroCotizacion } = await req.json()
     if (!solicitudId) return NextResponse.json({ error: 'solicitudId requerido' }, { status: 400 })
 
     const { data: sol } = await supabase
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       cotizacion_aprobada_at: new Date().toISOString(),
       cotizacion_aprobada_por: userEmail,
       updated_at: new Date().toISOString(),
+      ...(numeroCotizacion ? { numero_cotizacion_vehimotors: numeroCotizacion.trim() } : {}),
     }).eq('id', solicitudId)
 
     await supabase.from('repuestos_historial').insert({
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
 
     await enviarAprobacionCotizacion({
       numero: sol.numero, solicitudId, tokenFactura: sol.token_factura, items,
+      numeroCotizacion: numeroCotizacion ?? null,
     })
 
     revalidatePath('/repuestos')

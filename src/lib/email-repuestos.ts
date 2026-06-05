@@ -109,14 +109,19 @@ export async function notificarRespuestaVehimotors(opts: {
 
 // ── 3. Cotización aprobada → Vehimotors con botón Anexar factura ───
 export async function enviarAprobacionCotizacion(opts: {
-  numero: string; solicitudId: string; tokenFactura: string; items: Item[]
+  numero: string; solicitudId: string; tokenFactura: string; items: Item[]; numeroCotizacion?: string | null
 }) {
-  const { numero, solicitudId, tokenFactura, items } = opts
+  const { numero, solicitudId, tokenFactura, items, numeroCotizacion } = opts
   const urlFactura = `${APP_URL}/api/repuestos/subir-factura?id=${solicitudId}&token=${tokenFactura}`
+
+  const refCot = numeroCotizacion
+    ? `<p style="font-family:sans-serif;font-size:13px;color:#374151;margin:0 0 16px">Referencia de su cotización: <strong style="font-family:monospace;font-size:14px">${numeroCotizacion}</strong></p>`
+    : ''
 
   const body = `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#16a34a;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Cotización Aprobada</p>
-    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">✅ Cotización ${numero} — Aprobada</h1>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 12px">✅ Cotización ${numero} — Aprobada</h1>
+    ${refCot}
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 20px">Hemos aprobado su cotización para los siguientes repuestos. Por favor proceda a emitir la factura formal:</p>
     ${itemsTable(items)}
     <p style="font-family:sans-serif;font-size:15px;font-weight:700;color:#111;margin:16px 0;text-align:center">Adjunte la factura a continuación:</p>

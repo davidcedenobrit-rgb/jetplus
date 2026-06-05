@@ -65,6 +65,9 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [showAdmin, setShowAdmin] = useState(false)
   const [adminEstado, setAdminEstado] = useState(solicitud.estado)
 
+  // Aprobación cotización
+  const [numCotizacionAprob, setNumCotizacionAprob] = useState('')
+
   const esOperador = ROL_OPERADOR.includes(rol)
   const esDirector = ROL_DIRECTOR.includes(rol)
   const esPago     = ROL_PAGO.includes(rol)
@@ -123,10 +126,11 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   }
 
   async function handleAprobarCotizacion() {
+    if (!numCotizacionAprob.trim()) { setError('Ingresa el número de cotización de Vehimotors'); return }
     setLoading(true); setError('')
     const res = await fetch('/api/repuestos/aprobar-cotizacion', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, userEmail }),
+      body: JSON.stringify({ solicitudId: solicitud.id, userEmail, numeroCotizacion: numCotizacionAprob.trim() }),
     })
     if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
     router.refresh(); setLoading(false)
@@ -256,8 +260,19 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
               <p className="text-sm text-yellow-700">{solicitud.cotizacion_observaciones}</p>
             </div>
           )}
-          <button onClick={handleAprobarCotizacion} disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
+          <div className="mb-4">
+            <label className="label">N° de cotización Vehimotors *</label>
+            <input
+              className="input text-sm font-mono"
+              type="text"
+              placeholder="Ej: SA03789"
+              value={numCotizacionAprob}
+              onChange={e => setNumCotizacionAprob(e.target.value)}
+            />
+            <p className="text-[11px] text-oriental-gray mt-1">Este número aparecerá en el email de aprobación que recibe Vehimotors.</p>
+          </div>
+          <button onClick={handleAprobarCotizacion} disabled={loading || !numCotizacionAprob.trim()}
+            className="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
             Aprobar cotización ✓
           </button>
