@@ -4,7 +4,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { Building2, CheckCircle2, Clock, ArrowRight } from 'lucide-react'
 
-const ROL_PERMITIDO = ['jose', 'admin', 'director', 'mary', 'leysdem']
+const ROL_PERMITIDO = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
 function timeAgo(fecha: string) {
   const now = new Date()

@@ -77,7 +77,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             { href: '/vehiculos', label: 'Vehículos',          icon: Car },
             { href: '/ingresos',  label: 'Ingresos',           icon: TrendingUp },
             { href: '/egresos',   label: 'Egresos',            icon: TrendingDown },
-            { href: '/creditos',  label: 'Créditos',           icon: CreditCard },
+            { href: '/creditos',   label: 'Créditos',           icon: CreditCard },
+            { href: '/vehimotors', label: 'Vehimotors',         icon: Building2 },
             { href: '/reportes',  label: 'Reportes',           icon: BarChart2 },
           ]
           return carlaNav.map(({ href, label, icon: Icon }) => {
