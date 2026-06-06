@@ -73,11 +73,18 @@ export async function enviarReporteVehimotors(opts: ReportarVehimotorsOpts) {
   const confirmarUrl = `${APP_URL}/api/ingresos/confirmar-vehimotors?id=${ingresoId}&token=${token}`
 
   const comprobantesSection = comprobantesUrls.length > 0
-    ? `<div style="margin:20px 0">
-        <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 10px">Comprobantes adjuntos</p>
-        ${comprobantesUrls.map((url, i) => `<a href="${url}" target="_blank" style="display:inline-block;margin:4px;padding:8px 16px;background:#f3f4f6;border-radius:8px;font-family:sans-serif;font-size:13px;color:#374151;text-decoration:none;border:1px solid #e5e7eb">📎 Ver comprobante ${i + 1}</a>`).join('')}
+    ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px 24px;margin:20px 0">
+        <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 14px">Comprobante${comprobantesUrls.length > 1 ? 's' : ''} de pago</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          ${comprobantesUrls.map((url, i) => `<a href="${url}" target="_blank" style="display:inline-block;padding:12px 24px;background:#d97706;color:#fff;font-family:sans-serif;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px">
+            📎 Ver comprobante${comprobantesUrls.length > 1 ? ` ${i + 1}` : ''}
+          </a>`).join('')}
+        </div>
+        <p style="font-family:sans-serif;font-size:11px;color:#92400e;margin:10px 0 0">Haga clic para abrir el comprobante en una nueva pestaña.</p>
       </div>`
-    : ''
+    : `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 24px;margin:20px 0">
+        <p style="font-family:sans-serif;font-size:13px;color:#6b7280;margin:0">Sin comprobante adjunto en este reporte.</p>
+      </div>`
 
   const body = `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#C41E3A;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Pago</p>

@@ -18,7 +18,9 @@ export async function GET() {
       metodoPago: 'Zelle',
       referencia: 'ZL-20260606-9871',
       banco: 'Bank of America',
-      comprobantesUrls: [],
+      comprobantesUrls: [
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/280px-PNG_transparency_demonstration_1.png',
+      ],
     })
 
     return NextResponse.json({ ok: true, mensaje: 'Correo de prueba enviado a rojasjgx@gmail.com y davidcedenobrit@gmail.com' })
