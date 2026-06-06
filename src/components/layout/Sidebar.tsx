@@ -72,6 +72,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             { href: '/clientes',  label: 'Clientes',           icon: Users },
             { href: '/showroom',  label: 'Vehículo Showroom',  icon: Store },
             { href: '/vehiculos', label: 'Vehículos',          icon: Car },
+            { href: '/ingresos',  label: 'Ingresos',           icon: TrendingUp },
+            { href: '/egresos',   label: 'Egresos',            icon: TrendingDown },
             { href: '/creditos',  label: 'Créditos',           icon: CreditCard },
             { href: '/reportes',  label: 'Reportes',           icon: BarChart2 },
           ]
