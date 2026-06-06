@@ -393,6 +393,26 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
     router.refresh()
   }
 
+  // Reportar a Vehimotors via API (genera token y envía email)
+  async function handleReportarVehimotors() {
+    setLoading('reportando_vehimotors')
+    try {
+      const res = await fetch('/api/ingresos/reportar-vehimotors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingresoId }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        alert(`Error: ${err.error ?? 'Error desconocido'}`)
+      } else {
+        router.refresh()
+      }
+    } finally {
+      setLoading('')
+    }
+  }
+
   // Acciones sin modal
   const actions = [
     {
@@ -437,15 +457,6 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
       onlyRoles: ROL_DIRECTOR,
       style: 'bg-teal-600 hover:bg-teal-700 text-white',
     },
-    {
-      label: 'Reportar a Vehimotors',
-      icon: Building2,
-      estado: 'reportado_vehimotors',
-      timestamp: 'vehimotors_at',
-      show: ['depositado', 'enviado_deposito', 'entregado_carla'],
-      onlyRoles: ROL_DIRECTOR,
-      style: 'bg-indigo-600 hover:bg-indigo-700 text-white',
-    },
   ]
 
   const visibleActions = actions.filter(a =>
@@ -456,8 +467,9 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
   // Acciones con modal
   const showEnviarDeposito = esDirector && ['aprobado', 'enviado_carla'].includes(estado)
   const showConfirmarDeposito = estado === 'enviado_deposito'
+  const showReportarVehimotors = esDirector && ['aprobado', 'depositado', 'enviado_deposito', 'entregado_carla'].includes(estado)
 
-  const hayAcciones = visibleActions.length > 0 || showEnviarDeposito || showConfirmarDeposito
+  const hayAcciones = visibleActions.length > 0 || showEnviarDeposito || showConfirmarDeposito || showReportarVehimotors
 
   return (
     <>
@@ -502,6 +514,18 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
               >
                 <BadgeCheck size={16} />
                 Confirmar depósito
+              </button>
+            )}
+
+            {/* Reportar a Vehimotors — llama API y envía email */}
+            {showReportarVehimotors && (
+              <button
+                onClick={handleReportarVehimotors}
+                disabled={loading !== ''}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50"
+              >
+                <Building2 size={16} />
+                {loading === 'reportando_vehimotors' ? 'Enviando...' : 'Reportar a Vehimotors'}
               </button>
             )}
           </div>
