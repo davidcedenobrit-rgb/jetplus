@@ -442,7 +442,7 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
       icon: Building2,
       estado: 'reportado_vehimotors',
       timestamp: 'vehimotors_at',
-      show: ['depositado', 'enviado_deposito', 'entregado_carla'],
+      show: ['aprobado', 'depositado', 'enviado_deposito', 'entregado_carla'],
       onlyRoles: ROL_DIRECTOR,
       style: 'bg-indigo-600 hover:bg-indigo-700 text-white',
     },
