@@ -162,8 +162,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )
         })()}
 
-        {/* Auditoría y Logs — solo José / Admin */}
-        {['jose', 'admin'].includes(rol) && (() => {
+        {/* Auditoría y Logs — solo Rojas (admin) */}
+        {rol === 'admin' && (() => {
           const activeAud = pathname === '/auditoria' || pathname.startsWith('/auditoria/')
           const activeLogs = pathname === '/logs' || pathname.startsWith('/logs/')
           return (

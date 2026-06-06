@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ScrollText, CheckCircle2, Wrench, Shield, Zap, Package, CreditCard, Car, Layout } from 'lucide-react'
 
-const SOLO_JOSE = ['jose', 'admin']
+const SOLO_JOSE = ['admin']
 
 type LogEntry = {
   id: string
