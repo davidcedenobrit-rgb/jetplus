@@ -904,6 +904,38 @@ export default function NuevoCreditoPage() {
                     <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcInicialOriental.totalCuotas)}) no coincide con el monto financiado ({formatUSD(calcInicialOriental.montoTotal)}). Verifica si es una condición especial.</p>
                   </div>
                 )}
+                {/* Pagos previos La Oriental */}
+                {calcInicialOriental.numCuotas > 0 && (() => {
+                  const hist = parseFloat(orMontoHistorico) || 0
+                  const mc   = calcInicialOriental.montoCuota || 0
+                  const completas = hist > 0 ? Math.min(Math.floor(hist / mc), calcInicialOriental.numCuotas) : 0
+                  const sobrante  = hist > 0 ? hist - completas * mc : 0
+                  const saldoRest = Math.max(0, calcInicialOriental.totalCuotas - hist)
+                  return (
+                    <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <div className="flex items-start gap-2 mb-3">
+                        <span className="text-amber-500 text-base">📋</span>
+                        <div>
+                          <p className="text-xs font-bold text-amber-800">¿Cliente con pagos previos al sistema?</p>
+                          <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado. El sistema distribuye automáticamente las cuotas pagadas y el abono parcial.</p>
+                        </div>
+                      </div>
+                      <div className="relative mb-3">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
+                        <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
+                          placeholder="0.00 — monto total ya cobrado"
+                          value={orMontoHistorico} onChange={e => setOrMontoHistorico(e.target.value)} />
+                      </div>
+                      {hist > 0 && mc > 0 && (
+                        <div className="space-y-1.5">
+                          {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
+                          {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
+                          <p className="text-[11px] text-oriental-gray font-semibold">Saldo restante: {formatUSD(saldoRest)}</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Sub-crédito 2: Financiamiento Vehimotors */}
@@ -984,6 +1016,38 @@ export default function NuevoCreditoPage() {
                     <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcVehimotors.totalCuotas)}) no coincide con el monto financiado ({formatUSD(calcVehimotors.montoTotal)}). Verifica si es una condición especial.</p>
                   </div>
                 )}
+                {/* Pagos previos Vehimotors */}
+                {calcVehimotors.numCuotas > 0 && (() => {
+                  const hist = parseFloat(vhMontoHistorico) || 0
+                  const mc   = calcVehimotors.montoCuota || 0
+                  const completas = hist > 0 ? Math.min(Math.floor(hist / mc), calcVehimotors.numCuotas) : 0
+                  const sobrante  = hist > 0 ? hist - completas * mc : 0
+                  const saldoRest = Math.max(0, calcVehimotors.totalCuotas - hist)
+                  return (
+                    <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <div className="flex items-start gap-2 mb-3">
+                        <span className="text-amber-500 text-base">📋</span>
+                        <div>
+                          <p className="text-xs font-bold text-amber-800">¿Cliente con pagos previos al sistema?</p>
+                          <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado por Vehimotors. El sistema distribuye cuotas pagadas y abono parcial automáticamente.</p>
+                        </div>
+                      </div>
+                      <div className="relative mb-3">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
+                        <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
+                          placeholder="0.00 — monto total ya cobrado"
+                          value={vhMontoHistorico} onChange={e => setVhMontoHistorico(e.target.value)} />
+                      </div>
+                      {hist > 0 && mc > 0 && (
+                        <div className="space-y-1.5">
+                          {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
+                          {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
+                          <p className="text-[11px] text-oriental-gray font-semibold">Saldo restante: {formatUSD(saldoRest)}</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* ── CUOTAS ESPECIALES (paralelas) ── */}
