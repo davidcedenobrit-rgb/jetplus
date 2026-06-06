@@ -125,10 +125,12 @@ export async function enviarReporteVehimotors(opts: ReportarVehimotorsOpts) {
     </div>
   `
 
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: FROM,
     to: TO_VEHIMOTORS,
     subject: `Reporte de pago — ${numeroRecibo} · ${clienteNombre}`,
     html: wrap(body),
   })
+  console.log('[email-ingresos] Resend response:', JSON.stringify({ data, error }))
+  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`)
 }

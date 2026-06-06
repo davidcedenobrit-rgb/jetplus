@@ -4,6 +4,7 @@ import { enviarReporteVehimotors } from '@/lib/email-ingresos'
 
 export async function GET() {
   try {
+    console.log('[test-vehimotors] Iniciando envío de correo de prueba...')
     await enviarReporteVehimotors({
       ingresoId: 'test-000',
       token: 'tokentest123abc',
