@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
-  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package
+  CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
+  Shield, ScrollText
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -158,6 +159,26 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
               <Upload size={18} />
               Importar datos
             </Link>
+          )
+        })()}
+
+        {/* Auditoría y Logs — solo Rojas (admin) */}
+        {rol === 'admin' && (() => {
+          const activeAud = pathname === '/auditoria' || pathname.startsWith('/auditoria/')
+          const activeLogs = pathname === '/logs' || pathname.startsWith('/logs/')
+          return (
+            <>
+              <Link href="/auditoria" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeAud ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Shield size={18} />
+                Auditoría
+              </Link>
+              <Link href="/logs" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeLogs ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <ScrollText size={18} />
+                Logs del sistema
+              </Link>
+            </>
           )
         })()}
 
