@@ -434,7 +434,7 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
       estado: 'entregado_carla',
       timestamp: 'entregado_carla_at',
       show: ['depositado'],
-      onlyRoles: ROL_DIRECTOR,
+      onlyRoles: [...ROL_DIRECTOR, 'carla'],
       style: 'bg-teal-600 hover:bg-teal-700 text-white',
     },
     {
