@@ -13,16 +13,19 @@ import {
 const navItemsTop = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ]
-const navItemsBottom = [
+const navItemsBottom1 = [
   { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/vehiculos', label: 'Vehículos', icon: Car },
   { href: '/ingresos', label: 'Ingresos', icon: TrendingUp },
   { href: '/egresos', label: 'Egresos', icon: TrendingDown },
   { href: '/creditos', label: 'Créditos', icon: CreditCard },
+]
+const navItemsBottom2 = [
   { href: '/tasas', label: 'Tasas', icon: ArrowLeftRight },
   { href: '/reportes', label: 'Reportes', icon: BarChart2 },
   { href: '/documentos-empresa', label: 'Docs. Empresa', icon: FolderOpen },
 ]
+const navItemsBottom = [...navItemsBottom1, ...navItemsBottom2]
 const navItems = [...navItemsTop, ...navItemsBottom]
 
 const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
@@ -134,8 +137,32 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* Clientes en adelante — oculto para Arianna y Almacén */}
-          {!['arianna', 'almacen'].includes(rol) && navItemsBottom.map(({ href, label, icon: Icon }) => {
+          {/* Clientes → Créditos — oculto para Arianna y Almacén */}
+          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + '/')
+            return (
+              <Link key={href} href={href} onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Icon size={18} />
+                {label}
+              </Link>
+            )
+          })}
+
+          {/* Vehimotors — solo directores */}
+          {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/vehimotors' || pathname.startsWith('/vehimotors/')
+            return (
+              <Link href="/vehimotors" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Building2 size={18} />
+                <span className="flex-1">Vehimotors</span>
+              </Link>
+            )
+          })()}
+
+          {/* Tasas → Docs. Empresa — oculto para Arianna y Almacén */}
+          {!['arianna', 'almacen'].includes(rol) && navItemsBottom2.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <Link key={href} href={href} onClick={onClose}
@@ -171,18 +198,6 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
                 <Upload size={18} />
                 Importar datos
-              </Link>
-            )
-          })()}
-
-          {/* Vehimotors — solo directores */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/vehimotors' || pathname.startsWith('/vehimotors/')
-            return (
-              <Link href="/vehimotors" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Building2 size={18} />
-                <span className="flex-1">Vehimotors</span>
               </Link>
             )
           })()}
