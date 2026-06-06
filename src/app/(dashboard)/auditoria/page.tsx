@@ -2,7 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Shield, User, Package, Car, CreditCard, CheckCircle2, Clock } from 'lucide-react'
 
-const SOLO_JOSE = ['admin']
+const SOLO_JOSE = ['director', 'admin']
 
 type EventoAuditoria = {
   id: string
