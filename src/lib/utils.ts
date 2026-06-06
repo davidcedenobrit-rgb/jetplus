@@ -66,6 +66,7 @@ export const METODOS_PAGO = [
   'Transferencia bancaria',
   'Pago móvil',
   'Zelle',
+  'Binance',
   'Efectivo USD',
   'Efectivo VES',
   'Depósito bancario',
