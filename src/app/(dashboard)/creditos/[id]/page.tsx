@@ -175,7 +175,15 @@ export default async function CreditoDetallePage({
         </div>
         <div className="flex items-center gap-2">
           <PrintButton />
-          {/* Botón editar apunta al crédito con que se navegó */}
+          {vehiculo?.placa && (
+            <Link
+              href={`/ingresos/nuevo?placa=${encodeURIComponent(vehiculo.placa)}`}
+              className="flex items-center gap-2 px-4 py-2 bg-oriental-red text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <PlusCircle size={15} />
+              Registrar ingreso
+            </Link>
+          )}
           <Link
             href={`/creditos/${id}/editar`}
             className="flex items-center gap-2 px-4 py-2 bg-oriental-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
