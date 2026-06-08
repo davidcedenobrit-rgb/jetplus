@@ -151,6 +151,7 @@ export interface EnviarReciboClienteOpts {
   metodoPago: string
   referencia?: string | null
   bancoEmisor?: string | null
+  bancoReceptor?: string | null
   fechaPago: string
   fechaAprobacion?: string | null
   observaciones?: string | null
@@ -165,7 +166,7 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
   const {
     clienteNombre, clienteCorreo, clienteCedula, clienteTelefono, clienteCiudad,
     numeroRecibo, concepto, monto, moneda, tasaCambio, metodoPago, referencia,
-    bancoEmisor, fechaPago, fechaAprobacion, observaciones,
+    bancoEmisor, bancoReceptor, fechaPago, fechaAprobacion, observaciones,
     vehiculoMarca, vehiculoModelo, vehiculoVersion, vehiculoAnio, placa,
   } = opts
   const resend = getResend()
@@ -188,7 +189,7 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
     React.createElement(ReciboPDF, {
       data: {
         numeroRecibo, fechaPago, concepto, monto, moneda, tasaCambio,
-        metodoPago, referencia, bancoEmisor, observaciones, fechaAprobacion,
+        metodoPago, referencia, bancoEmisor, bancoReceptor, observaciones, fechaAprobacion,
         clienteNombre, clienteCedula, clienteTelefono, clienteCorreo,
         clienteCiudad, vehiculoMarca, vehiculoModelo, vehiculoVersion,
         vehiculoAnio, placa,

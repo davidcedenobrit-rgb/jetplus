@@ -6,7 +6,9 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { ReciboPDF } from '@/lib/recibo-pdf'
 
-const ROL_PERMITIDO = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
+// GET /api/ingresos/test-whatsapp?id=<ingresoId>&tel=<telefono>
+// tel es opcional: si se omite, usa el teléfono del cliente del ingreso
+// Retorna la URL de WhatsApp con el mensaje pre-cargado y el PDF adjunto
 
 function getAdmin() {
   return createAdmin(
@@ -15,19 +17,25 @@ function getAdmin() {
   )
 }
 
-export async function POST(req: Request) {
+function formatPhoneWA(telefono: string): string {
+  const digits = telefono.replace(/\D/g, '')
+  if (digits.startsWith('0')) return '58' + digits.slice(1)
+  if (digits.startsWith('58')) return digits
+  return '58' + digits
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const ingresoId = searchParams.get('id')
+  const telOverride = searchParams.get('tel')
+
+  if (!ingresoId) {
+    return NextResponse.json({ error: 'Parámetro ?id=<ingresoId> requerido' }, { status: 400 })
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-
-  const rol = (user.user_metadata?.rol as string) ?? ''
-  if (!ROL_PERMITIDO.includes(rol)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-
-  let body: { ingresoId?: string }
-  try { body = await req.json() } catch { return NextResponse.json({ error: 'Body inválido' }, { status: 400 }) }
-
-  const { ingresoId } = body
-  if (!ingresoId) return NextResponse.json({ error: 'ingresoId requerido' }, { status: 400 })
 
   const { data: ingreso } = await supabase
     .from('ingresos')
@@ -38,6 +46,11 @@ export async function POST(req: Request) {
   if (!ingreso) return NextResponse.json({ error: 'Ingreso no encontrado' }, { status: 404 })
 
   const cliente = (ingreso as any).clientes
+  const telefono = telOverride ?? cliente?.telefono ?? null
+
+  if (!telefono) {
+    return NextResponse.json({ error: 'Sin teléfono: usa ?tel=04XX... para sobrescribir' }, { status: 400 })
+  }
 
   let vehiculo: any = null
   if (ingreso.vehiculo_id) {
@@ -49,6 +62,7 @@ export async function POST(req: Request) {
     vehiculo = v
   }
 
+  // Generar PDF y subirlo
   const pdfBuffer = await renderToBuffer(
     React.createElement(ReciboPDF, {
       data: {
@@ -83,17 +97,51 @@ export async function POST(req: Request) {
 
   const { error: uploadError } = await admin.storage
     .from('comprobantes')
-    .upload(storagePath, pdfBuffer, {
-      contentType: 'application/pdf',
-      upsert: true,
-    })
+    .upload(storagePath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
 
   if (uploadError) {
-    console.error('[pdf-url] upload error:', uploadError)
     return NextResponse.json({ error: uploadError.message }, { status: 500 })
   }
 
   const { data: urlData } = admin.storage.from('comprobantes').getPublicUrl(storagePath)
+  const pdfUrl = urlData.publicUrl
 
-  return NextResponse.json({ url: urlData.publicUrl, nombre: `${ingreso.numero_recibo}.pdf` })
+  const montoFmt = new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(Number(ingreso.monto))
+  const monedaLabel = ingreso.moneda === 'VES' ? 'Bs.' : ingreso.moneda
+
+  const fechaLegible = (() => {
+    try {
+      return new Date(ingreso.fecha_pago + 'T12:00:00').toLocaleDateString('es-VE', {
+        day: 'numeric', month: 'long', year: 'numeric',
+      })
+    } catch { return ingreso.fecha_pago }
+  })()
+
+  const lines = [
+    `Estimado/a ${cliente?.nombre ?? 'cliente'},`,
+    '',
+    'Le confirmamos la recepción de su pago:',
+    '',
+    `📋 N° Recibo: ${ingreso.numero_recibo}`,
+    `💼 Concepto: ${ingreso.concepto}`,
+    `💰 Monto: ${monedaLabel} ${montoFmt}`,
+    `📅 Fecha: ${fechaLegible}`,
+    `💳 Método: ${ingreso.metodo_pago}`,
+    ...(ingreso.referencia ? [`🔢 Referencia: ${ingreso.referencia}`] : []),
+    '',
+    `📄 Su recibo en PDF: ${pdfUrl}`,
+    '',
+    'Gracias por su preferencia.',
+    'La Oriental Automotors',
+  ]
+
+  const waUrl = `https://wa.me/${formatPhoneWA(telefono)}?text=${encodeURIComponent(lines.join('\n'))}`
+
+  return NextResponse.json({
+    ok: true,
+    pdfUrl,
+    waUrl,
+    telefono: formatPhoneWA(telefono),
+    mensaje: 'Redirige a waUrl para abrir WhatsApp con el mensaje pre-cargado',
+  })
 }

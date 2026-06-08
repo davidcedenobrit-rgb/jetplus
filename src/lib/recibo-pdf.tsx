@@ -87,6 +87,7 @@ export interface ReciboPDFData {
   metodoPago: string
   referencia?: string | null
   bancoEmisor?: string | null
+  bancoReceptor?: string | null
   observaciones?: string | null
   // Firma
   fechaAprobacion?: string | null
@@ -215,8 +216,14 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
           </View>
           {data.bancoEmisor && (
             <View style={s.col}>
-              <Text style={s.sectionLabel}>Banco</Text>
+              <Text style={s.sectionLabel}>Banco emisor</Text>
               <Text style={s.fieldValue}>{data.bancoEmisor}</Text>
+            </View>
+          )}
+          {data.bancoReceptor && (
+            <View style={s.col}>
+              <Text style={s.sectionLabel}>Banco receptor</Text>
+              <Text style={s.fieldValue}>{data.bancoReceptor}</Text>
             </View>
           )}
         </View>

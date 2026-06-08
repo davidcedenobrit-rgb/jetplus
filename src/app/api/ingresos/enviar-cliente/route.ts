@@ -58,6 +58,7 @@ export async function POST(req: Request) {
       metodoPago: ingreso.metodo_pago,
       referencia: ingreso.referencia ?? null,
       bancoEmisor: ingreso.banco_emisor ?? null,
+      bancoReceptor: ingreso.banco_receptor ?? null,
       fechaPago: ingreso.fecha_pago,
       fechaAprobacion: ingreso.fecha_aprobacion ?? null,
       observaciones: ingreso.observaciones ?? null,

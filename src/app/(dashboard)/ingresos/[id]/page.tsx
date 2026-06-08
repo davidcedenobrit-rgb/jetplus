@@ -299,7 +299,9 @@ export default async function IngresoDetallePage({
               <div className="print-bg-gray bg-oriental-bg rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold">Monto recibido</p>
-                  <p className="text-xs text-oriental-gray mt-0.5">{ingreso.moneda === 'USD' ? 'Dólares americanos' : 'Bolívares'}</p>
+                  <p className="text-xs text-oriental-gray mt-0.5">
+                    {ingreso.moneda === 'USD' ? 'Dólares americanos' : ingreso.moneda === 'USDT' ? 'Tether USD' : 'Bolívares'}
+                  </p>
                 </div>
                 <p className="text-3xl font-black text-oriental-black">{formatCurrency(ingreso.monto, ingreso.moneda)}</p>
               </div>
