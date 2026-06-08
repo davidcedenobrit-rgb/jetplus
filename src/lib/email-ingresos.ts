@@ -193,7 +193,7 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
         clienteCiudad, vehiculoMarca, vehiculoModelo, vehiculoVersion,
         vehiculoAnio, placa,
       },
-    })
+    }) as any
   )
 
   const body = `

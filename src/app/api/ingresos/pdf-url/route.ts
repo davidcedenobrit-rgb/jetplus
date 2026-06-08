@@ -74,7 +74,7 @@ export async function POST(req: Request) {
         vehiculoAnio: vehiculo?.anio ?? null,
         placa: ingreso.placa ?? vehiculo?.placa ?? null,
       },
-    })
+    }) as any
   )
 
   const admin = getAdmin()
