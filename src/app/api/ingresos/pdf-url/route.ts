@@ -5,6 +5,7 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { ReciboPDF } from '@/lib/recibo-pdf'
+import { fetchECData } from '@/lib/ingreso-ec-data'
 
 const ROL_PERMITIDO = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
@@ -49,6 +50,8 @@ export async function POST(req: Request) {
     vehiculo = v
   }
 
+  const ec = await fetchECData(supabase, ingresoId, ingreso.vehiculo_id ?? null)
+
   const pdfBuffer = await renderToBuffer(
     React.createElement(ReciboPDF, {
       data: {
@@ -74,6 +77,7 @@ export async function POST(req: Request) {
         vehiculoVersion: vehiculo?.version ?? null,
         vehiculoAnio: vehiculo?.anio ?? null,
         placa: ingreso.placa ?? vehiculo?.placa ?? null,
+        ...ec,
       },
     }) as any
   )

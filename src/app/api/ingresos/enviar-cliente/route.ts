@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { enviarReciboCliente } from '@/lib/email-ingresos'
+import { fetchECData } from '@/lib/ingreso-ec-data'
 
 const ROL_PERMITIDO = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
@@ -43,6 +44,8 @@ export async function POST(req: Request) {
     vehiculo = v
   }
 
+  const ec = await fetchECData(supabase, ingresoId, ingreso.vehiculo_id ?? null)
+
   try {
     await enviarReciboCliente({
       clienteNombre: cliente.nombre,
@@ -67,6 +70,7 @@ export async function POST(req: Request) {
       vehiculoVersion: vehiculo?.version ?? null,
       vehiculoAnio: vehiculo?.anio ?? null,
       placa: ingreso.placa ?? vehiculo?.placa ?? null,
+      ...ec,
     })
     return NextResponse.json({ ok: true })
   } catch (e: any) {

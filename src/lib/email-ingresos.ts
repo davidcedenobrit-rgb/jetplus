@@ -160,6 +160,25 @@ export interface EnviarReciboClienteOpts {
   vehiculoVersion?: string | null
   vehiculoAnio?: number | null
   placa?: string | null
+  cuotasAplicadas?: Array<{
+    numeroCuota: number
+    planNombre: string
+    fechaVencimiento?: string | null
+    montoTotal: number
+    montoAplicado: number
+  }>
+  ecTotalFinanciado?: number
+  ecTotalSaldo?: number
+  ecPct?: number
+  ecPagadas?: number
+  ecPendientes?: number
+  ecVencidas?: number
+  creditosDesglose?: Array<{
+    planNombre: string
+    saldo: number
+    totalCuotas: number
+    cuotasPagadas: number
+  }>
 }
 
 export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
@@ -168,6 +187,7 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
     numeroRecibo, concepto, monto, moneda, tasaCambio, metodoPago, referencia,
     bancoEmisor, bancoReceptor, fechaPago, fechaAprobacion, observaciones,
     vehiculoMarca, vehiculoModelo, vehiculoVersion, vehiculoAnio, placa,
+    cuotasAplicadas, ecTotalFinanciado, ecTotalSaldo, ecPct, ecPagadas, ecPendientes, ecVencidas, creditosDesglose,
   } = opts
   const resend = getResend()
 
@@ -190,6 +210,7 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
       data: {
         numeroRecibo, fechaPago, concepto, monto, moneda, tasaCambio,
         metodoPago, referencia, bancoEmisor, bancoReceptor, observaciones, fechaAprobacion,
+        cuotasAplicadas, ecTotalFinanciado, ecTotalSaldo, ecPct, ecPagadas, ecPendientes, ecVencidas, creditosDesglose,
         clienteNombre, clienteCedula, clienteTelefono, clienteCorreo,
         clienteCiudad, vehiculoMarca, vehiculoModelo, vehiculoVersion,
         vehiculoAnio, placa,

@@ -60,6 +60,12 @@ const s = StyleSheet.create({
 
   // Sello
   sello: { width: 70, height: 70, marginBottom: 4 },
+
+  // Estado de cuenta
+  ecBox: { borderWidth: 1, borderColor: BORDER, borderStyle: 'solid', borderRadius: 6, padding: '10 12', backgroundColor: LIGHT },
+  ecRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  ecLabel: { fontSize: 8, color: GRAY },
+  ecValue: { fontSize: 8, fontFamily: 'Helvetica-Bold' },
 })
 
 export interface ReciboPDFData {
@@ -91,6 +97,27 @@ export interface ReciboPDFData {
   observaciones?: string | null
   // Firma
   fechaAprobacion?: string | null
+  // Cuotas aplicadas
+  cuotasAplicadas?: Array<{
+    numeroCuota: number
+    planNombre: string
+    fechaVencimiento?: string | null
+    montoTotal: number
+    montoAplicado: number
+  }>
+  // Estado de cuenta
+  ecTotalFinanciado?: number
+  ecTotalSaldo?: number
+  ecPct?: number
+  ecPagadas?: number
+  ecPendientes?: number
+  ecVencidas?: number
+  creditosDesglose?: Array<{
+    planNombre: string
+    saldo: number
+    totalCuotas: number
+    cuotasPagadas: number
+  }>
 }
 
 function fmtDate(d?: string | null) {
@@ -100,6 +127,10 @@ function fmtDate(d?: string | null) {
       day: 'numeric', month: 'long', year: 'numeric',
     })
   } catch { return d }
+}
+
+function fmtNum(n: number) {
+  return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(n)
 }
 
 function fmtMonto(m: number, moneda: string) {
@@ -183,6 +214,39 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
 
         <View style={s.divider} />
 
+        {/* ── Cuotas aplicadas ── */}
+        {data.cuotasAplicadas && data.cuotasAplicadas.length > 0 && (
+          <>
+            <View style={s.table}>
+              <Text style={[s.sectionLabel, { marginBottom: 6 }]}>Cuotas aplicadas</Text>
+              <View style={s.tableHeader}>
+                <Text style={[s.tableHeaderText, { flex: 0.5 }]}>Cuota</Text>
+                <Text style={[s.tableHeaderText, { flex: 1 }]}>Plan</Text>
+                <Text style={[s.tableHeaderText, { flex: 1.2 }]}>Vencimiento</Text>
+                <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Total</Text>
+                <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Aplicado</Text>
+                <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Pendiente</Text>
+              </View>
+              {data.cuotasAplicadas.map((ci, idx) => {
+                const pendiente = Math.max(0, ci.montoTotal - ci.montoAplicado)
+                return (
+                  <View key={idx} style={s.tableRow}>
+                    <Text style={[s.tableCell, { flex: 0.5, fontFamily: 'Helvetica-Bold' }]}>#{ci.numeroCuota}</Text>
+                    <Text style={[s.tableCell, { flex: 1 }]}>{ci.planNombre}</Text>
+                    <Text style={[s.tableCell, { flex: 1.2, fontSize: 8 }]}>{fmtDate(ci.fechaVencimiento)}</Text>
+                    <Text style={[s.tableCellRight, { flex: 1 }]}>USD {fmtNum(ci.montoTotal)}</Text>
+                    <Text style={[s.tableCellRight, { flex: 1, fontFamily: 'Helvetica-Bold' }]}>USD {fmtNum(ci.montoAplicado)}</Text>
+                    <Text style={[s.tableCellRight, { flex: 1, fontFamily: 'Helvetica-Bold', color: pendiente > 0 ? '#dc2626' : '#16a34a' }]}>
+                      USD {fmtNum(pendiente)}
+                    </Text>
+                  </View>
+                )
+              })}
+            </View>
+            <View style={s.divider} />
+          </>
+        )}
+
         {/* ── Monto ── */}
         <View style={s.montoBox}>
           <View>
@@ -235,6 +299,77 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
             <View>
               <Text style={s.sectionLabel}>Observaciones</Text>
               <Text style={s.fieldValueLight}>{data.observaciones}</Text>
+            </View>
+          </>
+        )}
+
+        {/* ── Estado de cuenta ── */}
+        {data.creditosDesglose && data.creditosDesglose.length > 0 && (
+          <>
+            <View style={s.divider} />
+            <Text style={[s.sectionLabel, { marginBottom: 6 }]}>Estado de cuenta — al día de este recibo</Text>
+            <View style={[s.row2, { marginBottom: 14 }]}>
+
+              {/* Resumen */}
+              <View style={[s.col, s.ecBox]}>
+                <Text style={[s.sectionLabel, { marginBottom: 8 }]}>Resumen total</Text>
+                <View style={s.ecRow}>
+                  <Text style={s.ecLabel}>Total financiado</Text>
+                  <Text style={s.ecValue}>USD {fmtNum(data.ecTotalFinanciado ?? 0)}</Text>
+                </View>
+                <View style={s.ecRow}>
+                  <Text style={s.ecLabel}>Ya pagado</Text>
+                  <Text style={[s.ecValue, { color: '#16a34a' }]}>USD {fmtNum((data.ecTotalFinanciado ?? 0) - (data.ecTotalSaldo ?? 0))}</Text>
+                </View>
+                <View style={[s.ecRow, { marginBottom: 8 }]}>
+                  <Text style={s.ecLabel}>Saldo pendiente</Text>
+                  <Text style={[s.ecValue, { color: RED }]}>USD {fmtNum(data.ecTotalSaldo ?? 0)}</Text>
+                </View>
+                {/* Barra de progreso */}
+                <View style={{ height: 4, backgroundColor: BORDER, borderRadius: 2, marginBottom: 8 }}>
+                  <View style={{ height: 4, backgroundColor: '#22c55e', borderRadius: 2, width: `${data.ecPct ?? 0}%` }} />
+                </View>
+                {/* Contadores */}
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  <View style={{ flex: 1, backgroundColor: '#f0fdf4', borderRadius: 4, padding: '4 2', alignItems: 'center', borderWidth: 1, borderColor: '#bbf7d0', borderStyle: 'solid' }}>
+                    <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#16a34a' }}>{data.ecPagadas ?? 0}</Text>
+                    <Text style={{ fontSize: 7, color: '#16a34a' }}>Pagadas</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: '#fefce8', borderRadius: 4, padding: '4 2', alignItems: 'center', borderWidth: 1, borderColor: '#fef08a', borderStyle: 'solid' }}>
+                    <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#ca8a04' }}>{data.ecPendientes ?? 0}</Text>
+                    <Text style={{ fontSize: 7, color: '#ca8a04' }}>Pendientes</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: (data.ecVencidas ?? 0) > 0 ? '#fef2f2' : LIGHT, borderRadius: 4, padding: '4 2', alignItems: 'center', borderWidth: 1, borderColor: (data.ecVencidas ?? 0) > 0 ? '#fecaca' : BORDER, borderStyle: 'solid' }}>
+                    <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: (data.ecVencidas ?? 0) > 0 ? '#dc2626' : '#9ca3af' }}>{data.ecVencidas ?? 0}</Text>
+                    <Text style={{ fontSize: 7, color: (data.ecVencidas ?? 0) > 0 ? '#dc2626' : '#9ca3af' }}>Vencidas</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Desglose */}
+              <View style={s.col}>
+                <Text style={[s.sectionLabel, { marginBottom: 8 }]}>Desglose por financiamiento</Text>
+                <View style={{ gap: 6 }}>
+                  {data.creditosDesglose.map((c, idx) => {
+                    const isLaOriental = c.planNombre === 'La Oriental'
+                    const bg = isLaOriental ? '#faf5ff' : '#eef2ff'
+                    const textColor = isLaOriental ? '#7e22ce' : '#4338ca'
+                    const bColor = isLaOriental ? '#e9d5ff' : '#c7d2fe'
+                    return (
+                      <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: bg, borderRadius: 6, padding: '7 9', borderWidth: 1, borderColor: bColor, borderStyle: 'solid' }}>
+                        <View>
+                          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: textColor }}>{c.planNombre}</Text>
+                          <Text style={{ fontSize: 7.5, color: textColor }}>{c.cuotasPagadas}/{c.totalCuotas} cuotas</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontSize: 7.5, color: textColor }}>Saldo</Text>
+                          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: textColor }}>USD {fmtNum(c.saldo)}</Text>
+                        </View>
+                      </View>
+                    )
+                  })}
+                </View>
+              </View>
             </View>
           </>
         )}
