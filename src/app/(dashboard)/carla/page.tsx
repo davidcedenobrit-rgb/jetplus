@@ -38,8 +38,8 @@ export default async function CarlaPage() {
     .in('estado', ['enviado_carla', 'enviado_deposito', 'depositado', 'entregado_carla', 'reportado_vehimotors'])
     .order('fecha_registro', { ascending: false })
 
-  // Solo los que necesitan confirmación de Carla (depositado)
-  const pendientes = (deJose ?? []).filter(i => i.estado === 'depositado')
+  // Los que Rojas envió y Carla aún no confirmó
+  const pendientes = (deJose ?? []).filter(i => i.estado === 'enviado_carla')
 
   // Ya confirmados por Carla
   const confirmados = (deJose ?? []).filter(i => i.estado === 'entregado_carla')

@@ -492,6 +492,56 @@ export default async function IngresoDetallePage({
             rol={rol}
           />
 
+          {/* ── Enviado a Carla: comprobante y observaciones ─────── */}
+          {ingreso.estado === 'enviado_carla' && (
+            <div className="card p-5 space-y-4 border border-purple-200">
+              <h3 className="text-sm font-bold text-purple-900 flex items-center gap-2">
+                <Send size={14} className="text-purple-500" />
+                Enviado por José Rojas
+              </h3>
+              {ingreso.enviado_carla_at && (
+                <p className="text-[11px] text-purple-500">
+                  {new Date(ingreso.enviado_carla_at).toLocaleString('es-VE', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                  })}
+                </p>
+              )}
+              {ingreso.observaciones && (
+                <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
+                  <p className="text-[10px] text-purple-500 uppercase tracking-wider font-bold mb-1">Observaciones</p>
+                  <p className="text-sm text-purple-900">{ingreso.observaciones}</p>
+                </div>
+              )}
+              {(archivos ?? []).filter((a: any) => a.tipo !== 'comprobante_deposito').length > 0 && (
+                <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
+                  <p className="text-[10px] text-purple-500 uppercase tracking-wider font-bold mb-2 flex items-center gap-1">
+                    <FileText size={11} /> Comprobantes
+                  </p>
+                  <div className="space-y-2">
+                    {(archivos ?? [])
+                      .filter((a: any) => a.tipo !== 'comprobante_deposito')
+                      .map((a: any) => (
+                        <a
+                          key={a.id}
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-xs text-purple-700 hover:text-purple-900 hover:underline font-medium"
+                        >
+                          <ImageIcon size={12} className="flex-shrink-0" />
+                          {a.nombre ?? 'Ver comprobante'}
+                        </a>
+                      ))}
+                  </div>
+                </div>
+              )}
+              {!ingreso.observaciones && (archivos ?? []).filter((a: any) => a.tipo !== 'comprobante_deposito').length === 0 && (
+                <p className="text-xs text-purple-400 italic">Sin observaciones ni comprobantes adjuntos</p>
+              )}
+            </div>
+          )}
+
           {/* ── Seguimiento de depósito ───────────────────────────── */}
           {(ingreso as any).enviado_deposito_responsable && (
             <div className="card p-5 space-y-4">
