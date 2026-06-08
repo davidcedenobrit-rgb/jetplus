@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   const { data: ingreso } = await supabase
     .from('ingresos')
-    .select('*, clientes(nombre, correo)')
+    .select('*, clientes(nombre, cedula_rif, telefono, correo, ciudad)')
     .eq('id', ingresoId)
     .single()
 
@@ -32,17 +32,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'El cliente no tiene correo registrado' }, { status: 400 })
   }
 
+  // Vehículo vinculado (opcional)
+  let vehiculo: any = null
+  if (ingreso.vehiculo_id) {
+    const { data: v } = await supabase
+      .from('vehiculos')
+      .select('marca, modelo, version, anio, placa')
+      .eq('id', ingreso.vehiculo_id)
+      .single()
+    vehiculo = v
+  }
+
   try {
     await enviarReciboCliente({
       clienteNombre: cliente.nombre,
       clienteCorreo: cliente.correo,
+      clienteCedula: cliente.cedula_rif ?? null,
+      clienteTelefono: cliente.telefono ?? null,
+      clienteCiudad: cliente.ciudad ?? null,
       numeroRecibo: ingreso.numero_recibo,
       concepto: ingreso.concepto,
       monto: Number(ingreso.monto),
       moneda: ingreso.moneda,
+      tasaCambio: ingreso.tasa_cambio ? Number(ingreso.tasa_cambio) : null,
       metodoPago: ingreso.metodo_pago,
       referencia: ingreso.referencia ?? null,
+      bancoEmisor: ingreso.banco_emisor ?? null,
       fechaPago: ingreso.fecha_pago,
+      fechaAprobacion: ingreso.fecha_aprobacion ?? null,
+      observaciones: ingreso.observaciones ?? null,
+      vehiculoMarca: vehiculo?.marca ?? null,
+      vehiculoModelo: vehiculo?.modelo ?? null,
+      vehiculoVersion: vehiculo?.version ?? null,
+      vehiculoAnio: vehiculo?.anio ?? null,
+      placa: ingreso.placa ?? vehiculo?.placa ?? null,
     })
     return NextResponse.json({ ok: true })
   } catch (e: any) {

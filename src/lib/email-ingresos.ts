@@ -1,4 +1,7 @@
 import { Resend } from 'resend'
+import { renderToBuffer } from '@react-pdf/renderer'
+import React from 'react'
+import { ReciboPDF } from './recibo-pdf'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
@@ -136,17 +139,35 @@ export async function enviarReporteVehimotors(opts: ReportarVehimotorsOpts) {
 export interface EnviarReciboClienteOpts {
   clienteNombre: string
   clienteCorreo: string
+  clienteCedula?: string | null
+  clienteTelefono?: string | null
+  clienteCorreoDisplay?: string | null
+  clienteCiudad?: string | null
   numeroRecibo: string
   concepto: string
   monto: number
   moneda: string
+  tasaCambio?: number | null
   metodoPago: string
   referencia?: string | null
+  bancoEmisor?: string | null
   fechaPago: string
+  fechaAprobacion?: string | null
+  observaciones?: string | null
+  vehiculoMarca?: string | null
+  vehiculoModelo?: string | null
+  vehiculoVersion?: string | null
+  vehiculoAnio?: number | null
+  placa?: string | null
 }
 
 export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
-  const { clienteNombre, clienteCorreo, numeroRecibo, concepto, monto, moneda, metodoPago, referencia, fechaPago } = opts
+  const {
+    clienteNombre, clienteCorreo, clienteCedula, clienteTelefono, clienteCiudad,
+    numeroRecibo, concepto, monto, moneda, tasaCambio, metodoPago, referencia,
+    bancoEmisor, fechaPago, fechaAprobacion, observaciones,
+    vehiculoMarca, vehiculoModelo, vehiculoVersion, vehiculoAnio, placa,
+  } = opts
   const resend = getResend()
 
   const montoFmt = new Intl.NumberFormat('es-VE', {
@@ -162,10 +183,23 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
     } catch { return fechaPago }
   })()
 
+  // Generar PDF
+  const pdfBuffer = await renderToBuffer(
+    React.createElement(ReciboPDF, {
+      data: {
+        numeroRecibo, fechaPago, concepto, monto, moneda, tasaCambio,
+        metodoPago, referencia, bancoEmisor, observaciones, fechaAprobacion,
+        clienteNombre, clienteCedula, clienteTelefono, clienteCorreo,
+        clienteCiudad, vehiculoMarca, vehiculoModelo, vehiculoVersion,
+        vehiculoAnio, placa,
+      },
+    })
+  )
+
   const body = `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#C41E3A;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Confirmación de Pago</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 6px">Estimado/a ${clienteNombre}</h1>
-    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 28px">Le confirmamos que hemos recibido su pago. A continuación el detalle:</p>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 28px">Le confirmamos que hemos recibido su pago. Encontrará el recibo adjunto en PDF.</p>
 
     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px 24px;margin-bottom:24px">
       <table width="100%" cellpadding="0" cellspacing="0">
@@ -189,6 +223,10 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
     to: [clienteCorreo],
     subject: `Recibo ${numeroRecibo} — Confirmación de pago · La Oriental Automotors`,
     html: wrap(body),
+    attachments: [{
+      filename: `${numeroRecibo}.pdf`,
+      content: pdfBuffer,
+    }],
   })
   console.log('[email-ingresos] enviarReciboCliente:', JSON.stringify({ data, error }))
   if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`)
