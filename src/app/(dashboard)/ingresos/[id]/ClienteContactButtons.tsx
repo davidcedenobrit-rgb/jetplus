@@ -32,7 +32,8 @@ export default function ClienteContactButtons({
   numeroRecibo, monto, moneda, concepto, fechaPago, metodoPago, referencia, rol,
 }: Props) {
   const [emailSent, setEmailSent] = useState(false)
-  const [sending, setSending] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [loadingWA, setLoadingWA] = useState(false)
   const [error, setError] = useState('')
 
   if (!ROL_PERMITIDO.includes(rol)) return null
@@ -50,20 +51,8 @@ export default function ClienteContactButtons({
     } catch { return fechaPago }
   })()
 
-  const waText = encodeURIComponent(
-    `Estimado/a ${clienteNombre},\n\n` +
-    `Le confirmamos la recepción de su pago:\n\n` +
-    `📋 N° Recibo: ${numeroRecibo}\n` +
-    `💼 Concepto: ${concepto}\n` +
-    `💰 Monto: ${monedaLabel} ${montoFmt}\n` +
-    `📅 Fecha: ${fechaLegible}\n` +
-    `💳 Método: ${metodoPago}\n` +
-    (referencia ? `🔢 Referencia: ${referencia}\n` : '') +
-    `\nGracias por su preferencia.\nLa Oriental Automotors`
-  )
-
   async function handleEmail() {
-    setSending(true)
+    setSendingEmail(true)
     setError('')
     try {
       const res = await fetch('/api/ingresos/enviar-cliente', {
@@ -80,8 +69,48 @@ export default function ClienteContactButtons({
     } catch {
       setError('Error de conexión')
     } finally {
-      setSending(false)
+      setSendingEmail(false)
     }
+  }
+
+  async function handleWhatsApp() {
+    if (!clienteTelefono) return
+    setLoadingWA(true)
+    setError('')
+
+    let pdfUrl = ''
+    try {
+      const res = await fetch('/api/ingresos/pdf-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingresoId }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        pdfUrl = json.url ?? ''
+      }
+    } catch {}
+
+    const lines = [
+      `Estimado/a ${clienteNombre},`,
+      '',
+      'Le confirmamos la recepción de su pago:',
+      '',
+      `📋 N° Recibo: ${numeroRecibo}`,
+      `💼 Concepto: ${concepto}`,
+      `💰 Monto: ${monedaLabel} ${montoFmt}`,
+      `📅 Fecha: ${fechaLegible}`,
+      `💳 Método: ${metodoPago}`,
+      ...(referencia ? [`🔢 Referencia: ${referencia}`] : []),
+      ...(pdfUrl ? ['', `📄 Su recibo en PDF: ${pdfUrl}`] : []),
+      '',
+      'Gracias por su preferencia.',
+      'La Oriental Automotors',
+    ]
+
+    const waUrl = `https://wa.me/${formatPhoneWA(clienteTelefono)}?text=${encodeURIComponent(lines.join('\n'))}`
+    setLoadingWA(false)
+    window.open(waUrl, '_blank')
   }
 
   return (
@@ -89,10 +118,10 @@ export default function ClienteContactButtons({
       <h3 className="text-sm font-bold text-oriental-black mb-4">Enviar al cliente</h3>
       <div className="space-y-2">
 
-        {/* Email */}
+        {/* Email con PDF adjunto */}
         <button
           onClick={handleEmail}
-          disabled={sending || emailSent || !clienteCorreo}
+          disabled={sendingEmail || emailSent || !clienteCorreo}
           title={!clienteCorreo ? 'El cliente no tiene correo registrado' : undefined}
           className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
             emailSent
@@ -102,28 +131,31 @@ export default function ClienteContactButtons({
         >
           {emailSent
             ? <CheckCircle2 size={16} />
-            : sending
+            : sendingEmail
             ? <Loader2 size={16} className="animate-spin" />
             : <Mail size={16} />}
           <span className="flex-1 text-left">
-            {emailSent ? 'Correo enviado' : sending ? 'Enviando...' : 'Enviar por correo'}
+            {emailSent ? 'Correo enviado' : sendingEmail ? 'Generando PDF...' : 'Enviar por correo'}
           </span>
           {!clienteCorreo && !emailSent && (
             <span className="text-[10px] font-normal opacity-60">Sin correo</span>
           )}
         </button>
 
-        {/* WhatsApp */}
+        {/* WhatsApp con link al PDF */}
         {clienteTelefono ? (
-          <a
-            href={`https://wa.me/${formatPhoneWA(clienteTelefono)}?text=${waText}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-green-500 hover:bg-green-600 text-white transition-colors"
+          <button
+            onClick={handleWhatsApp}
+            disabled={loadingWA}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-75"
           >
-            <MessageCircle size={16} />
-            Enviar por WhatsApp
-          </a>
+            {loadingWA
+              ? <Loader2 size={16} className="animate-spin" />
+              : <MessageCircle size={16} />}
+            <span className="flex-1 text-left">
+              {loadingWA ? 'Generando PDF...' : 'Enviar por WhatsApp'}
+            </span>
+          </button>
         ) : (
           <div className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-gray-100 text-gray-400 cursor-not-allowed">
             <MessageCircle size={16} />
