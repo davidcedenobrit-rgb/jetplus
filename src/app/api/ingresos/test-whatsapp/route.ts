@@ -63,7 +63,7 @@ export async function GET(req: Request) {
     vehiculo = v
   }
 
-  const ec = await fetchECData(supabase, ingresoId, ingreso.vehiculo_id ?? null)
+  const ec = await fetchECData(ingresoId, ingreso.vehiculo_id ?? null)
 
   // Generar PDF y subirlo
   const pdfBuffer = await renderToBuffer(
@@ -107,8 +107,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 })
   }
 
-  const { data: urlData } = admin.storage.from('comprobantes').getPublicUrl(storagePath)
-  const pdfUrl = urlData.publicUrl
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+  const pdfUrl = `${APP_URL}/api/recibo/${ingreso.numero_recibo}`
 
   const montoFmt = new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(Number(ingreso.monto))
   const monedaLabel = ingreso.moneda === 'VES' ? 'Bs.' : ingreso.moneda

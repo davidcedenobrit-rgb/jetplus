@@ -87,7 +87,10 @@ export default function ClienteContactButtons({
       })
       if (res.ok) {
         const json = await res.json()
-        pdfUrl = json.url ?? ''
+        // URL limpia en nuestro dominio (sin Supabase visible)
+        pdfUrl = json.nombre
+          ? `${window.location.origin}/api/recibo/${json.nombre.replace('.pdf', '')}`
+          : (json.url ?? '')
       }
     } catch {}
 

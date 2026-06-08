@@ -30,7 +30,7 @@ export async function GET() {
     vehiculo = v
   }
 
-  const ec = await fetchECData(supabase, TEST_INGRESO_ID, ingreso.vehiculo_id ?? null)
+  const ec = await fetchECData(TEST_INGRESO_ID, ingreso.vehiculo_id ?? null)
 
   try {
     await enviarReciboCliente({

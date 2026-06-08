@@ -1,12 +1,22 @@
-// Fetches cuotas aplicadas + estado de cuenta for a given ingreso
-// Used by PDF generation routes to populate ReciboPDFData
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
-export async function fetchECData(supabase: any, ingresoId: string, vehiculoId: string | null) {
+function getAdmin() {
+  return createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
+export async function fetchECData(ingresoId: string, vehiculoId: string | null) {
+  const admin = getAdmin()
+
   // Cuotas aplicadas a este ingreso
-  const { data: raw } = await supabase
+  const { data: raw, error: rawErr } = await admin
     .from('cuota_ingresos')
     .select('monto_aplicado, cuotas(numero_cuota, monto, fecha_vencimiento, credito_id, creditos(plan_tipo))')
     .eq('ingreso_id', ingresoId)
+
+  if (rawErr) console.error('[fetchECData] cuota_ingresos:', rawErr)
 
   const cuotasAplicadas = (raw ?? []).map((ci: any) => {
     const cuota = ci.cuotas
@@ -34,19 +44,22 @@ export async function fetchECData(supabase: any, ingresoId: string, vehiculoId: 
   let creditosDesglose: Array<{ planNombre: string; saldo: number; totalCuotas: number; cuotasPagadas: number }> = []
 
   if (vehiculoId) {
-    const { data: creds } = await supabase
+    const { data: creds, error: credsErr } = await admin
       .from('creditos')
       .select('id, plan_tipo, monto_financiado, saldo, num_cuotas')
       .eq('vehiculo_id', vehiculoId)
       .order('plan_tipo')
+
+    if (credsErr) console.error('[fetchECData] creditos:', credsErr)
     const creditosVehiculo = creds ?? []
 
     let cuotasVehiculo: any[] = []
     if (creditosVehiculo.length > 0) {
-      const { data: cuotas } = await supabase
+      const { data: cuotas, error: cuotasErr } = await admin
         .from('cuotas')
         .select('id, estado, credito_id')
         .in('credito_id', creditosVehiculo.map((c: any) => c.id))
+      if (cuotasErr) console.error('[fetchECData] cuotas:', cuotasErr)
       cuotasVehiculo = cuotas ?? []
     }
 
