@@ -88,7 +88,7 @@ function NuevoIngresoPageInner() {
   // ── Campos del pago ──
   const [concepto, setConcepto] = useState('')
   const [monto, setMonto] = useState('')
-  const [moneda, setMoneda] = useState<'USD' | 'VES'>('USD')
+  const [moneda, setMoneda] = useState<'USD' | 'VES' | 'USDT'>('USD')
   const [metodoPago, setMetodoPago] = useState('')
   const [bancoEmisor, setBancoEmisor] = useState('')
   const [bancoReceptor, setBancoReceptor] = useState('')
@@ -1020,7 +1020,7 @@ function NuevoIngresoPageInner() {
             <div>
               <label className="label">Moneda *</label>
               <div className="flex gap-2">
-                {(['USD', 'VES'] as const).map(m => (
+                {(['USD', 'VES', 'USDT'] as const).map(m => (
                   <button key={m} type="button" onClick={() => setMoneda(m)}
                     className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
                       moneda === m ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'

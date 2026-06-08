@@ -14,12 +14,12 @@ export default async function CarlaPage() {
   // Solo roles permitidos pueden ver esta página
   if (!ROL_CARLA_VISIBLE.includes(rol)) redirect('/dashboard')
 
-  // Ingresos depositados aún no entregados a Carla (pendientes)
+  // Ingresos enviados por Rojas a Carla y aún no confirmados
   const { data: pendientes } = await supabase
     .from('ingresos')
     .select('*, clientes(nombre, cedula_rif)')
-    .eq('estado', 'depositado')
-    .order('deposito_at', { ascending: true })
+    .eq('estado', 'enviado_carla')
+    .order('enviado_carla_at', { ascending: true })
 
   // Ingresos ya entregados a Carla
   const { data: entregados } = await supabase
@@ -52,7 +52,7 @@ export default async function CarlaPage() {
             <div className="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center">
               <Clock size={18} className="text-amber-600" />
             </div>
-            <p className="text-sm font-medium text-oriental-gray">Pendientes de entrega</p>
+            <p className="text-sm font-medium text-oriental-gray">Enviados por Rojas</p>
           </div>
           <p className="text-2xl font-extrabold text-oriental-black">{pendientes?.length ?? 0}</p>
           <p className="text-xs text-oriental-gray mt-1">{formatCurrency(totalPendiente)} total</p>
@@ -74,10 +74,10 @@ export default async function CarlaPage() {
             <div className="w-9 h-9 bg-oriental-red/10 rounded-lg flex items-center justify-center">
               <Package size={18} className="text-oriental-red" />
             </div>
-            <p className="text-sm font-medium text-oriental-gray">Monto por entregar</p>
+            <p className="text-sm font-medium text-oriental-gray">Monto por confirmar</p>
           </div>
           <p className="text-2xl font-extrabold text-oriental-black">{formatCurrency(totalPendiente)}</p>
-          <p className="text-xs text-oriental-gray mt-1">en {pendientes?.length ?? 0} depósitos</p>
+          <p className="text-xs text-oriental-gray mt-1">en {pendientes?.length ?? 0} recibos</p>
         </div>
       </div>
 
@@ -85,7 +85,7 @@ export default async function CarlaPage() {
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-          <h2 className="text-base font-bold text-oriental-black">Pendientes de entrega a Carla</h2>
+          <h2 className="text-base font-bold text-oriental-black">Por confirmar recepción</h2>
           {(pendientes?.length ?? 0) > 0 && (
             <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-full">
               {pendientes!.length}
@@ -96,7 +96,7 @@ export default async function CarlaPage() {
         {(!pendientes || pendientes.length === 0) ? (
           <div className="card p-8 text-center">
             <CheckCircle2 size={32} className="mx-auto text-teal-400 mb-3" />
-            <p className="text-oriental-gray text-sm">No hay depósitos pendientes de entrega</p>
+            <p className="text-oriental-gray text-sm">No hay recibos pendientes de confirmación</p>
           </div>
         ) : (
           <div className="card overflow-hidden">
@@ -107,7 +107,7 @@ export default async function CarlaPage() {
                   <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Cliente</th>
                   <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Placa</th>
                   <th className="text-right px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Monto</th>
-                  <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Depositado</th>
+                  <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Enviado</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -126,7 +126,7 @@ export default async function CarlaPage() {
                       {formatCurrency(ingreso.monto, ingreso.moneda)}
                     </td>
                     <td className="px-4 py-3 text-oriental-gray text-xs">
-                      {ingreso.deposito_at ? formatDate(ingreso.deposito_at) : '—'}
+                      {(ingreso as any).enviado_carla_at ? formatDate((ingreso as any).enviado_carla_at) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <Link href={`/ingresos/${ingreso.id}`} className="text-oriental-red hover:text-oriental-red-dark font-medium text-xs">
