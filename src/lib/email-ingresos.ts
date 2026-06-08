@@ -4,6 +4,7 @@ function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
 const FROM = 'La Oriental Automotors <repuestos@laoriental.co>'
+const FROM_ADMIN = 'La Oriental Automotors <administracion@laoriental.co>'
 
 // Destinatarios de prueba (en producción se cambiarán a vehimotors)
 const TO_VEHIMOTORS = [
@@ -127,5 +128,68 @@ export async function enviarReporteVehimotors(opts: ReportarVehimotorsOpts) {
     html: wrap(body),
   })
   console.log('[email-ingresos] Resend response:', JSON.stringify({ data, error }))
+  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`)
+}
+
+// ─── Recibo al cliente ────────────────────────────────────────────────────────
+
+export interface EnviarReciboClienteOpts {
+  clienteNombre: string
+  clienteCorreo: string
+  numeroRecibo: string
+  concepto: string
+  monto: number
+  moneda: string
+  metodoPago: string
+  referencia?: string | null
+  fechaPago: string
+}
+
+export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
+  const { clienteNombre, clienteCorreo, numeroRecibo, concepto, monto, moneda, metodoPago, referencia, fechaPago } = opts
+  const resend = getResend()
+
+  const montoFmt = new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(monto)
+  const monedaLabel = moneda === 'VES' ? 'Bs.' : moneda
+
+  const fechaFmt = (() => {
+    try {
+      return new Date(fechaPago + 'T12:00:00').toLocaleDateString('es-VE', {
+        day: 'numeric', month: 'long', year: 'numeric',
+      })
+    } catch { return fechaPago }
+  })()
+
+  const body = `
+    <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#C41E3A;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Confirmación de Pago</p>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 6px">Estimado/a ${clienteNombre}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 28px">Le confirmamos que hemos recibido su pago. A continuación el detalle:</p>
+
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px 24px;margin-bottom:24px">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${row('N° Recibo', `<span style="font-family:monospace;font-weight:800;color:#C41E3A">${numeroRecibo}</span>`)}
+        ${row('Concepto', concepto)}
+        ${row('Monto recibido', `<span style="font-size:18px;font-weight:800;color:#111">${monedaLabel} ${montoFmt}</span>`)}
+        ${row('Método de pago', metodoPago)}
+        ${referencia ? row('N° Referencia', referencia) : ''}
+        ${row('Fecha', fechaFmt)}
+      </table>
+    </div>
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px 24px;text-align:center">
+      <p style="font-family:sans-serif;font-size:15px;color:#166534;margin:0 0 6px;font-weight:700">✓ Pago recibido correctamente</p>
+      <p style="font-family:sans-serif;font-size:13px;color:#6b7280;margin:0">Gracias por su preferencia. La Oriental Automotors siempre a su servicio.</p>
+    </div>
+  `
+
+  const { data, error } = await resend.emails.send({
+    from: FROM_ADMIN,
+    to: [clienteCorreo],
+    subject: `Recibo ${numeroRecibo} — Confirmación de pago · La Oriental Automotors`,
+    html: wrap(body),
+  })
+  console.log('[email-ingresos] enviarReciboCliente:', JSON.stringify({ data, error }))
   if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`)
 }

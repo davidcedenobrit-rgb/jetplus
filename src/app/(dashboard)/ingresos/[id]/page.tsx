@@ -8,6 +8,7 @@ import {
   User, Clock, Hash, CreditCard, BadgeCheck, ImageIcon
 } from 'lucide-react'
 import ActionButtons from './ActionButtons'
+import ClienteContactButtons from './ClienteContactButtons'
 import ComprobantesGallery from '@/components/ComprobantesGallery'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -489,6 +490,22 @@ export default async function IngresoDetallePage({
             monto={ingreso.monto}
             moneda={ingreso.moneda}
             numeroRecibo={ingreso.numero_recibo}
+            rol={rol}
+          />
+
+          {/* ── Enviar al cliente ────────────────────────────────── */}
+          <ClienteContactButtons
+            ingresoId={ingreso.id}
+            clienteNombre={cliente?.nombre ?? ''}
+            clienteCorreo={cliente?.correo ?? null}
+            clienteTelefono={cliente?.telefono ?? null}
+            numeroRecibo={ingreso.numero_recibo}
+            monto={Number(ingreso.monto)}
+            moneda={ingreso.moneda}
+            concepto={ingreso.concepto}
+            fechaPago={ingreso.fecha_pago}
+            metodoPago={ingreso.metodo_pago}
+            referencia={ingreso.referencia ?? null}
             rol={rol}
           />
 
