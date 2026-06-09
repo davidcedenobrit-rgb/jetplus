@@ -124,7 +124,13 @@ export default async function IngresosPage({
                   </td>
                   <td className="px-4 py-3 text-gray-700">{ingreso.concepto}</td>
                   <td className="px-4 py-3 text-right font-bold text-oriental-black">
-                    {formatCurrency(ingreso.monto)}
+                    {ingreso.moneda === 'VES' && ingreso.tasa_cambio
+                      ? <span>
+                          <span className="text-oriental-black">{formatCurrency(Number(ingreso.monto) / Number(ingreso.tasa_cambio))}</span>
+                          <span className="block text-[10px] font-normal text-oriental-gray">Bs. {Number(ingreso.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                        </span>
+                      : formatCurrency(ingreso.monto, ingreso.moneda === 'VES' ? 'VES' : 'USD')
+                    }
                   </td>
                   <td className="px-4 py-3 text-oriental-gray">{formatDate(ingreso.fecha_pago)}</td>
                   <td className="px-4 py-3">
