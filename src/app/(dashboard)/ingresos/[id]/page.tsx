@@ -252,9 +252,8 @@ export default async function IngresoDetallePage({
                             <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Cuota</th>
                             <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Plan</th>
                             <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Vencimiento</th>
-                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Monto total</th>
-                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Aplicado</th>
-                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Pendiente</th>
+                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Monto cuota</th>
+                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Abonado este recibo</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -265,7 +264,6 @@ export default async function IngresoDetallePage({
                               planTipo === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Crédito'
                             const montoTotal = Number(cuota?.monto ?? 0)
                             const aplicado = Number(ci.monto_aplicado)
-                            const pendiente = Math.max(0, montoTotal - aplicado)
                             return (
                               <tr key={idx} className="border-b border-gray-100 last:border-0">
                                 <td className="px-3 py-2 font-semibold text-oriental-black">#{cuota?.numero_cuota ?? '—'}</td>
@@ -280,9 +278,6 @@ export default async function IngresoDetallePage({
                                 </td>
                                 <td className="px-3 py-2 text-right font-bold text-oriental-black">
                                   ${aplicado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className={`px-3 py-2 text-right font-bold ${pendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                  ${pendiente.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
                                 </td>
                               </tr>
                             )
