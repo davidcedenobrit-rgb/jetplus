@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban
+  Shield, ScrollText, Building2, Ban, Globe
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -205,6 +205,18 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                     {anulacionesPendientes > 99 ? '99+' : anulacionesPendientes}
                   </span>
                 )}
+              </Link>
+            )
+          })()}
+
+          {/* Link de Ventas */}
+          {['jose', 'admin', 'director'].includes(rol) && (() => {
+            const active = pathname === '/link-ventas' || pathname.startsWith('/link-ventas/')
+            return (
+              <Link href="/link-ventas" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Globe size={18} />
+                <span className="flex-1">Link de Ventas</span>
               </Link>
             )
           })()}
