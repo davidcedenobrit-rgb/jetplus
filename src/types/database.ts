@@ -9,7 +9,7 @@ export type EstadoRecibo =
   | 'registrado' | 'pendiente_aprobacion' | 'aprobado' | 'rechazado'
   | 'correccion_requerida' | 'enviado_cliente' | 'enviado_carla'
   | 'listo_depositar' | 'enviado_deposito' | 'depositado'
-  | 'entregado_carla' | 'reportado_vehimotors' | 'anulado'
+  | 'entregado_carla' | 'reportado_vehimotors' | 'pendiente_anulacion' | 'anulado'
 export type EstadoEgreso =
   | 'registrado' | 'pendiente_aprobacion' | 'aprobado' | 'rechazado'
   | 'correccion_requerida' | 'pagado' | 'reportado_carla'
@@ -127,6 +127,14 @@ export interface Ingreso {
   deposito_at: string | null
   vehimotors_at: string | null
   updated_at: string
+  anulacion_solicitada_por: string | null
+  anulacion_solicitada_at: string | null
+  anulacion_motivo: string | null
+  anulacion_observaciones: string | null
+  anulacion_estado_previo: string | null
+  anulacion_resuelta_por: string | null
+  anulacion_resuelta_at: string | null
+  anulacion_rechazada_motivo: string | null
 }
 
 export interface Egreso {

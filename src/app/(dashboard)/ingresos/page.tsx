@@ -39,6 +39,7 @@ export default async function IngresosPage({
     depositado: 'bg-emerald-100 text-emerald-800',
     entregado_carla: 'bg-teal-100 text-teal-800',
     reportado_vehimotors: 'bg-indigo-100 text-indigo-800',
+    pendiente_anulacion: 'bg-orange-100 text-orange-800',
     anulado: 'bg-gray-200 text-gray-400',
   }
 
@@ -56,6 +57,7 @@ export default async function IngresosPage({
         { estado: 'entregado_carla',     label: 'Entregado Carla'   },
         { estado: 'reportado_vehimotors',label: 'Vehimotors'        },
         { estado: 'rechazado',           label: 'Rechazado'         },
+        { estado: 'pendiente_anulacion', label: 'Pend. Anulación'  },
       ]
     : [
         { estado: '',                    label: 'Todos'             },
@@ -63,6 +65,7 @@ export default async function IngresosPage({
         { estado: 'aprobado',            label: 'Aprobado'          },
         { estado: 'rechazado',           label: 'Rechazado'         },
         { estado: 'correccion_requerida',label: 'Corrección'        },
+        { estado: 'pendiente_anulacion', label: 'Pend. Anulación'  },
       ]
 
   return (

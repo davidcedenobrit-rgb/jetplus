@@ -98,6 +98,14 @@ function NuevoIngresoPageInner() {
   const [observaciones, setObservaciones] = useState('')
   const [tasaCambio, setTasaCambio] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
+  const [rolUsuario, setRolUsuario] = useState<string>('')
+
+  // Cargar rol del usuario para mostrar advertencia si aplica
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setRolUsuario((user?.user_metadata?.rol as string) ?? 'editor')
+    })
+  }, [])
 
   // ── Auto-carga desde query params (cuando llega desde el botón "Registrar pago" del crédito) ──
   useEffect(() => {
@@ -596,6 +604,17 @@ function NuevoIngresoPageInner() {
           <p className="text-oriental-gray text-sm mt-0.5">Nuevo pago de cliente</p>
         </div>
       </div>
+
+      {/* Aviso para Mary y Leysdem */}
+      {['mary', 'leysdem'].includes(rolUsuario) && (
+        <div className="mb-6 flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-300 rounded-xl">
+          <AlertCircle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800">
+            <strong>Revisa cuidadosamente</strong> el cliente, placa, monto, referencia y método de pago antes de guardar.
+            Los recibos anulados no se eliminan ni se reutilizan en el correlativo — quedará un registro permanente.
+          </p>
+        </div>
+      )}
 
       {vieneDeCuota && (
         <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-xl">

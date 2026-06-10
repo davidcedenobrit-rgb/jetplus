@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2
+  Shield, ScrollText, Building2, Ban
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -35,10 +35,11 @@ interface SidebarProps {
   rol?: string
   aprobacionesPendientes?: number
   depositosPendientesCarla?: number
+  anulacionesPendientes?: number
   onClose?: () => void
 }
 
-export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0, onClose }: SidebarProps) {
+export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0, anulacionesPendientes = 0, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -138,7 +139,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* Clientes → Créditos — oculto para Arianna y Almacén */}
+          {/* Clientes → Créditos */}
           {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
@@ -150,7 +151,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })}
 
-          {/* Vehimotors — solo directores */}
+          {/* Vehimotors */}
           {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
             const active = pathname === '/vehimotors' || pathname.startsWith('/vehimotors/')
             return (
@@ -162,7 +163,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* Tasas → Docs. Empresa — oculto para Arianna y Almacén */}
+          {/* Tasas → Docs. Empresa */}
           {!['arianna', 'almacen'].includes(rol) && navItemsBottom2.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
@@ -174,7 +175,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })}
 
-          {/* Aprobaciones — oculto para Arianna y Almacén */}
+          {/* Aprobaciones */}
           {!['arianna', 'almacen'].includes(rol) && (() => {
             const active = pathname === '/aprobaciones' || pathname.startsWith('/aprobaciones/')
             return (
@@ -191,7 +192,24 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* Importar — solo directores */}
+          {/* Anulaciones */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/anulaciones' || pathname.startsWith('/anulaciones/')
+            return (
+              <Link href="/anulaciones" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Ban size={18} />
+                <span className="flex-1">Anulaciones</span>
+                {anulacionesPendientes > 0 && (
+                  <span className="bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                    {anulacionesPendientes > 99 ? '99+' : anulacionesPendientes}
+                  </span>
+                )}
+              </Link>
+            )
+          })()}
+
+          {/* Importar */}
           {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
             const active = pathname === '/importar' || pathname.startsWith('/importar/')
             return (
@@ -203,7 +221,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* Auditoría y Logs — solo Rojas (director/admin) */}
+          {/* Auditoría y Logs */}
           {['director', 'admin'].includes(rol) && (() => {
             const activeAud = pathname === '/auditoria' || pathname.startsWith('/auditoria/')
             const activeLogs = pathname === '/logs' || pathname.startsWith('/logs/')
@@ -223,7 +241,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* RR · Recibido de Rojas — para director/admin también */}
+          {/* RR · Recibido de Rojas */}
           {['director', 'admin', 'jose'].includes(rol) && (() => {
             const active = pathname === '/carla' || pathname.startsWith('/carla/')
             return (

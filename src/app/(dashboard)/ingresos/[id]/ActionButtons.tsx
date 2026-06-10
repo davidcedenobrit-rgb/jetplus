@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import {
   CheckCircle2, XCircle, AlertTriangle,
   Send, Landmark, Building2, Printer, BadgeCheck,
-  User, Clock, X, Upload, Hash, CreditCard
+  User, Clock, X, Upload, Hash, CreditCard, Ban, ShieldAlert, MessageSquare
 } from 'lucide-react'
-import DeleteButton from '@/components/DeleteButton'
-
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
+const ROL_PUEDE_SOLICITAR = ['mary', 'leysdem', 'jose', 'admin', 'director']
+const ROL_PUEDE_RESOLVER = ['jose', 'admin', 'director']
 
 interface Props {
   ingresoId: string
@@ -19,6 +19,149 @@ interface Props {
   moneda: string
   numeroRecibo: string
   rol?: string
+}
+
+// ─── Modal: Solicitar anulación (mary/leysdem) ────────────────────────────────
+function ModalSolicitarAnulacion({
+  onClose, onConfirm, loading,
+}: {
+  onClose: () => void
+  onConfirm: (motivo: string, observaciones: string) => Promise<void>
+  loading: boolean
+}) {
+  const [motivo, setMotivo] = useState('')
+  const [observaciones, setObservaciones] = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!motivo.trim()) return
+    await onConfirm(motivo.trim(), observaciones.trim())
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center">
+              <Ban size={18} className="text-white" />
+            </div>
+            <div>
+              <h2 className="font-bold text-oriental-black text-base">Solicitar anulación</h2>
+              <p className="text-xs text-oriental-gray">Se notificará a Rojas para aprobación</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-oriental-gray" />
+          </button>
+        </div>
+
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-5">
+          <p className="text-xs text-orange-800 font-medium">
+            ⚠️ El recibo no se eliminará. Quedará como <strong>Pendiente de anulación</strong> hasta que Rojas apruebe.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">
+              Motivo <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={motivo}
+              onChange={e => setMotivo(e.target.value)}
+              required
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors"
+            >
+              <option value="">Seleccionar motivo...</option>
+              <option value="Ingreso registrado por error">Ingreso registrado por error</option>
+              <option value="Cliente incorrecto">Cliente incorrecto</option>
+              <option value="Monto incorrecto">Monto incorrecto</option>
+              <option value="Duplicado">Duplicado</option>
+              <option value="Pago no recibido">Pago no recibido</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">
+              Observaciones <span className="text-gray-400 font-normal normal-case">(opcional)</span>
+            </label>
+            <div className="relative">
+              <MessageSquare size={15} className="absolute left-3 top-3 text-oriental-gray" />
+              <textarea
+                value={observaciones}
+                onChange={e => setObservaciones(e.target.value)}
+                placeholder="Detalles adicionales..."
+                rows={3}
+                className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-oriental-gray hover:bg-gray-50 transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" disabled={loading || !motivo.trim()}
+              className="flex-1 px-4 py-2.5 rounded-lg bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              <Ban size={15} />
+              {loading ? 'Enviando...' : 'Solicitar anulación'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Modal: Rechazar anulación (Rojas) ────────────────────────────────────────
+function ModalRechazarAnulacion({
+  onClose, onConfirm, loading,
+}: {
+  onClose: () => void
+  onConfirm: (motivo: string) => Promise<void>
+  loading: boolean
+}) {
+  const [motivo, setMotivo] = useState('')
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-bold text-oriental-black text-base">Rechazar anulación</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-oriental-gray" />
+          </button>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">
+            Motivo del rechazo <span className="text-gray-400 font-normal normal-case">(opcional)</span>
+          </label>
+          <textarea
+            value={motivo}
+            onChange={e => setMotivo(e.target.value)}
+            placeholder="Explica por qué se rechaza la anulación..."
+            rows={3}
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-colors resize-none"
+          />
+        </div>
+        <div className="flex gap-3 pt-4">
+          <button type="button" onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-oriental-gray hover:bg-gray-50 transition-colors">
+            Cancelar
+          </button>
+          <button onClick={() => onConfirm(motivo.trim())} disabled={loading}
+            className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
+            {loading ? 'Rechazando...' : 'Confirmar rechazo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ─── Modal: José envía a depositar ───────────────────────────────────────────
@@ -307,6 +450,9 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
   const [loading, setLoading] = useState('')
   const [showModalDeposito, setShowModalDeposito] = useState(false)
   const [showModalConfirmar, setShowModalConfirmar] = useState(false)
+  const [showModalSolicitarAnulacion, setShowModalSolicitarAnulacion] = useState(false)
+  const [showModalRechazarAnulacion, setShowModalRechazarAnulacion] = useState(false)
+  const [anulacionError, setAnulacionError] = useState('')
 
   const esDirector = ROL_DIRECTOR.includes(rol)
 
@@ -408,6 +554,52 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
       } else {
         router.refresh()
       }
+    } finally {
+      setLoading('')
+    }
+  }
+
+  async function handleSolicitarAnulacion(motivo: string, observaciones: string) {
+    setLoading('solicitar_anulacion')
+    setAnulacionError('')
+    try {
+      const res = await fetch('/api/ingresos/solicitar-anulacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingresoId, motivo, observaciones }),
+      })
+      if (!res.ok) {
+        const { error } = await res.json()
+        setAnulacionError(error ?? 'Error al solicitar anulación')
+      } else {
+        setShowModalSolicitarAnulacion(false)
+        router.refresh()
+      }
+    } catch {
+      setAnulacionError('Error de conexión')
+    } finally {
+      setLoading('')
+    }
+  }
+
+  async function handleResolverAnulacion(decision: 'aprobar' | 'rechazar', motivoRechazo?: string) {
+    setLoading(`resolver_${decision}`)
+    setAnulacionError('')
+    try {
+      const res = await fetch('/api/ingresos/resolver-anulacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingresoId, decision, motivoRechazo }),
+      })
+      if (!res.ok) {
+        const { error } = await res.json()
+        setAnulacionError(error ?? 'Error al resolver anulación')
+      } else {
+        setShowModalRechazarAnulacion(false)
+        router.refresh()
+      }
+    } catch {
+      setAnulacionError('Error de conexión')
     } finally {
       setLoading('')
     }
@@ -543,7 +735,55 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
             💡 En Chrome: activa <strong>Más ajustes</strong> y desactiva<br />
             <em>"Encabezados y pies de página"</em> para una impresión limpia
           </p>
-          <DeleteButton table="ingresos" id={ingresoId} redirectTo="/ingresos" label="Eliminar ingreso" />
+
+          {/* Bloque de anulación */}
+          {estado !== 'anulado' && estado !== 'pendiente_anulacion' && ROL_PUEDE_SOLICITAR.includes(rol) && (
+            <button
+              onClick={() => { setAnulacionError(''); setShowModalSolicitarAnulacion(true) }}
+              disabled={loading !== ''}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold border border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors disabled:opacity-50"
+            >
+              <Ban size={16} />
+              Solicitar anulación
+            </button>
+          )}
+
+          {/* Para Rojas: aprobar o rechazar anulación pendiente */}
+          {estado === 'pendiente_anulacion' && ROL_PUEDE_RESOLVER.includes(rol) && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                <ShieldAlert size={14} />
+                <span className="text-xs font-semibold">Anulación pendiente de aprobación</span>
+              </div>
+              <button
+                onClick={() => handleResolverAnulacion('aprobar')}
+                disabled={loading !== ''}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50"
+              >
+                <Ban size={16} />
+                {loading === 'resolver_aprobar' ? 'Anulando...' : 'Aprobar anulación'}
+              </button>
+              <button
+                onClick={() => { setAnulacionError(''); setShowModalRechazarAnulacion(true) }}
+                disabled={loading !== ''}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <XCircle size={16} />
+                Rechazar anulación
+              </button>
+            </div>
+          )}
+
+          {estado === 'anulado' && (
+            <div className="flex items-center gap-2 text-gray-500 bg-gray-100 rounded-lg px-3 py-2">
+              <Ban size={14} />
+              <span className="text-xs font-semibold">Ingreso anulado</span>
+            </div>
+          )}
+
+          {anulacionError && (
+            <p className="text-xs text-red-500">{anulacionError}</p>
+          )}
         </div>
       </div>
 
@@ -564,6 +804,22 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
           onClose={() => setShowModalConfirmar(false)}
           onConfirm={handleConfirmarDeposito}
           loading={loading === 'confirmando_deposito'}
+        />
+      )}
+
+      {showModalSolicitarAnulacion && (
+        <ModalSolicitarAnulacion
+          onClose={() => setShowModalSolicitarAnulacion(false)}
+          onConfirm={handleSolicitarAnulacion}
+          loading={loading === 'solicitar_anulacion'}
+        />
+      )}
+
+      {showModalRechazarAnulacion && (
+        <ModalRechazarAnulacion
+          onClose={() => setShowModalRechazarAnulacion(false)}
+          onConfirm={(motivo) => handleResolverAnulacion('rechazar', motivo)}
+          loading={loading === 'resolver_rechazar'}
         />
       )}
     </>

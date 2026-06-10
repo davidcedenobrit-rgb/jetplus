@@ -505,7 +505,6 @@ export default async function IngresoDetallePage({
             referencia={ingreso.referencia ?? null}
             rol={rol}
           />
-
           {/* ── Enviado a Carla: comprobante y observaciones ─────── */}
           {ingreso.estado === 'enviado_carla' && (
             <div className="card p-5 space-y-4 border border-purple-200">
