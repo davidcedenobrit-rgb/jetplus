@@ -1,9 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import VehiculosFiltro from './VehiculosFiltro'
 
-const LOGO = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
-const WA = 'https://wa.me/584120000000'
-const WA_AC500 = 'https://wa.me/584120000000?text=Hola, quiero información sobre el Plan Asegúrate con $500'
+const LOGO    = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
+const MG_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e64a9efded9c776ffb5.png'
+const MX_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e646bac2400279a352f.png'
+const WA_BASE = 'https://wa.me/584149989010'
+const WA_MSG  = encodeURIComponent('Hola 👋 Vengo de la página de La Oriental y quiero información sobre los planes de compra.')
+const WA_FIN  = encodeURIComponent('Hola 👋 Vengo de la web y quiero información sobre el plan de financiamiento 40% inicial + 24 cuotas.')
+const WA_AC   = encodeURIComponent('Hola 👋 Vengo de la web y quiero información sobre el plan Asegúrate con $500.')
 
 export const revalidate = 60
 
@@ -16,197 +20,223 @@ export default async function VentasPage() {
     .eq('disponible', true)
     .order('orden')
 
-  const vehiculosPublicos = vehiculos ?? []
-  const vehiculosAC500 = vehiculosPublicos.filter(v => v.ac500_visible)
+  const lista      = vehiculos ?? []
+  const ac500Lista = lista.filter(v => v.ac500_visible)
 
-  function fm(n: number | null) {
-    return n ? Number(n).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '—'
+  function fm(n: number | null | undefined) {
+    if (!n) return '—'
+    return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#0f0f0f', color: '#fff', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
-      {/* Topbar */}
-      <header className="bg-[#111] border-b border-white/8 px-5 py-4 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <img src={LOGO} alt="La Oriental" className="h-8 object-contain" style={{ filter: 'invert(1)' }} />
-          <div className="hidden sm:block">
-            <p className="text-xs text-white/40 leading-none">Representantes oficiales · MG y MAXUS</p>
+      {/* ── TOPBAR ─────────────────────────────── */}
+      <header style={{ background: '#111', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <img src={LOGO} alt="La Oriental" style={{ height: 34, objectFit: 'contain', filter: 'invert(1)' }} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <img src={MG_LOGO} alt="MG" style={{ height: 18, objectFit: 'contain' }} />
+            <img src={MX_LOGO} alt="MAXUS" style={{ height: 18, objectFit: 'contain' }} />
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-white/40">
-          <span className="hidden sm:inline">📍 Maturín, Monagas</span>
-          <a href={WA} target="_blank" rel="noopener noreferrer"
-            className="px-3 py-1.5 bg-[#16a34a] text-white rounded-lg font-semibold text-xs hover:bg-[#15803d] transition-colors">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>📍 Maturín, Monagas</span>
+          <a href={`${WA_BASE}?text=${WA_MSG}`} target="_blank" rel="noopener noreferrer"
+            style={{ padding: '8px 16px', background: '#16a34a', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
             WhatsApp ↗
           </a>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="max-w-5xl mx-auto px-5 pt-16 pb-12 text-center">
-        <div className="flex items-center justify-center gap-3 mb-5">
-          <span className="text-xs font-bold uppercase tracking-widest text-red-500 bg-red-600/10 px-3 py-1 rounded-full border border-red-600/20">MG</span>
-          <span className="text-white/20">·</span>
-          <span className="text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-600/10 px-3 py-1 rounded-full border border-blue-600/20">MAXUS</span>
-          <span className="text-white/20">·</span>
-          <span className="text-xs font-bold uppercase tracking-widest text-white/40">MATURÍN</span>
+      {/* ── HERO ───────────────────────────────── */}
+      <section style={{ maxWidth: 900, margin: '0 auto', padding: '72px 24px 56px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 24 }}>
+          <span style={{ background: 'rgba(220,38,38,0.15)', color: '#ef4444', border: '1px solid rgba(220,38,38,0.3)', padding: '4px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>MG</span>
+          <span style={{ background: 'rgba(37,99,235,0.15)', color: '#60a5fa', border: '1px solid rgba(37,99,235,0.3)', padding: '4px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>MAXUS</span>
+          <span style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', padding: '4px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: '0.8px' }}>MATURÍN</span>
         </div>
-        <h1 className="text-4xl sm:text-5xl font-black leading-tight mb-4">
+
+        <h1 style={{ fontSize: 'clamp(32px, 6vw, 52px)', fontWeight: 900, lineHeight: 1.1, marginBottom: 18, letterSpacing: '-0.5px' }}>
           Tu próximo vehículo<br />
-          <span className="text-red-500">MG</span> o <span className="text-blue-400">MAXUS</span> está aquí.
+          <span style={{ color: '#ef4444' }}>MG</span> o <span style={{ color: '#60a5fa' }}>MAXUS</span> está aquí.
         </h1>
-        <p className="text-white/50 text-lg max-w-xl mx-auto mb-8">
-          Explora precios base y planes de financiamiento disponibles en nuestra sede de <span className="text-white/80">Maturín</span>. Nuestros asesores te acompañan en cada paso.
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 17, maxWidth: 520, margin: '0 auto 36px', lineHeight: 1.6 }}>
+          Explora precios base y planes de financiamiento disponibles en nuestra sede de{' '}
+          <span style={{ color: 'rgba(255,255,255,0.75)' }}>Maturín</span>. Nuestros asesores te acompañan en cada paso.
         </p>
-        <div className="flex flex-wrap gap-3 justify-center">
-          <a href="#vehiculos" className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors">
-            Ver vehículos →
-          </a>
-          {vehiculosAC500.length > 0 && (
-            <a href="#ac500" className="px-6 py-3 bg-white/8 text-white font-bold rounded-xl hover:bg-white/15 transition-colors border border-white/10">
-              Plan $500 →
-            </a>
+
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <a href="#vehiculos" className="v-btn-red">Ver vehículos →</a>
+          {ac500Lista.length > 0 && (
+            <a href="#ac500" className="v-btn-ghost">Plan $500 →</a>
           )}
-          <a href={WA} target="_blank" rel="noopener noreferrer"
-            className="px-6 py-3 bg-white/8 text-white font-bold rounded-xl hover:bg-white/15 transition-colors border border-white/10">
-            WhatsApp ↗
-          </a>
+          <a href={`${WA_BASE}?text=${WA_MSG}`} target="_blank" rel="noopener noreferrer" className="v-btn-ghost">WhatsApp ↗</a>
+          <a href="#asesor" className="v-btn-ghost">Formulario →</a>
         </div>
+
+        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, marginTop: 24 }}>
+          * Los precios mostrados son referenciales y pueden variar. Consulta disponibilidad con tu asesor.
+        </p>
       </section>
 
-      {/* Cómo funciona */}
-      <section className="bg-[#111] border-y border-white/6 py-12 px-5">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/30 text-center mb-8">¿Cómo funciona?</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {/* ── CÓMO FUNCIONA ───────────────────────── */}
+      <section style={{ background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '48px 24px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center', marginBottom: 32 }}>¿Cómo funciona?</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24 }}>
             {[
-              { icon: '🔍', title: 'Revisa precios y planes', desc: 'Explora los precios base y planes de financiamiento disponibles en esta página.' },
-              { icon: '💬', title: 'Contacta a un asesor', desc: 'Escríbenos por WhatsApp para confirmar disponibilidad y ajustar el plan a tu medida.' },
-              { icon: '📄', title: 'Cotización formal', desc: 'Tu asesor genera una cotización formal desde el catálogo oficial.' },
+              { icon: '🔍', title: 'Revisa los precios base y planes', desc: 'disponibles en esta página.' },
+              { icon: '💬', title: 'Contacta a un asesor por WhatsApp', desc: 'para confirmar disponibilidad.' },
+              { icon: '📄', title: 'Tu asesor genera una cotización formal', desc: 'desde el catálogo.' },
             ].map(item => (
-              <div key={item.title} className="text-center">
-                <div className="text-3xl mb-3">{item.icon}</div>
-                <h3 className="font-bold text-white mb-1">{item.title}</h3>
-                <p className="text-sm text-white/40">{item.desc}</p>
+              <div key={item.title} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>{item.icon}</div>
+                <p style={{ fontSize: 13, lineHeight: 1.5 }}>
+                  <span style={{ fontWeight: 700, color: '#fff' }}>{item.title}</span>{' '}
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>{item.desc}</span>
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Vehículos */}
-      <section id="vehiculos" className="max-w-6xl mx-auto px-5 py-14">
-        <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/30 mb-2">Sede Maturín</p>
-          <h2 className="text-2xl font-black text-white">Vehículos disponibles</h2>
-          <p className="text-white/40 text-sm mt-1">*Precio base y plan de financiamiento disponibles en cada modelo.</p>
+      {/* ── VEHÍCULOS ───────────────────────────── */}
+      <section id="vehiculos" style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 24px' }}>
+        <div style={{ marginBottom: 32 }}>
+          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Sede Maturín · Atención personalizada</p>
+          <h2 style={{ fontSize: 26, fontWeight: 900, marginBottom: 4 }}>Vehículos MG &amp; MAXUS — La Oriental</h2>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Vehículos disponibles en Sede Maturín</p>
         </div>
-        <VehiculosFiltro vehiculos={vehiculosPublicos} />
+
+        <VehiculosFiltro vehiculos={lista} />
       </section>
 
-      {/* Financiamiento directo */}
-      <section className="bg-[#111] border-y border-white/6 py-14 px-5">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/30 mb-3">📈 Financiamiento directo</p>
-          <h2 className="text-3xl font-black mb-4">
-            Estrena con <span className="text-red-500">40% de inicial</span> y<br className="hidden sm:block" /> 24 cuotas fijas
+      {/* ── FINANCIAMIENTO 40% ──────────────────── */}
+      <section style={{ background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '64px 24px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16 }}>📈 Financiamiento directo</p>
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: 900, marginBottom: 16, lineHeight: 1.2 }}>
+            Estrena tu vehículo con <span style={{ color: '#ef4444' }}>40% de inicial</span> y 24 cuotas fijas
           </h2>
-          <p className="text-white/50 max-w-lg mx-auto mb-8">
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 16, maxWidth: 560, margin: '0 auto 36px', lineHeight: 1.6 }}>
             Sin bancos, sin trámites eternos. Financiamiento directo con La Oriental Automotors. Tú eliges el modelo, nosotros ajustamos el plan a tu medida.
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto mb-8">
-            {['✅ Financiamiento directo', '✅ Cuotas fijas en dólares', '✅ Sin banco ni trámites', '✅ Entrega inmediata'].map(item => (
-              <div key={item} className="bg-white/5 rounded-xl px-3 py-3 text-sm text-white/70 font-medium border border-white/8">{item}</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, maxWidth: 680, margin: '0 auto 36px' }}>
+            {[
+              { n: '01', icon: '🚗', title: 'Elige tu modelo', desc: 'SUVs, sedanes, pickups — el que mejor se adapte a tu estilo.' },
+              { n: '02', icon: '💰', title: 'Entrega el 40% de inicial', desc: 'La inicial se ajusta a tu medida. El 60% en cuotas mensuales fijas.' },
+              { n: '03', icon: '🔑', title: 'Sal manejando el mismo día', desc: 'Al entregar la inicial, te llevas tu vehículo nuevo ese mismo día.' },
+            ].map(step => (
+              <div key={step.n} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 16px', textAlign: 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span style={{ color: '#dc2626', fontSize: 13, fontWeight: 800 }}>{step.n}</span>
+                  <span style={{ fontSize: 20 }}>{step.icon}</span>
+                </div>
+                <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{step.title}</p>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 1.5 }}>{step.desc}</p>
+              </div>
             ))}
           </div>
-          <a href={WA} target="_blank" rel="noopener noreferrer"
-            className="inline-block px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors">
+
+          <div style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 20, padding: '28px 32px', maxWidth: 480, margin: '0 auto 32px', textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+              <span style={{ fontSize: 48, fontWeight: 900, color: '#ef4444' }}>40%</span>
+            </div>
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: 'rgba(255,255,255,0.7)' }}>
+              Solo necesitas el <strong style={{ color: '#fff' }}>40% del precio base</strong> como inicial. El{' '}
+              <strong style={{ color: '#fff' }}>60% restante</strong> se divide en{' '}
+              <strong style={{ color: '#fff' }}>24 cuotas mensuales fijas</strong>, directo con La Oriental.
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginTop: 8 }}>Sin banco, sin fiador, sin letra chica.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 16 }}>
+              {['✅ Financiamiento directo', '✅ Cuotas fijas en dólares', '✅ Sin banco ni trámites', '✅ Entrega inmediata', '✅ Inicial ajustable'].map(t => (
+                <span key={t} style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{t}</span>
+              ))}
+            </div>
+          </div>
+
+          <a href={`${WA_BASE}?text=${WA_FIN}`} target="_blank" rel="noopener noreferrer" className="v-btn-red">
             Consultar por WhatsApp
           </a>
         </div>
       </section>
 
-      {/* AC500 */}
-      {vehiculosAC500.length > 0 && (
-        <section id="ac500" className="max-w-6xl mx-auto px-5 py-14">
-          <div className="mb-10 text-center">
-            <span className="inline-block text-xs font-bold uppercase tracking-widest text-red-500 bg-red-600/10 px-3 py-1 rounded-full border border-red-600/20 mb-4">🛡️ Plan exclusivo</span>
-            <h2 className="text-3xl font-black mb-3">
-              Asegúrate con <span className="text-red-500">$500</span>
+      {/* ── AC500 ───────────────────────────────── */}
+      {ac500Lista.length > 0 && (
+        <section id="ac500" style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <span style={{ display: 'inline-block', background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.25)', color: '#ef4444', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', marginBottom: 18 }}>
+              🛡️ Plan exclusivo
+            </span>
+            <h2 style={{ fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, marginBottom: 14, lineHeight: 1.1 }}>
+              Asegúrate con <span style={{ color: '#ef4444' }}>$500</span>
             </h2>
-            <p className="text-white/50 max-w-xl mx-auto">
-              Reserva tu vehículo MG o MAXUS con solo $500 y accede a un precio preferencial.
-              Completa el resto con un cronograma de cuotas y recíbelo en el mes 6.
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 16, maxWidth: 540, margin: '0 auto', lineHeight: 1.6 }}>
+              Reserva tu vehículo MG o MAXUS con solo $500 y accede a un precio preferencial hasta 30% por debajo del mercado. Completa el resto con un cronograma de cuotas y recíbelo en el mes 6.
             </p>
           </div>
 
-          {/* Beneficios AC500 */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+          {/* Beneficios */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, maxWidth: 760, margin: '0 auto 44px' }}>
             {[
-              { icon: '🛡️', label: 'Precio congelado' },
-              { icon: '📉', label: 'Hasta 30% menos' },
-              { icon: '📅', label: 'Cuotas programadas' },
-              { icon: '🚗', label: 'Entrega mes 6' },
+              { icon: '🛡️', t: 'Asegura el precio de hoy', d: 'Con $500 congelas el precio actual de tu vehículo.' },
+              { icon: '📉', t: 'Hasta 30% por debajo del mercado', d: 'Accede a precios significativamente menores al valor de mercado.' },
+              { icon: '📅', t: 'Cronograma de cuotas', d: 'Completa el monto con cuotas programadas hasta la entrega.' },
+              { icon: '🚗', t: 'Entrega en el mes 6', d: 'Tu vehículo nuevo te espera en el mes 6.' },
             ].map(b => (
-              <div key={b.label} className="bg-[#1a1a1a] border border-white/8 rounded-xl p-4 text-center">
-                <div className="text-2xl mb-1">{b.icon}</div>
-                <p className="text-xs font-semibold text-white/60">{b.label}</p>
+              <div key={b.t} style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 16px', textAlign: 'center' }}>
+                <div style={{ fontSize: 28, marginBottom: 10 }}>{b.icon}</div>
+                <p style={{ fontWeight: 700, fontSize: 12, marginBottom: 6, color: '#fff' }}>{b.t}</p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>{b.d}</p>
               </div>
             ))}
           </div>
 
           {/* Cards AC500 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {vehiculosAC500.map(v => (
-              <div key={v.id} className="bg-[#1a1a1a] border border-red-600/20 rounded-2xl overflow-hidden">
-                {/* Imagen */}
-                <div className="relative h-40 bg-[#111] flex items-center justify-center">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+            {ac500Lista.map(v => (
+              <div key={v.id} className="v-card">
+                <div style={{ height: 180, background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
                   {v.img_url ? (
-                    <img src={v.img_url} alt={v.model} className="w-full h-full object-contain p-4" />
+                    <img src={v.img_url} alt={v.model} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 16 }} />
                   ) : (
-                    <div className="text-white/20 text-4xl">🚗</div>
+                    <span style={{ fontSize: 48, opacity: 0.2 }}>🚗</span>
                   )}
-                  <span className={`absolute top-3 left-3 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest ${v.brand === 'MG' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`}>
-                    {v.brand}
-                  </span>
+                  <span className={`v-tag ${v.brand === 'MG' ? 'v-tag-mg' : 'v-tag-maxus'}`}
+                    style={{ position: 'absolute', top: 12, left: 12 }}>{v.brand}</span>
                 </div>
-
-                <div className="p-4">
-                  <h3 className="font-bold text-white mb-1">{v.model}</h3>
-                  {v.cash && <p className="text-white/40 text-xs mb-4">Precio base: ${fm(v.cash)}</p>}
-
-                  {/* Planes */}
-                  <div className="space-y-2">
+                <div style={{ padding: 20 }}>
+                  <p style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>{v.model}</p>
+                  {v.cash && <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 14 }}>Precio base: ${fm(v.cash)}</p>}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                     {v.ac500_6m_cuota && (
-                      <div className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
-                        <span className="text-xs text-white/50 font-semibold">6 meses</span>
-                        <span className="font-bold text-white">${fm(v.ac500_6m_cuota)}<span className="text-[10px] font-normal text-white/40">/mes</span></span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '9px 14px' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>6 meses</span>
+                        <span style={{ fontWeight: 800, color: '#fff' }}>${fm(v.ac500_6m_cuota)}<span style={{ fontSize: 10, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mes</span></span>
                       </div>
                     )}
                     {v.ac500_9m_cuota && (
-                      <div className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
-                        <span className="text-xs text-white/50 font-semibold">9 meses</span>
-                        <span className="font-bold text-white">${fm(v.ac500_9m_cuota)}<span className="text-[10px] font-normal text-white/40">/mes</span></span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '9px 14px' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>9 meses</span>
+                        <span style={{ fontWeight: 800, color: '#fff' }}>${fm(v.ac500_9m_cuota)}<span style={{ fontSize: 10, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mes</span></span>
                       </div>
                     )}
                     {v.ac500_12m_cuota && (
-                      <div className="flex justify-between items-center bg-red-600/10 border border-red-600/20 rounded-lg px-3 py-2">
-                        <span className="text-xs text-red-400 font-semibold">12 meses</span>
-                        <span className="font-bold text-red-400">${fm(v.ac500_12m_cuota)}<span className="text-[10px] font-normal text-red-500/60">/mes</span></span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 10, padding: '9px 14px' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#ef4444' }}>12 meses</span>
+                        <span style={{ fontWeight: 800, color: '#ef4444' }}>${fm(v.ac500_12m_cuota)}<span style={{ fontSize: 10, fontWeight: 400, color: 'rgba(239,68,68,0.5)' }}>/mes</span></span>
                       </div>
                     )}
                     {!v.ac500_6m_cuota && !v.ac500_9m_cuota && !v.ac500_12m_cuota && (
-                      <p className="text-xs text-white/30 text-center py-2">Consulta las condiciones con tu asesor</p>
+                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center', padding: '8px 0' }}>Consulta condiciones con tu asesor</p>
                     )}
                   </div>
-
-                  <a
-                    href={`${WA}?text=Hola, quiero información sobre el Plan AC500 para el ${v.model}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full text-center mt-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
-                  >
+                  <a href={`${WA_BASE}?text=${encodeURIComponent(`Hola 👋 vengo de la web de La Oriental y quiero información sobre el plan AC500 del ${v.model}.`)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'block', width: '100%', padding: '11px 0', background: '#dc2626', color: '#fff', fontWeight: 700, borderRadius: 10, textAlign: 'center', textDecoration: 'none', fontSize: 13, transition: 'background 0.15s', boxSizing: 'border-box' }}>
                     Consultar plan AC500
                   </a>
                 </div>
@@ -214,19 +244,46 @@ export default async function VentasPage() {
             ))}
           </div>
 
-          <p className="text-center text-white/25 text-xs mt-8">
-            Cupos limitados. Consulta disponibilidad de modelos y cronograma de cuotas con nuestro equipo.
-          </p>
+          <div style={{ textAlign: 'center', marginTop: 28 }}>
+            <a href={`${WA_BASE}?text=${WA_AC}`} target="_blank" rel="noopener noreferrer" className="v-btn-red" style={{ display: 'inline-block' }}>
+              Consultar plan AC500 por WhatsApp
+            </a>
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, marginTop: 14 }}>
+              Cupos limitados. Consulta disponibilidad de modelos y cronograma de cuotas con nuestro equipo.
+            </p>
+          </div>
         </section>
       )}
 
-      {/* Footer */}
-      <footer className="bg-[#111] border-t border-white/6 px-5 py-8 text-center">
-        <img src={LOGO} alt="La Oriental" className="h-6 object-contain mx-auto mb-3" style={{ filter: 'invert(1)', opacity: 0.4 }} />
-        <p className="text-white/25 text-xs">
+      {/* ── FORMULARIO ASESOR ───────────────────── */}
+      <section id="asesor" style={{ background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '64px 24px' }}>
+        <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 14 }}>Contacto directo</p>
+          <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 8 }}>Sede Maturín</h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, marginBottom: 36, lineHeight: 1.6 }}>
+            Atención personalizada en <strong style={{ color: 'rgba(255,255,255,0.7)' }}>Maturín, Estado Monagas</strong>.<br />
+            Cotizaciones aprobadas en tiempo real.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+            <a href="https://wa.link/uc69id" target="_blank" rel="noopener noreferrer"
+              style={{ padding: '12px 22px', background: '#16a34a', color: '#fff', fontWeight: 700, borderRadius: 10, textDecoration: 'none', fontSize: 14 }}>
+              Whatsapp oficial
+            </a>
+            <a href="https://wa.link/posuml" target="_blank" rel="noopener noreferrer"
+              style={{ padding: '12px 22px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', fontWeight: 700, borderRadius: 10, textDecoration: 'none', fontSize: 14 }}>
+              Servicio técnico
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ─────────────────────────────── */}
+      <footer style={{ background: '#111', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '32px 24px', textAlign: 'center' }}>
+        <img src={LOGO} alt="La Oriental" style={{ height: 22, objectFit: 'contain', filter: 'invert(1)', opacity: 0.35, marginBottom: 12 }} />
+        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12, marginBottom: 4 }}>
           La Oriental Automotors · Representantes oficiales MG &amp; MAXUS · Sede Maturín
         </p>
-        <p className="text-white/20 text-[11px] mt-2">
+        <p style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>
           * Los precios mostrados son referenciales y pueden variar. Consulta disponibilidad con tu asesor.
         </p>
       </footer>

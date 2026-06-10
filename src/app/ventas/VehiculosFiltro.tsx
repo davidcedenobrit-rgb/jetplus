@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 
 interface Vehiculo {
   id: string
@@ -14,10 +13,12 @@ interface Vehiculo {
   tasa_credito: number | null
   stock: number | null
   colores: string | null
+  transmision: string | null
+  ano: number | null
 }
 
 const CMAP: Record<string, string> = {
-  blanco:'#f8f8f8',blanca:'#f8f8f8',negro:'#1a1a1a',negra:'#1a1a1a',
+  blanco:'#f0f0f0',blanca:'#f0f0f0',negro:'#1a1a1a',negra:'#1a1a1a',
   rojo:'#dc2626',roja:'#dc2626',gris:'#9ca3af',grises:'#9ca3af',
   plata:'#c0c0c0',plateado:'#c0c0c0',plateada:'#c0c0c0',
   azul:'#2563eb',azules:'#2563eb',verde:'#16a34a',verdes:'#16a34a',
@@ -26,9 +27,12 @@ const CMAP: Record<string, string> = {
   celeste:'#7dd3fc','borgoña':'#7f1d1d',vino:'#7f1d1d',perla:'#f1f0eb',
 }
 function cHex(n: string) { return CMAP[n.trim().toLowerCase()] ?? '#6b7280' }
-function fm(n: number | null) { return n ? Number(n).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '—' }
+function fm(n: number | null | undefined) {
+  if (!n) return '—'
+  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+}
 
-const WA = 'https://wa.me/584120000000'
+const WA_BASE = 'https://wa.me/584149989010'
 
 type Filtro = 'todos' | 'MG' | 'MAXUS'
 
@@ -39,93 +43,113 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
   return (
     <div>
       {/* Filtros */}
-      <div className="flex gap-2 mb-6">
+      <div style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
         {(['todos', 'MG', 'MAXUS'] as Filtro[]).map(f => (
           <button
             key={f}
             onClick={() => setFiltro(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
-              filtro === f ? 'bg-red-600 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
-            }`}
+            className={`v-filter${filtro === f ? ' active' : ''}`}
           >
             {f === 'todos' ? 'Todos' : f}
           </button>
         ))}
       </div>
 
-      {/* Grid de vehículos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         {lista.map(v => {
           const colorsArr = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
           return (
-            <div key={v.id} className="bg-[#1a1a1a] border border-white/8 rounded-2xl overflow-hidden hover:border-white/15 transition-colors">
+            <div key={v.id} className="v-card">
               {/* Imagen */}
-              <div className="relative h-44 bg-[#111] flex items-center justify-center overflow-hidden">
+              <div style={{ height: 190, background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
                 {v.img_url ? (
-                  <img src={v.img_url} alt={v.model} className="w-full h-full object-contain p-4" />
+                  <img
+                    src={v.img_url}
+                    alt={v.model}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 16 }}
+                  />
                 ) : (
-                  <div className="text-white/20 text-5xl">🚗</div>
+                  <span style={{ fontSize: 52, opacity: 0.15 }}>🚗</span>
                 )}
-                <div className="absolute top-3 left-3 flex gap-1.5">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest ${v.brand === 'MG' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`}>
-                    {v.brand}
-                  </span>
+                {/* Badges */}
+                <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6 }}>
+                  <span className={`v-tag ${v.brand === 'MG' ? 'v-tag-mg' : 'v-tag-maxus'}`}>{v.brand}</span>
                   {v.stock !== null && v.stock > 0 && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-600/20 text-green-400 border border-green-600/30">
+                    <span style={{ background: 'rgba(22,163,74,0.85)', color: '#fff', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
                       {v.stock} en stock
                     </span>
                   )}
                 </div>
+                {/* Año badge */}
+                {v.ano && (
+                  <span style={{ position: 'absolute', top: 12, right: 12, color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600 }}>
+                    {v.ano}
+                  </span>
+                )}
               </div>
 
               {/* Info */}
-              <div className="p-4">
-                <h3 className="font-bold text-white text-base mb-3">{v.model}</h3>
+              <div style={{ padding: '16px 18px 18px' }}>
+                <p style={{ fontWeight: 800, fontSize: 15, marginBottom: 2, color: '#fff' }}>{v.model}</p>
+                {v.transmision && v.transmision !== 'Ambos' && (
+                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginBottom: 14 }}>{v.transmision}</p>
+                )}
 
-                <div className="space-y-1.5 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/40">Precio base</span>
-                    <span className="font-bold text-white">${fm(v.cash)}</span>
+                {/* Precios */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Precio base</span>
+                    <span style={{ fontWeight: 800, color: '#fff' }}>${fm(v.cash)}</span>
                   </div>
                   {v.gc && v.gc > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-white/40">Gastos contado</span>
-                      <span className="text-white/70">${fm(v.gc)}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.35)' }}>G. Contado</span>
+                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>${fm(v.gc)}</span>
                     </div>
                   )}
                   {v.gcr && v.gcr > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-white/40">Gastos crédito</span>
-                      <span className="text-white/70">${fm(v.gcr)}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.35)' }}>G. Crédito</span>
+                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>${fm(v.gcr)}</span>
                     </div>
                   )}
                   {v.tasa_credito && v.tasa_credito > 0 && (
-                    <div className="flex justify-between text-sm pt-1 border-t border-white/8">
-                      <span className="text-white/40">Cuota 24 meses</span>
-                      <span className="font-bold text-red-400">${fm(v.tasa_credito)}/mes</span>
-                    </div>
+                    <>
+                      <div className="v-sep" />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>Cuota 24 meses</span>
+                        <span style={{ fontWeight: 800, color: '#ef4444' }}>${fm(v.tasa_credito)}/mes</span>
+                      </div>
+                    </>
                   )}
                 </div>
 
                 {/* Colores */}
                 {colorsArr.length > 0 && (
-                  <div className="flex gap-1.5 flex-wrap mb-4">
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
                     {colorsArr.map(c => (
                       <div
                         key={c}
                         title={c}
-                        className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0"
-                        style={{ background: cHex(c) }}
+                        style={{
+                          width: 16, height: 16, borderRadius: '50%',
+                          background: cHex(c),
+                          border: c.toLowerCase().includes('blanco') || c.toLowerCase().includes('blanca') || c.toLowerCase().includes('perla')
+                            ? '1px solid rgba(0,0,0,0.25)'
+                            : '1px solid rgba(255,255,255,0.15)',
+                          flexShrink: 0,
+                        }}
                       />
                     ))}
                   </div>
                 )}
 
                 <a
-                  href={`${WA}?text=Hola, me interesa el ${v.model}`}
+                  href={`${WA_BASE}?text=${encodeURIComponent(`Hola 👋 vengo de la web de La Oriental y quiero información sobre el ${v.model}.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full text-center py-2.5 rounded-xl bg-white/8 text-white/80 text-sm font-semibold hover:bg-white/15 hover:text-white transition-colors border border-white/10"
+                  className="v-btn-wa"
                 >
                   Consultar por WhatsApp
                 </a>
@@ -136,8 +160,15 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
       </div>
 
       {lista.length === 0 && (
-        <p className="text-center text-white/40 py-12">No hay vehículos disponibles en este momento.</p>
+        <div style={{ textAlign: 'center', padding: '80px 0', color: 'rgba(255,255,255,0.25)' }}>
+          <p style={{ fontSize: 40, marginBottom: 12 }}>🚗</p>
+          <p>No hay vehículos disponibles en este momento.</p>
+        </div>
       )}
+
+      <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, textAlign: 'center', marginTop: 28 }}>
+        *Precio base y plan 40% inicial + cuotas fijas disponibles en cada modelo.
+      </p>
     </div>
   )
 }
