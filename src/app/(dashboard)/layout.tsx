@@ -29,12 +29,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .eq('estado', 'depositado')
     : { count: 0 }
 
+  // Conteo de anulaciones pendientes (solo para roles que las ven)
+  const ROL_VE_ANULACIONES = ['jose', 'admin', 'director', 'mary', 'leysdem']
+  const { count: anulacionesPendientes } = ROL_VE_ANULACIONES.includes(rol)
+    ? await supabase
+        .from('ingresos')
+        .select('id', { count: 'exact', head: true })
+        .eq('estado', 'pendiente_anulacion')
+    : { count: 0 }
+
   return (
     <ClientLayout
       userEmail={user.email ?? ''}
       rol={rol}
       aprobacionesPendientes={aprobacionesPendientes ?? 0}
       depositosPendientesCarla={depositosPendientesCarla ?? 0}
+      anulacionesPendientes={anulacionesPendientes ?? 0}
     >
       {children}
     </ClientLayout>

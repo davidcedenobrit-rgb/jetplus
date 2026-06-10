@@ -10,6 +10,7 @@ interface ClientLayoutProps {
   rol: string
   aprobacionesPendientes: number
   depositosPendientesCarla: number
+  anulacionesPendientes: number
 }
 
 export default function ClientLayout({
@@ -18,6 +19,7 @@ export default function ClientLayout({
   rol,
   aprobacionesPendientes,
   depositosPendientesCarla,
+  anulacionesPendientes,
 }: ClientLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -45,6 +47,7 @@ export default function ClientLayout({
           rol={rol}
           aprobacionesPendientes={aprobacionesPendientes}
           depositosPendientesCarla={depositosPendientesCarla}
+          anulacionesPendientes={anulacionesPendientes}
           onClose={() => setSidebarOpen(false)}
         />
       </div>

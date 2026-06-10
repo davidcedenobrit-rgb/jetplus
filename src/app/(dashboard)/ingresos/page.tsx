@@ -39,6 +39,7 @@ export default async function IngresosPage({
     depositado: 'bg-emerald-100 text-emerald-800',
     entregado_carla: 'bg-teal-100 text-teal-800',
     reportado_vehimotors: 'bg-indigo-100 text-indigo-800',
+    pendiente_anulacion: 'bg-orange-100 text-orange-800',
     anulado: 'bg-gray-200 text-gray-400',
   }
 
@@ -56,6 +57,7 @@ export default async function IngresosPage({
         { estado: 'entregado_carla',     label: 'Entregado Carla'   },
         { estado: 'reportado_vehimotors',label: 'Vehimotors'        },
         { estado: 'rechazado',           label: 'Rechazado'         },
+        { estado: 'pendiente_anulacion', label: 'Pend. Anulación'  },
       ]
     : [
         { estado: '',                    label: 'Todos'             },
@@ -63,6 +65,7 @@ export default async function IngresosPage({
         { estado: 'aprobado',            label: 'Aprobado'          },
         { estado: 'rechazado',           label: 'Rechazado'         },
         { estado: 'correccion_requerida',label: 'Corrección'        },
+        { estado: 'pendiente_anulacion', label: 'Pend. Anulación'  },
       ]
 
   return (
@@ -124,7 +127,13 @@ export default async function IngresosPage({
                   </td>
                   <td className="px-4 py-3 text-gray-700">{ingreso.concepto}</td>
                   <td className="px-4 py-3 text-right font-bold text-oriental-black">
-                    {formatCurrency(ingreso.monto)}
+                    {ingreso.moneda === 'VES' && ingreso.tasa_cambio
+                      ? <span>
+                          <span className="text-oriental-black">{formatCurrency(Number(ingreso.monto) / Number(ingreso.tasa_cambio))}</span>
+                          <span className="block text-[10px] font-normal text-oriental-gray">Bs. {Number(ingreso.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                        </span>
+                      : formatCurrency(ingreso.monto, ingreso.moneda === 'VES' ? 'VES' : 'USD')
+                    }
                   </td>
                   <td className="px-4 py-3 text-oriental-gray">{formatDate(ingreso.fecha_pago)}</td>
                   <td className="px-4 py-3">

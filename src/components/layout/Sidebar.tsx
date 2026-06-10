@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2
+  Shield, ScrollText, Building2, Ban
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -32,10 +32,11 @@ interface SidebarProps {
   rol?: string
   aprobacionesPendientes?: number
   depositosPendientesCarla?: number
+  anulacionesPendientes?: number
   onClose?: () => void
 }
 
-export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0, onClose }: SidebarProps) {
+export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0, anulacionesPendientes = 0, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -190,6 +191,23 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
               <Building2 size={18} />
               <span className="flex-1">Vehimotors</span>
+            </Link>
+          )
+        })()}
+
+        {/* Anulaciones — solo director/mary/leysdem */}
+        {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+          const active = pathname === '/anulaciones' || pathname.startsWith('/anulaciones/')
+          return (
+            <Link href="/anulaciones" onClick={onClose}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+              <Ban size={18} />
+              <span className="flex-1">Anulaciones</span>
+              {anulacionesPendientes > 0 && (
+                <span className="bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                  {anulacionesPendientes > 99 ? '99+' : anulacionesPendientes}
+                </span>
+              )}
             </Link>
           )
         })()}
