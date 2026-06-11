@@ -17,142 +17,114 @@ interface Vehiculo {
   ano: number | null
 }
 
-const CMAP: Record<string, string> = {
-  blanco:'#f0f0f0',blanca:'#f0f0f0',negro:'#1a1a1a',negra:'#1a1a1a',
-  rojo:'#dc2626',roja:'#dc2626',gris:'#9ca3af',grises:'#9ca3af',
-  plata:'#c0c0c0',plateado:'#c0c0c0',plateada:'#c0c0c0',
-  azul:'#2563eb',azules:'#2563eb',verde:'#16a34a',verdes:'#16a34a',
-  amarillo:'#eab308',naranja:'#ea580c',beige:'#d4c5a9',
-  marron:'#78350f','marrón':'#78350f',dorado:'#b8860b',
-  celeste:'#7dd3fc','borgoña':'#7f1d1d',vino:'#7f1d1d',perla:'#f1f0eb',
-}
-function cHex(n: string) { return CMAP[n.trim().toLowerCase()] ?? '#6b7280' }
+const WA = '584149989010'
+
 function fm(n: number | null | undefined) {
-  if (!n) return '—'
+  if (!n) return '0'
   return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-const WA_BASE = 'https://wa.me/584149989010'
-
-type Filtro = 'todos' | 'MG' | 'MAXUS'
+type Filtro = 'ALL' | 'MG' | 'MAXUS'
 
 export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }) {
-  const [filtro, setFiltro] = useState<Filtro>('todos')
-  const lista = filtro === 'todos' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
+  const [filtro, setFiltro] = useState<Filtro>('ALL')
+  const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
+
+  function goWA(model: string) {
+    const msg = `Hola 👋 vengo del perfil de ventas de La Oriental. Me interesa el ${model}.`
+    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+  function cotizar(v: Vehiculo) {
+    const msg = `Hola 👋 vengo de la web de La Oriental y quiero una cotización formal del ${v.model} (precio base $${fm(v.cash)}).`
+    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+  async function compartir(v: Vehiculo) {
+    const url = new URL(window.location.href); url.searchParams.set('car', v.id)
+    const link = url.toString()
+    if (navigator.share) { try { await navigator.share({ title: `La Oriental | ${v.model}`, url: link }); return } catch {} }
+    try { await navigator.clipboard.writeText(link) } catch {}
+  }
 
   return (
     <div>
       {/* Filtros */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
-        {(['todos', 'MG', 'MAXUS'] as Filtro[]).map(f => (
-          <button
-            key={f}
-            onClick={() => setFiltro(f)}
-            className={`v-filter${filtro === f ? ' active' : ''}`}
-          >
-            {f === 'todos' ? 'Todos' : f}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
+        {(['ALL', 'MG', 'MAXUS'] as Filtro[]).map(f => (
+          <button key={f} onClick={() => setFiltro(f)} className={`f-btn${filtro === f ? ' on' : ''}`}>
+            {f === 'ALL' ? 'Todos' : f}
           </button>
         ))}
       </div>
 
       {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
         {lista.map(v => {
-          const colorsArr = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
+          const init = v.cash ? v.cash * 0.4 : 0
           return (
-            <div key={v.id} className="v-card">
+            <div key={v.id} id={`car-${v.id}`} className="lo-card">
               {/* Imagen */}
-              <div style={{ height: 190, background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
-                {v.img_url ? (
-                  <img
-                    src={v.img_url}
-                    alt={v.model}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 16 }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 52, opacity: 0.15 }}>🚗</span>
-                )}
-                {/* Badges */}
-                <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6 }}>
-                  <span className={`v-tag ${v.brand === 'MG' ? 'v-tag-mg' : 'v-tag-maxus'}`}>{v.brand}</span>
-                  {v.stock !== null && v.stock > 0 && (
-                    <span style={{ background: 'rgba(22,163,74,0.85)', color: '#fff', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
-                      {v.stock} en stock
-                    </span>
-                  )}
-                </div>
-                {/* Año badge */}
-                {v.ano && (
-                  <span style={{ position: 'absolute', top: 12, right: 12, color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600 }}>
-                    {v.ano}
-                  </span>
-                )}
+              <div className="lo-card-imgwrap">
+                {v.img_url
+                  ? <img src={v.img_url} alt={v.model} className="lo-card-img" loading="lazy" />
+                  : <span style={{ fontSize: 52, opacity: .12 }}>🚗</span>}
               </div>
 
-              {/* Info */}
-              <div style={{ padding: '16px 18px 18px' }}>
-                <p style={{ fontWeight: 800, fontSize: 15, marginBottom: 2, color: '#fff' }}>{v.model}</p>
-                {v.transmision && v.transmision !== 'Ambos' && (
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginBottom: 14 }}>{v.transmision}</p>
-                )}
+              {/* Cuerpo */}
+              <div style={{ padding: '24px 26px 26px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '.5px' }}>{v.brand}</p>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111', marginTop: 2, lineHeight: 1.3 }}>{v.model}</h3>
 
-                {/* Precios */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Precio base</span>
-                    <span style={{ fontWeight: 800, color: '#fff' }}>${fm(v.cash)}</span>
-                  </div>
-                  {v.gc && v.gc > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: 'rgba(255,255,255,0.35)' }}>G. Contado</span>
-                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>${fm(v.gc)}</span>
-                    </div>
-                  )}
-                  {v.gcr && v.gcr > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: 'rgba(255,255,255,0.35)' }}>G. Crédito</span>
-                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>${fm(v.gcr)}</span>
-                    </div>
-                  )}
-                  {v.tasa_credito && v.tasa_credito > 0 && (
-                    <>
-                      <div className="v-sep" />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>Cuota 24 meses</span>
-                        <span style={{ fontWeight: 800, color: '#ef4444' }}>${fm(v.tasa_credito)}/mes</span>
-                      </div>
-                    </>
-                  )}
+                {/* Badges */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  {v.stock && v.stock > 0
+                    ? <span className="lo-badge lo-badge-stock">{v.stock} disponible{v.stock > 1 ? 's' : ''}</span>
+                    : <span className="lo-badge lo-badge-none">Consultar</span>}
+                  {v.transmision && v.transmision !== 'Ambos' && <span className="lo-badge lo-badge-meta">{v.transmision}</span>}
+                  {v.ano && <span className="lo-badge lo-badge-meta">{v.ano}</span>}
                 </div>
 
-                {/* Colores */}
-                {colorsArr.length > 0 && (
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-                    {colorsArr.map(c => (
-                      <div
-                        key={c}
-                        title={c}
-                        style={{
-                          width: 16, height: 16, borderRadius: '50%',
-                          background: cHex(c),
-                          border: c.toLowerCase().includes('blanco') || c.toLowerCase().includes('blanca') || c.toLowerCase().includes('perla')
-                            ? '1px solid rgba(0,0,0,0.25)'
-                            : '1px solid rgba(255,255,255,0.15)',
-                          flexShrink: 0,
-                        }}
-                      />
-                    ))}
+                {/* Precio base */}
+                <div style={{ marginTop: 18 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 4 }}>Precio base (contado)</p>
+                  <p style={{ fontSize: 25, fontWeight: 800, color: '#111' }}>${fm(v.cash)}</p>
+                  <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>*Sin incluir: IVA, placa, seguro, gastos</p>
+                </div>
+
+                {/* Plan 40% */}
+                {(init > 0 || (v.tasa_credito && v.tasa_credito > 0)) && (
+                  <div className="lo-credit-box" style={{ marginTop: 14 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#a16207', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 8 }}>Plan 40% inicial + cuotas</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <div>
+                        <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Inicial (40%)</p>
+                        <p style={{ fontSize: 17, fontWeight: 800, color: '#111' }}>${fm(init)}</p>
+                      </div>
+                      {v.tasa_credito && v.tasa_credito > 0 && (
+                        <>
+                          <div style={{ width: 1, height: 36, background: '#fde68a' }} />
+                          <div>
+                            <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Cuota mensual (24m)</p>
+                            <p style={{ fontSize: 17, fontWeight: 800, color: '#a16207' }}>${fm(v.tasa_credito)}</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                <a
-                  href={`${WA_BASE}?text=${encodeURIComponent(`Hola 👋 vengo de la web de La Oriental y quiero información sobre el ${v.model}.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="v-btn-wa"
-                >
-                  Consultar por WhatsApp
-                </a>
+                <div style={{ flex: 1 }} />
+
+                {/* Botones */}
+                <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <button onClick={() => goWA(v.model)} className="lo-cbtn-dark">WhatsApp</button>
+                    <button onClick={() => compartir(v)} className="lo-cbtn-out">Compartir</button>
+                  </div>
+                  <button onClick={() => cotizar(v)} className="lo-cbtn-red">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
+                    Generar cotización
+                  </button>
+                </div>
               </div>
             </div>
           )
@@ -160,15 +132,11 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
       </div>
 
       {lista.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '80px 0', color: 'rgba(255,255,255,0.25)' }}>
+        <div style={{ textAlign: 'center', padding: '80px 0', color: '#9ca3af' }}>
           <p style={{ fontSize: 40, marginBottom: 12 }}>🚗</p>
-          <p>No hay vehículos disponibles en este momento.</p>
+          <p style={{ fontWeight: 600 }}>No hay vehículos disponibles en este momento.</p>
         </div>
       )}
-
-      <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, textAlign: 'center', marginTop: 28 }}>
-        *Precio base y plan 40% inicial + cuotas fijas disponibles en cada modelo.
-      </p>
     </div>
   )
 }
