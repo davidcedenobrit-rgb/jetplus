@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import CotizacionModal from './CotizacionModal'
 
 interface Vehiculo {
   id: string
@@ -28,14 +29,11 @@ type Filtro = 'ALL' | 'MG' | 'MAXUS'
 
 export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
+  const [modalVehiculo, setModalVehiculo] = useState<Vehiculo | null>(null)
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
   function goWA(model: string) {
     const msg = `Hola 👋 vengo del perfil de ventas de La Oriental. Me interesa el ${model}.`
-    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
-  }
-  function cotizar(v: Vehiculo) {
-    const msg = `Hola 👋 vengo de la web de La Oriental y quiero una cotización formal del ${v.model} (precio base $${fm(v.cash)}).`
     window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
   }
   async function compartir(v: Vehiculo) {
@@ -47,6 +45,10 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
 
   return (
     <div>
+      {modalVehiculo && (
+        <CotizacionModal vehiculo={modalVehiculo} onClose={() => setModalVehiculo(null)} />
+      )}
+
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
         {(['ALL', 'MG', 'MAXUS'] as Filtro[]).map(f => (
@@ -120,7 +122,7 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
                     <button onClick={() => goWA(v.model)} className="lo-cbtn-dark">WhatsApp</button>
                     <button onClick={() => compartir(v)} className="lo-cbtn-out">Compartir</button>
                   </div>
-                  <button onClick={() => cotizar(v)} className="lo-cbtn-red">
+                  <button onClick={() => setModalVehiculo(v)} className="lo-cbtn-red">
                     <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
                     Generar cotización
                   </button>
