@@ -1,0 +1,319 @@
+'use client'
+
+import { useState } from 'react'
+
+interface Vehiculo {
+  id: string
+  brand: string
+  model: string
+  cash: number | null
+  gc: number | null
+  gcr: number | null
+  tasa_credito: number | null
+}
+
+type Step = 'pin' | 'form' | 'sending' | 'success' | 'error'
+type Modalidad = 'contado' | 'credito_24'
+
+function fmt(n: number | null | undefined) {
+  if (!n) return '0,00'
+  return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function calcular(v: Vehiculo, modalidad: Modalidad) {
+  const precio = v.cash ?? 0
+  const iva = precio * 0.16
+  if (modalidad === 'contado') {
+    const gastos = v.gc ?? 0
+    return { iva, gastos, totalInicial: precio + iva + gastos, financiamiento: null, cuota: null, costoTotal: precio + iva + gastos }
+  }
+  const gastos = v.gcr ?? 0
+  const totalInicial = precio * 0.4 + iva + gastos
+  const financiamiento = precio * 0.6
+  const cuota = v.tasa_credito ?? 0
+  return { iva, gastos, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
+}
+
+export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehiculo; onClose: () => void }) {
+  const [step, setStep] = useState<Step>('pin')
+  const [pin, setPin] = useState('')
+  const [pinError, setPinError] = useState('')
+  const [pinLoading, setPinLoading] = useState(false)
+  const [vendedoraNombre, setVendedoraNombre] = useState('')
+  const [modalidad, setModalidad] = useState<Modalidad>('contado')
+  const [form, setForm] = useState({
+    clienteNombre: '', clienteCiRif: '', clienteCorreo: '',
+    clienteTelefono: '', clienteDireccion: '',
+    clienteCiudadEstado: '', clienteCodigoPostal: '',
+    agenteRetencion: false,
+  })
+  const [errorMsg, setErrorMsg] = useState('')
+  const [numeroCot, setNumeroCot] = useState('')
+
+  const calc = calcular(vehiculo, modalidad)
+
+  async function verificarPin() {
+    if (!/^\d{3}$/.test(pin)) { setPinError('El código debe ser de 3 dígitos'); return }
+    setPinLoading(true)
+    setPinError('')
+    try {
+      const r = await fetch('/api/vendedoras/verificar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: pin }),
+      })
+      const json = await r.json()
+      if (json.valida) {
+        setVendedoraNombre(json.nombre)
+        setStep('form')
+      } else {
+        setPinError('Código incorrecto. Intenta de nuevo.')
+      }
+    } catch {
+      setPinError('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setPinLoading(false)
+    }
+  }
+
+  async function enviar() {
+    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim() || !form.clienteCorreo.trim()) {
+      setErrorMsg('Nombre, C.I./RIF y correo son obligatorios.')
+      return
+    }
+    if (!/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) {
+      setErrorMsg('El correo no es válido.')
+      return
+    }
+    setStep('sending')
+    setErrorMsg('')
+    try {
+      const r = await fetch('/api/cotizaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo: pin,
+          vehiculoId: vehiculo.id,
+          clienteNombre: form.clienteNombre,
+          clienteCiRif: form.clienteCiRif,
+          clienteCorreo: form.clienteCorreo,
+          clienteTelefono: form.clienteTelefono || null,
+          clienteDireccion: form.clienteDireccion || null,
+          clienteCiudadEstado: form.clienteCiudadEstado || null,
+          clienteCodigoPostal: form.clienteCodigoPostal || null,
+          agenteRetencion: form.agenteRetencion,
+          modalidad,
+        }),
+      })
+      const json = await r.json()
+      if (json.ok) {
+        setNumeroCot(json.numero)
+        setStep('success')
+      } else {
+        setErrorMsg(json.error ?? 'Error al generar la cotización.')
+        setStep('form')
+      }
+    } catch {
+      setErrorMsg('Error de conexión. Intenta de nuevo.')
+      setStep('form')
+    }
+  }
+
+  const inp = 'width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;outline:none;font-family:inherit;background:#fff;box-sizing:border-box'
+  const label = { fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 4, display: 'block' as const, textTransform: 'uppercase' as const, letterSpacing: '0.4px' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+
+      <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>
+              {step === 'pin' ? 'Acceso vendedora' : step === 'success' ? '¡Cotización enviada!' : `${vehiculo.brand} · ${vendedoraNombre}`}
+            </p>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: '#111', margin: 0 }}>
+              {step === 'pin' ? 'Generar cotización' : step === 'success' ? '' : vehiculo.model}
+            </h2>
+          </div>
+          <button onClick={onClose} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 18, lineHeight: '32px', textAlign: 'center' }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px 24px' }}>
+
+          {/* ── STEP: PIN ── */}
+          {step === 'pin' && (
+            <div>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20, lineHeight: 1.5 }}>
+                Ingresa tu código de 3 dígitos para continuar.
+              </p>
+              <div style={{ marginBottom: 16 }}>
+                <label style={label}>Código de vendedora</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={3}
+                  value={pin}
+                  onChange={e => { setPin(e.target.value.replace(/\D/g, '')); setPinError('') }}
+                  onKeyDown={e => e.key === 'Enter' && verificarPin()}
+                  placeholder="•••"
+                  style={{ ...Object.fromEntries(inp.split(';').filter(Boolean).map(p => { const [k, v] = p.split(':'); return [k.trim().replace(/-([a-z])/g, (_,c) => c.toUpperCase()), v?.trim()] })), fontSize: 24, textAlign: 'center', letterSpacing: 12, fontWeight: 800 } as React.CSSProperties}
+                  autoFocus
+                />
+                {pinError && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 6 }}>{pinError}</p>}
+              </div>
+              <button
+                onClick={verificarPin}
+                disabled={pinLoading || pin.length !== 3}
+                style={{ width: '100%', padding: '12px', background: pin.length === 3 ? '#111' : '#d1d5db', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: pin.length === 3 ? 'pointer' : 'default', fontFamily: 'inherit', transition: 'background .15s' }}
+              >
+                {pinLoading ? 'Verificando...' : 'Continuar →'}
+              </button>
+            </div>
+          )}
+
+          {/* ── STEP: FORM ── */}
+          {(step === 'form' || step === 'sending') && (
+            <div>
+              {/* Vehículo info */}
+              <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
+                <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, margin: '0 0 2px' }}>{vehiculo.brand}</p>
+                <p style={{ fontSize: 14, fontWeight: 800, color: '#111', margin: 0 }}>{vehiculo.model}</p>
+              </div>
+
+              {/* Modalidad */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={label}>Modalidad de venta</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {([['contado', 'Contado'], ['credito_24', 'Crédito 24 meses']] as [Modalidad, string][]).map(([val, lbl]) => (
+                    <button
+                      key={val}
+                      onClick={() => setModalidad(val)}
+                      style={{ flex: 1, padding: '10px 8px', border: `2px solid ${modalidad === val ? '#111' : '#e5e7eb'}`, borderRadius: 10, background: modalidad === val ? '#111' : '#fff', color: modalidad === val ? '#fff' : '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preview de montos */}
+              <div style={{ background: '#fffbeb', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
+                <p style={{ fontSize: 10, fontWeight: 800, color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
+                  {modalidad === 'contado' ? 'Resumen contado' : 'Resumen crédito 24 meses'}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 0' }}>
+                  {modalidad === 'contado' ? (
+                    <>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Precio base</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(vehiculo.cash)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>IVA 16%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.iva)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>TOTAL</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>40% Precio base</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt((vehiculo.cash ?? 0) * 0.4)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>IVA 16%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.iva)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>INICIAL</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Cuota mensual × 24</span><span style={{ fontSize: 11, fontWeight: 700, color: '#a16207', textAlign: 'right', marginTop: 6 }}>${fmt(calc.cuota)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Costo total</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.costoTotal)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Datos del cliente */}
+              <p style={{ fontSize: 12, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>Datos del cliente</p>
+
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div>
+                  <label style={label}>Nombre completo *</label>
+                  <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
+                    value={form.clienteNombre} onChange={e => setForm(p => ({ ...p, clienteNombre: e.target.value }))} placeholder="Luis Vanegas" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={label}>C.I. / RIF *</label>
+                    <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
+                      value={form.clienteCiRif} onChange={e => setForm(p => ({ ...p, clienteCiRif: e.target.value }))} placeholder="V-12345678" />
+                  </div>
+                  <div>
+                    <label style={label}>Teléfono</label>
+                    <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
+                      value={form.clienteTelefono} onChange={e => setForm(p => ({ ...p, clienteTelefono: e.target.value }))} placeholder="0414-..." />
+                  </div>
+                </div>
+                <div>
+                  <label style={label}>Correo electrónico *</label>
+                  <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
+                    type="email" value={form.clienteCorreo} onChange={e => setForm(p => ({ ...p, clienteCorreo: e.target.value }))} placeholder="cliente@email.com" />
+                </div>
+                <div>
+                  <label style={label}>Dirección</label>
+                  <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
+                    value={form.clienteDireccion} onChange={e => setForm(p => ({ ...p, clienteDireccion: e.target.value }))} placeholder="Av. Principal..." />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={label}>Ciudad / Estado</label>
+                    <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
+                      value={form.clienteCiudadEstado} onChange={e => setForm(p => ({ ...p, clienteCiudadEstado: e.target.value }))} placeholder="Maturín - Monagas" />
+                  </div>
+                  <div>
+                    <label style={label}>Código Postal</label>
+                    <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
+                      value={form.clienteCodigoPostal} onChange={e => setForm(p => ({ ...p, clienteCodigoPostal: e.target.value }))} placeholder="6201" />
+                  </div>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 600 }}>
+                  <input type="checkbox" checked={form.agenteRetencion} onChange={e => setForm(p => ({ ...p, agenteRetencion: e.target.checked }))} style={{ width: 16, height: 16 }} />
+                  Agente de Retención
+                </label>
+              </div>
+
+              {errorMsg && (
+                <div style={{ marginTop: 14, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px' }}>
+                  <p style={{ fontSize: 13, color: '#dc2626', fontWeight: 600, margin: 0 }}>{errorMsg}</p>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                <button onClick={onClose} style={{ flex: 1, padding: '12px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Cancelar
+                </button>
+                <button
+                  onClick={enviar}
+                  disabled={step === 'sending'}
+                  style={{ flex: 2, padding: '12px', background: step === 'sending' ? '#9ca3af' : '#dc2626', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: step === 'sending' ? 'default' : 'pointer', fontFamily: 'inherit', transition: 'background .15s' }}
+                >
+                  {step === 'sending' ? 'Enviando cotización...' : '📄 Enviar cotización al cliente'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP: SUCCESS ── */}
+          {step === 'success' && (
+            <div style={{ textAlign: 'center', padding: '10px 0 8px' }}>
+              <div style={{ width: 64, height: 64, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 28 }}>✓</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111', marginBottom: 6 }}>¡Cotización enviada!</h3>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
+                Se ha enviado la cotización <strong style={{ color: '#C41E3A' }}>{numeroCot}</strong> al correo del cliente.
+              </p>
+              <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 24 }}>También recibiste una copia por correo y José Rojas fue notificado.</p>
+              <button onClick={onClose} style={{ width: '100%', padding: '12px', background: '#111', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cerrar
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  )
+}
