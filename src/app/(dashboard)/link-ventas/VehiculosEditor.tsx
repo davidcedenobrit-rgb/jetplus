@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Check, X } from 'lucide-react'
 
 interface Vehiculo {
   id: string
@@ -67,7 +67,6 @@ export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos
   const [dirty, setDirty] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
   const [saved, setSaved] = useState<Record<string, boolean>>({})
-  const [expandedAc500, setExpandedAc500] = useState<Record<string, boolean>>({})
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [newV, setNewV] = useState<{ id: string } & typeof EMPTY_VEHICULO>({ id: '', ...EMPTY_VEHICULO })
@@ -177,7 +176,6 @@ export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos
           const isDirty = dirty[v.id]
           const isSaving = saving[v.id]
           const isSaved = saved[v.id]
-          const ac500Open = expandedAc500[v.id]
 
           return (
             <div key={v.id} className={`card p-4 transition-all ${isDirty ? 'border-2 border-orange-300' : 'border border-gray-200'}`}>
@@ -245,40 +243,6 @@ export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos
                 <Field label="Orden (número menor = aparece primero)">
                   <input className={inputCls} type="number" step="1" value={v.orden ?? 99} onChange={e => update(v.id, 'orden', parseInt(e.target.value) || 99)} />
                 </Field>
-              </div>
-
-              {/* AC500 section */}
-              <div className="border-t border-gray-100 mt-3 pt-3">
-                <button
-                  onClick={() => setExpandedAc500(prev => ({ ...prev, [v.id]: !prev[v.id] }))}
-                  className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-oriental-black transition-colors"
-                >
-                  {ac500Open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  Plan Asegúrate con $500
-                  {v.ac500_visible && (
-                    <span className="bg-oriental-red/10 text-oriental-red text-[10px] font-bold px-1.5 py-0.5 rounded">ACTIVO</span>
-                  )}
-                </button>
-
-                {ac500Open && (
-                  <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <Field label="Visible en página AC500">
-                      <div className="flex items-center gap-2 mt-1">
-                        <Toggle on={!!v.ac500_visible} onClick={() => update(v.id, 'ac500_visible', !v.ac500_visible)} />
-                        <span className="text-xs text-gray-500">{v.ac500_visible ? 'Sí' : 'No'}</span>
-                      </div>
-                    </Field>
-                    <Field label="Cuota 6 meses ($)">
-                      <input className={inputCls} type="number" step="0.01" value={v.ac500_6m_cuota ?? ''} placeholder="—" onChange={e => update(v.id, 'ac500_6m_cuota', e.target.value ? parseFloat(e.target.value) : null)} />
-                    </Field>
-                    <Field label="Cuota 9 meses ($)">
-                      <input className={inputCls} type="number" step="0.01" value={v.ac500_9m_cuota ?? ''} placeholder="—" onChange={e => update(v.id, 'ac500_9m_cuota', e.target.value ? parseFloat(e.target.value) : null)} />
-                    </Field>
-                    <Field label="Cuota 12 meses ($)">
-                      <input className={inputCls} type="number" step="0.01" value={v.ac500_12m_cuota ?? ''} placeholder="—" onChange={e => update(v.id, 'ac500_12m_cuota', e.target.value ? parseFloat(e.target.value) : null)} />
-                    </Field>
-                  </div>
-                )}
               </div>
 
               {/* Bottom: save */}

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ExternalLink } from 'lucide-react'
-import VehiculosEditor from './VehiculosEditor'
+import LinkVentasTabs from './LinkVentasTabs'
 
 const ROL_PERMITIDO = ['jose', 'admin', 'director']
 
@@ -12,10 +12,10 @@ export default async function LinkVentasPage() {
   const rol = (user?.user_metadata?.rol as string) ?? 'editor'
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
-  const { data: vehiculos } = await supabase
-    .from('catalogo_ventas')
-    .select('*')
-    .order('orden')
+  const [{ data: vehiculos }, { data: ac500 }] = await Promise.all([
+    supabase.from('catalogo_ventas').select('*').order('orden'),
+    supabase.from('ac500_vehiculos').select('*').order('orden'),
+  ])
 
   return (
     <div className="p-4 lg:p-8">
@@ -37,7 +37,7 @@ export default async function LinkVentasPage() {
         </a>
       </div>
 
-      <VehiculosEditor initialVehiculos={vehiculos ?? []} />
+      <LinkVentasTabs catalogo={vehiculos ?? []} ac500={ac500 ?? []} />
     </div>
   )
 }

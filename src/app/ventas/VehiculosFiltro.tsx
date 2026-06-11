@@ -17,184 +17,113 @@ interface Vehiculo {
   ano: number | null
 }
 
-const CMAP: Record<string, string> = {
-  blanco:'#f0f0f0',blanca:'#f0f0f0',negro:'#1a1a1a',negra:'#1a1a1a',
-  rojo:'#dc2626',roja:'#dc2626',gris:'#9ca3af',grises:'#9ca3af',
-  plata:'#c0c0c0',plateado:'#c0c0c0',plateada:'#c0c0c0',
-  azul:'#2563eb',azules:'#2563eb',verde:'#16a34a',verdes:'#16a34a',
-  amarillo:'#eab308',naranja:'#ea580c',beige:'#d4c5a9',
-  marron:'#78350f','marrón':'#78350f',dorado:'#b8860b',
-  celeste:'#7dd3fc','borgoña':'#7f1d1d',vino:'#7f1d1d',perla:'#f1f0eb',
-}
-function cHex(n: string) { return CMAP[n.trim().toLowerCase()] ?? '#6b7280' }
+const WA = '584149989010'
+
 function fm(n: number | null | undefined) {
-  if (!n) return '—'
+  if (!n) return '0'
   return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-const WA_BASE = 'https://wa.me/584149989010'
-
-type Filtro = 'todos' | 'MG' | 'MAXUS'
+type Filtro = 'ALL' | 'MG' | 'MAXUS'
 
 export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }) {
-  const [filtro, setFiltro] = useState<Filtro>('todos')
-  const lista = filtro === 'todos' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
+  const [filtro, setFiltro] = useState<Filtro>('ALL')
+  const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
-  function handleShare(v: Vehiculo) {
-    const text = `🚗 ${v.model} — ${v.brand}\nPrecio base: $${fm(v.cash)}\nVer más en La Oriental Automotors`
-    if (navigator.share) {
-      navigator.share({ title: v.model, text }).catch(() => {})
-    } else {
-      navigator.clipboard.writeText(text).catch(() => {})
-    }
+  function goWA(model: string) {
+    const msg = `Hola 👋 vengo del perfil de ventas de La Oriental. Me interesa el ${model}.`
+    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+  function cotizar(v: Vehiculo) {
+    const msg = `Hola 👋 vengo de la web de La Oriental y quiero una cotización formal del ${v.model} (precio base $${fm(v.cash)}).`
+    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+  async function compartir(v: Vehiculo) {
+    const url = new URL(window.location.href); url.searchParams.set('car', v.id)
+    const link = url.toString()
+    if (navigator.share) { try { await navigator.share({ title: `La Oriental | ${v.model}`, url: link }); return } catch {} }
+    try { await navigator.clipboard.writeText(link) } catch {}
   }
 
   return (
     <div>
       {/* Filtros */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-        {(['todos', 'MG', 'MAXUS'] as Filtro[]).map(f => (
-          <button
-            key={f}
-            onClick={() => setFiltro(f)}
-            className={`lo-filter${filtro === f ? ' active' : ''}`}
-          >
-            {f === 'todos' ? 'Todos' : f}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
+        {(['ALL', 'MG', 'MAXUS'] as Filtro[]).map(f => (
+          <button key={f} onClick={() => setFiltro(f)} className={`f-btn${filtro === f ? ' on' : ''}`}>
+            {f === 'ALL' ? 'Todos' : f}
           </button>
         ))}
       </div>
 
       {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
         {lista.map(v => {
-          const colorsArr = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
-          const inicial = v.cash ? Math.round(v.cash * 0.4) : null
-
+          const init = v.cash ? v.cash * 0.4 : 0
           return (
-            <div key={v.id} className="lo-car-card">
+            <div key={v.id} id={`car-${v.id}`} className="lo-card">
               {/* Imagen */}
-              <div style={{ height: 185, background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
-                {v.img_url ? (
-                  <img
-                    src={v.img_url}
-                    alt={v.model}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 14 }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 50, opacity: 0.13 }}>🚗</span>
-                )}
-
-                {/* Brand badge */}
-                <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: 5 }}>
-                  <span style={{
-                    background: v.brand === 'MG' ? '#dc2626' : '#1d4ed8',
-                    color: '#fff', fontSize: 10, fontWeight: 800,
-                    padding: '2px 8px', borderRadius: 999, letterSpacing: '0.5px'
-                  }}>{v.brand}</span>
-                  {v.stock !== null && v.stock > 0 && (
-                    <span style={{ background: 'rgba(22,163,74,0.85)', color: '#fff', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
-                      {v.stock} en stock
-                    </span>
-                  )}
-                </div>
-
-                {/* Año */}
-                {v.ano && (
-                  <span style={{ position: 'absolute', top: 10, right: 10, color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600 }}>
-                    {v.ano}
-                  </span>
-                )}
+              <div className="lo-card-imgwrap">
+                {v.img_url
+                  ? <img src={v.img_url} alt={v.model} className="lo-card-img" loading="lazy" />
+                  : <span style={{ fontSize: 52, opacity: .12 }}>🚗</span>}
               </div>
 
-              {/* Info */}
-              <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <p style={{ fontWeight: 800, fontSize: 15, color: '#111827', marginBottom: 2 }}>{v.model}</p>
-                {v.transmision && v.transmision !== 'Ambos' && (
-                  <p style={{ color: '#9ca3af', fontSize: 11, marginBottom: 12, fontWeight: 500 }}>{v.transmision}</p>
-                )}
+              {/* Cuerpo */}
+              <div style={{ padding: '24px 26px 26px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '.5px' }}>{v.brand}</p>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111', marginTop: 2, lineHeight: 1.3 }}>{v.model}</h3>
 
-                {/* Precio base */}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Precio base (contado)</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>${fm(v.cash)}</span>
-                    {v.gc && v.gc > 0 && (
-                      <span style={{ fontSize: 12, color: '#9ca3af' }}>G. contado ${fm(v.gc)}</span>
-                    )}
-                  </div>
+                {/* Badges */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  {v.stock && v.stock > 0
+                    ? <span className="lo-badge lo-badge-stock">{v.stock} disponible{v.stock > 1 ? 's' : ''}</span>
+                    : <span className="lo-badge lo-badge-none">Consultar</span>}
+                  {v.transmision && v.transmision !== 'Ambos' && <span className="lo-badge lo-badge-meta">{v.transmision}</span>}
+                  {v.ano && <span className="lo-badge lo-badge-meta">{v.ano}</span>}
                 </div>
 
-                {/* Plan 40% inicial */}
-                {(inicial || v.tasa_credito) && (
-                  <div className="lo-plan-box">
-                    <p style={{ fontSize: 10, fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 8 }}>
-                      Plan 40% inicial + cuotas
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {inicial && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                          <span style={{ color: '#92400e', fontWeight: 600 }}>Inicial (40%)</span>
-                          <span style={{ fontWeight: 800, color: '#78350f' }}>${fm(inicial)}</span>
-                        </div>
-                      )}
+                {/* Precio base */}
+                <div style={{ marginTop: 18 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 4 }}>Precio base (contado)</p>
+                  <p style={{ fontSize: 25, fontWeight: 800, color: '#111' }}>${fm(v.cash)}</p>
+                  <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>*Sin incluir: IVA, placa, seguro, gastos</p>
+                </div>
+
+                {/* Plan 40% */}
+                {(init > 0 || (v.tasa_credito && v.tasa_credito > 0)) && (
+                  <div className="lo-credit-box" style={{ marginTop: 14 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#a16207', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 8 }}>Plan 40% inicial + cuotas</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <div>
+                        <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Inicial (40%)</p>
+                        <p style={{ fontSize: 17, fontWeight: 800, color: '#111' }}>${fm(init)}</p>
+                      </div>
                       {v.tasa_credito && v.tasa_credito > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                          <span style={{ color: '#92400e', fontWeight: 600 }}>Cuota mensual (24 m)</span>
-                          <span style={{ fontWeight: 800, color: '#dc2626' }}>${fm(v.tasa_credito)}/mes</span>
-                        </div>
+                        <>
+                          <div style={{ width: 1, height: 36, background: '#fde68a' }} />
+                          <div>
+                            <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Cuota mensual (24m)</p>
+                            <p style={{ fontSize: 17, fontWeight: 800, color: '#a16207' }}>${fm(v.tasa_credito)}</p>
+                          </div>
+                        </>
                       )}
                     </div>
-                  </div>
-                )}
-
-                {/* Colores */}
-                {colorsArr.length > 0 && (
-                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 12 }}>
-                    {colorsArr.map(c => (
-                      <div
-                        key={c}
-                        title={c}
-                        className="lo-color-dot"
-                        style={{ background: cHex(c) }}
-                      />
-                    ))}
                   </div>
                 )}
 
                 <div style={{ flex: 1 }} />
 
                 {/* Botones */}
-                <div style={{ display: 'flex', gap: 8, marginTop: 14, flexDirection: 'column' }}>
-                  {/* WhatsApp + Compartir */}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <a
-                      href={`${WA_BASE}?text=${encodeURIComponent(`Hola 👋 vengo de la web de La Oriental y quiero información sobre el ${v.model}.`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="lo-card-wa"
-                      style={{ textDecoration: 'none' }}
-                    >
-                      WhatsApp
-                    </a>
-                    <button
-                      onClick={() => handleShare(v)}
-                      className="lo-card-share"
-                    >
-                      Compartir
-                    </button>
+                <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <button onClick={() => goWA(v.model)} className="lo-cbtn-dark">WhatsApp</button>
+                    <button onClick={() => compartir(v)} className="lo-cbtn-out">Compartir</button>
                   </div>
-                  {/* Generar cotización */}
-                  <a
-                    href={`${WA_BASE}?text=${encodeURIComponent(`Hola 👋 vengo de la web de La Oriental y quiero una cotización formal del ${v.model} con precio base $${fm(v.cash)}.`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="lo-card-cot"
-                    style={{ textDecoration: 'none' }}
-                  >
+                  <button onClick={() => cotizar(v)} className="lo-cbtn-red">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
                     Generar cotización
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
@@ -208,10 +137,6 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
           <p style={{ fontWeight: 600 }}>No hay vehículos disponibles en este momento.</p>
         </div>
       )}
-
-      <p style={{ color: '#9ca3af', fontSize: 11, textAlign: 'center', marginTop: 28 }}>
-        * Precio base y plan 40% inicial + cuotas fijas disponibles en cada modelo.
-      </p>
     </div>
   )
 }
