@@ -14,10 +14,14 @@ interface Props {
   userEmail: string
 }
 
-const ROL_ARIANNA   = ['arianna', 'director', 'jose', 'admin', 'mary', 'leysdem']
-const ROL_DIRECTOR  = ['director', 'jose', 'admin', 'mary', 'leysdem']
-const ROL_PAGO      = ['director', 'jose', 'admin', 'mary']
-const ROL_ADMIN     = ['jose', 'arianna', 'director', 'admin']
+// Verificar, rechazar, enviar cotización, cargar pago, solicitar guía — Ari/Mary/Leysdm/Rojas (NO José)
+const ROL_OPERADOR  = ['arianna', 'director', 'admin', 'mary', 'leysdem']
+// Aprobar cotización — solo Rojas
+const ROL_DIRECTOR  = ['director', 'admin']
+// Cargar pago y retención — mismo nivel que operador
+const ROL_PAGO      = ['arianna', 'director', 'admin', 'mary', 'leysdem']
+// Panel admin y acciones internas
+const ROL_ADMIN     = ['arianna', 'director', 'admin', 'mary', 'leysdem']
 
 const TODOS_ESTADOS = [
   { key: 'solicitado',             label: 'Solicitado' },
@@ -61,7 +65,10 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [showAdmin, setShowAdmin] = useState(false)
   const [adminEstado, setAdminEstado] = useState(solicitud.estado)
 
-  const esArianna  = ROL_ARIANNA.includes(rol)
+  // Aprobación cotización
+  const [numCotizacionAprob, setNumCotizacionAprob] = useState('')
+
+  const esOperador = ROL_OPERADOR.includes(rol)
   const esDirector = ROL_DIRECTOR.includes(rol)
   const esPago     = ROL_PAGO.includes(rol)
   const estado     = solicitud.estado
@@ -119,10 +126,11 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   }
 
   async function handleAprobarCotizacion() {
+    if (!numCotizacionAprob.trim()) { setError('Ingresa el número de cotización de Vehimotors'); return }
     setLoading(true); setError('')
     const res = await fetch('/api/repuestos/aprobar-cotizacion', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, userEmail }),
+      body: JSON.stringify({ solicitudId: solicitud.id, userEmail, numeroCotizacion: numCotizacionAprob.trim() }),
     })
     if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
     router.refresh(); setLoading(false)
@@ -159,41 +167,12 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
     setEnviandoAlmacen(false)
   }
 
-  async function handleReporteRecepcion(tieneNovedad: boolean) {
-    setEnviandoReporte(true); setError('')
-    const fd = new FormData()
-    fd.append('solicitudId', solicitud.id)
-    fd.append('tieneNovedad', String(tieneNovedad))
-    fd.append('userEmail', userEmail)
-    if (tieneNovedad && novedadTexto) fd.append('notas', novedadTexto)
-    if (tieneNovedad && novedadFoto)  fd.append('foto', novedadFoto)
-    const res = await fetch('/api/repuestos/reportar-recepcion', { method: 'POST', body: fd })
-    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoReporte(false); return }
-    router.refresh()
-    setEnviandoReporte(false)
-  }
-
-  async function handleEnviarAlmacen() {
-    const emails = correosAlmacen.split(/[\s,;]+/).map(e => e.trim()).filter(Boolean)
-    if (!emails.length || !numCotizacion.trim()) {
-      setError('Completa los correos y el número de cotización'); return
-    }
-    setEnviandoAlmacen(true); setError('')
-    const res = await fetch('/api/repuestos/enviar-almacen', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, correosAlmacen: emails, numeroCotizacion: numCotizacion.trim(), userEmail }),
-    })
-    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoAlmacen(false); return }
-    setShowAlmacen(false); router.refresh()
-    setEnviandoAlmacen(false)
-  }
-
   return (
     <div className="space-y-4">
       {error && <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{error}</div>}
 
       {/* ── PASO 1 → Arianna verifica o rechaza ── */}
-      {estado === 'solicitado' && esArianna && (
+      {estado === 'solicitado' && esOperador && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-3">Verificar solicitud</h3>
           <div className="mb-3">
@@ -234,10 +213,9 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
       )}
 
       {/* ── PASO 2 → Enviar cotización a Vehimotors ── */}
-      {estado === 'verificado' && esArianna && (
+      {estado === 'verificado' && esOperador && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Enviar cotización a Vehimotors</h3>
-          <p className="text-xs text-oriental-gray mb-4">Email con 3 botones de respuesta + formulario para adjuntar cotización.</p>
           <button onClick={async () => {
             setLoading(true); setError('')
             const res = await fetch('/api/repuestos/enviar-cotizacion', {
@@ -264,8 +242,8 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
         </div>
       )}
 
-      {/* ── PASO 4 → Cotización recibida → aprobar ── */}
-      {estado === 'cotizacion_recibida' && (esArianna || esDirector) && (
+      {/* ── PASO 4 → Cotización recibida → aprobar — SOLO Rojas ── */}
+      {estado === 'cotizacion_recibida' && esDirector && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Revisar y aprobar cotización</h3>
           {solicitud.cotizacion_url ? (
@@ -282,8 +260,19 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
               <p className="text-sm text-yellow-700">{solicitud.cotizacion_observaciones}</p>
             </div>
           )}
-          <button onClick={handleAprobarCotizacion} disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
+          <div className="mb-4">
+            <label className="label">N° de cotización Vehimotors *</label>
+            <input
+              className="input text-sm font-mono"
+              type="text"
+              placeholder="Ej: SA03789"
+              value={numCotizacionAprob}
+              onChange={e => setNumCotizacionAprob(e.target.value)}
+            />
+            <p className="text-[11px] text-oriental-gray mt-1">Este número aparecerá en el email de aprobación que recibe Vehimotors.</p>
+          </div>
+          <button onClick={handleAprobarCotizacion} disabled={loading || !numCotizacionAprob.trim()}
+            className="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
             Aprobar cotización ✓
           </button>
@@ -367,13 +356,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
             <>
               <h3 className="text-sm font-bold text-oriental-black mb-3">Enviar a almacén</h3>
               <div className="mb-3">
-<<<<<<< HEAD
-                <label className="label">Correos del almacén *</label>
-                <textarea className="textarea text-sm" rows={2}
-                  placeholder="almacen@empresa.com, otro@empresa.com"
-                  value={correosAlmacen} onChange={e => setCorreosAlmacen(e.target.value)} />
-                <p className="text-[11px] text-oriental-gray -mt-2 mb-3">Separa múltiples correos con coma o salto de línea.</p>
-=======
                 <label className="label">Destinatarios *</label>
                 <div className="space-y-2">
                   {CORREOS_ALMACEN.map((email, i) => (
@@ -388,7 +370,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                     </label>
                   ))}
                 </div>
->>>>>>> a70209c (feat(repuestos): correos de almacén con checkboxes predefinidos)
               </div>
               <div className="mb-4">
                 <label className="label">Número de cotización (código Vehimotors) *</label>
@@ -402,11 +383,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                   {enviandoAlmacen ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                   Enviar email
                 </button>
-<<<<<<< HEAD
-                <button onClick={() => { setShowAlmacen(false); setError('') }}
-=======
                 <button onClick={() => { setShowAlmacen(false); setCorreosAlmacen([true, true]); setNumCotizacion(''); setError('') }}
->>>>>>> a70209c (feat(repuestos): correos de almacén con checkboxes predefinidos)
                   className="flex-1 btn-secondary py-2.5 text-sm">Cancelar</button>
               </div>
             </>
@@ -430,7 +407,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
       )}
 
       {/* ── PASO 8 → Guía recibida → confirmar llegada + reporte a Vehimotors ── */}
-      {estado === 'guia_recibida' && esArianna && (
+      {estado === 'guia_recibida' && esOperador && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-oriental-black mb-2">Confirmar llegada del pedido</h3>
           {solicitud.guia_url && (
