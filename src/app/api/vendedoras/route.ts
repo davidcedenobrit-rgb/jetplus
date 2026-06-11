@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   if (!nombre?.trim() || !codigo?.trim()) {
     return NextResponse.json({ error: 'Nombre y código son requeridos' }, { status: 400 })
   }
-  if (!/^\d{3}$/.test(codigo.trim())) {
+  if (!/^[A-Za-z]\d{3}$/.test(codigo.trim())) {
     return NextResponse.json({ error: 'El código debe ser exactamente 3 dígitos' }, { status: 400 })
   }
 
@@ -72,7 +72,7 @@ export async function PATCH(req: Request) {
   if (typeof activa === 'boolean') update.activa = activa
   if (nombre?.trim()) update.nombre = nombre.trim()
   if (codigo?.trim()) {
-    if (!/^\d{3}$/.test(codigo.trim())) {
+    if (!/^[A-Za-z]\d{3}$/.test(codigo.trim())) {
       return NextResponse.json({ error: 'El código debe ser exactamente 3 dígitos' }, { status: 400 })
     }
     const supabase = await createAdminClient()

@@ -73,7 +73,7 @@ export default function VendedorasEditor() {
 
   async function agregarVendedora() {
     if (!newNombre.trim() || !newCodigo.trim()) { showToast('Nombre y código son requeridos', false); return }
-    if (!/^\d{3}$/.test(newCodigo.trim())) { showToast('El código debe ser de exactamente 3 dígitos', false); return }
+    if (!/^[A-Za-z]\d{3}$/.test(newCodigo.trim())) { showToast('El código debe ser letra + 3 dígitos (ej: D198)', false); return }
     setSaving(true)
     const r = await fetch('/api/vendedoras', {
       method: 'POST',
@@ -172,18 +172,17 @@ export default function VendedorasEditor() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                  Código de 3 dígitos *
-                  <span className="font-normal ml-1 text-gray-400">(la clave para generar cotizaciones)</span>
+                  Código *
+                  <span className="font-normal ml-1 text-gray-400">(letra + 3 dígitos, ej: D198)</span>
                 </label>
                 <div className="relative">
                   <input
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red pr-10 tracking-widest font-mono"
                     type={showCodigo ? 'text' : 'password'}
-                    inputMode="numeric"
-                    maxLength={3}
+                    maxLength={4}
                     value={newCodigo}
-                    onChange={e => setNewCodigo(e.target.value.replace(/\D/g, ''))}
-                    placeholder="•••"
+                    onChange={e => setNewCodigo(e.target.value.toUpperCase())}
+                    placeholder="X000"
                   />
                   <button
                     type="button"

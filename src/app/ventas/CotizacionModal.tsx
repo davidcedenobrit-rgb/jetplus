@@ -53,7 +53,7 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
   const calc = calcular(vehiculo, modalidad)
 
   async function verificarPin() {
-    if (!/^\d{3}$/.test(pin)) { setPinError('El código debe ser de 3 dígitos'); return }
+    if (!/^[A-Za-z]\d{3}$/.test(pin.trim())) { setPinError('El código debe ser una letra seguida de 3 dígitos (ej: D198)'); return }
     setPinLoading(true)
     setPinError('')
     try {
@@ -153,12 +153,11 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
                 <label style={label}>Código de vendedora</label>
                 <input
                   type="text"
-                  inputMode="numeric"
-                  maxLength={3}
+                  maxLength={4}
                   value={pin}
-                  onChange={e => { setPin(e.target.value.replace(/\D/g, '')); setPinError('') }}
+                  onChange={e => { setPin(e.target.value.toUpperCase()); setPinError('') }}
                   onKeyDown={e => e.key === 'Enter' && verificarPin()}
-                  placeholder="•••"
+                  placeholder="X000"
                   style={{ ...Object.fromEntries(inp.split(';').filter(Boolean).map(p => { const [k, v] = p.split(':'); return [k.trim().replace(/-([a-z])/g, (_,c) => c.toUpperCase()), v?.trim()] })), fontSize: 24, textAlign: 'center', letterSpacing: 12, fontWeight: 800 } as React.CSSProperties}
                   autoFocus
                 />
@@ -166,8 +165,8 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
               </div>
               <button
                 onClick={verificarPin}
-                disabled={pinLoading || pin.length !== 3}
-                style={{ width: '100%', padding: '12px', background: pin.length === 3 ? '#111' : '#d1d5db', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: pin.length === 3 ? 'pointer' : 'default', fontFamily: 'inherit', transition: 'background .15s' }}
+                disabled={pinLoading || pin.length !== 4}
+                style={{ width: '100%', padding: '12px', background: pin.length === 4 ? '#111' : '#d1d5db', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: pin.length === 4 ? 'pointer' : 'default', fontFamily: 'inherit', transition: 'background .15s' }}
               >
                 {pinLoading ? 'Verificando...' : 'Continuar →'}
               </button>

@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 export async function POST(req: Request) {
   try {
     const { codigo } = await req.json()
-    if (!codigo || typeof codigo !== 'string' || !/^\d{3}$/.test(codigo.trim())) {
+    if (!codigo || typeof codigo !== 'string' || !/^[A-Za-z]\d{3}$/.test(codigo.trim())) {
       return NextResponse.json({ valida: false, error: 'Código inválido' }, { status: 400 })
     }
 
