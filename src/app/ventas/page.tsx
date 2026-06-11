@@ -20,7 +20,7 @@ export default async function VentasPage() {
   const supabase = await createClient()
 
   const { data: vehiculos } = await supabase
-    .from('vehiculos_showroom')
+    .from('catalogo_ventas')
     .select('*')
     .eq('disponible', true)
     .order('orden')

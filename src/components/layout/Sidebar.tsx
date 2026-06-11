@@ -7,22 +7,25 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban
+  Shield, ScrollText, Building2, Ban, Globe
 } from 'lucide-react'
 
 const navItemsTop = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ]
-const navItemsBottom = [
+const navItemsBottom1 = [
   { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/vehiculos', label: 'Vehículos', icon: Car },
   { href: '/ingresos', label: 'Ingresos', icon: TrendingUp },
   { href: '/egresos', label: 'Egresos', icon: TrendingDown },
   { href: '/creditos', label: 'Créditos', icon: CreditCard },
+]
+const navItemsBottom2 = [
   { href: '/tasas', label: 'Tasas', icon: ArrowLeftRight },
   { href: '/reportes', label: 'Reportes', icon: BarChart2 },
   { href: '/documentos-empresa', label: 'Docs. Empresa', icon: FolderOpen },
 ]
+const navItemsBottom = [...navItemsBottom1, ...navItemsBottom2]
 const navItems = [...navItemsTop, ...navItemsBottom]
 
 const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
@@ -64,177 +67,210 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {/* Resto del menú — oculto para Arianna */}
-        {rol !== 'arianna' && navItemsTop.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                active
-                  ? 'bg-oriental-red text-white font-semibold'
-                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
-              }`}
-            >
-              <Icon size={18} />
-              {label}
-            </Link>
-          )
-        })}
 
-        {/* Vehículo Showroom — entre Dashboard y Clientes */}
-        {(() => {
-          const active = pathname === '/showroom' || pathname.startsWith('/showroom/')
-          return (
-            <Link href="/showroom" onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-              <Store size={18} />
-              <span className="flex-1">Vehículo Showroom</span>
-            </Link>
-          )
-        })()}
-
-        {/* Repuestos — visible para todos */}
-        {(() => {
-          const active = pathname === '/repuestos' || pathname.startsWith('/repuestos/')
-          return (
-            <Link href="/repuestos" onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-              <Package size={18} />
-              <span className="flex-1">Repuestos</span>
-            </Link>
-          )
-        })()}
-
-        {/* Clientes en adelante — oculto para Arianna */}
-        {rol !== 'arianna' && navItemsBottom.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <Link key={href} href={href} onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-              <Icon size={18} />
-              {label}
-            </Link>
-          )
-        })}
-
-        {/* Aprobaciones — oculto para Arianna */}
-        {rol !== 'arianna' && (() => {
-          const active = pathname === '/aprobaciones' || pathname.startsWith('/aprobaciones/')
-          return (
-            <Link
-              href="/aprobaciones"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                active
-                  ? 'bg-oriental-red text-white font-semibold'
-                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
-              }`}
-            >
-              <ShieldCheck size={18} />
-              <span className="flex-1">Aprobaciones</span>
-              {aprobacionesPendientes > 0 && (
-                <span className="bg-oriental-red text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                  {aprobacionesPendientes > 99 ? '99+' : aprobacionesPendientes}
-                </span>
-              )}
-            </Link>
-          )
-        })()}
-
-        {/* Importar — solo directores, no Arianna */}
-        {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-          const active = pathname === '/importar' || pathname.startsWith('/importar/')
-          return (
-            <Link
-              href="/importar"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                active
-                  ? 'bg-oriental-red text-white font-semibold'
-                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
-              }`}
-            >
-              <Upload size={18} />
-              Importar datos
-            </Link>
-          )
-        })()}
-
-        {/* Auditoría y Logs — solo Rojas (admin) */}
-        {rol === 'admin' && (() => {
-          const activeAud = pathname === '/auditoria' || pathname.startsWith('/auditoria/')
-          const activeLogs = pathname === '/logs' || pathname.startsWith('/logs/')
-          return (
-            <>
-              <Link href="/auditoria" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeAud ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Shield size={18} />
-                Auditoría
+        {/* ── NAV EXCLUSIVA CARLA ───────────────────────────────── */}
+        {rol === 'carla' && (() => {
+          const carlaNav = [
+            { href: '/dashboard', label: 'Dashboard',         icon: LayoutDashboard },
+            { href: '/carla',     label: 'RR · Recibido de Rojas', icon: PackageCheck },
+            { href: '/clientes',  label: 'Clientes',           icon: Users },
+            { href: '/showroom',  label: 'Vehículo Showroom',  icon: Store },
+            { href: '/vehiculos', label: 'Vehículos',          icon: Car },
+            { href: '/ingresos',  label: 'Ingresos',           icon: TrendingUp },
+            { href: '/egresos',   label: 'Egresos',            icon: TrendingDown },
+            { href: '/creditos',   label: 'Créditos',           icon: CreditCard },
+            { href: '/vehimotors', label: 'Vehimotors',         icon: Building2 },
+            { href: '/reportes',  label: 'Reportes',           icon: BarChart2 },
+          ]
+          return carlaNav.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + '/')
+            const isRR = href === '/carla'
+            return (
+              <Link key={href} href={href} onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Icon size={18} />
+                <span className="flex-1">{label}</span>
+                {isRR && depositosPendientesCarla > 0 && (
+                  <span className="bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                    {depositosPendientesCarla > 99 ? '99+' : depositosPendientesCarla}
+                  </span>
+                )}
               </Link>
-              <Link href="/logs" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeLogs ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <ScrollText size={18} />
-                Logs del sistema
+            )
+          })
+        })()}
+
+        {/* ── NAV RESTO DE ROLES ────────────────────────────────── */}
+        {rol !== 'carla' && <>
+
+          {/* Dashboard — oculto para Arianna y Almacén */}
+          {!['arianna', 'almacen'].includes(rol) && navItemsTop.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + '/')
+            return (
+              <Link key={href} href={href} onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Icon size={18} />
+                {label}
               </Link>
-            </>
-          )
-        })()}
+            )
+          })}
 
-        {/* Vehimotors — visible para directores */}
-        {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-          const active = pathname === '/vehimotors' || pathname.startsWith('/vehimotors/')
-          return (
-            <Link href="/vehimotors" onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-              <Building2 size={18} />
-              <span className="flex-1">Vehimotors</span>
-            </Link>
-          )
-        })()}
+          {/* Vehículo Showroom — oculto para Arianna y Almacén */}
+          {!['arianna', 'almacen'].includes(rol) && (() => {
+            const active = pathname === '/showroom' || pathname.startsWith('/showroom/')
+            return (
+              <Link href="/showroom" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Store size={18} />
+                <span className="flex-1">Vehículo Showroom</span>
+              </Link>
+            )
+          })()}
 
-        {/* Anulaciones — solo director/mary/leysdem */}
-        {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-          const active = pathname === '/anulaciones' || pathname.startsWith('/anulaciones/')
-          return (
-            <Link href="/anulaciones" onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-              <Ban size={18} />
-              <span className="flex-1">Anulaciones</span>
-              {anulacionesPendientes > 0 && (
-                <span className="bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                  {anulacionesPendientes > 99 ? '99+' : anulacionesPendientes}
-                </span>
-              )}
-            </Link>
-          )
-        })()}
+          {/* Repuestos — visible para todos */}
+          {(() => {
+            const active = pathname === '/repuestos' || pathname.startsWith('/repuestos/')
+            return (
+              <Link href="/repuestos" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Package size={18} />
+                <span className="flex-1">Repuestos</span>
+              </Link>
+            )
+          })()}
 
-        {/* Carla — visible solo para carla/jose/admin */}
-        {ROL_CARLA_VISIBLE.includes(rol) && (() => {
-          const active = pathname === '/carla' || pathname.startsWith('/carla/')
-          return (
-            <Link
-              href="/carla"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                active
-                  ? 'bg-oriental-red text-white font-semibold'
-                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
-              }`}
-            >
-              <PackageCheck size={18} />
-              <span className="flex-1">Carla</span>
-              {depositosPendientesCarla > 0 && (
-                <span className="bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                  {depositosPendientesCarla > 99 ? '99+' : depositosPendientesCarla}
-                </span>
-              )}
-            </Link>
-          )
-        })()}
+          {/* Clientes → Créditos */}
+          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + '/')
+            return (
+              <Link key={href} href={href} onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Icon size={18} />
+                {label}
+              </Link>
+            )
+          })}
+
+          {/* Vehimotors */}
+          {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/vehimotors' || pathname.startsWith('/vehimotors/')
+            return (
+              <Link href="/vehimotors" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Building2 size={18} />
+                <span className="flex-1">Vehimotors</span>
+              </Link>
+            )
+          })()}
+
+          {/* Tasas → Docs. Empresa */}
+          {!['arianna', 'almacen'].includes(rol) && navItemsBottom2.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + '/')
+            return (
+              <Link key={href} href={href} onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Icon size={18} />
+                {label}
+              </Link>
+            )
+          })}
+
+          {/* Aprobaciones */}
+          {!['arianna', 'almacen'].includes(rol) && (() => {
+            const active = pathname === '/aprobaciones' || pathname.startsWith('/aprobaciones/')
+            return (
+              <Link href="/aprobaciones" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <ShieldCheck size={18} />
+                <span className="flex-1">Aprobaciones</span>
+                {aprobacionesPendientes > 0 && (
+                  <span className="bg-oriental-red text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                    {aprobacionesPendientes > 99 ? '99+' : aprobacionesPendientes}
+                  </span>
+                )}
+              </Link>
+            )
+          })()}
+
+          {/* Anulaciones */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/anulaciones' || pathname.startsWith('/anulaciones/')
+            return (
+              <Link href="/anulaciones" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Ban size={18} />
+                <span className="flex-1">Anulaciones</span>
+                {anulacionesPendientes > 0 && (
+                  <span className="bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                    {anulacionesPendientes > 99 ? '99+' : anulacionesPendientes}
+                  </span>
+                )}
+              </Link>
+            )
+          })()}
+
+          {/* Link de Ventas */}
+          {['jose', 'admin', 'director'].includes(rol) && (() => {
+            const active = pathname === '/link-ventas' || pathname.startsWith('/link-ventas/')
+            return (
+              <Link href="/link-ventas" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Globe size={18} />
+                <span className="flex-1">Link de Ventas</span>
+              </Link>
+            )
+          })()}
+
+          {/* Importar */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/importar' || pathname.startsWith('/importar/')
+            return (
+              <Link href="/importar" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Upload size={18} />
+                Importar datos
+              </Link>
+            )
+          })()}
+
+          {/* Auditoría y Logs */}
+          {['director', 'admin'].includes(rol) && (() => {
+            const activeAud = pathname === '/auditoria' || pathname.startsWith('/auditoria/')
+            const activeLogs = pathname === '/logs' || pathname.startsWith('/logs/')
+            return (
+              <>
+                <Link href="/auditoria" onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeAud ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <Shield size={18} />
+                  Auditoría
+                </Link>
+                <Link href="/logs" onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeLogs ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <ScrollText size={18} />
+                  Logs del sistema
+                </Link>
+              </>
+            )
+          })()}
+
+          {/* RR · Recibido de Rojas */}
+          {['director', 'admin', 'jose'].includes(rol) && (() => {
+            const active = pathname === '/carla' || pathname.startsWith('/carla/')
+            return (
+              <Link href="/carla" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <PackageCheck size={18} />
+                <span className="flex-1">Carla</span>
+                {depositosPendientesCarla > 0 && (
+                  <span className="bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                    {depositosPendientesCarla > 99 ? '99+' : depositosPendientesCarla}
+                  </span>
+                )}
+              </Link>
+            )
+          })()}
+
+        </>}
       </nav>
 
       {/* User */}
@@ -249,6 +285,9 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )}
           {rol === 'arianna' && (
             <span className="text-[10px] bg-orange-600/20 text-orange-500 font-semibold px-1.5 py-0.5 rounded">SHOWROOM</span>
+          )}
+          {rol === 'almacen' && (
+            <span className="text-[10px] bg-blue-600/20 text-blue-600 font-semibold px-1.5 py-0.5 rounded">ALMACÉN</span>
           )}
         </div>
         <button
