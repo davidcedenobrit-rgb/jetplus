@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     if (!['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
     }
-    if (!/^\d{3}$/.test(String(codigo).trim())) {
+    if (!/^[A-Za-z]\d{3}$/.test(String(codigo).trim())) {
       return NextResponse.json({ error: 'Código inválido' }, { status: 400 })
     }
 
