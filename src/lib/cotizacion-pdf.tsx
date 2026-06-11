@@ -176,8 +176,8 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 <Text style={s.cotzKey}>Vencimiento:</Text>
                 <Text style={s.cotzVal}>{data.vencimiento}</Text>
               </View>
-              <View style={[s.retBadge, !data.agenteRetencion && s.retBadgeNo]}>
-                <Text style={[s.retBadgeText, !data.agenteRetencion && s.retBadgeNoText]}>
+              <View style={!data.agenteRetencion ? [s.retBadge, s.retBadgeNo] : s.retBadge}>
+                <Text style={!data.agenteRetencion ? [s.retBadgeText, s.retBadgeNoText] : s.retBadgeText}>
                   AGENTE DE RETENCIÓN: {data.agenteRetencion ? 'SÍ' : 'NO'}
                 </Text>
               </View>
