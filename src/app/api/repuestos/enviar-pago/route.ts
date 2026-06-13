@@ -11,7 +11,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { solicitudId, comprobanteUrl } = await req.json()
+    const { solicitudId, comprobanteUrl, numeroCotizacion } = await req.json()
     if (!solicitudId || !comprobanteUrl) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
 
     const { data: sol } = await supabase
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     await enviarConfirmacionPago({
       numero: sol.numero, solicitudId, tokenPago: sol.token_pago,
       comprobanteUrl, items, retencionUrl: sol.retencion_url ?? null,
+      numeroCotizacion: numeroCotizacion ?? null,
     })
 
     await supabase.from('solicitudes_repuestos').update({

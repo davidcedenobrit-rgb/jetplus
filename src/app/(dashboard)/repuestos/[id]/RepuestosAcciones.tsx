@@ -68,6 +68,9 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   // Aprobación cotización
   const [numCotizacionAprob, setNumCotizacionAprob] = useState('')
 
+  // Cotización Vehimotors al enviar pago
+  const [numCotizacionPago, setNumCotizacionPago] = useState('')
+
   const esOperador = ROL_OPERADOR.includes(rol)
   const esDirector = ROL_DIRECTOR.includes(rol)
   const esPago     = ROL_PAGO.includes(rol)
@@ -115,10 +118,11 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
 
   async function handleEnviarPago() {
     if (!solicitud.comprobante_url) { setError('Debes cargar el comprobante de pago primero'); return }
+    if (!numCotizacionPago.trim()) { setError('Ingresa el número de cotización de Vehimotors'); return }
     setLoading(true); setError('')
     const res = await fetch('/api/repuestos/enviar-pago', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, comprobanteUrl: solicitud.comprobante_url }),
+      body: JSON.stringify({ solicitudId: solicitud.id, comprobanteUrl: solicitud.comprobante_url, numeroCotizacion: numCotizacionPago.trim() }),
     })
     if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
     await log('pago_enviado', 'Pago enviado a Vehimotors')
@@ -326,12 +330,25 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
           ))}
 
           {estado === 'factura_recibida' && (
-            <button onClick={handleEnviarPago} disabled={!pagoListo || loading}
-              className={`w-full mt-2 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2
-                ${pagoListo ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-              {pagoListo ? 'Enviar pago a Vehimotors' : 'Carga el comprobante para continuar'}
-            </button>
+            <>
+              <div className="mb-3">
+                <label className="label">N° de cotización Vehimotors *</label>
+                <input
+                  className="input text-sm font-mono"
+                  type="text"
+                  placeholder="Ej: SA03789"
+                  value={numCotizacionPago}
+                  onChange={e => setNumCotizacionPago(e.target.value)}
+                />
+                <p className="text-[11px] text-oriental-gray mt-1">Aparecerá en el email: "Se ha pagado la cotización XXXXX del pedido SORE-XXXXX".</p>
+              </div>
+              <button onClick={handleEnviarPago} disabled={!pagoListo || !numCotizacionPago.trim() || loading}
+                className={`w-full mt-1 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2
+                  ${pagoListo && numCotizacionPago.trim() ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                {pagoListo ? 'Enviar pago a Vehimotors' : 'Carga el comprobante para continuar'}
+              </button>
+            </>
           )}
         </div>
       )}

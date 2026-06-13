@@ -162,13 +162,11 @@ export async function enviarReporteRecepcion(opts: {
       <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#92400e;margin:0 0 6px">Detalles de la novedad:</p>
       <p style="font-family:sans-serif;font-size:14px;color:#78350f;margin:0">${notas}</p>
     </div>` : ''}
-    ${fotoUrl ? `<div style="text-align:center;margin-bottom:20px"><a href="${fotoUrl}" style="${btnStyle('#d97706')}">📷 Ver foto adjunta</a></div>` : ''}
-    <div style="text-align:center"><a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>`
+    ${fotoUrl ? `<div style="text-align:center;margin-bottom:20px"><a href="${fotoUrl}" style="${btnStyle('#d97706')}">📷 Ver foto adjunta</a></div>` : ''}`
   : `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#16a34a;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Recepción</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">✅ Pedido recibido sin novedad — ${numero}</h1>
-    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">El pedido <strong>${numero}</strong> fue recibido en nuestro taller en perfectas condiciones. Sin novedades. Gracias.</p>
-    <div style="text-align:center"><a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>`
+    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">El pedido <strong>${numero}</strong> fue recibido en nuestro taller en perfectas condiciones. Sin novedades. Gracias.</p>`
 
   const asunto = tieneNovedad
     ? `⚠️ Novedad en pedido ${numero} — La Oriental Automotors`
@@ -179,14 +177,19 @@ export async function enviarReporteRecepcion(opts: {
 export async function enviarConfirmacionPago(opts: {
   numero: string; solicitudId: string; tokenPago: string
   comprobanteUrl: string; items: Item[]; retencionUrl?: string | null
+  numeroCotizacion?: string | null
 }) {
-  const { numero, solicitudId, tokenPago, comprobanteUrl, items, retencionUrl } = opts
+  const { numero, solicitudId, tokenPago, comprobanteUrl, items, retencionUrl, numeroCotizacion } = opts
   const urlConfirmar = `${APP_URL}/api/repuestos/confirmar-pago?id=${solicitudId}&token=${tokenPago}&accion=confirmar`
   const urlGuia      = `${APP_URL}/api/repuestos/confirmar-pago?id=${solicitudId}&token=${tokenPago}&accion=guia`
 
+  const titulo = numeroCotizacion
+    ? `Se ha pagado la cotización ${numeroCotizacion} del pedido ${numero}`
+    : `💰 Pago realizado — ${numero}`
+
   const body = `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#16a34a;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Comprobante de Pago</p>
-    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">💰 Pago realizado — ${numero}</h1>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">💰 ${titulo}</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 20px">Adjuntamos comprobante de pago para los siguientes repuestos. Por favor confirme recepción y envíe la guía de despacho.</p>
     ${itemsTable(items)}
     <div style="text-align:center;margin-bottom:16px">
