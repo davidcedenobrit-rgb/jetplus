@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     // Obtener vehículo
     const { data: vehiculo } = await supabase
       .from('catalogo_ventas')
-      .select('brand, model, cash, gc, gcr, tasa_credito')
+      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, gcr_banco, cuota_banco')
       .eq('id', vehiculoId)
       .eq('disponible', true)
       .single()
@@ -73,6 +73,7 @@ export async function POST(req: Request) {
     let diferencial = 0
     let tasaBCVSnap: number | null = null
     let tasaVHMSnap: number | null = null
+    let totalVehiculoBanco = 0
 
     if (plan === 'banco_100' && modalidad === 'credito_24') {
       const { data: tasasRows } = await supabase
@@ -82,12 +83,22 @@ export async function POST(req: Request) {
       for (const r of tasasRows ?? []) tm[r.clave] = Number(r.valor)
       tasaBCVSnap = tm['tasa_bcv'] ?? 0
       tasaVHMSnap = tm['tasa_vehimotors'] ?? 0
+      const placaMonto = Number(vehiculo.placa_monto) || 400
+      totalVehiculoBanco = precioBase + iva + placaMonto
+      const financiamientoBanco = totalVehiculoBanco * 0.70
       if (tasaBCVSnap > 0 && tasaVHMSnap > tasaBCVSnap) {
-        diferencial = precioBase * (tasaVHMSnap - tasaBCVSnap) / tasaBCVSnap
+        diferencial = financiamientoBanco * (tasaVHMSnap - tasaBCVSnap) / tasaBCVSnap
       }
     }
 
-    const gastosBase = modalidad === 'contado' ? Number(vehiculo.gc) || 0 : Number(vehiculo.gcr) || 0
+    let gastosBase: number
+    if (plan === 'banco_100' && modalidad === 'credito_24') {
+      gastosBase = Number(vehiculo.gcr_banco) || 0
+    } else if (modalidad === 'contado') {
+      gastosBase = Number(vehiculo.gc) || 0
+    } else {
+      gastosBase = Number(vehiculo.gcr) || 0
+    }
     const gastos = gastosBase + diferencial
 
     let totalInicial: number
@@ -98,6 +109,12 @@ export async function POST(req: Request) {
     if (modalidad === 'contado') {
       totalInicial = precioBase + iva + gastos
       costoTotal = totalInicial
+    } else if (plan === 'banco_100') {
+      const inicialBanco = totalVehiculoBanco * 0.30
+      totalInicial = inicialBanco + gastos
+      financiamientoMonto = totalVehiculoBanco * 0.70
+      cuotaMensual = Number(vehiculo.cuota_banco) || 0
+      costoTotal = totalInicial + cuotaMensual * 24
     } else {
       const inicial40 = precioBase * 0.4
       totalInicial = inicial40 + iva + gastos
@@ -168,6 +185,7 @@ export async function POST(req: Request) {
       plan,
       ivaMonto: iva,
       gastosMonto: gastos,
+      totalVehiculo: plan === 'banco_100' ? totalVehiculoBanco : undefined,
       totalInicial,
       financiamientoMonto,
       cuotaMensual,

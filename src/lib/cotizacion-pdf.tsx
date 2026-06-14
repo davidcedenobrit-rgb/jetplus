@@ -116,6 +116,7 @@ export interface CotizacionPDFData {
   plan?: 'vehimotors' | 'banco_100'
   ivaMonto: number
   gastosMonto: number
+  totalVehiculo?: number
   totalInicial: number
   financiamientoMonto: number | null
   cuotaMensual: number | null
@@ -126,7 +127,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const es24 = data.modalidad === 'credito_24'
   const esBanco = data.plan === 'banco_100'
   const modalidadLabel = es24
-    ? (esBanco ? 'CRÉDITO BANCARIO 24 MESES (40% INICIAL)' : 'CRÉDITO 24 MESES (40% INICIAL)')
+    ? (esBanco ? 'CRÉDITO BANCARIO 24 MESES (30% INICIAL)' : 'CRÉDITO 24 MESES (40% INICIAL)')
     : 'CONTADO'
 
   return (
@@ -223,7 +224,26 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 <Text style={s.calcHeaderVal}>{modalidadLabel}</Text>
               </View>
 
-              {es24 ? (
+              {es24 && esBanco ? (
+                <>
+                  <View style={s.calcRow}>
+                    <Text style={s.calcLabel}>Total Precio Vehículo</Text>
+                    <Text style={s.calcVal}>{fmt(data.totalVehiculo ?? 0)}</Text>
+                  </View>
+                  <View style={s.calcRow}>
+                    <Text style={s.calcLabel}>Inicial (30%)</Text>
+                    <Text style={s.calcVal}>{fmt((data.totalVehiculo ?? 0) * 0.30)}</Text>
+                  </View>
+                  <View style={s.calcRow}>
+                    <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
+                    <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
+                  </View>
+                  <View style={s.calcTotalRow}>
+                    <Text style={s.calcTotalLabel}>TOTAL INICIAL A PAGAR:</Text>
+                    <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
+                  </View>
+                </>
+              ) : es24 ? (
                 <>
                   <View style={s.calcRow}>
                     <Text style={s.calcLabel}>40% Precio Base</Text>
@@ -273,7 +293,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={s.finHeaderText}>PLAN DE FINANCIAMIENTO</Text>
                 </View>
                 <View style={s.finRow}>
-                  <Text style={s.finLabel}>Financiamiento 60%</Text>
+                  <Text style={s.finLabel}>{esBanco ? 'Financiamiento 70%' : 'Financiamiento 60%'}</Text>
                   <Text style={s.finVal}>${fmt(data.financiamientoMonto)}</Text>
                 </View>
                 <View style={s.finRow}>

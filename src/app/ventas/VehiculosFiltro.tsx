@@ -17,6 +17,9 @@ interface Vehiculo {
   colores: string | null
   transmision: string | null
   ano: number | null
+  placa_monto?: number | null
+  gcr_banco?: number | null
+  cuota_banco?: number | null
 }
 
 const WA = '584149989010'

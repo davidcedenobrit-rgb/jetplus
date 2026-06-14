@@ -23,6 +23,9 @@ interface Vehiculo {
   ac500_6m_cuota: number | null
   ac500_9m_cuota: number | null
   ac500_12m_cuota: number | null
+  placa_monto: number | null
+  gcr_banco: number | null
+  cuota_banco: number | null
 }
 
 const CMAP: Record<string, string> = {
@@ -60,6 +63,7 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   tasa_credito: null, stock: 0, ano: 2026, transmision: 'Automático',
   colores: '', orden: 99, disponible: true,
   ac500_visible: false, ac500_6m_cuota: null, ac500_9m_cuota: null, ac500_12m_cuota: null,
+  placa_monto: 400, gcr_banco: null, cuota_banco: null,
 }
 
 export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos: Vehiculo[] }) {
@@ -97,6 +101,7 @@ export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos
       orden: v.orden, disponible: v.disponible,
       ac500_visible: v.ac500_visible, ac500_6m_cuota: v.ac500_6m_cuota,
       ac500_9m_cuota: v.ac500_9m_cuota, ac500_12m_cuota: v.ac500_12m_cuota,
+      placa_monto: v.placa_monto, gcr_banco: v.gcr_banco, cuota_banco: v.cuota_banco,
       updated_at: new Date().toISOString(),
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
@@ -243,6 +248,22 @@ export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos
                 <Field label="Orden (número menor = aparece primero)">
                   <input className={inputCls} type="number" step="1" value={v.orden ?? 99} onChange={e => update(v.id, 'orden', parseInt(e.target.value) || 99)} />
                 </Field>
+              </div>
+
+              {/* Plan 100% Banco */}
+              <div className="border-t border-dashed border-gray-200 pt-3 mt-1 mb-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Plan 100% Banco (crédito bancario)</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <Field label="Placa ($)">
+                    <input className={inputCls} type="number" step="0.01" value={v.placa_monto ?? 400} onChange={e => update(v.id, 'placa_monto', e.target.value ? parseFloat(e.target.value) : null)} placeholder="400" />
+                  </Field>
+                  <Field label="Gastos Banco ($)">
+                    <input className={inputCls} type="number" step="0.01" value={v.gcr_banco ?? ''} onChange={e => update(v.id, 'gcr_banco', e.target.value ? parseFloat(e.target.value) : null)} placeholder="0" />
+                  </Field>
+                  <Field label="Cuota Banco ($/mes)">
+                    <input className={inputCls} type="number" step="0.01" value={v.cuota_banco ?? ''} onChange={e => update(v.id, 'cuota_banco', e.target.value ? parseFloat(e.target.value) : null)} placeholder="0" />
+                  </Field>
+                </div>
               </div>
 
               {/* Bottom: save */}

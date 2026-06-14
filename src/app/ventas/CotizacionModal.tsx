@@ -10,6 +10,9 @@ interface Vehiculo {
   gc: number | null
   gcr: number | null
   tasa_credito: number | null
+  placa_monto?: number | null
+  gcr_banco?: number | null
+  cuota_banco?: number | null
 }
 
 type Step = 'pin' | 'form' | 'sending' | 'success' | 'error'
@@ -27,17 +30,28 @@ function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: Tasas | 
   const iva = precio * 0.16
   if (modalidad === 'contado') {
     const gastos = v.gc ?? 0
-    return { iva, gastos, totalInicial: precio + iva + gastos, financiamiento: null, cuota: null, costoTotal: precio + iva + gastos }
+    return { iva, gastos, totalVehiculo: null, inicialBanco: null, totalInicial: precio + iva + gastos, financiamiento: null, cuota: null, costoTotal: precio + iva + gastos }
   }
-  let diferencial = 0
-  if (plan === 'banco_100' && tasas && tasas.tasa_bcv > 0 && tasas.tasa_vhm > tasas.tasa_bcv) {
-    diferencial = precio * (tasas.tasa_vhm - tasas.tasa_bcv) / tasas.tasa_bcv
+  if (plan === 'banco_100') {
+    const placaMonto = v.placa_monto ?? 400
+    const totalVehiculo = precio + iva + placaMonto
+    const financiamientoBanco = totalVehiculo * 0.70
+    let diferencial = 0
+    if (tasas && tasas.tasa_bcv > 0 && tasas.tasa_vhm > tasas.tasa_bcv) {
+      diferencial = financiamientoBanco * (tasas.tasa_vhm - tasas.tasa_bcv) / tasas.tasa_bcv
+    }
+    const gastos = (v.gcr_banco ?? 0) + diferencial
+    const inicialBanco = totalVehiculo * 0.30
+    const totalInicial = inicialBanco + gastos
+    const financiamiento = totalVehiculo * 0.70
+    const cuota = v.cuota_banco ?? 0
+    return { iva, gastos, totalVehiculo, inicialBanco, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
   }
-  const gastos = (v.gcr ?? 0) + diferencial
+  const gastos = v.gcr ?? 0
   const totalInicial = precio * 0.4 + iva + gastos
   const financiamiento = precio * 0.6
   const cuota = v.tasa_credito ?? 0
-  return { iva, gastos, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
+  return { iva, gastos, totalVehiculo: null, inicialBanco: null, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
 }
 
 export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehiculo; onClose: () => void }) {
@@ -245,6 +259,16 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
                       <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
                       <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>TOTAL</span>
                       <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
+                    </>
+                  ) : plan === 'banco_100' ? (
+                    <>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Total Precio Vehículo</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.totalVehiculo)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Inicial 30%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.inicialBanco)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>TOTAL INICIAL</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Financiamiento 70%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right', marginTop: 6 }}>${fmt(calc.financiamiento)}</span>
+                      {(calc.cuota ?? 0) > 0 && (<><span style={{ fontSize: 11, color: '#6b7280' }}>Cuota mensual × 24</span><span style={{ fontSize: 11, fontWeight: 700, color: '#a16207', textAlign: 'right' }}>${fmt(calc.cuota)}</span></>)}
                     </>
                   ) : (
                     <>
