@@ -10,16 +10,18 @@ const BORDER = '#e5e7eb'
 
 const s = StyleSheet.create({
   page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 40 },
-  header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '20pt 28pt 14pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  logo: { width: 200, height: 58, objectFit: 'contain' },
+
+  header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '16pt 28pt 12pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  logoWrap: { flexShrink: 0 },
+  logo: { width: 220, height: 64, objectFit: 'contain', objectPositionX: 0 },
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
   companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
   companyLine: { fontSize: 7.5, color: GRAY },
 
-  body: { padding: '16pt 28pt' },
+  body: { padding: '14pt 28pt' },
 
-  twoCol: { flexDirection: 'row', marginBottom: 14 },
+  twoCol: { flexDirection: 'row', marginBottom: 12 },
   clientBlock: { flex: 1, paddingRight: 16 },
   cotzBlock: { width: 180, backgroundColor: '#fafafa', border: `1pt solid ${BORDER}`, borderRadius: 6, padding: '10pt 12pt' },
 
@@ -39,7 +41,7 @@ const s = StyleSheet.create({
   retBadgeNo: { backgroundColor: '#fef2f2' },
   retBadgeNoText: { color: '#dc2626' },
 
-  divider: { height: 1, backgroundColor: BORDER, marginBottom: 12 },
+  divider: { height: 1, backgroundColor: BORDER, marginBottom: 10 },
 
   tableHeader: { flexDirection: 'row', backgroundColor: DARK, borderRadius: 4, padding: '5pt 8pt', marginBottom: 1 },
   tableHeaderText: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#fff' },
@@ -51,7 +53,7 @@ const s = StyleSheet.create({
   colPrecio: { width: 75, textAlign: 'right' },
   colImporte: { width: 75, textAlign: 'right' },
 
-  modalidadBlock: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-start' },
+  modalidadBlock: { marginTop: 12, flexDirection: 'row', alignItems: 'flex-start' },
   noteBox: { flex: 1, paddingRight: 16 },
   noteText: { fontSize: 7.5, color: GRAY, lineHeight: 1.5, fontStyle: 'italic' },
 
@@ -66,7 +68,7 @@ const s = StyleSheet.create({
   calcTotalLabel: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD },
   calcTotalVal: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#92400e' },
 
-  finBox: { marginTop: 8, border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' },
+  finBox: { marginTop: 6, border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' },
   finHeader: { backgroundColor: GOLD, padding: '5pt 10pt' },
   finHeaderText: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
   finRow: { flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` },
@@ -76,20 +78,26 @@ const s = StyleSheet.create({
   finTotalLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: GRAY, textTransform: 'uppercase' },
   finTotalVal: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#15803d' },
 
-  legalBox: { marginTop: 10, backgroundColor: LIGHT, border: `1pt solid ${BORDER}`, borderRadius: 6, padding: '8pt 12pt' },
-  legalText: { fontSize: 7.5, color: GRAY, lineHeight: 1.55 },
+  legalBox: { marginTop: 8, backgroundColor: LIGHT, border: `1pt solid ${BORDER}`, borderRadius: 6, padding: '7pt 12pt' },
+  legalText: { fontSize: 7.5, color: GRAY, lineHeight: 1.5 },
   legalBold: { fontFamily: 'Helvetica-Bold', color: DARK },
 
-  sigRow: { flexDirection: 'row', marginTop: 20, marginBottom: 10 },
+  // Firmas
+  sigRow: { flexDirection: 'row', marginTop: 18, marginBottom: 10, gap: 20 },
   sigBlock: { flex: 1, alignItems: 'center' },
-  sigSpace: { height: 48 },
-  sigLine: { width: 180, height: 1, backgroundColor: DARK, marginBottom: 5 },
+  sigSpaceBox: { height: 70, width: 200, borderBottom: `1pt solid ${DARK}`, marginBottom: 6 },
   sigLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: DARK },
-  sigSub: { fontSize: 7.5, color: GRAY },
-  selloCircle: { width: 72, height: 72, borderRadius: 36, border: `1.5pt dashed ${GRAY}`, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  selloText: { fontSize: 7, color: GRAY, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
-  condTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 5 },
-  condText: { fontSize: 8, color: GRAY, lineHeight: 1.6 },
+  sigSub: { fontSize: 7.5, color: GRAY, marginTop: 2 },
+
+  // Sello
+  selloBox: { width: 100, height: 100, border: `1.5pt dashed ${GRAY}`, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  selloInner: { alignItems: 'center' },
+  selloText: { fontSize: 8, color: GRAY, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
+  selloSubText: { fontSize: 7, color: '#9ca3af', textAlign: 'center', marginTop: 2 },
+  sigLineOnly: { width: 200, height: 1, backgroundColor: DARK, marginBottom: 6 },
+
+  condTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 4 },
+  condText: { fontSize: 7.5, color: GRAY, lineHeight: 1.55 },
   footer: { position: 'absolute', bottom: 20, left: 28, right: 28, flexDirection: 'row', justifyContent: 'space-between', borderTop: `0.5pt solid ${BORDER}`, paddingTop: 6 },
   footerText: { fontSize: 7, color: '#9ca3af' },
 })
@@ -140,7 +148,9 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
 
         {/* Header */}
         <View style={s.header}>
-          <Image src={LOGO} style={s.logo} />
+          <View style={s.logoWrap}>
+            <Image src={LOGO} style={s.logo} />
+          </View>
           <View style={s.companyBlock}>
             <Text style={s.companyName}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
             <Text style={s.companyRif}>RIF: J-505692143</Text>
@@ -289,7 +299,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
 
           {/* Plan de financiamiento (solo crédito) */}
           {es24 && data.financiamientoMonto != null && (
-            <View style={{ alignItems: 'flex-end', marginTop: 8 }}>
+            <View style={{ alignItems: 'flex-end', marginTop: 6 }}>
               <View style={[s.finBox, { width: 240 }]}>
                 <View style={s.finHeader}>
                   <Text style={s.finHeaderText}>PLAN DE FINANCIAMIENTO</Text>
@@ -332,20 +342,24 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             </View>
           )}
 
-          {/* Firmas */}
+          {/* ── Firmas ── */}
           <View style={s.sigRow}>
+            {/* Comprador */}
             <View style={s.sigBlock}>
-              <View style={s.sigSpace} />
-              <View style={s.sigLine} />
+              <View style={s.sigSpaceBox} />
               <Text style={s.sigLabel}>COMPRADOR / CLIENTE</Text>
               <Text style={s.sigSub}>{data.clienteNombre}</Text>
             </View>
+
+            {/* La Oriental */}
             <View style={s.sigBlock}>
-              <View style={s.selloCircle}>
-                <Text style={s.selloText}>Sello</Text>
-                <Text style={s.selloText}>La Oriental</Text>
+              <View style={s.selloBox}>
+                <View style={s.selloInner}>
+                  <Text style={s.selloText}>SELLO</Text>
+                  <Text style={s.selloSubText}>LA ORIENTAL{'\n'}AUTOMOTORS</Text>
+                </View>
               </View>
-              <View style={s.sigLine} />
+              <View style={s.sigLineOnly} />
               <Text style={s.sigLabel}>REPRESENTANTE LA ORIENTAL</Text>
               <Text style={s.sigSub}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
             </View>
