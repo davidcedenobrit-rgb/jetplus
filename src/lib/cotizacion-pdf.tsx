@@ -113,6 +113,7 @@ export interface CotizacionPDFData {
   modelo: string
   precioBase: number
   modalidad: 'contado' | 'credito_24'
+  plan?: 'vehimotors' | 'banco_100'
   ivaMonto: number
   gastosMonto: number
   totalInicial: number
@@ -123,7 +124,10 @@ export interface CotizacionPDFData {
 
 export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const es24 = data.modalidad === 'credito_24'
-  const modalidadLabel = es24 ? 'CRÉDITO 24 MESES (40% INICIAL)' : 'CONTADO'
+  const esBanco = data.plan === 'banco_100'
+  const modalidadLabel = es24
+    ? (esBanco ? 'CRÉDITO BANCARIO 24 MESES (40% INICIAL)' : 'CRÉDITO 24 MESES (40% INICIAL)')
+    : 'CONTADO'
 
   return (
     <Document title={`Cotización ${data.numero}`} author="La Oriental Automotors">

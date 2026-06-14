@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Vehiculo {
   id: string
@@ -14,20 +14,26 @@ interface Vehiculo {
 
 type Step = 'pin' | 'form' | 'sending' | 'success' | 'error'
 type Modalidad = 'contado' | 'credito_24'
+type Plan = 'vehimotors' | 'banco_100'
+interface Tasas { tasa_bcv: number; tasa_vhm: number }
 
 function fmt(n: number | null | undefined) {
   if (!n) return '0,00'
   return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function calcular(v: Vehiculo, modalidad: Modalidad) {
+function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: Tasas | null) {
   const precio = v.cash ?? 0
   const iva = precio * 0.16
   if (modalidad === 'contado') {
     const gastos = v.gc ?? 0
     return { iva, gastos, totalInicial: precio + iva + gastos, financiamiento: null, cuota: null, costoTotal: precio + iva + gastos }
   }
-  const gastos = v.gcr ?? 0
+  let diferencial = 0
+  if (plan === 'banco_100' && tasas && tasas.tasa_bcv > 0 && tasas.tasa_vhm > tasas.tasa_bcv) {
+    diferencial = precio * (tasas.tasa_vhm - tasas.tasa_bcv) / tasas.tasa_bcv
+  }
+  const gastos = (v.gcr ?? 0) + diferencial
   const totalInicial = precio * 0.4 + iva + gastos
   const financiamiento = precio * 0.6
   const cuota = v.tasa_credito ?? 0
@@ -41,6 +47,15 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
   const [pinLoading, setPinLoading] = useState(false)
   const [vendedoraNombre, setVendedoraNombre] = useState('')
   const [modalidad, setModalidad] = useState<Modalidad>('contado')
+  const [plan, setPlan] = useState<Plan>('vehimotors')
+  const [tasas, setTasas] = useState<Tasas | null>(null)
+
+  useEffect(() => {
+    fetch('/api/cotizaciones/tasas')
+      .then(r => r.json())
+      .then(d => setTasas({ tasa_bcv: d.tasa_bcv, tasa_vhm: d.tasa_vhm }))
+      .catch(() => {})
+  }, [])
   const [form, setForm] = useState({
     clienteNombre: '', clienteCiRif: '', clienteCorreo: '',
     clienteTelefono: '', clienteDireccion: '',
@@ -50,7 +65,7 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
 
-  const calc = calcular(vehiculo, modalidad)
+  const calc = calcular(vehiculo, modalidad, plan, tasas)
 
   async function verificarPin() {
     if (!/^[A-Za-z]\d{3}$/.test(pin.trim())) { setPinError('El código debe ser una letra seguida de 3 dígitos (ej: D198)'); return }
@@ -103,6 +118,7 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
           clienteCodigoPostal: form.clienteCodigoPostal || null,
           agenteRetencion: form.agenteRetencion,
           modalidad,
+          plan: modalidad === 'credito_24' ? plan : 'vehimotors',
         }),
       })
       const json = await r.json()
@@ -198,10 +214,28 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
                 </div>
               </div>
 
+              {/* Plan (solo para crédito) */}
+              {modalidad === 'credito_24' && (
+                <div style={{ marginBottom: 18 }}>
+                  <label style={label}>Plan de financiamiento</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(['vehimotors', 'banco_100'] as Plan[]).map(p => (
+                      <button key={p} onClick={() => setPlan(p)}
+                        style={{ flex: 1, padding: '10px 8px', border: `2px solid ${plan === p ? '#111' : '#e5e7eb'}`, borderRadius: 10, background: plan === p ? '#111' : '#fff', color: plan === p ? '#fff' : '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}>
+                        {p === 'vehimotors' ? 'Plan Vehimotors' : 'Plan 100% Banco'}
+                      </button>
+                    ))}
+                  </div>
+                  {plan === 'banco_100' && !tasas && (
+                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 5 }}>Cargando tasas...</p>
+                  )}
+                </div>
+              )}
+
               {/* Preview de montos */}
               <div style={{ background: '#fffbeb', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
                 <p style={{ fontSize: 10, fontWeight: 800, color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-                  {modalidad === 'contado' ? 'Resumen contado' : 'Resumen crédito 24 meses'}
+                  {modalidad === 'contado' ? 'Resumen contado' : plan === 'banco_100' ? 'Resumen crédito 100% Banco' : 'Resumen crédito 24 meses'}
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 0' }}>
                   {modalidad === 'contado' ? (

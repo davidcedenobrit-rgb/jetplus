@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import CotizacionModal from './CotizacionModal'
+import CotizacionRapidaModal from './CotizacionRapidaModal'
 
 interface Vehiculo {
   id: string
@@ -30,6 +31,7 @@ type Filtro = 'ALL' | 'MG' | 'MAXUS'
 export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const [modalVehiculo, setModalVehiculo] = useState<Vehiculo | null>(null)
+  const [rapidaVehiculo, setRapidaVehiculo] = useState<Vehiculo | null>(null)
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
   function goWA(model: string) {
@@ -47,6 +49,9 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
     <div>
       {modalVehiculo && (
         <CotizacionModal vehiculo={modalVehiculo} onClose={() => setModalVehiculo(null)} />
+      )}
+      {rapidaVehiculo && (
+        <CotizacionRapidaModal vehiculo={rapidaVehiculo} onClose={() => setRapidaVehiculo(null)} />
       )}
 
       {/* Filtros */}
@@ -122,10 +127,15 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
                     <button onClick={() => goWA(v.model)} className="lo-cbtn-dark">WhatsApp</button>
                     <button onClick={() => compartir(v)} className="lo-cbtn-out">Compartir</button>
                   </div>
-                  <button onClick={() => setModalVehiculo(v)} className="lo-cbtn-red">
-                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
-                    Generar cotización
-                  </button>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <button onClick={() => setRapidaVehiculo(v)} className="lo-cbtn-out">
+                      📊 Cot. Rápida
+                    </button>
+                    <button onClick={() => setModalVehiculo(v)} className="lo-cbtn-red">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
+                      Cotización
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

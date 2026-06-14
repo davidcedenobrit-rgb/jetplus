@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       clienteCodigoPostal,
       agenteRetencion,
       modalidad,
+      plan = 'vehimotors',
     } = body
 
     // Validaciones básicas
@@ -31,6 +32,9 @@ export async function POST(req: Request) {
     }
     if (!['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
+    }
+    if (!['vehimotors', 'banco_100'].includes(plan)) {
+      return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
     }
     if (!/^[A-Za-z]\d{3}$/.test(String(codigo).trim())) {
       return NextResponse.json({ error: 'Código inválido' }, { status: 400 })
@@ -64,7 +68,28 @@ export async function POST(req: Request) {
 
     const precioBase = Number(vehiculo.cash) || 0
     const iva = precioBase * 0.16
-    const gastos = modalidad === 'contado' ? Number(vehiculo.gc) || 0 : Number(vehiculo.gcr) || 0
+
+    // Diferencial plan 100% Banco
+    let diferencial = 0
+    let tasaBCVSnap: number | null = null
+    let tasaVHMSnap: number | null = null
+
+    if (plan === 'banco_100' && modalidad === 'credito_24') {
+      const { data: tasasRows } = await supabase
+        .from('config_cotizaciones')
+        .select('clave, valor')
+      const tm: Record<string, number> = {}
+      for (const r of tasasRows ?? []) tm[r.clave] = Number(r.valor)
+      tasaBCVSnap = tm['tasa_bcv'] ?? 0
+      tasaVHMSnap = tm['tasa_vehimotors'] ?? 0
+      if (tasaBCVSnap > 0 && tasaVHMSnap > tasaBCVSnap) {
+        diferencial = precioBase * (tasaVHMSnap - tasaBCVSnap) / tasaBCVSnap
+      }
+    }
+
+    const gastosBase = modalidad === 'contado' ? Number(vehiculo.gc) || 0 : Number(vehiculo.gcr) || 0
+    const gastos = gastosBase + diferencial
+
     let totalInicial: number
     let financiamientoMonto: number | null = null
     let cuotaMensual: number | null = null
@@ -105,8 +130,12 @@ export async function POST(req: Request) {
         modelo: vehiculo.model,
         precio_base: precioBase,
         modalidad,
+        plan,
         iva_monto: iva,
         gastos_monto: gastos,
+        diferencial_monto: diferencial > 0 ? diferencial : null,
+        tasa_bcv_snap: tasaBCVSnap,
+        tasa_vhm_snap: tasaVHMSnap,
         total_inicial: totalInicial,
         financiamiento_monto: financiamientoMonto,
         cuota_mensual: cuotaMensual,
@@ -136,6 +165,7 @@ export async function POST(req: Request) {
       modelo: vehiculo.model,
       precioBase,
       modalidad,
+      plan,
       ivaMonto: iva,
       gastosMonto: gastos,
       totalInicial,
