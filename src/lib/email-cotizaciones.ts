@@ -66,7 +66,7 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData) {
   const body = `
     <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">Cotización de vehículo</p>
     <h1 style="font-family:sans-serif;font-size:20px;font-weight:800;color:#111;margin:0 0 4px">Estimado/a ${data.clienteNombre}</h1>
-    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">Adjunto encontrará su cotización formal. Tiene una validez de 30 días.</p>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">Adjunto encontrará su cotización formal. Tiene una validez de 2 días.</p>
 
     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;margin-bottom:18px">
       <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px">Resumen de cotización</p>
@@ -78,8 +78,7 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData) {
           ? row('Inicial a pagar', `<span style="font-size:16px;color:#92400e">$${fmt(data.totalInicial)}</span>`)
           : row('Total a pagar', `<span style="font-size:16px;color:#111">$${fmt(data.totalInicial)}</span>`)
         }
-        ${es24 && data.cuotaMensual ? row('Cuota mensual (24m)', `$${fmt(data.cuotaMensual)}`) : ''}
-        ${es24 ? row('Costo total', `$${fmt(data.costoTotal)}`) : ''}
+        ${es24 && data.cuotaMensual ? row('Cuota mensual (24m)', `<span style="font-size:15px;color:#92400e">$${fmt(data.cuotaMensual)}</span>`) : ''}
         ${row('Válida hasta', data.vencimiento)}
       </table>
     </div>
@@ -120,6 +119,7 @@ export async function enviarNotificacionRojas(opts: {
   modelo: string
   modalidad: 'contado' | 'credito_24'
   totalInicial: number
+  cuotaMensual: number | null
   costoTotal: number
   fecha: string
 }) {
@@ -141,10 +141,10 @@ export async function enviarNotificacionRojas(opts: {
         ${row('Vehículo', `${opts.marca} ${opts.modelo}`)}
         ${row('Modalidad', es24 ? 'Crédito 24 meses' : 'Contado')}
         ${es24
-          ? row('Inicial a pagar', `<strong>$${fmt(opts.totalInicial)}</strong>`)
-          : row('Total a pagar', `<strong>$${fmt(opts.totalInicial)}</strong>`)
+          ? row('Inicial a pagar', `<strong style="font-size:15px;color:#92400e">$${fmt(opts.totalInicial)}</strong>`)
+          : row('Total a pagar', `<strong style="font-size:15px">$${fmt(opts.totalInicial)}</strong>`)
         }
-        ${es24 ? row('Costo total', `$${fmt(opts.costoTotal)}`) : ''}
+        ${es24 && opts.cuotaMensual ? row('Cuota mensual (24m)', `<strong style="font-size:15px;color:#92400e">$${fmt(opts.cuotaMensual)}</strong>`) : ''}
         ${row('Fecha', opts.fecha)}
       </table>
     </div>

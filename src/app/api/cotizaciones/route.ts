@@ -205,6 +205,7 @@ export async function POST(req: Request) {
         modelo: vehiculo.model,
         modalidad,
         totalInicial,
+        cuotaMensual,
         costoTotal,
         fecha: fmtDate(hoy),
       }),
