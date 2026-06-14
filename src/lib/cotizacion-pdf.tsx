@@ -11,7 +11,7 @@ const BORDER = '#e5e7eb'
 const s = StyleSheet.create({
   page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 40 },
   header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '20pt 28pt 14pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  logo: { width: 140, height: 42, objectFit: 'contain' },
+  logo: { width: 200, height: 58, objectFit: 'contain' },
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
   companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
@@ -80,11 +80,14 @@ const s = StyleSheet.create({
   legalText: { fontSize: 7.5, color: GRAY, lineHeight: 1.55 },
   legalBold: { fontFamily: 'Helvetica-Bold', color: DARK },
 
-  sigRow: { flexDirection: 'row', marginTop: 16, marginBottom: 10 },
+  sigRow: { flexDirection: 'row', marginTop: 20, marginBottom: 10 },
   sigBlock: { flex: 1, alignItems: 'center' },
-  sigLine: { width: 160, height: 1, backgroundColor: DARK, marginBottom: 6 },
+  sigSpace: { height: 48 },
+  sigLine: { width: 180, height: 1, backgroundColor: DARK, marginBottom: 5 },
   sigLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: DARK },
   sigSub: { fontSize: 7.5, color: GRAY },
+  selloCircle: { width: 72, height: 72, borderRadius: 36, border: `1.5pt dashed ${GRAY}`, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  selloText: { fontSize: 7, color: GRAY, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
   condTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 5 },
   condText: { fontSize: 8, color: GRAY, lineHeight: 1.6 },
   footer: { position: 'absolute', bottom: 20, left: 28, right: 28, flexDirection: 'row', justifyContent: 'space-between', borderTop: `0.5pt solid ${BORDER}`, paddingTop: 6 },
@@ -332,11 +335,16 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           {/* Firmas */}
           <View style={s.sigRow}>
             <View style={s.sigBlock}>
+              <View style={s.sigSpace} />
               <View style={s.sigLine} />
               <Text style={s.sigLabel}>COMPRADOR / CLIENTE</Text>
               <Text style={s.sigSub}>{data.clienteNombre}</Text>
             </View>
             <View style={s.sigBlock}>
+              <View style={s.selloCircle}>
+                <Text style={s.selloText}>Sello</Text>
+                <Text style={s.selloText}>La Oriental</Text>
+              </View>
               <View style={s.sigLine} />
               <Text style={s.sigLabel}>REPRESENTANTE LA ORIENTAL</Text>
               <Text style={s.sigSub}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
