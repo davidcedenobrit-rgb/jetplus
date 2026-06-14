@@ -11,7 +11,7 @@ const BORDER = '#e5e7eb'
 const s = StyleSheet.create({
   page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 40 },
   header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '20pt 28pt 14pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  logo: { width: 90, height: 26, objectFit: 'contain' },
+  logo: { width: 140, height: 42, objectFit: 'contain' },
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
   companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
@@ -76,12 +76,11 @@ const s = StyleSheet.create({
   finTotalLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: GRAY, textTransform: 'uppercase' },
   finTotalVal: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#15803d' },
 
-  legalBox: { marginTop: 20, backgroundColor: LIGHT, border: `1pt solid ${BORDER}`, borderRadius: 6, padding: '10pt 12pt' },
+  legalBox: { marginTop: 10, backgroundColor: LIGHT, border: `1pt solid ${BORDER}`, borderRadius: 6, padding: '8pt 12pt' },
   legalText: { fontSize: 7.5, color: GRAY, lineHeight: 1.55 },
   legalBold: { fontFamily: 'Helvetica-Bold', color: DARK },
 
-  page2: { padding: '28pt', fontSize: 9 },
-  sigRow: { flexDirection: 'row', marginTop: 60, marginBottom: 48 },
+  sigRow: { flexDirection: 'row', marginTop: 16, marginBottom: 10 },
   sigBlock: { flex: 1, alignItems: 'center' },
   sigLine: { width: 160, height: 1, backgroundColor: DARK, marginBottom: 6 },
   sigLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: DARK },
@@ -325,22 +324,12 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             <View style={s.legalBox}>
               <Text style={s.legalText}>
                 <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
-                Los precios indicados son referenciales y están sujetos a disponibilidad de stock al momento de la compra. Esta cotización tiene una validez de 30 días a partir de la fecha de emisión. Para confirmar disponibilidad y precio final, contacte a su asesor.
+                Los precios indicados son referenciales y están sujetos a disponibilidad de stock al momento de la compra. Esta cotización tiene una validez de 2 días a partir de la fecha de emisión. Para confirmar disponibilidad y precio final, contacte a su asesor.
               </Text>
             </View>
           )}
-        </View>
 
-        {/* Footer */}
-        <View style={s.footer} fixed>
-          <Text style={s.footerText}>La Oriental Automotors · MG &amp; MAXUS · Maturín, Venezuela</Text>
-          <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
-      </Page>
-
-      {/* ── Página 2: Firmas + Condiciones ── */}
-      <Page size="A4" style={s.page}>
-        <View style={s.page2}>
+          {/* Firmas */}
           <View style={s.sigRow}>
             <View style={s.sigBlock}>
               <View style={s.sigLine} />
@@ -354,12 +343,14 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             </View>
           </View>
 
+          {/* Condiciones */}
           <Text style={s.condTitle}>CONDICIONES:</Text>
           <Text style={s.condText}>
             Los Planes de Venta no pueden ser modificados luego de su aprobación y representan un compromiso de pago por parte del comprador. Es responsabilidad única del comprador y el Banco la aprobación del crédito bancario, entendiendo que debe ser aprobado y firmado dentro del plazo establecido. En caso de ser financiado, el comprador deberá pagar sus cuotas entre el primero (1°) y el quinto (5°) día de cada mes.
           </Text>
         </View>
 
+        {/* Footer */}
         <View style={s.footer} fixed>
           <Text style={s.footerText}>La Oriental Automotors · MG &amp; MAXUS · Maturín, Venezuela</Text>
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
