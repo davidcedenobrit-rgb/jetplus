@@ -217,7 +217,7 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
           <div className="grid gap-3">
             <div>
               <label className={labelCls}>Nombre completo *</label>
-              <input className={inputCls} value={form.clienteNombre} onChange={e => setForm(p => ({ ...p, clienteNombre: e.target.value }))} placeholder="Luis Alberto Vanegas" />
+              <input className={inputCls} value={form.clienteNombre} onChange={e => setForm(p => ({ ...p, clienteNombre: e.target.value }))} placeholder="Nombre del cliente" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
