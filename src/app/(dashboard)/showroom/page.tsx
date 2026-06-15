@@ -1,19 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Store, Plus, Car, MapPin, CheckCircle2, Lock, Tag, Wrench, Pencil } from 'lucide-react'
+import { Store, Plus } from 'lucide-react'
 import PrintButton from './PrintButton'
-import ShowroomDeleteButton from './ShowroomDeleteButton'
+import ShowroomClient from './ShowroomClient'
 import type { VehiculoShowroom } from '@/types/database'
-
-const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
-  llegada:        { label: 'Recibido',        color: 'text-blue-700',   bg: 'bg-blue-100',   step: 1 },
-  por_enviar_pdi: { label: 'Por enviar a PDI', color: 'text-yellow-700', bg: 'bg-yellow-100', step: 2 },
-  en_taller:      { label: 'En taller (PDI)',  color: 'text-orange-700', bg: 'bg-orange-100', step: 3 },
-  en_agencia:     { label: 'Disponible',       color: 'text-green-700',  bg: 'bg-green-100',  step: 4 },
-  reservado:      { label: 'Reservado',        color: 'text-purple-700', bg: 'bg-purple-100', step: 5 },
-  vendido:        { label: 'Vendido',          color: 'text-gray-600',   bg: 'bg-gray-100',   step: 6 },
-}
 
 const TABS = [
   { key: 'todos',      label: 'Todos' },
@@ -22,26 +13,6 @@ const TABS = [
   { key: 'en_taller',  label: 'En taller' },
   { key: 'vendido',    label: 'Vendidos' },
 ] as const
-
-function ProgressBar({ estado }: { estado: string }) {
-  const step = ESTADOS[estado]?.step ?? 1
-  const pct = Math.round(((step - 1) / 5) * 100)
-  return (
-    <div className="mt-3">
-      <div className="flex justify-between text-[10px] text-oriental-gray mb-1">
-        <span>Recibido</span>
-        <span>Vendido</span>
-      </div>
-      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${estado === 'vendido' ? 'bg-gray-400' : estado === 'reservado' ? 'bg-purple-500' : estado === 'en_agencia' ? 'bg-green-500' : 'bg-oriental-red'}`}
-          style={{ width: `${pct === 0 ? 4 : pct}%` }}
-        />
-      </div>
-      <p className="text-[10px] text-oriental-gray mt-0.5">{pct}% completado</p>
-    </div>
-  )
-}
 
 export default async function ShowroomPage({
   searchParams,
@@ -69,7 +40,6 @@ export default async function ShowroomPage({
   const { data: vehiculos } = await query
   const lista = (vehiculos ?? []) as VehiculoShowroom[]
 
-  // Conteos por estado
   const { data: todos } = await supabase.from('vehiculos_showroom').select('estado')
   const conteos: Record<string, number> = {}
   ;(todos ?? []).forEach((v: any) => {
@@ -86,7 +56,7 @@ export default async function ShowroomPage({
           </div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Vehículo Showroom</h1>
-            <p className="text-oriental-gray text-sm">Consignaciones de Vehimotors · {lista.length} vehículo{lista.length !== 1 ? 's' : ''}</p>
+            <p className="text-oriental-gray text-sm">Consignaciones de Vehimotors · {todos?.length ?? 0} vehículo{(todos?.length ?? 0) !== 1 ? 's' : ''}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -123,7 +93,6 @@ export default async function ShowroomPage({
         })}
       </div>
 
-      {/* Grid de cards */}
       {lista.length === 0 ? (
         <div className="card p-16 text-center">
           <Store size={40} className="text-gray-300 mx-auto mb-3" />
@@ -131,116 +100,7 @@ export default async function ShowroomPage({
           <p className="text-sm text-gray-400 mt-1">Registra el primer vehículo de consignación</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {lista.map(v => {
-            const est = ESTADOS[v.estado] ?? ESTADOS.llegada
-            const hoy = new Date()
-            const vence = v.reserva_vence ? new Date(v.reserva_vence) : null
-            const reservaVencida = vence && vence < hoy
-
-            return (
-              <div key={v.id} className="card hover:shadow-md transition-shadow overflow-hidden">
-                {/* Área clickeable → detalle */}
-                <Link href={`/showroom/${v.id}`} className="block p-5">
-                  {/* Header card */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {v.marca}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est.bg} ${est.color}`}>
-                        {est.label}
-                      </span>
-                    </div>
-                    {v.pdi_hecho && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
-                        <CheckCircle2 size={10} /> PDI ✓
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Info principal */}
-                  <h3 className="font-bold text-oriental-black text-base leading-tight">{v.modelo}</h3>
-
-                  <div className="mt-2 space-y-1.5">
-                    {v.placa && (
-                      <p className="text-xs text-oriental-gray flex items-center gap-1.5">
-                        <Car size={11} className="flex-shrink-0" />
-                        <span className="font-mono font-bold text-oriental-black">{v.placa}</span>
-                        {v.color && <span>· {v.color}</span>}
-                        {v.anio && <span>· {v.anio}</span>}
-                      </p>
-                    )}
-                    {v.ubicacion && (
-                      <div className="inline-flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
-                        <MapPin size={11} className="text-oriental-red flex-shrink-0" />
-                        <span className="text-xs font-semibold text-oriental-black capitalize">
-                          {v.ubicacion === 'otro' ? (v.ubicacion_descripcion ?? 'Otro') : v.ubicacion}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5">
-                      <Wrench size={11} className={v.pdi_hecho ? 'text-green-600' : 'text-gray-300'} />
-                      <span className={`text-[11px] font-semibold ${v.pdi_hecho ? 'text-green-700' : 'text-gray-400'}`}>
-                        {v.pdi_hecho ? 'PDI completado' : 'PDI pendiente'}
-                      </span>
-                    </div>
-                    {v.vin && (
-                      <p className="text-[10px] font-mono text-oriental-gray truncate">VIN: {v.vin}</p>
-                    )}
-                    {v.serial_motor && (
-                      <p className="text-[10px] font-mono text-oriental-gray truncate">Motor: {v.serial_motor}</p>
-                    )}
-                  </div>
-
-                  {/* Reserva */}
-                  {v.estado === 'reservado' && v.reserva_monto && (
-                    <div className={`mt-3 rounded-lg px-3 py-2 ${reservaVencida ? 'bg-red-50 border border-red-200' : 'bg-purple-50 border border-purple-100'}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-[11px] font-semibold text-purple-700">
-                          <Lock size={10} /> Reservado
-                        </span>
-                        <span className="text-[11px] font-bold text-purple-800">
-                          ${v.reserva_monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      {vence && (
-                        <p className={`text-[10px] mt-0.5 ${reservaVencida ? 'text-red-600 font-semibold' : 'text-purple-600'}`}>
-                          {reservaVencida ? '⚠ Reserva vencida' : `Vence: ${vence.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}`}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Vendido */}
-                  {v.estado === 'vendido' && (
-                    <div className="mt-3 rounded-lg px-3 py-2 bg-gray-50 border border-gray-200">
-                      <p className="text-[11px] font-semibold text-gray-500 flex items-center gap-1">
-                        <Tag size={10} /> Vendido · ciclo cerrado
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Barra de progreso */}
-                  <ProgressBar estado={v.estado} />
-                </Link>
-
-                {/* Botones Editar / Eliminar — solo jose y arianna */}
-                {puedeEditar && (
-                  <div className="px-5 pb-4 flex gap-2 border-t border-gray-100 pt-3">
-                    <Link
-                      href={`/showroom/${v.id}/editar`}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-gray-200 text-oriental-gray hover:bg-gray-50 text-xs font-semibold transition-colors"
-                    >
-                      <Pencil size={13} /> Editar
-                    </Link>
-                    <ShowroomDeleteButton id={v.id} modelo={v.modelo} placa={v.placa} />
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <ShowroomClient lista={lista} puedeEditar={puedeEditar} />
       )}
     </div>
   )
