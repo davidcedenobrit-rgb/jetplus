@@ -43,7 +43,7 @@ export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; a
       {tab === 'ac500' && <AC500Editor initial={ac500} />}
       {tab === 'vendedoras' && <VendedorasEditor />}
       {tab === 'cotizaciones' && <CotizacionesTab />}
-      {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} />}
+      {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} ac500={ac500} />}
       {tab === 'tasas' && <TasasEditor />}
     </div>
   )

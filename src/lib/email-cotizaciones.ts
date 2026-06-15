@@ -1,7 +1,7 @@
 import { Resend } from 'resend'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
-import { CotizacionPDF, type CotizacionPDFData } from './cotizacion-pdf'
+import { CotizacionPDF, type CotizacionPDFData, type AC500ScheduleData } from './cotizacion-pdf'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
@@ -53,20 +53,48 @@ function row(label: string, value: string) {
   </tr>`
 }
 
-export async function enviarCotizacionCliente(data: CotizacionPDFData) {
+export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenRespuesta: string) {
   const resend = getResend()
 
   const pdfBuffer = await renderToBuffer(
     React.createElement(CotizacionPDF, { data }) as React.ReactElement<any>
   )
 
+  const isAC500 = data.modalidad === 'ac500'
   const es24 = data.modalidad === 'credito_24'
-  const modalidadLabel = es24 ? 'Crédito 24 meses' : 'Contado'
+  const modalidadLabel = isAC500
+    ? `Plan Asegúrate $500 — ${data.ac500Schedule?.meses} meses`
+    : es24 ? 'Crédito 24 meses' : 'Contado'
+  const responderUrl = `${APP_URL}/responder/${tokenRespuesta}`
+
+  // AC500 schedule table for email
+  const ac500ScheduleHTML = isAC500 && data.ac500Schedule ? `
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px 18px;margin-bottom:18px">
+      <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 10px">
+        Cronograma de pagos — ${data.ac500Schedule.meses} meses
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr style="border-bottom:1px solid #bfdbfe">
+          <td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#1e3a5f;font-weight:800;border-bottom:1px solid #bfdbfe">Cuota 0 — RESERVA</td>
+          <td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#1e3a5f;font-weight:800;text-align:right;border-bottom:1px solid #bfdbfe">$${fmt(data.ac500Schedule.reserva)}</td>
+        </tr>
+        ${data.ac500Schedule.cuotas.map(c => `
+        <tr>
+          <td style="padding:5px 0;font-family:sans-serif;font-size:12px;color:#6b7280;border-bottom:1px solid #dbeafe">${c.label}</td>
+          <td style="padding:5px 0;font-family:sans-serif;font-size:12px;color:#1e40af;font-weight:700;text-align:right;border-bottom:1px solid #dbeafe">$${fmt(c.monto)}</td>
+        </tr>`).join('')}
+        <tr>
+          <td style="padding:8px 0 0;font-family:sans-serif;font-size:13px;color:#1e3a5f;font-weight:800">TOTAL A PAGAR</td>
+          <td style="padding:8px 0 0;font-family:sans-serif;font-size:15px;color:#1e3a5f;font-weight:800;text-align:right">$${fmt(data.ac500Schedule.total)}</td>
+        </tr>
+      </table>
+    </div>
+  ` : ''
 
   const body = `
-    <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">Cotización de vehículo</p>
+    <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">${isAC500 ? 'Plan Asegúrate $500' : 'Cotización de vehículo'}</p>
     <h1 style="font-family:sans-serif;font-size:20px;font-weight:800;color:#111;margin:0 0 4px">Estimado/a ${data.clienteNombre}</h1>
-    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">Adjunto encontrará su cotización formal. Tiene una validez de 30 días.</p>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">Adjunto encontrará su ${isAC500 ? 'plan de separación' : 'cotización formal'}. Tiene una validez de 2 días.</p>
 
     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;margin-bottom:18px">
       <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px">Resumen de cotización</p>
@@ -74,23 +102,56 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData) {
         ${row('N° Cotización', `<span style="font-family:monospace;color:#C41E3A;font-size:14px">${data.numero}</span>`)}
         ${row('Vehículo', `${data.marca} ${data.modelo}`)}
         ${row('Modalidad', modalidadLabel)}
-        ${es24
+        ${isAC500
+          ? row('Reserva (Cuota 0)', `<span style="font-size:16px;color:#1e3a5f;font-weight:800">$${fmt(data.ac500Schedule?.reserva)}</span>`)
+          : es24
           ? row('Inicial a pagar', `<span style="font-size:16px;color:#92400e">$${fmt(data.totalInicial)}</span>`)
           : row('Total a pagar', `<span style="font-size:16px;color:#111">$${fmt(data.totalInicial)}</span>`)
         }
-        ${es24 && data.cuotaMensual ? row('Cuota mensual (24m)', `$${fmt(data.cuotaMensual)}`) : ''}
-        ${es24 ? row('Costo total', `$${fmt(data.costoTotal)}`) : ''}
+        ${es24 && data.cuotaMensual ? row('Cuota mensual (24m)', `<span style="font-size:15px;color:#92400e">$${fmt(data.cuotaMensual)}</span>`) : ''}
+        ${isAC500 ? row('Total del plan', `<span style="font-size:15px;color:#1e3a5f;font-weight:800">$${fmt(data.costoTotal)}</span>`) : ''}
         ${row('Válida hasta', data.vencimiento)}
       </table>
     </div>
 
-    <div style="background:#fffbeb;border:1px solid rgba(234,179,8,0.3);border-radius:10px;padding:16px 20px;margin-bottom:20px">
-      <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#92400e;margin:0 0 6px">¿Deseas solicitar un descuento?</p>
-      <p style="font-family:sans-serif;font-size:13px;color:#6b7280;margin:0 0 12px">Contáctate directamente con nuestra gerencia y evaluamos tu caso de manera personalizada.</p>
-      <a href="mailto:${ROJAS}?subject=Solicitud%20de%20descuento%20-%20${encodeURIComponent(data.numero)}&body=Hola%2C%20soy%20${encodeURIComponent(data.clienteNombre)}%20y%20quisiera%20solicitar%20un%20descuento%20sobre%20la%20cotizaci%C3%B3n%20${encodeURIComponent(data.numero)}."
-        style="display:inline-block;background:#ca8a04;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-family:sans-serif;font-size:13px;font-weight:700">
-        Solicitar descuento →
-      </a>
+    ${ac500ScheduleHTML}
+
+    <div style="background:#f0fdf4;border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:20px 22px;margin-bottom:12px">
+      <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#15803d;margin:0 0 14px">¿Qué deseas hacer con esta cotización?</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-bottom:10px">
+            <a href="${responderUrl}?r=aceptar"
+              style="display:block;background:#16a34a;color:#fff;padding:13px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:800;text-align:center">
+              ✅ Sí, acepto esta cotización
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:10px">
+            <a href="${responderUrl}?r=posponer"
+              style="display:block;background:#fff;color:#374151;padding:12px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700;text-align:center;border:2px solid #d1d5db">
+              ⏸ Por ahora no compraré
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="${responderUrl}?r=rechazar"
+              style="display:block;background:#fff;color:#dc2626;padding:12px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700;text-align:center;border:2px solid #fecaca">
+              ❌ No me interesa / Rechazar
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background:#fffbeb;border:1px solid rgba(234,179,8,0.3);border-radius:10px;padding:14px 18px;margin-bottom:20px">
+      <p style="font-family:sans-serif;font-size:12px;color:#92400e;margin:0">
+        💬 ¿Preguntas? Contáctanos directamente por
+        <a href="https://wa.me/584149989010" style="color:#92400e;font-weight:700">WhatsApp</a>
+        o responde este correo.
+      </p>
     </div>
 
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;margin:0">* Precios referenciales sujetos a disponibilidad. Consulte con su asesor para confirmar.</p>
@@ -118,13 +179,19 @@ export async function enviarNotificacionRojas(opts: {
   clienteCiRif: string
   marca: string
   modelo: string
-  modalidad: 'contado' | 'credito_24'
+  modalidad: 'contado' | 'credito_24' | 'ac500'
   totalInicial: number
+  cuotaMensual: number | null
   costoTotal: number
   fecha: string
+  ac500Schedule?: AC500ScheduleData
 }) {
   const resend = getResend()
+  const isAC500 = opts.modalidad === 'ac500'
   const es24 = opts.modalidad === 'credito_24'
+  const modalidadLabel = isAC500
+    ? `Asegúrate $500 — ${opts.ac500Schedule?.meses ?? ''}m`
+    : es24 ? 'Crédito 24 meses' : 'Contado'
 
   const body = `
     <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">Nueva cotización generada</p>
@@ -139,12 +206,15 @@ export async function enviarNotificacionRojas(opts: {
         ${row('C.I./RIF', opts.clienteCiRif)}
         ${row('Correo cliente', opts.clienteCorreo)}
         ${row('Vehículo', `${opts.marca} ${opts.modelo}`)}
-        ${row('Modalidad', es24 ? 'Crédito 24 meses' : 'Contado')}
-        ${es24
-          ? row('Inicial a pagar', `<strong>$${fmt(opts.totalInicial)}</strong>`)
-          : row('Total a pagar', `<strong>$${fmt(opts.totalInicial)}</strong>`)
+        ${row('Modalidad', modalidadLabel)}
+        ${isAC500
+          ? row('Reserva (Cuota 0)', `<strong style="font-size:15px;color:#1e3a5f">$${fmt(opts.ac500Schedule?.reserva)}</strong>`)
+          : es24
+          ? row('Inicial a pagar', `<strong style="font-size:15px;color:#92400e">$${fmt(opts.totalInicial)}</strong>`)
+          : row('Total a pagar', `<strong style="font-size:15px">$${fmt(opts.totalInicial)}</strong>`)
         }
-        ${es24 ? row('Costo total', `$${fmt(opts.costoTotal)}`) : ''}
+        ${es24 && opts.cuotaMensual ? row('Cuota mensual (24m)', `<strong style="font-size:15px;color:#92400e">$${fmt(opts.cuotaMensual)}</strong>`) : ''}
+        ${isAC500 ? row('Total del plan', `<strong style="font-size:15px;color:#1e3a5f">$${fmt(opts.costoTotal)}</strong>`) : ''}
         ${row('Fecha', opts.fecha)}
       </table>
     </div>
