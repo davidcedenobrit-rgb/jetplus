@@ -148,13 +148,31 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
 
   // Quick cotización
   type QModal = 'contado' | 'credito_24' | 'banco_100'
+  type QStep = 'preview' | 'email' | 'result'
   const [quickV, setQuickV] = useState<Vehiculo | null>(null)
+  const [qStep, setQStep] = useState<QStep>('preview')
   const [qForm, setQForm] = useState({ codigo: 'R000', nombre: '', correo: '', cirif: '', modalidad: 'contado' as QModal })
   const [qSending, setQSending] = useState(false)
   const [qResult, setQResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const captureRef = useRef<HTMLDivElement>(null)
 
-  function openQuick(v: Vehiculo) { setQuickV(v); setQResult(null); setQForm(p => ({ ...p, nombre: '', correo: '', cirif: '' })) }
-  function closeQuick() { setQuickV(null); setQResult(null) }
+  function openQuick(v: Vehiculo) {
+    setQuickV(v); setQStep('preview'); setQResult(null)
+    setQForm(p => ({ ...p, nombre: '', correo: '', cirif: '' }))
+  }
+  function closeQuick() { setQuickV(null); setQStep('preview'); setQResult(null) }
+
+  async function descargarImagen() {
+    if (!captureRef.current || !quickV) return
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(captureRef.current, { backgroundColor: '#ffffff', scale: 2, logging: false })
+      const link = document.createElement('a')
+      link.download = `${quickV.model.replace(/\s+/g, '_')}.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch { showToast('Error al generar imagen', false) }
+  }
 
   async function enviarRapido() {
     if (!quickV) return
@@ -179,9 +197,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
         }),
       })
       const json = await res.json()
-      if (!res.ok) setQResult({ ok: false, msg: json.error ?? 'Error al enviar' })
-      else setQResult({ ok: true, msg: `✓ Cotización ${json.numero} enviada a ${qForm.correo}` })
-    } catch { setQResult({ ok: false, msg: 'Error de conexión' }) }
+      if (!res.ok) { setQResult({ ok: false, msg: json.error ?? 'Error al enviar' }); setQStep('result') }
+      else { setQResult({ ok: true, msg: `✓ Cotización ${json.numero} enviada a ${qForm.correo}` }); setQStep('result') }
+    } catch { setQResult({ ok: false, msg: 'Error de conexión' }); setQStep('result') }
     finally { setQSending(false) }
   }
 
@@ -577,94 +595,169 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       </div>
 
       {/* Modal cotización rápida */}
-      {quickV && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-12 p-4" onClick={e => e.target === e.currentTarget && closeQuick()}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-gray-100">
-              <div className="flex-1 min-w-0">
-                <p className={`text-[10px] font-bold uppercase tracking-widest ${quickV.brand === 'MG' ? 'text-oriental-red' : 'text-blue-600'}`}>{quickV.brand}</p>
-                <p className="font-bold text-oriental-black truncate">{quickV.model}</p>
-              </div>
-              <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-lg flex items-center gap-1 flex-shrink-0">
-                <Zap size={11} /> Cotización rápida
-              </span>
-              <button onClick={closeQuick} className="text-gray-400 hover:text-oriental-black flex-shrink-0"><X size={18} /></button>
-            </div>
+      {quickV && (() => {
+        const precio = quickV.cash ?? 0
+        const iva    = precio * 0.16
+        const gc     = quickV.gc ?? 0
+        const gcr    = quickV.gcr ?? 0
+        const cuota  = quickV.tasa_credito ?? 0
+        const totalC = precio + iva + gc
+        const ini40  = precio * 0.4
+        const totalI = ini40 + iva + gcr
+        const fin60  = precio * 0.6
+        const fmtQ   = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-            {!qResult ? (
-              <div className="p-5 space-y-4">
-                {/* Modalidad */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-2">Modalidad de venta</p>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {([
-                      { v: 'contado', label: 'Contado' },
-                      { v: 'credito_24', label: 'Crédito 24m' },
-                      { v: 'banco_100', label: '100% Banco' },
-                    ] as { v: QModal; label: string }[]).map(opt => (
-                      <button
-                        key={opt.v}
-                        onClick={() => setQForm(p => ({ ...p, modalidad: opt.v }))}
-                        className={`py-2 px-2 rounded-lg text-xs font-bold border transition-colors ${
-                          qForm.modalidad === opt.v
-                            ? 'bg-oriental-red text-white border-oriental-red'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+        const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 18px', borderBottom: '1px solid #f3f4f6' }
+        const lbl: React.CSSProperties = { fontSize: 13, color: '#374151' }
+        const val: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#111', fontFamily: 'monospace' }
 
-                {/* Campos */}
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre del cliente *</label>
-                    <input className={modalInputCls} value={qForm.nombre} onChange={e => setQForm(p => ({ ...p, nombre: e.target.value }))} placeholder="Juan Pérez" autoFocus />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Correo electrónico *</label>
-                    <input className={modalInputCls} type="email" value={qForm.correo} onChange={e => setQForm(p => ({ ...p, correo: e.target.value }))} placeholder="cliente@email.com" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">C.I. / RIF *</label>
-                    <input className={modalInputCls} value={qForm.cirif} onChange={e => setQForm(p => ({ ...p, cirif: e.target.value }))} placeholder="V-12345678" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Código vendedora</label>
-                    <input className={modalInputCls} value={qForm.codigo} onChange={e => setQForm(p => ({ ...p, codigo: e.target.value.toUpperCase() }))} placeholder="R000" />
-                  </div>
-                </div>
+        return (
+          <div className="fixed inset-0 bg-black/55 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && closeQuick()}>
+            <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 420, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.28)' }}>
 
-                <button
-                  onClick={enviarRapido}
-                  disabled={qSending}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-oriental-red text-white font-bold rounded-xl text-sm hover:bg-oriental-red-dark transition-colors disabled:opacity-50"
-                >
-                  {qSending ? 'Enviando...' : <><Send size={15} /> Generar y enviar cotización</>}
-                </button>
-              </div>
-            ) : (
-              <div className="p-8 text-center">
-                <p className="text-4xl mb-3">{qResult.ok ? '✅' : '❌'}</p>
-                <p className={`font-bold text-sm ${qResult.ok ? 'text-green-700' : 'text-red-600'}`}>{qResult.msg}</p>
-                {qResult.ok && (
-                  <button
-                    onClick={() => { setQResult(null); setQForm(p => ({ ...p, nombre: '', correo: '', cirif: '' })) }}
-                    className="mt-3 text-xs text-oriental-red font-semibold hover:underline"
-                  >
-                    Generar otra cotización
+              {/* Preview: resumen de precios */}
+              {qStep === 'preview' && (
+                <>
+                  <div ref={captureRef} style={{ fontFamily: 'sans-serif' }}>
+                    {/* Encabezado */}
+                    <div style={{ background: '#111', borderRadius: '20px 20px 0 0', padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <p style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>VEHÍCULO · {quickV.brand}</p>
+                        <p style={{ fontSize: 19, fontWeight: 800, color: '#fff', margin: '3px 0 0' }}>{quickV.model}</p>
+                      </div>
+                      <button onClick={closeQuick} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                    </div>
+
+                    {/* Contado */}
+                    <div style={{ background: '#7c2d12', padding: '7px 18px', fontSize: 11, fontWeight: 800, color: '#fde68a', textTransform: 'uppercase', letterSpacing: 1 }}>Modalidad de Contado</div>
+                    <div style={row}><span style={lbl}>100% Precio Base:</span><span style={val}>${fmtQ(precio)}</span></div>
+                    <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmtQ(iva)}</span></div>
+                    <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
+                      <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza Seguro Vehículo, Traslado,{'\n'}Gastos, INTT, Gastos Notaría</span>
+                      <span style={{ ...val, flexShrink: 0 }}>${fmtQ(gc)}</span>
+                    </div>
+                    <div style={{ ...row, background: '#fef9c3', border: 'none' }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#92400e' }}>TOTAL A PAGAR:</span>
+                      <span style={{ fontSize: 17, fontWeight: 900, color: '#92400e', fontFamily: 'monospace' }}>${fmtQ(totalC)}</span>
+                    </div>
+
+                    {/* Crédito 24m */}
+                    <div style={{ background: '#064e3b', padding: '7px 18px', fontSize: 11, fontWeight: 800, color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: 1, marginTop: 6 }}>Modalidad Crédito 24 Meses (40% Inicial)</div>
+                    <div style={row}><span style={lbl}>40% Precio Base:</span><span style={val}>${fmtQ(ini40)}</span></div>
+                    <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmtQ(iva)}</span></div>
+                    <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
+                      <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza Seguro Vehículo, Traslado,{'\n'}Gastos, INTT, Gastos Notaría</span>
+                      <span style={{ ...val, flexShrink: 0 }}>${fmtQ(gcr)}</span>
+                    </div>
+                    <div style={{ ...row, background: '#dcfce7', border: 'none' }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#065f46' }}>TOTAL INICIAL A PAGAR:</span>
+                      <span style={{ fontSize: 17, fontWeight: 900, color: '#065f46', fontFamily: 'monospace' }}>${fmtQ(totalI)}</span>
+                    </div>
+                    <div style={{ ...row, background: '#f0fdf4' }}>
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>Financiamiento 60% —</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: 'monospace' }}>${fmtQ(fin60)}</span>
+                    </div>
+                    {cuota > 0 && (
+                      <div style={{ ...row, background: '#fff1f2', border: 'none' }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: '#C41E3A' }}>24 Cuotas Mensuales:</span>
+                        <span style={{ fontSize: 17, fontWeight: 900, color: '#C41E3A', fontFamily: 'monospace' }}>${fmtQ(cuota)}</span>
+                      </div>
+                    )}
+                    <div style={{ padding: '8px 18px 14px' }}>
+                      <p style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', margin: 0 }}>*Precios referenciales sujetos a disponibilidad y cambios sin previo aviso</p>
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 16px 20px' }}>
+                    <button
+                      onClick={descargarImagen}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', background: '#1e3a5f', color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+                    >
+                      📥 Descargar imagen
+                    </button>
+                    <button
+                      onClick={() => setQStep('email')}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', background: '#C41E3A', color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+                    >
+                      ✉️ Enviar por correo
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Paso 2: Formulario email */}
+              {qStep === 'email' && (
+                <>
+                  <div style={{ background: '#111', borderRadius: '20px 20px 0 0', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>VEHÍCULO · {quickV.brand}</p>
+                      <p style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '2px 0 0' }}>{quickV.model}</p>
+                    </div>
+                    <button onClick={() => setQStep('preview')} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 600 }}>← Volver</button>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-2">Modalidad a cotizar</p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {([
+                          { v: 'contado', label: 'Contado' },
+                          { v: 'credito_24', label: 'Crédito 24m' },
+                          { v: 'banco_100', label: '100% Banco' },
+                        ] as { v: QModal; label: string }[]).map(opt => (
+                          <button key={opt.v} onClick={() => setQForm(p => ({ ...p, modalidad: opt.v }))}
+                            className={`py-2 px-2 rounded-lg text-xs font-bold border transition-colors ${qForm.modalidad === opt.v ? 'bg-oriental-red text-white border-oriental-red' : 'border-gray-200 text-gray-600 bg-white hover:border-gray-400'}`}>
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre del cliente *</label>
+                        <input className={modalInputCls} value={qForm.nombre} onChange={e => setQForm(p => ({ ...p, nombre: e.target.value }))} placeholder="Juan Pérez" autoFocus />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">Correo electrónico *</label>
+                        <input className={modalInputCls} type="email" value={qForm.correo} onChange={e => setQForm(p => ({ ...p, correo: e.target.value }))} placeholder="cliente@email.com" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">C.I. / RIF *</label>
+                        <input className={modalInputCls} value={qForm.cirif} onChange={e => setQForm(p => ({ ...p, cirif: e.target.value }))} placeholder="V-12345678" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">Código vendedora</label>
+                        <input className={modalInputCls} value={qForm.codigo} onChange={e => setQForm(p => ({ ...p, codigo: e.target.value.toUpperCase() }))} placeholder="R000" />
+                      </div>
+                    </div>
+                    <button onClick={enviarRapido} disabled={qSending}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-oriental-red text-white font-bold rounded-xl text-sm hover:bg-oriental-red-dark transition-colors disabled:opacity-50">
+                      {qSending ? 'Enviando...' : <><Send size={15} /> Generar y enviar cotización</>}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Paso 3: Resultado */}
+              {qStep === 'result' && qResult && (
+                <div className="p-10 text-center" style={{ borderRadius: 20 }}>
+                  <p className="text-5xl mb-4">{qResult.ok ? '✅' : '❌'}</p>
+                  <p className={`font-bold text-sm ${qResult.ok ? 'text-green-700' : 'text-red-600'}`}>{qResult.msg}</p>
+                  {qResult.ok && (
+                    <button onClick={() => { setQStep('email'); setQForm(p => ({ ...p, nombre: '', correo: '', cirif: '' })) }}
+                      className="mt-4 text-xs text-oriental-red font-semibold hover:underline block mx-auto">
+                      Enviar otra cotización
+                    </button>
+                  )}
+                  <button onClick={closeQuick} className="mt-3 block mx-auto px-6 py-2 bg-gray-100 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors">
+                    Cerrar
                   </button>
-                )}
-                <button onClick={closeQuick} className="mt-3 block mx-auto px-6 py-2 bg-gray-100 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors">
-                  Cerrar
-                </button>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Modal agregar vehículo */}
       {showModal && (
