@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Check, X, RefreshCw, Pencil, ChevronUp } from 'lucide-react'
 
@@ -78,6 +78,39 @@ function Toast({ msg, ok }: { msg: string; ok: boolean }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">{children}</p>
+}
+
+function NumField({ value, onCommit, placeholder, className }: {
+  value: number | null
+  onCommit: (v: number | null) => void
+  placeholder?: string
+  className?: string
+}) {
+  const [raw, setRaw] = useState(value != null ? String(value) : '')
+  const focused = useRef(false)
+
+  useEffect(() => {
+    if (!focused.current) setRaw(value != null ? String(value) : '')
+  }, [value])
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className={className}
+      value={raw}
+      placeholder={placeholder ?? '0'}
+      onFocus={e => { focused.current = true; e.target.select() }}
+      onChange={e => setRaw(e.target.value)}
+      onBlur={() => {
+        focused.current = false
+        const parsed = parseFloat(raw.replace(',', '.'))
+        const final = isNaN(parsed) ? null : parsed
+        onCommit(final)
+        setRaw(final != null ? String(final) : '')
+      }}
+    />
+  )
 }
 
 const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
@@ -375,16 +408,16 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                     <SectionLabel>Precios y financiamiento</SectionLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <Field label="Precio base ($)">
-                        <input className={inputCls} type="number" step="0.01" value={v.cash ?? ''} onChange={e => update(v.id, 'cash', e.target.value ? parseFloat(e.target.value) : null)} placeholder="30000" />
+                        <NumField className={inputCls} value={v.cash} placeholder="30000" onCommit={n => update(v.id, 'cash', n)} />
                       </Field>
                       <Field label="Gastos de contado ($)">
-                        <input className={inputCls} type="number" step="0.01" value={v.gc ?? ''} onChange={e => update(v.id, 'gc', e.target.value ? parseFloat(e.target.value) : null)} placeholder="3500" />
+                        <NumField className={inputCls} value={v.gc} placeholder="3500" onCommit={n => update(v.id, 'gc', n)} />
                       </Field>
                       <Field label="Gastos de crédito ($)">
-                        <input className={inputCls} type="number" step="0.01" value={v.gcr ?? ''} onChange={e => update(v.id, 'gcr', e.target.value ? parseFloat(e.target.value) : null)} placeholder="5000" />
+                        <NumField className={inputCls} value={v.gcr} placeholder="5000" onCommit={n => update(v.id, 'gcr', n)} />
                       </Field>
                       <Field label="Cuota a 24 meses ($/mes)">
-                        <input className={inputCls} type="number" step="0.01" value={v.tasa_credito ?? ''} onChange={e => update(v.id, 'tasa_credito', e.target.value ? parseFloat(e.target.value) : null)} placeholder="500" />
+                        <NumField className={inputCls} value={v.tasa_credito} placeholder="500" onCommit={n => update(v.id, 'tasa_credito', n)} />
                       </Field>
                     </div>
                   </div>
@@ -394,13 +427,13 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                     <SectionLabel>Plan 100% banco (crédito bancario)</SectionLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <Field label="Monto de placa ($)">
-                        <input className={inputCls} type="number" step="0.01" value={v.placa_monto ?? 400} onChange={e => update(v.id, 'placa_monto', e.target.value ? parseFloat(e.target.value) : null)} placeholder="400" />
+                        <NumField className={inputCls} value={v.placa_monto} placeholder="400" onCommit={n => update(v.id, 'placa_monto', n)} />
                       </Field>
                       <Field label="Gastos del banco ($)">
-                        <input className={inputCls} type="number" step="0.01" value={v.gcr_banco ?? ''} onChange={e => update(v.id, 'gcr_banco', e.target.value ? parseFloat(e.target.value) : null)} placeholder="0" />
+                        <NumField className={inputCls} value={v.gcr_banco} placeholder="0" onCommit={n => update(v.id, 'gcr_banco', n)} />
                       </Field>
                       <Field label="Cuota mensual banco ($/mes)">
-                        <input className={inputCls} type="number" step="0.01" value={v.cuota_banco ?? ''} onChange={e => update(v.id, 'cuota_banco', e.target.value ? parseFloat(e.target.value) : null)} placeholder="0" />
+                        <NumField className={inputCls} value={v.cuota_banco} placeholder="0" onCommit={n => update(v.id, 'cuota_banco', n)} />
                       </Field>
                     </div>
                   </div>
@@ -410,7 +443,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                     <SectionLabel>Información del vehículo</SectionLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <Field label="Año">
-                        <input className={inputCls} type="number" step="1" value={v.ano ?? 2026} onChange={e => update(v.id, 'ano', parseInt(e.target.value) || 2026)} />
+                        <NumField className={inputCls} value={v.ano} placeholder="2026" onCommit={n => update(v.id, 'ano', n != null ? Math.round(n) : 2026)} />
                       </Field>
                       <Field label="Transmisión">
                         <select className={inputCls} value={v.transmision ?? 'Automático'} onChange={e => update(v.id, 'transmision', e.target.value)}>
@@ -420,10 +453,10 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                         </select>
                       </Field>
                       <Field label="Unidades en stock">
-                        <input className={inputCls} type="number" step="1" min="0" value={v.stock ?? 0} onChange={e => update(v.id, 'stock', parseInt(e.target.value) || 0)} />
+                        <NumField className={inputCls} value={v.stock} placeholder="0" onCommit={n => update(v.id, 'stock', n != null ? Math.round(n) : 0)} />
                       </Field>
                       <Field label="Orden de aparición">
-                        <input className={inputCls} type="number" step="1" value={v.orden ?? 99} onChange={e => update(v.id, 'orden', parseInt(e.target.value) || 99)} />
+                        <NumField className={inputCls} value={v.orden} placeholder="99" onCommit={n => update(v.id, 'orden', n != null ? Math.round(n) : 99)} />
                       </Field>
                     </div>
 
