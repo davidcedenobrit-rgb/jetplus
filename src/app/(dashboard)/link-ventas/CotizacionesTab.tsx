@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type Estado = 'aceptada' | 'rechazada' | 'sin_respuesta'
+type Estado = 'aceptada' | 'rechazada' | 'sin_respuesta' | 'pospuesta'
 
 interface Cotizacion {
   id: string
@@ -47,9 +47,10 @@ function fmtFecha(s: string) {
 }
 
 const ESTADO_CFG: Record<Estado, { label: string; cls: string; dot: string }> = {
-  sin_respuesta: { label: 'Sin respuesta', cls: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' },
-  aceptada:      { label: 'Aceptada',      cls: 'bg-green-50 text-green-700', dot: 'bg-green-500' },
-  rechazada:     { label: 'Rechazada',     cls: 'bg-red-50 text-red-700',     dot: 'bg-red-500' },
+  sin_respuesta: { label: 'Sin respuesta',    cls: 'bg-gray-100 text-gray-600',   dot: 'bg-gray-400' },
+  aceptada:      { label: 'Aceptada',         cls: 'bg-green-50 text-green-700',  dot: 'bg-green-500' },
+  rechazada:     { label: 'No le interesó',   cls: 'bg-red-50 text-red-700',      dot: 'bg-red-500' },
+  pospuesta:     { label: 'Por ahora no',     cls: 'bg-amber-50 text-amber-700',  dot: 'bg-amber-400' },
 }
 
 function EstadoBadge({ estado }: { estado: Estado }) {
@@ -214,14 +215,15 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
           <div className="border border-gray-100 rounded-xl p-4">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3">Cambiar estado</p>
             <div className="flex gap-2">
-              {(['aceptada', 'sin_respuesta', 'rechazada'] as Estado[]).map(e => (
+              {(['aceptada', 'pospuesta', 'sin_respuesta', 'rechazada'] as Estado[]).map(e => (
                 <button
                   key={e}
                   onClick={() => { setPendingEstado(e); setMotivoError('') }}
                   className={`flex-1 py-2 px-2 rounded-lg border-2 text-[11px] font-bold transition-all ${
                     pendingEstado === e
-                      ? e === 'aceptada' ? 'border-green-500 bg-green-50 text-green-700'
+                      ? e === 'aceptada'  ? 'border-green-500 bg-green-50 text-green-700'
                         : e === 'rechazada' ? 'border-red-500 bg-red-50 text-red-700'
+                        : e === 'pospuesta' ? 'border-amber-400 bg-amber-50 text-amber-700'
                         : 'border-gray-400 bg-gray-100 text-gray-700'
                       : 'border-gray-200 text-gray-400 hover:border-gray-300'
                   }`}
@@ -293,6 +295,7 @@ export default function CotizacionesTab() {
     todas: cotizaciones.length,
     sin_respuesta: cotizaciones.filter(c => c.estado === 'sin_respuesta').length,
     aceptada: cotizaciones.filter(c => c.estado === 'aceptada').length,
+    pospuesta: cotizaciones.filter(c => c.estado === 'pospuesta').length,
     rechazada: cotizaciones.filter(c => c.estado === 'rechazada').length,
   }
 
@@ -309,10 +312,11 @@ export default function CotizacionesTab() {
   }
 
   const filtros: { key: Filtro; label: string; count: number }[] = [
-    { key: 'todas',         label: 'Todas',          count: counts.todas },
-    { key: 'sin_respuesta', label: 'Sin respuesta',  count: counts.sin_respuesta },
-    { key: 'aceptada',      label: 'Aceptadas',      count: counts.aceptada },
-    { key: 'rechazada',     label: 'Rechazadas',     count: counts.rechazada },
+    { key: 'todas',         label: 'Todas',           count: counts.todas },
+    { key: 'sin_respuesta', label: 'Sin respuesta',   count: counts.sin_respuesta },
+    { key: 'aceptada',      label: 'Aceptadas',       count: counts.aceptada },
+    { key: 'pospuesta',     label: 'Por ahora no',    count: counts.pospuesta },
+    { key: 'rechazada',     label: 'No les interesó', count: counts.rechazada },
   ]
 
   return (

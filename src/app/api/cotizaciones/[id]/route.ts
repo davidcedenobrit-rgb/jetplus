@@ -8,7 +8,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json()
     const { estado, motivo_rechazo } = body
 
-    if (!['aceptada', 'rechazada', 'sin_respuesta'].includes(estado)) {
+    if (!['aceptada', 'rechazada', 'sin_respuesta', 'pospuesta'].includes(estado)) {
       return NextResponse.json({ error: 'Estado inválido' }, { status: 400 })
     }
     if (estado === 'rechazada' && !motivo_rechazo?.trim()) {

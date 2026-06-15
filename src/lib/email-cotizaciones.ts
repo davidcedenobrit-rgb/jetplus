@@ -53,7 +53,7 @@ function row(label: string, value: string) {
   </tr>`
 }
 
-export async function enviarCotizacionCliente(data: CotizacionPDFData) {
+export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenRespuesta: string) {
   const resend = getResend()
 
   const pdfBuffer = await renderToBuffer(
@@ -62,6 +62,7 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData) {
 
   const es24 = data.modalidad === 'credito_24'
   const modalidadLabel = es24 ? 'Crédito 24 meses' : 'Contado'
+  const responderUrl = `${APP_URL}/responder/${tokenRespuesta}`
 
   const body = `
     <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">Cotización de vehículo</p>
@@ -83,13 +84,42 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData) {
       </table>
     </div>
 
-    <div style="background:#fffbeb;border:1px solid rgba(234,179,8,0.3);border-radius:10px;padding:16px 20px;margin-bottom:20px">
-      <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#92400e;margin:0 0 6px">¿Deseas solicitar un descuento?</p>
-      <p style="font-family:sans-serif;font-size:13px;color:#6b7280;margin:0 0 12px">Contáctate directamente con nuestra gerencia y evaluamos tu caso de manera personalizada.</p>
-      <a href="mailto:${ROJAS}?subject=Solicitud%20de%20descuento%20-%20${encodeURIComponent(data.numero)}&body=Hola%2C%20soy%20${encodeURIComponent(data.clienteNombre)}%20y%20quisiera%20solicitar%20un%20descuento%20sobre%20la%20cotizaci%C3%B3n%20${encodeURIComponent(data.numero)}."
-        style="display:inline-block;background:#ca8a04;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-family:sans-serif;font-size:13px;font-weight:700">
-        Solicitar descuento →
-      </a>
+    <div style="background:#f0fdf4;border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:20px 22px;margin-bottom:12px">
+      <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#15803d;margin:0 0 14px">¿Qué deseas hacer con esta cotización?</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-bottom:10px">
+            <a href="${responderUrl}?r=aceptar"
+              style="display:block;background:#16a34a;color:#fff;padding:13px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:800;text-align:center">
+              ✅ Sí, acepto esta cotización
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:10px">
+            <a href="${responderUrl}?r=posponer"
+              style="display:block;background:#fff;color:#374151;padding:12px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700;text-align:center;border:2px solid #d1d5db">
+              ⏸ Por ahora no compraré
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="${responderUrl}?r=rechazar"
+              style="display:block;background:#fff;color:#dc2626;padding:12px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700;text-align:center;border:2px solid #fecaca">
+              ❌ No me interesa / Rechazar
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background:#fffbeb;border:1px solid rgba(234,179,8,0.3);border-radius:10px;padding:14px 18px;margin-bottom:20px">
+      <p style="font-family:sans-serif;font-size:12px;color:#92400e;margin:0">
+        💬 ¿Preguntas? Contáctanos directamente por
+        <a href="https://wa.me/584149989010" style="color:#92400e;font-weight:700">WhatsApp</a>
+        o responde este correo.
+      </p>
     </div>
 
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;margin:0">* Precios referenciales sujetos a disponibilidad. Consulte con su asesor para confirmar.</p>

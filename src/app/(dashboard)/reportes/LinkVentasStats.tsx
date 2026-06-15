@@ -19,9 +19,10 @@ function fmtHora(s: string) {
 }
 
 const ESTADO_CFG: Record<string, { label: string; cls: string }> = {
-  sin_respuesta: { label: 'Sin respuesta', cls: 'bg-gray-100 text-gray-600' },
-  aceptada:      { label: 'Aceptada',      cls: 'bg-green-50 text-green-700' },
-  rechazada:     { label: 'Rechazada',     cls: 'bg-red-50 text-red-700' },
+  sin_respuesta: { label: 'Sin respuesta',  cls: 'bg-gray-100 text-gray-600' },
+  aceptada:      { label: 'Aceptada',       cls: 'bg-green-50 text-green-700' },
+  pospuesta:     { label: 'Por ahora no',   cls: 'bg-amber-50 text-amber-700' },
+  rechazada:     { label: 'No le interesó', cls: 'bg-red-50 text-red-700' },
 }
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -118,7 +119,7 @@ export default function LinkVentasStats() {
   }))
 
   // Estados
-  const byEstado: Record<string, number> = { sin_respuesta: 0, aceptada: 0, rechazada: 0 }
+  const byEstado: Record<string, number> = { sin_respuesta: 0, aceptada: 0, pospuesta: 0, rechazada: 0 }
   cotizaciones.forEach(c => { byEstado[c.estado ?? 'sin_respuesta'] = (byEstado[c.estado ?? 'sin_respuesta'] ?? 0) + 1 })
 
   // Por modalidad

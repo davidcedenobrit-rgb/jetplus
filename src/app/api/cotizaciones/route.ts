@@ -194,7 +194,7 @@ export async function POST(req: Request) {
 
     // Enviar emails (ambos en paralelo, errores no bloqueantes)
     const emailResults = await Promise.allSettled([
-      enviarCotizacionCliente(pdfData),
+      enviarCotizacionCliente(pdfData, cot.token_respuesta),
       enviarNotificacionRojas({
         numero: cot.numero,
         vendedoraNombre: vendedora.nombre,
