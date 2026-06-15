@@ -8,7 +8,20 @@ type ShowroomItem = { marca: string; modelo: string; unidades: number }
 
 function extractKey(model: string): string {
   const m = model.toUpperCase().replace(/[()]/g, '')
-  const codes = ['MG3','MG5','MG6','MG7','RX5','RX8','RX9','D60','D90','D60','S80','T60','T90','T50','ZS','HS','HS5']
+
+  // ZS: diferenciar clásico vs new (el showroom solo tiene NEW MG ZS AT COM)
+  if (m.includes('ZS')) {
+    if (m.includes('CLASICO') || m.includes('CLÁSICO')) return 'ZS-CLASICO'
+    return 'ZS-NEW'
+  }
+
+  // MG3: diferenciar automático vs sincrónico (el showroom solo tiene AT)
+  if (m.includes('MG3')) {
+    if (m.includes(' MT') || m.includes('SINCRONIC') || m.includes('SINCRÓNIC')) return 'MG3-MT'
+    return 'MG3-AT'
+  }
+
+  const codes = ['MG5','MG6','MG7','RX5','RX8','RX9','D60','D90','S80','T60','T90','T50','HS5','HS']
   for (const c of codes) {
     if (m.includes(c)) return c
   }
