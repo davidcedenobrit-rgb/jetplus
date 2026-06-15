@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import VehiculosFiltro from './VehiculosFiltro'
 import AC500Filtro from './AC500Filtro'
+import StickyNav from './StickyNav'
 
 const LOGO    = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
 const MG_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e64a9efded9c776ffb5.png'
@@ -23,65 +24,86 @@ export default async function VentasPage() {
   const acLista = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F2F2F2', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#F2F2F2', fontFamily: "'Inter', system-ui, sans-serif", paddingBottom: 64 }}>
 
-      {/* ── HERO ──────────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px 0' }}>
-        <div className="lo-glass" style={{ padding: '30px 34px', marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 22 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <img src={LOGO} alt="La Oriental" style={{ height: 38, objectFit: 'contain' }} />
-              <div style={{ width: 1, height: 30, background: '#ececec' }} className="lo-brand-sep" />
-              <div className="lo-brand-pill">
-                <img src={MG_LOGO} alt="MG" style={{ height: 17, objectFit: 'contain' }} />
-                <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-                <img src={MX_LOGO} alt="MAXUS" style={{ height: 17, objectFit: 'contain' }} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span className="lo-pill-loc">📍 Maturín, Monagas</span>
-              <span className="lo-pill-online"><span className="lo-dot" /> Asesores en línea</span>
+      {/* ── HEADER ────────────────────────────────────────────────────────── */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          {/* Logo + nombre */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <img src={LOGO} alt="La Oriental" style={{ height: 32, objectFit: 'contain' }} />
+            <div style={{ width: 1, height: 24, background: '#e5e7eb' }} />
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>La Oriental Automotors</p>
+              <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1 }}>Representantes oficiales · MG y MAXUS</p>
             </div>
           </div>
-
-          <div className="lo-hairline" style={{ marginBottom: 24 }} />
-
-          <div style={{ marginBottom: 24 }}>
-            <h1 style={{ fontSize: 'clamp(26px, 4.5vw, 40px)', fontWeight: 900, lineHeight: 1.12, color: '#111827', marginBottom: 12, letterSpacing: '-0.5px' }}>
-              Tu próximo vehículo <span style={{ color: '#a16207' }}>MG</span> o <span style={{ color: '#a16207' }}>MAXUS</span><br />está aquí.
-            </h1>
-            <p style={{ fontSize: 15, color: '#6b7280', lineHeight: 1.6, maxWidth: 560 }}>
-              Explora precios base y planes de financiamiento disponibles en nuestra sede de <strong style={{ color: '#374151' }}>Maturín</strong>. Nuestros asesores te acompañan en cada paso.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {acLista.length > 0 && <a href="#ac500" className="lo-btn-gold">🛡️ Plan $500</a>}
-            <a href="#vehiculos" className="lo-btn-glass">Ver vehículos ↓</a>
-            <a href={`${WA_BASE}?text=${WA_MSG}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">WhatsApp</a>
+          {/* Brand pills + ubicación */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="lo-brand-pill">
+              <img src={MG_LOGO} alt="MG" style={{ height: 16, objectFit: 'contain' }} />
+              <span style={{ width: 1, height: 14, background: '#e5e7eb' }} />
+              <img src={MX_LOGO} alt="MAXUS" style={{ height: 16, objectFit: 'contain' }} />
+            </div>
+            <span className="lo-pill-loc" style={{ fontSize: 12 }}>📍 Maturín, Venezuela</span>
           </div>
         </div>
+      </div>
 
-        {/* Cómo funciona */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 30 }}>
-          {[
-            { icon: '🔍', t: 'Revisa los precios base y planes', d: 'disponibles en esta página.' },
-            { icon: '💬', t: 'Contacta a un asesor por WhatsApp', d: 'para confirmar disponibilidad.' },
-            { icon: '📄', t: 'Tu asesor genera la cotización', d: 'formal desde el catálogo.' },
-          ].map(s => (
-            <div key={s.t} className="lo-info-box" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 24 }}>{s.icon}</span>
-              <p style={{ fontSize: 13, lineHeight: 1.5 }}>
-                <span style={{ fontWeight: 700, color: '#111' }}>{s.t}</span>{' '}
-                <span style={{ color: '#6b7280' }}>{s.d}</span>
+      {/* ── HERO (dos columnas) ───────────────────────────────────────────── */}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }} className="lo-hero-grid">
+          {/* Columna izquierda */}
+          <div className="lo-glass" style={{ padding: '32px 36px' }}>
+            <span className="lo-pill-online" style={{ marginBottom: 18, display: 'inline-flex' }}>
+              <span className="lo-dot" /> Asesores disponibles · Atención en Maturín
+            </span>
+            <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, lineHeight: 1.1, color: '#111827', marginBottom: 14, letterSpacing: '-0.5px' }}>
+              Tu próximo vehículo <span style={{ color: '#a16207' }}>MG</span><br />o <span style={{ color: '#a16207' }}>MAXUS</span> está aquí.
+            </h1>
+            <p style={{ fontSize: 15, color: '#6b7280', lineHeight: 1.65, marginBottom: 28, maxWidth: 480 }}>
+              Explora precios base y planes de financiamiento disponibles en nuestra sede de <strong style={{ color: '#374151' }}>Maturín</strong>. Nuestros asesores te acompañan en cada paso.
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {acLista.length > 0 && <a href="#ac500" className="lo-btn-gold">🛡️ Plan $500 →</a>}
+              <a href="#vehiculos" className="lo-btn-glass">Ver vehículos ↓</a>
+              <a href={`${WA_BASE}?text=${WA_MSG}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">WhatsApp</a>
+            </div>
+            <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 18 }}>* Los precios mostrados son referenciales y pueden variar. Consulta disponibilidad con tu asesor.</p>
+          </div>
+
+          {/* Columna derecha */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 260, maxWidth: 300 }} className="lo-hero-right">
+            {/* ¿Cómo funciona? */}
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '20px 22px' }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14 }}>¿Cómo funciona?</p>
+              {[
+                { icon: '🔍', t: 'Revisa los', b: 'precios base y planes', d: 'disponibles en esta página.' },
+                { icon: '💬', t: 'Contacta a un', b: 'asesor por WhatsApp', d: 'para confirmar disponibilidad.' },
+                { icon: '📄', t: 'Tu asesor genera la', b: 'cotización formal', d: 'desde el catálogo.' },
+              ].map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i < 2 ? 12 : 0 }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>{s.icon}</span>
+                  <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5, margin: 0 }}>
+                    {s.t} <strong style={{ color: '#111' }}>{s.b}</strong> {s.d}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Sede Maturín */}
+            <div style={{ background: '#fffbeb', border: '1px solid rgba(234,179,8,.3)', borderRadius: 14, padding: '16px 20px' }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>📍 Sede Maturín</p>
+              <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, margin: 0 }}>
+                Atención personalizada en <strong>Maturín, Estado Monagas</strong>. Cotizaciones aprobadas en tiempo real.
               </p>
             </div>
-          ))}
+          </div>
         </div>
       </div>
 
       {/* ── VEHÍCULOS ─────────────────────────────────────────────────────── */}
-      <section id="vehiculos" style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 16px 56px' }}>
+      <section id="vehiculos" style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 20px 56px' }}>
         <div style={{ marginBottom: 22 }}>
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede Maturín · Atención personalizada</p>
           <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
@@ -121,7 +143,7 @@ export default async function VentasPage() {
 
       {/* ── AC500 ─────────────────────────────────────────────────────────── */}
       {acLista.length > 0 && (
-        <section id="ac500" style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 16px' }}>
+        <section id="ac500" style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 20px' }}>
           <div style={{ textAlign: 'center', marginBottom: 40 }}>
             <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>🛡️ Plan exclusivo</span>
             <h2 style={{ fontSize: 'clamp(26px, 4.5vw, 42px)', fontWeight: 900, color: '#111827', marginBottom: 14, lineHeight: 1.1 }}>
@@ -161,6 +183,9 @@ export default async function VentasPage() {
         <p style={{ color: 'rgba(255,255,255,.3)', fontSize: 12, marginBottom: 4 }}>La Oriental Automotors · Representantes oficiales MG &amp; MAXUS · Sede Maturín</p>
         <p style={{ color: 'rgba(255,255,255,.18)', fontSize: 11 }}>* Precios referenciales. Consulta disponibilidad con tu asesor.</p>
       </footer>
+
+      {/* ── STICKY BOTTOM NAV ─────────────────────────────────────────────── */}
+      <StickyNav hasAC500={acLista.length > 0} />
     </div>
   )
 }
