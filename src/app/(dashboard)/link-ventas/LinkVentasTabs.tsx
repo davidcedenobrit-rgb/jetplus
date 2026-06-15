@@ -5,9 +5,10 @@ import VehiculosEditor from './VehiculosEditor'
 import AC500Editor from './AC500Editor'
 import VendedorasEditor from './VendedorasEditor'
 import CotizacionesTab from './CotizacionesTab'
+import CotizacionCDMTab from './CotizacionCDMTab'
 import TasasEditor from './TasasEditor'
 
-type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'tasas'
+type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; ac500: any[] }) {
@@ -18,6 +19,7 @@ export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; a
     { key: 'ac500', label: 'Asegúrate con $500' },
     { key: 'vendedoras', label: 'Vendedoras' },
     { key: 'cotizaciones', label: 'Cotizaciones' },
+    { key: 'generar', label: 'Generar cotización' },
     { key: 'tasas', label: 'Tasas' },
   ]
 
@@ -41,6 +43,7 @@ export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; a
       {tab === 'ac500' && <AC500Editor initial={ac500} />}
       {tab === 'vendedoras' && <VendedorasEditor />}
       {tab === 'cotizaciones' && <CotizacionesTab />}
+      {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} />}
       {tab === 'tasas' && <TasasEditor />}
     </div>
   )
