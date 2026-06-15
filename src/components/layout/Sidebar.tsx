@@ -139,8 +139,32 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* Clientes → Créditos */}
-          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.map(({ href, label, icon: Icon }) => {
+          {/* Clientes → Egresos */}
+          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.slice(0, 4).map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + '/')
+            return (
+              <Link key={href} href={href} onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Icon size={18} />
+                {label}
+              </Link>
+            )
+          })}
+
+          {/* Link de Ventas — debajo de Egresos */}
+          {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director'].includes(rol) && (() => {
+            const active = pathname === '/link-ventas' || pathname.startsWith('/link-ventas/')
+            return (
+              <Link href="/link-ventas" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Globe size={18} />
+                <span className="flex-1">Link de Ventas</span>
+              </Link>
+            )
+          })()}
+
+          {/* Créditos */}
+          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.slice(4).map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <Link key={href} href={href} onClick={onClose}
@@ -205,18 +229,6 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                     {anulacionesPendientes > 99 ? '99+' : anulacionesPendientes}
                   </span>
                 )}
-              </Link>
-            )
-          })()}
-
-          {/* Link de Ventas */}
-          {['jose', 'admin', 'director'].includes(rol) && (() => {
-            const active = pathname === '/link-ventas' || pathname.startsWith('/link-ventas/')
-            return (
-              <Link href="/link-ventas" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Globe size={18} />
-                <span className="flex-1">Link de Ventas</span>
               </Link>
             )
           })()}
