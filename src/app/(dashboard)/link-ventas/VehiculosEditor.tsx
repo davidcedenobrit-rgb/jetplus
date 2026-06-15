@@ -1,8 +1,27 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Check, X } from 'lucide-react'
+import { Plus, Check, X, RefreshCw } from 'lucide-react'
+
+type ShowroomItem = { marca: string; modelo: string; unidades: number }
+
+// Extrae el código clave de un nombre de modelo (RX5, D60, MG3, ZS, etc.)
+function extractKey(model: string): string {
+  const m = model.toUpperCase().replace(/[()]/g, '')
+  const codes = ['MG3','MG5','MG6','MG7','RX5','RX8','RX9','D60','D90','D60','S80','T60','T90','T50','ZS','HS','HS5']
+  for (const c of codes) {
+    if (m.includes(c)) return c
+  }
+  return m.split(/\s+/).find(t => /^[A-Z][A-Z0-9]{1,4}$/.test(t)) ?? m.split(' ')[0]
+}
+
+function tieneStock(brand: string, model: string, stock: ShowroomItem[]): number {
+  const key = extractKey(model)
+  return stock
+    .filter(s => s.marca.toUpperCase() === brand.toUpperCase() && extractKey(s.modelo) === key)
+    .reduce((sum, s) => sum + s.unidades, 0)
+}
 
 interface Vehiculo {
   id: string
@@ -66,13 +85,26 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   placa_monto: 400, gcr_banco: null, cuota_banco: null,
 }
 
-export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos: Vehiculo[] }) {
+export default function VehiculosEditor({ initialVehiculos, showroomStock }: { initialVehiculos: Vehiculo[]; showroomStock: ShowroomItem[] }) {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>(initialVehiculos)
   const [dirty, setDirty] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
   const [saved, setSaved] = useState<Record<string, boolean>>({})
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+  const [syncing, setSyncing] = useState(false)
   const [showModal, setShowModal] = useState(false)
+
+  // Ordenar: primero los que tienen stock en showroom, luego el resto
+  const vehiculosOrdenados = useMemo(() => {
+    const conStock = vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) > 0)
+    const sinStock = vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) === 0)
+    return [...conStock, ...sinStock]
+  }, [vehiculos, showroomStock])
+
+  const modelosEnShowroom = useMemo(
+    () => vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) > 0),
+    [vehiculos, showroomStock]
+  )
   const [newV, setNewV] = useState<{ id: string } & typeof EMPTY_VEHICULO>({ id: '', ...EMPTY_VEHICULO })
   const [savingNew, setSavingNew] = useState(false)
   const supabase = createClient()
@@ -126,6 +158,23 @@ export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos
     }
   }
 
+  async function sincronizarShowroom() {
+    setSyncing(true)
+    let ok = 0, fail = 0
+    for (const v of vehiculos) {
+      const stock = tieneStock(v.brand, v.model, showroomStock)
+      const nuevoDisp = stock > 0
+      if (!!v.disponible === nuevoDisp) continue // ya está correcto
+      const { error } = await supabase.from('catalogo_ventas').update({ disponible: nuevoDisp }).eq('id', v.id)
+      if (error) { fail++; continue }
+      ok++
+      setVehiculos(prev => prev.map(x => x.id === v.id ? { ...x, disponible: nuevoDisp } : x))
+    }
+    setSyncing(false)
+    if (fail > 0) showToast(`Sincronizado con ${fail} error(es)`, false)
+    else showToast(`✓ Catálogo sincronizado con showroom (${ok} cambio${ok !== 1 ? 's' : ''})`, true)
+  }
+
   async function saveNew() {
     if (!newV.id || !newV.model) { showToast('ID y Modelo son obligatorios', false); return }
     setSavingNew(true)
@@ -161,29 +210,77 @@ export default function VehiculosEditor({ initialVehiculos }: { initialVehiculos
       {toast && <Toast msg={toast.msg} ok={toast.ok} />}
 
       {/* Header del catálogo */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-bold text-oriental-black">
           Catálogo de vehículos
           <span className="ml-2 text-xs font-normal text-oriental-gray">({vehiculos.length} modelos)</span>
         </h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <Plus size={14} /> Agregar vehículo
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={sincronizarShowroom}
+            disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-2 border border-orange-300 bg-orange-50 text-orange-700 text-xs font-semibold rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50"
+            title="Activa los modelos con stock en showroom y desactiva los que no tienen"
+          >
+            <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+            Sync showroom
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <Plus size={14} /> Agregar
+          </button>
+        </div>
       </div>
+
+      {/* Banner showroom */}
+      {modelosEnShowroom.length > 0 && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-lg">🏪</span>
+          <div className="flex-1">
+            <p className="text-xs font-bold text-amber-800">
+              {modelosEnShowroom.length} modelo{modelosEnShowroom.length !== 1 ? 's' : ''} en showroom con stock disponible
+            </p>
+            <p className="text-[11px] text-amber-700 mt-0.5">
+              Aparecen primero — verifica que los precios y gastos estén actualizados antes de activarlos en el catálogo público.
+            </p>
+          </div>
+          <button
+            onClick={sincronizarShowroom}
+            disabled={syncing}
+            className="flex-shrink-0 px-3 py-1.5 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
+          >
+            {syncing ? 'Sincronizando...' : 'Sincronizar ahora'}
+          </button>
+        </div>
+      )}
 
       {/* Cards */}
       <div className="space-y-3">
-        {vehiculos.map(v => {
+        {vehiculosOrdenados.map(v => {
           const colorsArr = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
           const isDirty = dirty[v.id]
           const isSaving = saving[v.id]
           const isSaved = saved[v.id]
+          const unidadesShowroom = tieneStock(v.brand, v.model, showroomStock)
+          const enShowroom = unidadesShowroom > 0
 
           return (
-            <div key={v.id} className={`card p-4 transition-all ${isDirty ? 'border-2 border-orange-300' : 'border border-gray-200'}`}>
+            <div key={v.id} className={`card p-4 transition-all ${
+              enShowroom && isDirty ? 'border-2 border-orange-400' :
+              enShowroom ? 'border-2 border-amber-300 bg-amber-50/30' :
+              isDirty ? 'border-2 border-orange-300' : 'border border-gray-200'
+            }`}>
+              {/* Banner showroom en la card */}
+              {enShowroom && (
+                <div className="flex items-center gap-2 mb-3 px-2.5 py-1.5 bg-amber-100 border border-amber-200 rounded-lg">
+                  <span className="text-sm">🏪</span>
+                  <span className="text-[11px] font-bold text-amber-800">
+                    {unidadesShowroom} unidad{unidadesShowroom !== 1 ? 'es' : ''} en showroom — verifica precios antes de activar
+                  </span>
+                </div>
+              )}
               {/* Top row: brand + model + toggle */}
               <div className="flex items-start justify-between mb-4">
                 <div>

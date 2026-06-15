@@ -11,7 +11,9 @@ import TasasEditor from './TasasEditor'
 type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; ac500: any[] }) {
+type ShowroomItem = { marca: string; modelo: string; unidades: number }
+
+export default function LinkVentasTabs({ catalogo, ac500, showroomStock }: { catalogo: any[]; ac500: any[]; showroomStock: ShowroomItem[] }) {
   const [tab, setTab] = useState<Tab>('catalogo')
 
   const tabs: { key: Tab; label: string }[] = [
@@ -39,7 +41,7 @@ export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; a
         ))}
       </div>
 
-      {tab === 'catalogo' && <VehiculosEditor initialVehiculos={catalogo} />}
+      {tab === 'catalogo' && <VehiculosEditor initialVehiculos={catalogo} showroomStock={showroomStock} />}
       {tab === 'ac500' && <AC500Editor initial={ac500} />}
       {tab === 'vendedoras' && <VendedorasEditor />}
       {tab === 'cotizaciones' && <CotizacionesTab />}

@@ -12,10 +12,22 @@ export default async function LinkVentasPage() {
   const rol = (user?.user_metadata?.rol as string) ?? 'editor'
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
-  const [{ data: vehiculos }, { data: ac500 }] = await Promise.all([
+  const [{ data: vehiculos }, { data: ac500 }, { data: showroomRaw }] = await Promise.all([
     supabase.from('catalogo_ventas').select('*').order('orden'),
     supabase.from('ac500_vehiculos').select('*').order('orden'),
+    supabase.from('vehiculos_showroom').select('marca, modelo').eq('estado', 'en_agencia'),
   ])
+
+  // Agrupar por marca+modelo con conteo de unidades
+  const showroomMap: Record<string, number> = {}
+  for (const r of showroomRaw ?? []) {
+    const k = `${r.marca}||${r.modelo}`
+    showroomMap[k] = (showroomMap[k] ?? 0) + 1
+  }
+  const showroomStock = Object.entries(showroomMap).map(([k, unidades]) => {
+    const [marca, modelo] = k.split('||')
+    return { marca, modelo, unidades }
+  })
 
   return (
     <div className="p-4 lg:p-8">
@@ -37,7 +49,7 @@ export default async function LinkVentasPage() {
         </a>
       </div>
 
-      <LinkVentasTabs catalogo={vehiculos ?? []} ac500={ac500 ?? []} />
+      <LinkVentasTabs catalogo={vehiculos ?? []} ac500={ac500 ?? []} showroomStock={showroomStock} />
     </div>
   )
 }
