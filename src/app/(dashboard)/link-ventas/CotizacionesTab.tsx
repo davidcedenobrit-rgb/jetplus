@@ -133,7 +133,17 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
             <p className="font-mono text-sm font-bold text-oriental-red">{cot.numero}</p>
             <p className="text-xs text-gray-400 mt-0.5">{fmtFecha(cot.fecha)} · vence {fmtFecha(cot.vencimiento)}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors text-sm">✕</button>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/cotizaciones/${cot.id}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-red text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
+            >
+              Ver PDF
+            </a>
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors text-sm">✕</button>
+          </div>
         </div>
 
         <div className="flex-1 px-5 py-4 space-y-5">
@@ -351,7 +361,7 @@ export default function CotizacionesTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['N° Cotización', 'Fecha', 'Cliente', 'Vehículo', 'Modalidad', 'Vendedora', 'Total inicial', 'Estado'].map(h => (
+                  {['N° Cotización', 'Fecha', 'Cliente', 'Vehículo', 'Modalidad', 'Vendedora', 'Total inicial', 'Estado', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-bold text-oriental-gray uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -387,6 +397,16 @@ export default function CotizacionesTab() {
                     </td>
                     <td className="px-4 py-3">
                       <EstadoBadge estado={c.estado ?? 'sin_respuesta'} />
+                    </td>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <a
+                        href={`/api/cotizaciones/${c.id}/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 hover:bg-oriental-red hover:text-white text-gray-600 rounded-lg text-[11px] font-bold transition-colors whitespace-nowrap"
+                      >
+                        Ver PDF
+                      </a>
                     </td>
                   </tr>
                 ))}
