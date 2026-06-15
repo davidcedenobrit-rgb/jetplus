@@ -37,6 +37,10 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
   const [rapidaVehiculo, setRapidaVehiculo] = useState<Vehiculo | null>(null)
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
+  function trackEvento(evento: string, brand: string, model: string) {
+    fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento, marca: brand, modelo: model }) }).catch(() => {})
+  }
+
   function goWA(model: string) {
     const msg = `Hola 👋 vengo del perfil de ventas de La Oriental. Me interesa el ${model}.`
     window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
@@ -131,10 +135,10 @@ export default function VehiculosFiltro({ vehiculos }: { vehiculos: Vehiculo[] }
                     <button onClick={() => compartir(v)} className="lo-cbtn-out">Compartir</button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <button onClick={() => setRapidaVehiculo(v)} className="lo-cbtn-out">
+                    <button onClick={() => { trackEvento('cotizacion_rapida', v.brand, v.model); setRapidaVehiculo(v) }} className="lo-cbtn-out">
                       📊 Cot. Rápida
                     </button>
-                    <button onClick={() => setModalVehiculo(v)} className="lo-cbtn-red">
+                    <button onClick={() => { trackEvento('cotizacion_formal_click', v.brand, v.model); setModalVehiculo(v) }} className="lo-cbtn-red">
                       <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
                       Cotización
                     </button>

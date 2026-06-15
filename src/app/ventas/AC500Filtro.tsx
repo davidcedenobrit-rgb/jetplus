@@ -84,6 +84,7 @@ function AC500Card({ v }: { v: AC500Vehiculo }) {
   const rows = schedule(v, mode)
 
   function goWA() {
+    fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_whatsapp', marca: v.brand, modelo: v.model }) }).catch(() => {})
     const colorPart = color ? ` Color: ${color}.` : ''
     const entrega = mode === '6' ? '6 meses' : '9 meses'
     const msg = `Hola 👋 vengo del perfil de ventas de La Oriental. Me interesa el ${v.model} en el Plan Asegúrate con $500 (${entrega}).${colorPart} ¿Me comparten disponibilidad y próximos pasos?`

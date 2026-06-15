@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
+import LinkVentasStats from './LinkVentasStats'
 import {
   TrendingUp, TrendingDown, Wallet, BarChart2, Filter,
   Users, Car, CreditCard, CheckCircle2, AlertCircle, Clock,
@@ -1433,6 +1434,15 @@ export default function ReportesPage() {
                 </div>
               </div>
             )}
+          </section>
+
+          {/* ── LINK DE VENTAS ─────────────────────────────────────────────── */}
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-5 bg-oriental-red rounded-full" />
+              <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Link de Ventas · Analítica</p>
+            </div>
+            <LinkVentasStats />
           </section>
 
         </div>
