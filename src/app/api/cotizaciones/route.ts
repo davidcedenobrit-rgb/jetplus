@@ -231,7 +231,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabase
     .from('cotizaciones')
-    .select('id, numero, fecha, vencimiento, vendedora_nombre, cliente_nombre, cliente_ci_rif, cliente_correo, marca, modelo, modalidad, total_inicial, costo_total, created_at')
+    .select('id, numero, fecha, vencimiento, vendedora_nombre, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, created_at')
     .order('created_at', { ascending: false })
     .limit(limit)
 
