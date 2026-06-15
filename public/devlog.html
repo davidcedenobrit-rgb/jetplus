@@ -607,20 +607,20 @@
   <div class="hero">
     <div class="hero-eyebrow">
       <span class="dot"></span>
-      Devlog · Sprint Cierre · 25 Mayo 2026
+      Devlog · Actualización Sprint Junio · 15 Junio 2026
     </div>
     <h1>Centro de Mando<br /><span class="blue">La Oriental Finanzas</span></h1>
     <p class="hero-client">La Oriental Automotors MG &amp; MAXUS · Maturín, Venezuela</p>
     <p class="hero-impact">
-      "De hojas de cálculo fragmentadas y control manual a un sistema financiero centralizado, con trazabilidad completa, control de roles y acceso desde cualquier dispositivo."
+      "De un sistema de gestión interna a una plataforma comercial completa: cotizaciones con PDF, página pública de ventas con tracking, módulo Vehimotors, analytics de Link de Ventas y plan Asegúrate $500 — todo integrado y en producción."
     </p>
     <div class="kpis">
       <div class="kpi">
-        <span class="kpi-num">11</span>
+        <span class="kpi-num">18</span>
         <span class="kpi-label">Módulos entregados</span>
       </div>
       <div class="kpi">
-        <span class="kpi-num">62<span class="unit">+</span></span>
+        <span class="kpi-num">130<span class="unit">+</span></span>
         <span class="kpi-label">Funcionalidades</span>
       </div>
       <div class="kpi">
@@ -628,8 +628,12 @@
         <span class="kpi-label">Roles de acceso</span>
       </div>
       <div class="kpi">
-        <span class="kpi-num">8</span>
-        <span class="kpi-label">Estados por recibo</span>
+        <span class="kpi-num">64</span>
+        <span class="kpi-label">Commits en junio</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num">PDF</span>
+        <span class="kpi-label">Cotizaciones automáticas</span>
       </div>
       <div class="kpi">
         <span class="kpi-num">PWA</span>
@@ -878,6 +882,200 @@
     </div>
   </section>
 
+  <!-- SPRINT JUNIO 2026 -->
+  <section>
+    <p class="section-eyebrow">Sprint Junio 2026 · 64 commits · 9 días</p>
+    <h2 class="section-title">Nuevas Funcionalidades — Junio 6–15</h2>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Sistema de Cotizaciones (módulo completo)</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Cotizaciones con PIN de vendedora</div><div class="feature-desc">Cada vendedora tiene un código único (formato letra + 3 dígitos, ej. D198). Se valida al generar la cotización y queda registrado en el PDF y el historial.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">3 planes de financiamiento</div><div class="feature-desc">Contado · Plan 40% inicial + 24 cuotas · Plan 100% Banco con diferencial cambiario. Cada plan genera un desglose económico distinto con IVA, gastos admin y financiamiento.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">PDF de cotización generado automáticamente</div><div class="feature-desc">Documento profesional con logo La Oriental, datos del cliente, desglose económico, cuadro de cuotas, espacio de firma y sello. Página única, vencimiento a 2 días.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Email de cotización vía Resend</div><div class="feature-desc">Correo automático al cliente con resumen del plan seleccionado (inicial + cuota por separado), adjunto PDF, remitente cotizaciones@laoriental.co.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Cotización rápida — modal de precios</div><div class="feature-desc">Modal ligero accesible desde la página pública. Muestra precio al contado, inicial 40% y cuota estimada sin requerir datos del cliente. Registra el evento en analytics.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Generador de cotizaciones en CDM (Rojas)</div><div class="feature-desc">El director José Rojas puede crear cotizaciones formales directamente desde su Centro de Mando usando el código interno R000 sin PIN.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Panel de cotizaciones con gestión de estados</div><div class="feature-desc">Tabla con filtros por estado: Todas / Sin respuesta / Aceptadas / Rechazadas. Click en fila abre panel de detalle con desglose económico completo y datos del cliente.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">3 badges de estado con motivo de rechazo</div><div class="feature-desc">aceptada · rechazada (requiere motivo) · sin_respuesta. El estado se actualiza vía PATCH y queda registrado en la BD con fecha.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Ver PDF on demand desde el panel</div><div class="feature-desc">Botón "Ver PDF" en cada fila regenera el documento desde la BD en tiempo real. El endpoint /api/cotizaciones/[id]/pdf reconstruye el PDF con renderToBuffer.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Link de Ventas — Página Pública /ventas</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Módulo completo creado desde cero</div><div class="feature-desc">Catálogo público con precios base, plan 40% y plan AC500. Sin autenticación requerida. Optimizado para móvil. Accesible desde enlace compartido a clientes.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Header blanco fijo con branding completo</div><div class="feature-desc">Logo La Oriental + nombre + pills MG/MAXUS + ubicación "Maturín, Venezuela" en barra superior siempre visible durante el scroll.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Hero en dos columnas</div><div class="feature-desc">Columna izquierda: titular, descripción y CTAs. Columna derecha: ¿Cómo funciona? (3 pasos) + card de Sede Maturín. Colapsa a una columna en móvil.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Sticky bottom nav — 3 accesos rápidos</div><div class="feature-desc">Barra fija en la parte inferior con botones: Showroom Maturín (scroll a vehículos), Plan $500 (scroll a AC500, visible solo si hay vehículos activos), Fichas Técnicas (WhatsApp).</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Filtros de marca y modelo + buscador</div><div class="feature-desc">Pills de Todos / MG / MAXUS + selector dinámico de modelos por marca + caja de búsqueda de texto libre. Filtrado client-side instantáneo sin recarga.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Plan AC500 — Asegúrate con $500</div><div class="feature-desc">Sección con tarjetas de cronograma de cuotas por vehículo. Soporta planes de 6 y 9 meses con toggle. Precio congelado, reserva $500, entrega programada.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Selector de colores por vehículo</div><div class="feature-desc">Dots de color interactivos con hex matching en AC500 cards. El color seleccionado se incluye en el mensaje de WhatsApp al solicitar información.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Compartir oferta con URL por vehículo</div><div class="feature-desc">Botón "Compartir esta oferta" genera URL con parámetro ?car=[id] usando Web Share API o clipboard fallback.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Analytics &amp; Tracking de Link de Ventas</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Tracking de eventos desde la página pública</div><div class="feature-desc">Endpoint /api/eventos (sin auth). Registra: cotizacion_rapida, cotizacion_formal_click, ac500_whatsapp. Tabla eventos_link_ventas en PostgreSQL con marca, modelo y timestamp.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Dashboard analytics completo en Reportes</div><div class="feature-desc">Sección "Link de Ventas" en el módulo de Reportes con selector de período 7/30/90 días. KPIs en tiempo real: cotizaciones generadas, aceptadas, interacciones web, cot. rápidas.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Ranking vendedoras por cotizaciones</div><div class="feature-desc">Tabla ordenada por número de cotizaciones en el período seleccionado. Muestra posición, nombre y total.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Vehículos más cotizados con inicial promedio</div><div class="feature-desc">Ranking por modelo con número de cotizaciones e inicial promedio en USD para cada vehículo.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Breakdown por modalidad y estado</div><div class="feature-desc">Contadores de Contado / Plan 100% Banco / Crédito 24m y de aceptada / rechazada / sin_respuesta con porcentajes del total.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Historial completo de cotizaciones recientes</div><div class="feature-desc">Tabla con N° de cotización, fecha, hora, vendedora, vehículo, cliente, modalidad, total inicial y estado con badge de color. Muestra las últimas 50.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Top vehículos por interés en AC500</div><div class="feature-desc">Ranking de clics en WhatsApp del plan AC500 por vehículo, para identificar cuáles modelos generan más conversaciones.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo Vehimotors</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Sistema completo de reporte a Vehimotors</div><div class="feature-desc">Flujo de reporte de depósitos a Vehimotors con envío de email, confirmación por token y registro de timestamp reportado_vehimotors_at.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Email con botón de comprobante de pago destacado</div><div class="feature-desc">Correo a Vehimotors incluye botón visual de comprobante. Logs de errores Resend con diagnóstico detallado.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Integración en panel Carla</div><div class="feature-desc">Carla ve el campo enviado_carla, montos USDT y sección de comprobante directamente desde su panel dedicado. Vehimotors aparece debajo de Créditos en sidebar.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Endpoint de prueba con datos reales</div><div class="feature-desc">GET /api/ingresos/test-vehimotors para validar el flujo completo de email antes de enviar a producción, usando registros reales de la BD.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Recibos PDF &amp; WhatsApp al Cliente</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Recibo PDF adjunto al correo del cliente</div><div class="feature-desc">Al aprobar un ingreso, el sistema genera y adjunta un recibo en PDF al correo enviado al cliente. Incluye cuotas aplicadas y estado de cuenta actualizado.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">WhatsApp con link de descarga del recibo</div><div class="feature-desc">Mensaje de WhatsApp al cliente incluye URL directa para descargar el PDF del recibo. Elimina la necesidad de enviar el archivo manualmente.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Equivalente USD en lista de ingresos VES</div><div class="feature-desc">Los ingresos registrados en bolívares muestran el equivalente en USD calculado con la tasa del día, para facilitar el seguimiento financiero.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <div class="feature-group-title">Módulo Auditoría, Logs &amp; UX</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Módulos Auditoría y Logs para director</div><div class="feature-desc">Accesibles solo para roles jose/admin/director. Trazabilidad de acciones del sistema con fecha, usuario y tipo de operación.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Sidebar: orden optimizado de navegación</div><div class="feature-desc">Link de Ventas reposicionado debajo de Egresos (entre Egresos y Créditos) para flujo natural de trabajo del equipo comercial.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Buscador + filtros en Showroom y Vehículos</div><div class="feature-desc">Pills de marca (Todos/MG/MAXUS), selector dinámico de modelos y caja de búsqueda de texto libre en ambos módulos. Filtrado instantáneo client-side.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Sistema de Anulaciones con soft-delete</div><div class="feature-desc">Flujo completo de anulación de recibos con registro de motivo, timestamp y preservación del historial. No se eliminan registros, solo se marcan como anulados.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Fix CSP para imágenes externas</div><div class="feature-desc">Se amplió el Content-Security-Policy para permitir imágenes de filesafe.space y googleapis.com. Los logos de La Oriental, MG y MAXUS ahora cargan correctamente.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <div><div class="feature-name">Métodos de pago: USDT CH, USDT JR, USDT VE, Binance</div><div class="feature-desc">Nuevas opciones de pago cripto disponibles al registrar ingresos. Cuota de inicial como concepto de pago separado.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-count">
+      <span class="num">64</span> commits en 9 días · <span class="num" style="margin-left:16px">7</span> módulos nuevos o ampliados
+    </div>
+  </section>
+
   <!-- ARQUITECTURA -->
   <section>
     <p class="section-eyebrow">Ingeniería</p>
@@ -903,11 +1101,15 @@
    ├─ ingresos          ├─ egresos
    ├─ creditos          ├─ cuotas
    ├─ cuota_ingresos    ├─ tasas
-   └─ solicitudes_cambio
+   ├─ solicitudes_cambio├─ cotizaciones
+   ├─ catalogo_ventas   ├─ ac500_vehiculos
+   └─ eventos_link_ventas
 
 <span class="hl">Supabase Auth</span>   ──  user_metadata.rol  ──  5 roles
 <span class="hl">Vercel</span>          ──  Edge Network        ──  CI/CD automático
 <span class="hl">ImageResponse</span>  ──  Íconos dinámicos    ──  PWA + iOS + Android
+<span class="hl">@react-pdf</span>     ──  PDF en servidor    ──  Cotizaciones + Recibos
+<span class="hl">Resend</span>         ──  Email transacc.    ──  Cotizaciones + Recibos cliente
       </pre>
     </div>
 
@@ -928,6 +1130,10 @@
       <span class="chip chip-infra">🔐 SSL/TLS automático</span>
       <span class="chip chip-pwa">📱 PWA Manifest</span>
       <span class="chip chip-pwa">🍎 Apple Web App</span>
+      <span class="chip chip-be">📄 @react-pdf/renderer</span>
+      <span class="chip chip-be">📧 Resend Email API</span>
+      <span class="chip chip-db">📊 eventos_link_ventas</span>
+      <span class="chip chip-db">💼 cotizaciones + PIN</span>
     </div>
   </section>
 
@@ -1021,6 +1227,23 @@
         </div>
       </div>
 
+      <div class="tl-item">
+        <div class="tl-phase">Fase 5 · Comercial &amp; Analytics · Junio 2026</div>
+        <div class="tl-title">Cotizaciones, Link de Ventas y tracking completo</div>
+        <div class="tl-bullets">
+          <div class="tl-bullet">Sistema de cotizaciones con PDF, PIN de vendedora, 3 planes de financiamiento y gestión de estados</div>
+          <div class="tl-bullet">Email transaccional con Resend — cotizaciones al cliente y recibo PDF adjunto</div>
+          <div class="tl-bullet">Página pública /ventas rediseñada — hero dos columnas, header fijo, sticky bottom nav</div>
+          <div class="tl-bullet">Plan AC500 con cronograma de cuotas interactivo (6 o 9 meses) y selector de colores</div>
+          <div class="tl-bullet">Tracking de eventos en la web pública — tabla eventos_link_ventas en PostgreSQL</div>
+          <div class="tl-bullet">Analytics completo en Reportes — ranking vendedoras, vehículos más cotizados, conversiones AC500</div>
+          <div class="tl-bullet">Módulo Vehimotors — reporte por email con comprobante y confirmación por token</div>
+          <div class="tl-bullet">Sistema de Anulaciones con soft-delete, módulos Auditoría y Logs para director</div>
+          <div class="tl-bullet">Métodos de pago cripto: USDT CH/JR/VE y Binance</div>
+          <div class="tl-bullet">Fix CSP para logos de filesafe.space y googleapis (MG/MAXUS branding)</div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -1051,11 +1274,11 @@
         <div class="roadmap-value">⚡ Expediente digital completo</div>
       </div>
 
-      <div class="roadmap-card">
-        <span class="roadmap-badge">Próxima versión</span>
-        <div class="roadmap-title">Dashboard ejecutivo para José</div>
-        <div class="roadmap-desc">Gráficas de ingresos vs. egresos por mes, cartera de créditos activos, top clientes por monto y vehículos más vendidos.</div>
-        <div class="roadmap-value">⚡ Decisiones basadas en datos</div>
+      <div class="roadmap-card" style="border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.04)">
+        <span class="roadmap-badge" style="background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.3);color:#34D399">✓ Entregado — Junio 2026</span>
+        <div class="roadmap-title">Analytics de Link de Ventas</div>
+        <div class="roadmap-desc">Dashboard completo en Reportes con ranking vendedoras, vehículos más cotizados, conversiones, clic en AC500 y historial de cotizaciones por período.</div>
+        <div class="roadmap-value">✓ Activo en producción desde Jun 15</div>
       </div>
 
       <div class="roadmap-card">
@@ -1076,7 +1299,7 @@
     <div class="icon">N</div>
     <div class="name">Navi Dev</div>
   </div>
-  <div class="footer-sub">Infraestructura digital de clase mundial · © 2026 Navi Group · Desarrollado para La Oriental Automotors</div>
+  <div class="footer-sub">Infraestructura digital de clase mundial · © 2026 Navi Group · Desarrollado para La Oriental Automotors<br><span style="font-size:11px;opacity:.6">Última actualización: 15 Junio 2026 · Sprint Junio — 64 commits · 7 módulos</span></div>
 </footer>
 
 </body>
