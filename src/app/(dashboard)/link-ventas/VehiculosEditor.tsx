@@ -2,11 +2,10 @@
 
 import { useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Check, X, RefreshCw } from 'lucide-react'
+import { Plus, Check, X, RefreshCw, Pencil, ChevronUp } from 'lucide-react'
 
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
 
-// Extrae el código clave de un nombre de modelo (RX5, D60, MG3, ZS, etc.)
 function extractKey(model: string): string {
   const m = model.toUpperCase().replace(/[()]/g, '')
   const codes = ['MG3','MG5','MG6','MG7','RX5','RX8','RX9','D60','D90','D60','S80','T60','T90','T50','ZS','HS','HS5']
@@ -62,7 +61,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className={`w-10 h-6 rounded-full relative transition-colors ${on ? 'bg-oriental-red' : 'bg-gray-300'}`}
+      className={`w-10 h-6 rounded-full relative transition-colors flex-shrink-0 ${on ? 'bg-oriental-red' : 'bg-gray-300'}`}
     >
       <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${on ? 'left-5' : 'left-1'}`} />
     </button>
@@ -75,6 +74,10 @@ function Toast({ msg, ok }: { msg: string; ok: boolean }) {
       {msg}
     </div>
   )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">{children}</p>
 }
 
 const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
@@ -90,11 +93,15 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
   const [dirty, setDirty] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
   const [saved, setSaved] = useState<Record<string, boolean>>({})
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [newV, setNewV] = useState<{ id: string } & typeof EMPTY_VEHICULO>({ id: '', ...EMPTY_VEHICULO })
+  const [savingNew, setSavingNew] = useState(false)
+  const supabase = createClient()
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Ordenar: primero los que tienen stock en showroom, luego el resto
   const vehiculosOrdenados = useMemo(() => {
     const conStock = vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) > 0)
     const sinStock = vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) === 0)
@@ -105,10 +112,6 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     () => vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) > 0),
     [vehiculos, showroomStock]
   )
-  const [newV, setNewV] = useState<{ id: string } & typeof EMPTY_VEHICULO>({ id: '', ...EMPTY_VEHICULO })
-  const [savingNew, setSavingNew] = useState(false)
-  const supabase = createClient()
-  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function showToast(msg: string, ok: boolean) {
     setToast({ msg, ok })
@@ -120,6 +123,10 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     setVehiculos(prev => prev.map(v => v.id === id ? { ...v, [field]: value } : v))
     setDirty(prev => ({ ...prev, [id]: true }))
     setSaved(prev => ({ ...prev, [id]: false }))
+  }
+
+  function toggleExpand(id: string) {
+    setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
   async function save(id: string) {
@@ -164,7 +171,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     for (const v of vehiculos) {
       const stock = tieneStock(v.brand, v.model, showroomStock)
       const nuevoDisp = stock > 0
-      if (!!v.disponible === nuevoDisp) continue // ya está correcto
+      if (!!v.disponible === nuevoDisp) continue
       const { error } = await supabase.from('catalogo_ventas').update({ disponible: nuevoDisp }).eq('id', v.id)
       if (error) { fail++; continue }
       ok++
@@ -195,21 +202,23 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     if (data) setVehiculos(data)
   }
 
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-      {children}
-    </div>
-  )
-
-  const inputCls = 'w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:border-oriental-red transition-colors'
+  const inputCls = 'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:border-oriental-red transition-colors'
   const modalInputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red'
+
+  function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold text-gray-500">{label}</span>
+        {children}
+      </div>
+    )
+  }
 
   return (
     <>
       {toast && <Toast msg={toast.msg} ok={toast.ok} />}
 
-      {/* Header del catálogo */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-bold text-oriental-black">
           Catálogo de vehículos
@@ -257,126 +266,207 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       )}
 
       {/* Cards */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {vehiculosOrdenados.map(v => {
           const colorsArr = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
           const isDirty = dirty[v.id]
           const isSaving = saving[v.id]
           const isSaved = saved[v.id]
+          const isExpanded = expanded[v.id] || false
           const unidadesShowroom = tieneStock(v.brand, v.model, showroomStock)
           const enShowroom = unidadesShowroom > 0
 
           return (
-            <div key={v.id} className={`card p-4 transition-all ${
-              enShowroom && isDirty ? 'border-2 border-orange-400' :
-              enShowroom ? 'border-2 border-amber-300 bg-amber-50/30' :
-              isDirty ? 'border-2 border-orange-300' : 'border border-gray-200'
-            }`}>
-              {/* Banner showroom en la card */}
-              {enShowroom && (
-                <div className="flex items-center gap-2 mb-3 px-2.5 py-1.5 bg-amber-100 border border-amber-200 rounded-lg">
-                  <span className="text-sm">🏪</span>
-                  <span className="text-[11px] font-bold text-amber-800">
-                    {unidadesShowroom} unidad{unidadesShowroom !== 1 ? 'es' : ''} en showroom — verifica precios antes de activar
-                  </span>
+            <div
+              key={v.id}
+              className={`rounded-xl border transition-all bg-white ${
+                enShowroom && isDirty ? 'border-2 border-orange-400' :
+                enShowroom ? 'border-2 border-amber-300' :
+                isDirty ? 'border-orange-300 shadow-sm' : 'border-gray-200'
+              }`}
+            >
+              {/* Collapsed row — always visible */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded flex-shrink-0 ${
+                  v.brand === 'MG' ? 'bg-red-50 text-oriental-red' : 'bg-blue-50 text-blue-600'
+                }`}>
+                  {v.brand}
+                </span>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-oriental-black text-sm truncate">
+                      {v.model || <span className="text-gray-400">Sin nombre</span>}
+                    </p>
+                    {enShowroom && (
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded flex-shrink-0">
+                        🏪 {unidadesShowroom}u showroom
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-400">
+                    {v.cash ? `$${v.cash.toLocaleString('es-VE', { minimumFractionDigits: 0 })}` : 'Sin precio'}
+                    {v.stock != null ? ` · ${v.stock} en stock` : ''}
+                    {v.ano ? ` · ${v.ano}` : ''}
+                  </p>
                 </div>
-              )}
-              {/* Top row: brand + model + toggle */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <span className={`text-[10px] font-bold uppercase tracking-widest ${v.brand === 'MG' ? 'text-oriental-red' : 'text-blue-600'}`}>
-                    {v.brand}
+
+                {isDirty && !isExpanded && (
+                  <span className="text-[10px] font-semibold text-orange-500 bg-orange-50 px-2 py-0.5 rounded flex-shrink-0">
+                    Sin guardar
                   </span>
-                  <p className="font-bold text-oriental-black text-base">{v.model}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">ID: {v.id}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">{v.disponible ? 'Activo' : 'Inactivo'}</span>
+                )}
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                    v.disponible ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {v.disponible ? 'Activo' : 'Inactivo'}
+                  </span>
                   <Toggle on={!!v.disponible} onClick={() => toggleDisp(v.id)} />
                 </div>
-              </div>
 
-              {/* Grid de campos */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
-                <Field label="Precio Base ($)">
-                  <input className={inputCls} type="number" step="0.01" value={v.cash ?? ''} onChange={e => update(v.id, 'cash', e.target.value ? parseFloat(e.target.value) : null)} />
-                </Field>
-                <Field label="G. Contado ($)">
-                  <input className={inputCls} type="number" step="0.01" value={v.gc ?? ''} onChange={e => update(v.id, 'gc', e.target.value ? parseFloat(e.target.value) : null)} />
-                </Field>
-                <Field label="G. Crédito ($)">
-                  <input className={inputCls} type="number" step="0.01" value={v.gcr ?? ''} onChange={e => update(v.id, 'gcr', e.target.value ? parseFloat(e.target.value) : null)} />
-                </Field>
-                <Field label="Cuota 24m ($/mes)">
-                  <input className={inputCls} type="number" step="0.01" value={v.tasa_credito ?? ''} onChange={e => update(v.id, 'tasa_credito', e.target.value ? parseFloat(e.target.value) : null)} />
-                </Field>
-                <Field label="Stock">
-                  <input className={inputCls} type="number" step="1" min="0" value={v.stock ?? 0} onChange={e => update(v.id, 'stock', parseInt(e.target.value) || 0)} />
-                </Field>
-                <Field label="Año">
-                  <input className={inputCls} type="number" step="1" value={v.ano ?? 2026} onChange={e => update(v.id, 'ano', parseInt(e.target.value) || 2026)} />
-                </Field>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                <Field label="Transmisión">
-                  <select className={inputCls} value={v.transmision ?? 'Automático'} onChange={e => update(v.id, 'transmision', e.target.value)}>
-                    <option>Automático</option>
-                    <option>Sincrónico</option>
-                    <option>Ambos</option>
-                  </select>
-                </Field>
-                <Field label="Colores (separados por coma)">
-                  <input className={inputCls} type="text" value={v.colores ?? ''} placeholder="Blanco, Negro, Rojo..." onChange={e => update(v.id, 'colores', e.target.value)} />
-                </Field>
-                <Field label="Vista previa de colores">
-                  <div className="flex gap-1.5 flex-wrap items-center h-8">
-                    {colorsArr.length ? colorsArr.map(c => (
-                      <div key={c} title={c} className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0" style={{ background: cHex(c) }} />
-                    )) : <span className="text-xs text-gray-400">Sin colores</span>}
-                  </div>
-                </Field>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                <Field label="URL de imagen">
-                  <input className={inputCls} type="text" value={v.img_url ?? ''} placeholder="https://..." onChange={e => update(v.id, 'img_url', e.target.value || null)} />
-                </Field>
-                <Field label="Orden (número menor = aparece primero)">
-                  <input className={inputCls} type="number" step="1" value={v.orden ?? 99} onChange={e => update(v.id, 'orden', parseInt(e.target.value) || 99)} />
-                </Field>
-              </div>
-
-              {/* Plan 100% Banco */}
-              <div className="border-t border-dashed border-gray-200 pt-3 mt-1 mb-3">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Plan 100% Banco (crédito bancario)</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <Field label="Placa ($)">
-                    <input className={inputCls} type="number" step="0.01" value={v.placa_monto ?? 400} onChange={e => update(v.id, 'placa_monto', e.target.value ? parseFloat(e.target.value) : null)} placeholder="400" />
-                  </Field>
-                  <Field label="Gastos Banco ($)">
-                    <input className={inputCls} type="number" step="0.01" value={v.gcr_banco ?? ''} onChange={e => update(v.id, 'gcr_banco', e.target.value ? parseFloat(e.target.value) : null)} placeholder="0" />
-                  </Field>
-                  <Field label="Cuota Banco ($/mes)">
-                    <input className={inputCls} type="number" step="0.01" value={v.cuota_banco ?? ''} onChange={e => update(v.id, 'cuota_banco', e.target.value ? parseFloat(e.target.value) : null)} placeholder="0" />
-                  </Field>
-                </div>
-              </div>
-
-              {/* Bottom: save */}
-              <div className="flex justify-end mt-4">
                 <button
-                  onClick={() => save(v.id)}
-                  disabled={isSaving || !isDirty}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
-                    isSaved ? 'bg-green-600 text-white' :
-                    isDirty ? 'bg-oriental-red text-white hover:bg-oriental-red-dark' :
-                    'bg-gray-100 text-gray-400 cursor-default'
+                  onClick={() => toggleExpand(v.id)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
+                    isExpanded
+                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-oriental-black text-white hover:bg-gray-800'
                   }`}
                 >
-                  {isSaving ? 'Guardando...' : isSaved ? <><Check size={13} /> Guardado</> : 'Guardar cambios'}
+                  {isExpanded ? <><ChevronUp size={13} /> Cerrar</> : <><Pencil size={12} /> Editar</>}
                 </button>
               </div>
+
+              {/* Expanded edit panel */}
+              {isExpanded && (
+                <div className="border-t border-gray-100 px-5 py-5 space-y-5 bg-gray-50 rounded-b-xl">
+
+                  {enShowroom && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <span>🏪</span>
+                      <span className="text-xs font-bold text-amber-800">
+                        {unidadesShowroom} unidad{unidadesShowroom !== 1 ? 'es' : ''} en showroom — verifica precios antes de activar
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Identidad */}
+                  <div>
+                    <SectionLabel>Identidad del vehículo</SectionLabel>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <Field label="Marca">
+                        <select className={inputCls} value={v.brand} onChange={e => update(v.id, 'brand', e.target.value as 'MG' | 'MAXUS')}>
+                          <option value="MG">MG</option>
+                          <option value="MAXUS">MAXUS</option>
+                        </select>
+                      </Field>
+                      <Field label="Nombre del modelo">
+                        <input className={inputCls} type="text" value={v.model} onChange={e => update(v.id, 'model', e.target.value)} placeholder="MG HS TROPHY" />
+                      </Field>
+                      <Field label="ID interno">
+                        <input className={`${inputCls} bg-gray-100 cursor-not-allowed`} type="text" value={v.id} readOnly />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* Precios */}
+                  <div>
+                    <SectionLabel>Precios y financiamiento</SectionLabel>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <Field label="Precio base ($)">
+                        <input className={inputCls} type="number" step="0.01" value={v.cash ?? ''} onChange={e => update(v.id, 'cash', e.target.value ? parseFloat(e.target.value) : null)} placeholder="30000" />
+                      </Field>
+                      <Field label="Gastos de contado ($)">
+                        <input className={inputCls} type="number" step="0.01" value={v.gc ?? ''} onChange={e => update(v.id, 'gc', e.target.value ? parseFloat(e.target.value) : null)} placeholder="3500" />
+                      </Field>
+                      <Field label="Gastos de crédito ($)">
+                        <input className={inputCls} type="number" step="0.01" value={v.gcr ?? ''} onChange={e => update(v.id, 'gcr', e.target.value ? parseFloat(e.target.value) : null)} placeholder="5000" />
+                      </Field>
+                      <Field label="Cuota a 24 meses ($/mes)">
+                        <input className={inputCls} type="number" step="0.01" value={v.tasa_credito ?? ''} onChange={e => update(v.id, 'tasa_credito', e.target.value ? parseFloat(e.target.value) : null)} placeholder="500" />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* Plan banco */}
+                  <div>
+                    <SectionLabel>Plan 100% banco (crédito bancario)</SectionLabel>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <Field label="Monto de placa ($)">
+                        <input className={inputCls} type="number" step="0.01" value={v.placa_monto ?? 400} onChange={e => update(v.id, 'placa_monto', e.target.value ? parseFloat(e.target.value) : null)} placeholder="400" />
+                      </Field>
+                      <Field label="Gastos del banco ($)">
+                        <input className={inputCls} type="number" step="0.01" value={v.gcr_banco ?? ''} onChange={e => update(v.id, 'gcr_banco', e.target.value ? parseFloat(e.target.value) : null)} placeholder="0" />
+                      </Field>
+                      <Field label="Cuota mensual banco ($/mes)">
+                        <input className={inputCls} type="number" step="0.01" value={v.cuota_banco ?? ''} onChange={e => update(v.id, 'cuota_banco', e.target.value ? parseFloat(e.target.value) : null)} placeholder="0" />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* Info del auto */}
+                  <div>
+                    <SectionLabel>Información del vehículo</SectionLabel>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <Field label="Año">
+                        <input className={inputCls} type="number" step="1" value={v.ano ?? 2026} onChange={e => update(v.id, 'ano', parseInt(e.target.value) || 2026)} />
+                      </Field>
+                      <Field label="Transmisión">
+                        <select className={inputCls} value={v.transmision ?? 'Automático'} onChange={e => update(v.id, 'transmision', e.target.value)}>
+                          <option>Automático</option>
+                          <option>Sincrónico</option>
+                          <option>Ambos</option>
+                        </select>
+                      </Field>
+                      <Field label="Unidades en stock">
+                        <input className={inputCls} type="number" step="1" min="0" value={v.stock ?? 0} onChange={e => update(v.id, 'stock', parseInt(e.target.value) || 0)} />
+                      </Field>
+                      <Field label="Orden de aparición">
+                        <input className={inputCls} type="number" step="1" value={v.orden ?? 99} onChange={e => update(v.id, 'orden', parseInt(e.target.value) || 99)} />
+                      </Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                      <Field label="URL de imagen">
+                        <input className={inputCls} type="text" value={v.img_url ?? ''} placeholder="https://..." onChange={e => update(v.id, 'img_url', e.target.value || null)} />
+                      </Field>
+                      <Field label="Colores disponibles (separar por coma)">
+                        <input className={inputCls} type="text" value={v.colores ?? ''} placeholder="Blanco, Negro, Rojo..." onChange={e => update(v.id, 'colores', e.target.value)} />
+                      </Field>
+                    </div>
+
+                    {colorsArr.length > 0 && (
+                      <div className="flex gap-2 flex-wrap items-center mt-2">
+                        {colorsArr.map(c => (
+                          <div key={c} className="flex items-center gap-1.5">
+                            <div className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" style={{ background: cHex(c) }} />
+                            <span className="text-xs text-gray-500">{c}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Guardar */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                    <p className="text-xs text-gray-400">ID: <code className="font-mono">{v.id}</code></p>
+                    <button
+                      onClick={() => save(v.id)}
+                      disabled={isSaving || !isDirty}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                        isSaved
+                          ? 'bg-green-600 text-white'
+                          : isDirty
+                          ? 'bg-oriental-red text-white hover:bg-oriental-red-dark'
+                          : 'bg-gray-100 text-gray-400 cursor-default'
+                      }`}
+                    >
+                      {isSaving ? 'Guardando...' : isSaved ? <><Check size={15} /> Guardado</> : 'Guardar cambios'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
@@ -421,25 +511,27 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                 <label className="block text-xs font-semibold text-gray-500 mb-1">URL de imagen</label>
                 <input className={modalInputCls} type="text" value={newV.img_url ?? ''} onChange={e => setNewV(p => ({ ...p, img_url: e.target.value || null }))} placeholder="https://..." />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Precio Base ($)</label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Precio base ($)</label>
                   <input className={modalInputCls} type="number" step="0.01" value={newV.cash ?? ''} onChange={e => setNewV(p => ({ ...p, cash: e.target.value ? parseFloat(e.target.value) : null }))} placeholder="30000" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">G. Contado ($)</label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Gastos de contado ($)</label>
                   <input className={modalInputCls} type="number" step="0.01" value={newV.gc ?? ''} onChange={e => setNewV(p => ({ ...p, gc: e.target.value ? parseFloat(e.target.value) : null }))} placeholder="3500" />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">G. Crédito ($)</label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Gastos de crédito ($)</label>
                   <input className={modalInputCls} type="number" step="0.01" value={newV.gcr ?? ''} onChange={e => setNewV(p => ({ ...p, gcr: e.target.value ? parseFloat(e.target.value) : null }))} placeholder="5000" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Cuota a 24 meses ($/mes)</label>
+                  <input className={modalInputCls} type="number" step="0.01" value={newV.tasa_credito ?? ''} onChange={e => setNewV(p => ({ ...p, tasa_credito: e.target.value ? parseFloat(e.target.value) : null }))} placeholder="500" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Cuota 24m ($/mes)</label>
-                  <input className={modalInputCls} type="number" step="0.01" value={newV.tasa_credito ?? ''} onChange={e => setNewV(p => ({ ...p, tasa_credito: e.target.value ? parseFloat(e.target.value) : null }))} placeholder="500" />
-                </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Stock</label>
                   <input className={modalInputCls} type="number" step="1" min="0" value={newV.stock ?? 0} onChange={e => setNewV(p => ({ ...p, stock: parseInt(e.target.value) || 0 }))} />
@@ -447,6 +539,10 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Año</label>
                   <input className={modalInputCls} type="number" step="1" value={newV.ano ?? 2026} onChange={e => setNewV(p => ({ ...p, ano: parseInt(e.target.value) || 2026 }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Orden</label>
+                  <input className={modalInputCls} type="number" step="1" value={newV.orden ?? 99} onChange={e => setNewV(p => ({ ...p, orden: parseInt(e.target.value) || 99 }))} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -459,13 +555,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Orden</label>
-                  <input className={modalInputCls} type="number" step="1" value={newV.orden ?? 99} onChange={e => setNewV(p => ({ ...p, orden: parseInt(e.target.value) || 99 }))} />
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Colores (separados por coma)</label>
+                  <input className={modalInputCls} type="text" value={newV.colores ?? ''} onChange={e => setNewV(p => ({ ...p, colores: e.target.value }))} placeholder="Blanco, Negro, Rojo" />
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Colores (separados por coma)</label>
-                <input className={modalInputCls} type="text" value={newV.colores ?? ''} onChange={e => setNewV(p => ({ ...p, colores: e.target.value }))} placeholder="Blanco, Negro, Rojo" />
               </div>
             </div>
             <div className="flex gap-3 px-6 pb-6">
