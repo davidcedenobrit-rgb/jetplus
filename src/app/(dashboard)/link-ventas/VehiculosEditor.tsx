@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Check, X, RefreshCw, Pencil, ChevronUp } from 'lucide-react'
+import { Plus, Check, X, RefreshCw, Pencil, ChevronUp, Zap, Send } from 'lucide-react'
 
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
 
@@ -145,6 +145,46 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
   const [showModal, setShowModal] = useState(false)
   const [newV, setNewV] = useState<{ id: string } & typeof EMPTY_VEHICULO>({ id: '', ...EMPTY_VEHICULO })
   const [savingNew, setSavingNew] = useState(false)
+
+  // Quick cotización
+  type QModal = 'contado' | 'credito_24' | 'banco_100'
+  const [quickV, setQuickV] = useState<Vehiculo | null>(null)
+  const [qForm, setQForm] = useState({ codigo: 'R000', nombre: '', correo: '', cirif: '', modalidad: 'contado' as QModal })
+  const [qSending, setQSending] = useState(false)
+  const [qResult, setQResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  function openQuick(v: Vehiculo) { setQuickV(v); setQResult(null); setQForm(p => ({ ...p, nombre: '', correo: '', cirif: '' })) }
+  function closeQuick() { setQuickV(null); setQResult(null) }
+
+  async function enviarRapido() {
+    if (!quickV) return
+    if (!qForm.nombre.trim() || !qForm.correo.trim() || !qForm.cirif.trim() || !qForm.codigo.trim()) {
+      showToast('Completa todos los campos', false); return
+    }
+    setQSending(true)
+    const modalidadAPI = qForm.modalidad === 'banco_100' ? 'credito_24' : qForm.modalidad
+    const planAPI = qForm.modalidad === 'banco_100' ? 'banco_100' : 'vehimotors'
+    try {
+      const res = await fetch('/api/cotizaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo: qForm.codigo.trim().toUpperCase(),
+          vehiculoId: quickV.id,
+          clienteNombre: qForm.nombre.trim(),
+          clienteCorreo: qForm.correo.trim(),
+          clienteCiRif: qForm.cirif.trim(),
+          modalidad: modalidadAPI,
+          plan: planAPI,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) setQResult({ ok: false, msg: json.error ?? 'Error al enviar' })
+      else setQResult({ ok: true, msg: `✓ Cotización ${json.numero} enviada a ${qForm.correo}` })
+    } catch { setQResult({ ok: false, msg: 'Error de conexión' }) }
+    finally { setQSending(false) }
+  }
+
   const supabase = createClient()
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -372,6 +412,15 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                   <Toggle on={!!v.disponible} onClick={() => toggleDisp(v.id)} />
                 </div>
 
+                {v.disponible && (
+                  <button
+                    onClick={() => openQuick(v)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors flex-shrink-0"
+                  >
+                    <Zap size={12} /> Cotizar
+                  </button>
+                )}
+
                 <button
                   onClick={() => toggleExpand(v.id)}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
@@ -526,6 +575,96 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
           </div>
         )}
       </div>
+
+      {/* Modal cotización rápida */}
+      {quickV && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-12 p-4" onClick={e => e.target === e.currentTarget && closeQuick()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-gray-100">
+              <div className="flex-1 min-w-0">
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${quickV.brand === 'MG' ? 'text-oriental-red' : 'text-blue-600'}`}>{quickV.brand}</p>
+                <p className="font-bold text-oriental-black truncate">{quickV.model}</p>
+              </div>
+              <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-lg flex items-center gap-1 flex-shrink-0">
+                <Zap size={11} /> Cotización rápida
+              </span>
+              <button onClick={closeQuick} className="text-gray-400 hover:text-oriental-black flex-shrink-0"><X size={18} /></button>
+            </div>
+
+            {!qResult ? (
+              <div className="p-5 space-y-4">
+                {/* Modalidad */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-2">Modalidad de venta</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([
+                      { v: 'contado', label: 'Contado' },
+                      { v: 'credito_24', label: 'Crédito 24m' },
+                      { v: 'banco_100', label: '100% Banco' },
+                    ] as { v: QModal; label: string }[]).map(opt => (
+                      <button
+                        key={opt.v}
+                        onClick={() => setQForm(p => ({ ...p, modalidad: opt.v }))}
+                        className={`py-2 px-2 rounded-lg text-xs font-bold border transition-colors ${
+                          qForm.modalidad === opt.v
+                            ? 'bg-oriental-red text-white border-oriental-red'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Campos */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre del cliente *</label>
+                    <input className={modalInputCls} value={qForm.nombre} onChange={e => setQForm(p => ({ ...p, nombre: e.target.value }))} placeholder="Juan Pérez" autoFocus />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Correo electrónico *</label>
+                    <input className={modalInputCls} type="email" value={qForm.correo} onChange={e => setQForm(p => ({ ...p, correo: e.target.value }))} placeholder="cliente@email.com" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">C.I. / RIF *</label>
+                    <input className={modalInputCls} value={qForm.cirif} onChange={e => setQForm(p => ({ ...p, cirif: e.target.value }))} placeholder="V-12345678" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Código vendedora</label>
+                    <input className={modalInputCls} value={qForm.codigo} onChange={e => setQForm(p => ({ ...p, codigo: e.target.value.toUpperCase() }))} placeholder="R000" />
+                  </div>
+                </div>
+
+                <button
+                  onClick={enviarRapido}
+                  disabled={qSending}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-oriental-red text-white font-bold rounded-xl text-sm hover:bg-oriental-red-dark transition-colors disabled:opacity-50"
+                >
+                  {qSending ? 'Enviando...' : <><Send size={15} /> Generar y enviar cotización</>}
+                </button>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-4xl mb-3">{qResult.ok ? '✅' : '❌'}</p>
+                <p className={`font-bold text-sm ${qResult.ok ? 'text-green-700' : 'text-red-600'}`}>{qResult.msg}</p>
+                {qResult.ok && (
+                  <button
+                    onClick={() => { setQResult(null); setQForm(p => ({ ...p, nombre: '', correo: '', cirif: '' })) }}
+                    className="mt-3 text-xs text-oriental-red font-semibold hover:underline"
+                  >
+                    Generar otra cotización
+                  </button>
+                )}
+                <button onClick={closeQuick} className="mt-3 block mx-auto px-6 py-2 bg-gray-100 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors">
+                  Cerrar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal agregar vehículo */}
       {showModal && (
