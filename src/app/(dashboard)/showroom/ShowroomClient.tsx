@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Car, MapPin, CheckCircle2, Lock, Tag, Wrench, Pencil } from 'lucide-react'
+import { Car, MapPin, CheckCircle2, Lock, Tag, Wrench, Pencil, Search, X } from 'lucide-react'
 import ShowroomDeleteButton from './ShowroomDeleteButton'
 import type { VehiculoShowroom } from '@/types/database'
 
@@ -56,6 +56,7 @@ export default function ShowroomClient({
 }) {
   const [marca, setMarca] = useState<string | null>(null)
   const [modelo, setModelo] = useState<string | null>(null)
+  const [busqueda, setBusqueda] = useState('')
 
   const marcas = useMemo(() => {
     const set = new Set(lista.map(v => v.marca).filter(Boolean))
@@ -69,67 +70,79 @@ export default function ShowroomClient({
   }, [lista, marca])
 
   const visible = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
     return lista.filter(v => {
       if (marca && v.marca !== marca) return false
       if (modelo && v.modelo !== modelo) return false
+      if (q) {
+        const haystack = [v.placa, v.modelo, v.marca, v.color, v.vin, v.serial_motor, v.ubicacion]
+          .filter(Boolean).join(' ').toLowerCase()
+        if (!haystack.includes(q)) return false
+      }
       return true
     })
-  }, [lista, marca, modelo])
+  }, [lista, marca, modelo, busqueda])
 
   function seleccionarMarca(m: string) {
     if (marca === m) { setMarca(null); setModelo(null) }
     else { setMarca(m); setModelo(null) }
   }
 
-  function seleccionarModelo(m: string) {
-    setModelo(modelo === m ? null : m)
-  }
-
-  const hayFiltros = marcas.length > 0
+  const hayFiltros = marca || modelo || busqueda.trim()
 
   return (
     <div>
-      {/* Filtros marca / modelo */}
-      {hayFiltros && (
-        <div className="mb-5 space-y-3">
-          {/* Marca */}
+      {/* Filtros */}
+      <div className="mb-5 space-y-3">
+        {/* Buscador */}
+        <div className="relative max-w-sm">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar placa, modelo, VIN, color..."
+            className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-oriental-red bg-white"
+          />
+          {busqueda && (
+            <button onClick={() => setBusqueda('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Marca */}
+        {marcas.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14">Marca</span>
             {marcas.map(m => (
-              <PillBtn key={m} active={marca === m} onClick={() => seleccionarMarca(m)}>
-                {m}
-              </PillBtn>
+              <PillBtn key={m} active={marca === m} onClick={() => seleccionarMarca(m)}>{m}</PillBtn>
             ))}
             {marca && (
-              <button onClick={() => { setMarca(null); setModelo(null) }} className="text-xs text-gray-400 hover:text-gray-600 underline ml-1">
-                Limpiar
-              </button>
+              <button onClick={() => { setMarca(null); setModelo(null) }} className="text-xs text-gray-400 hover:text-gray-600 underline ml-1">Limpiar</button>
             )}
           </div>
+        )}
 
-          {/* Modelos */}
-          {modelos.length > 1 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14">Modelo</span>
-              {modelos.map(m => (
-                <PillBtn key={m} active={modelo === m} onClick={() => seleccionarModelo(m)}>
-                  {m}
-                </PillBtn>
-              ))}
-              {modelo && (
-                <button onClick={() => setModelo(null)} className="text-xs text-gray-400 hover:text-gray-600 underline ml-1">
-                  Limpiar
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+        {/* Modelos */}
+        {modelos.length > 1 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14">Modelo</span>
+            {modelos.map(m => (
+              <PillBtn key={m} active={modelo === m} onClick={() => setModelo(modelo === m ? null : m)}>{m}</PillBtn>
+            ))}
+            {modelo && (
+              <button onClick={() => setModelo(null)} className="text-xs text-gray-400 hover:text-gray-600 underline ml-1">Limpiar</button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Contador filtrado */}
-      {(marca || modelo) && (
+      {hayFiltros && (
         <p className="text-xs text-oriental-gray mb-4">
           Mostrando <strong className="text-oriental-black">{visible.length}</strong> de {lista.length} vehículos
+          <button onClick={() => { setMarca(null); setModelo(null); setBusqueda('') }} className="ml-2 text-oriental-red hover:underline">Limpiar todo</button>
         </p>
       )}
 
@@ -137,7 +150,7 @@ export default function ShowroomClient({
       {visible.length === 0 ? (
         <div className="card p-16 text-center">
           <p className="text-oriental-gray font-medium">No hay vehículos con estos filtros</p>
-          <button onClick={() => { setMarca(null); setModelo(null) }} className="text-sm text-oriental-red mt-2 underline">Limpiar filtros</button>
+          <button onClick={() => { setMarca(null); setModelo(null); setBusqueda('') }} className="text-sm text-oriental-red mt-2 underline">Limpiar filtros</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
