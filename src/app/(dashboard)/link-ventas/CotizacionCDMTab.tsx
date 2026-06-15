@@ -61,7 +61,7 @@ const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm foc
 const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1'
 
 export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
-  const disponibles: Vehiculo[] = catalogo.filter((v: any) => v.disponible)
+  const disponibles: Vehiculo[] = catalogo
 
   const [step, setStep] = useState<Step>('vehiculo')
   const [vehiculoSel, setVehiculoSel] = useState<Vehiculo | null>(null)
@@ -120,7 +120,7 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
       <div>
         <div className="mb-5">
           <h2 className="text-base font-bold text-oriental-black">Generar cotización</h2>
-          <p className="text-sm text-oriental-gray mt-1">Selecciona el vehículo disponible en showroom</p>
+          <p className="text-sm text-oriental-gray mt-1">Todos los modelos del catálogo — los marcados como "No público" no aparecen en la web</p>
         </div>
 
         {disponibles.length === 0 ? (
@@ -142,7 +142,12 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
                     <img src={v.img_url} alt={v.model} className="w-full h-full object-contain" />
                   </div>
                 )}
-                <p className="text-[10px] font-bold text-oriental-red uppercase tracking-widest mb-0.5">{v.brand}</p>
+                <div className="flex items-start justify-between gap-2 mb-0.5">
+                  <p className="text-[10px] font-bold text-oriental-red uppercase tracking-widest">{v.brand}</p>
+                  {!v.disponible && (
+                    <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">No público</span>
+                  )}
+                </div>
                 <p className="font-bold text-oriental-black text-sm mb-2">{v.model}</p>
                 <p className="text-xs text-oriental-gray">Precio base: <span className="font-bold text-oriental-black">${fm(v.cash)}</span></p>
                 <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
