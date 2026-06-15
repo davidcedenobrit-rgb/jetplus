@@ -278,7 +278,6 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
                       <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>INICIAL</span>
                       <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
                       <span style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Cuota mensual × 24</span><span style={{ fontSize: 11, fontWeight: 700, color: '#a16207', textAlign: 'right', marginTop: 6 }}>${fmt(calc.cuota)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>Costo total</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.costoTotal)}</span>
                     </>
                   )}
                 </div>
