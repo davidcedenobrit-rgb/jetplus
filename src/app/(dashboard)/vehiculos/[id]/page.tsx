@@ -8,6 +8,7 @@ import VehiculoDocumentos from './VehiculoDocumentos'
 import DesvincularCliente from './DesvincularCliente'
 import VincularCliente from './VincularCliente'
 import EditarVehiculo from './EditarVehiculo'
+import ShowroomDocumentos from '../../showroom/[id]/ShowroomDocumentos'
 
 export default async function VehiculoDetallePage({
   params,
@@ -43,6 +44,23 @@ export default async function VehiculoDetallePage({
     .select('id, tipo, url, nombre, created_at')
     .eq('vehiculo_id', id)
     .order('created_at', { ascending: true })
+
+  // Vehículo de showroom vinculado (si vino de preventa) — para mostrar sus documentos aquí también
+  const { data: showroomVinculado } = await supabase
+    .from('vehiculos_showroom')
+    .select('id')
+    .eq('vehiculo_id', id)
+    .maybeSingle()
+
+  let archivosPreventa: { id: string; tipo: string; url: string; nombre: string | null; created_at: string }[] = []
+  if (showroomVinculado) {
+    const { data } = await supabase
+      .from('archivos')
+      .select('id, tipo, url, nombre, created_at')
+      .eq('showroom_vehiculo_id', showroomVinculado.id)
+      .order('created_at', { ascending: true })
+    archivosPreventa = data ?? []
+  }
 
   // Créditos del vehículo para el resumen financiero
   const { data: creditos } = await supabase
@@ -343,6 +361,14 @@ export default async function VehiculoDetallePage({
 
         {/* Columna derecha: documentos + ingresos */}
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Documentos de preventa (showroom) — solo si el vehículo viene de showroom */}
+          {showroomVinculado && (
+            <ShowroomDocumentos
+              showroomId={showroomVinculado.id}
+              archivosIniciales={archivosPreventa}
+            />
+          )}
 
           {/* Documentos */}
           <VehiculoDocumentos
