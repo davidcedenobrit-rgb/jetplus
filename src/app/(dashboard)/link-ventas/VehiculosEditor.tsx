@@ -508,10 +508,52 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                       <Field label="Gastos de crédito ($)">
                         <NumField className={inputCls} value={v.gcr} placeholder="5000" onCommit={n => update(v.id, 'gcr', n)} />
                       </Field>
-                      <Field label="Cuota a 24 meses ($/mes)">
+                      <Field label="Cuota Vehimotors 24m ($/mes)">
                         <NumField className={inputCls} value={v.tasa_credito} placeholder="500" onCommit={n => update(v.id, 'tasa_credito', n)} />
                       </Field>
                     </div>
+
+                    {(() => {
+                      const precio = v.cash ?? 0
+                      if (precio <= 0) return null
+                      const iva = precio * 0.16
+                      const gc = v.gc ?? 0
+                      const gcr = v.gcr ?? 0
+                      const cuota = v.tasa_credito ?? 0
+                      const totalContado = precio + iva + gc
+                      const inicialLaOriental = precio * 0.40 + iva + gcr
+                      const financiamientoVhm = precio * 0.60
+                      const fmtN = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      return (
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* Contado */}
+                          <div className="bg-gray-800 rounded-xl p-4">
+                            <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-3">Modalidad Contado</p>
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex justify-between text-gray-300"><span>Precio base</span><span className="font-mono">${fmtN(precio)}</span></div>
+                              <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmtN(iva)}</span></div>
+                              <div className="flex justify-between text-gray-300"><span>Gastos</span><span className="font-mono">${fmtN(gc)}</span></div>
+                              <div className="flex justify-between text-white font-bold border-t border-gray-600 pt-1.5 mt-1">
+                                <span>Total a pagar</span><span className="font-mono text-yellow-400">${fmtN(totalContado)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Crédito La Oriental + Vehimotors */}
+                          <div className="bg-gray-800 rounded-xl p-4">
+                            <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-3">Crédito 24m — La Oriental + Vehimotors</p>
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex justify-between text-purple-300"><span>Inicial La Oriental (40% + IVA + gastos)</span><span className="font-mono">${fmtN(inicialLaOriental)}</span></div>
+                              <div className="flex justify-between text-indigo-300"><span>Financiamiento Vehimotors (60%)</span><span className="font-mono">${fmtN(financiamientoVhm)}</span></div>
+                              {cuota > 0 && (
+                                <div className="flex justify-between text-oriental-red font-bold border-t border-gray-600 pt-1.5 mt-1">
+                                  <span>Cuota mensual × 24</span><span className="font-mono">${fmtN(cuota)}/mes</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   {/* Plan banco */}
