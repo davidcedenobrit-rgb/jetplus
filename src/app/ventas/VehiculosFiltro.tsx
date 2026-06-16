@@ -18,7 +18,11 @@ interface Vehiculo {
   transmision: string | null
   ano: number | null
   placa_monto?: number | null
-  gcr_banco?: number | null
+  poliza_vehiculo_banco?: number | null
+  poliza_vida_banco?: number | null
+  honorarios_banco?: number | null
+  gastos_internos_banco?: number | null
+  alfombras_banco?: number | null
   cuota_banco?: number | null
 }
 

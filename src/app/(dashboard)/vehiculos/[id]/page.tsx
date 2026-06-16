@@ -7,6 +7,7 @@ import DeleteButton from '@/components/DeleteButton'
 import VehiculoDocumentos from './VehiculoDocumentos'
 import DesvincularCliente from './DesvincularCliente'
 import VincularCliente from './VincularCliente'
+import EditarVehiculo from './EditarVehiculo'
 
 export default async function VehiculoDetallePage({
   params,
@@ -26,7 +27,7 @@ export default async function VehiculoDetallePage({
 
   const { data: { user } } = await supabase.auth.getUser()
   const rol = user?.user_metadata?.rol as string ?? ''
-  const puedeDesvincular = ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol)
+  const puedeEditar = ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol)
 
   const cliente = (vehiculo as any).clientes
 
@@ -124,6 +125,27 @@ export default async function VehiculoDetallePage({
               <InfoRow icon={CreditCard} label="Tipo compra" value={vehiculo.tipo_compra} capitalize />
               <InfoRow icon={Calendar} label="Entrega" value={vehiculo.fecha_entrega ? formatDate(vehiculo.fecha_entrega) : 'Pendiente'} />
             </div>
+            {puedeEditar && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <EditarVehiculo
+                  vehiculoId={id}
+                  vehiculo={{
+                    marca: vehiculo.marca,
+                    modelo: vehiculo.modelo,
+                    version: vehiculo.version,
+                    anio: vehiculo.anio,
+                    color: vehiculo.color,
+                    placa: vehiculo.placa,
+                    vin: vehiculo.vin,
+                    serial_motor: vehiculo.serial_motor,
+                    tipo_compra: vehiculo.tipo_compra,
+                    estado: vehiculo.estado,
+                    fecha_entrega: vehiculo.fecha_entrega,
+                    observaciones: vehiculo.observaciones,
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Vincular cliente — cuando no tiene propietario */}
@@ -148,7 +170,7 @@ export default async function VehiculoDetallePage({
                 <p className="text-xs text-oriental-gray">{cliente.cedula_rif}</p>
                 {cliente.telefono && <p className="text-xs text-oriental-gray mt-1">{cliente.telefono}</p>}
               </Link>
-              {puedeDesvincular && <DesvincularCliente vehiculoId={id} />}
+              {puedeEditar && <DesvincularCliente vehiculoId={id} />}
             </div>
           )}
 

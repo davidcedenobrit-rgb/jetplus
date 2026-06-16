@@ -14,7 +14,11 @@ interface Vehiculo {
   tasa_credito: number | null
   disponible: boolean | null
   placa_monto?: number | null
-  gcr_banco?: number | null
+  poliza_vehiculo_banco?: number | null
+  poliza_vida_banco?: number | null
+  honorarios_banco?: number | null
+  gastos_internos_banco?: number | null
+  alfombras_banco?: number | null
   cuota_banco?: number | null
 }
 
@@ -48,7 +52,8 @@ function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: Tasas
     let dif = 0
     if (tasas && tasas.tasa_bcv > 0 && tasas.tasa_vhm > tasas.tasa_bcv)
       dif = fin * (tasas.tasa_vhm - tasas.tasa_bcv) / tasas.tasa_bcv
-    const gastos = (v.gcr_banco ?? 0) + dif
+    const gastosBanco = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
+    const gastos = gastosBanco + dif
     const inicial = totalVeh * 0.30
     return { label: 'TOTAL INICIAL A PAGAR', total: inicial + gastos, cuota: v.cuota_banco ?? 0, financiamiento: fin }
   }

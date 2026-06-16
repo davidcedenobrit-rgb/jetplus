@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     // Obtener vehículo
     const { data: vehiculo } = await supabase
       .from('catalogo_ventas')
-      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, gcr_banco, cuota_banco')
+      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, cuota_banco')
       .eq('id', vehiculoId)
       .eq('disponible', true)
       .single()
@@ -93,7 +93,12 @@ export async function POST(req: Request) {
 
     let gastosBase: number
     if (plan === 'banco_100' && modalidad === 'credito_24') {
-      gastosBase = Number(vehiculo.gcr_banco) || 0
+      gastosBase =
+        (Number(vehiculo.poliza_vehiculo_banco) || 0) +
+        (Number(vehiculo.poliza_vida_banco) || 0) +
+        (Number(vehiculo.honorarios_banco) || 0) +
+        (Number(vehiculo.gastos_internos_banco) || 0) +
+        (Number(vehiculo.alfombras_banco) || 0)
     } else if (modalidad === 'contado') {
       gastosBase = Number(vehiculo.gc) || 0
     } else {

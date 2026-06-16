@@ -55,7 +55,11 @@ interface Vehiculo {
   ac500_9m_cuota: number | null
   ac500_12m_cuota: number | null
   placa_monto: number | null
-  gcr_banco: number | null
+  poliza_vehiculo_banco: number | null
+  poliza_vida_banco: number | null
+  honorarios_banco: number | null
+  gastos_internos_banco: number | null
+  alfombras_banco: number | null
   cuota_banco: number | null
 }
 
@@ -131,7 +135,9 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   tasa_credito: null, stock: 0, ano: 2026, transmision: 'Automático',
   colores: '', orden: 99, disponible: true,
   ac500_visible: false, ac500_6m_cuota: null, ac500_9m_cuota: null, ac500_12m_cuota: null,
-  placa_monto: 400, gcr_banco: null, cuota_banco: null,
+  placa_monto: 400,
+  poliza_vehiculo_banco: null, poliza_vida_banco: null, honorarios_banco: null,
+  gastos_internos_banco: null, alfombras_banco: null, cuota_banco: null,
 }
 
 export default function VehiculosEditor({ initialVehiculos, showroomStock }: { initialVehiculos: Vehiculo[]; showroomStock: ShowroomItem[] }) {
@@ -244,7 +250,10 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       orden: v.orden, disponible: v.disponible,
       ac500_visible: v.ac500_visible, ac500_6m_cuota: v.ac500_6m_cuota,
       ac500_9m_cuota: v.ac500_9m_cuota, ac500_12m_cuota: v.ac500_12m_cuota,
-      placa_monto: v.placa_monto, gcr_banco: v.gcr_banco, cuota_banco: v.cuota_banco,
+      placa_monto: v.placa_monto,
+      poliza_vehiculo_banco: v.poliza_vehiculo_banco, poliza_vida_banco: v.poliza_vida_banco,
+      honorarios_banco: v.honorarios_banco, gastos_internos_banco: v.gastos_internos_banco,
+      alfombras_banco: v.alfombras_banco, cuota_banco: v.cuota_banco,
       updated_at: new Date().toISOString(),
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
@@ -509,13 +518,30 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                       <Field label="Monto de placa ($)">
                         <NumField className={inputCls} value={v.placa_monto} placeholder="400" onCommit={n => update(v.id, 'placa_monto', n)} />
                       </Field>
-                      <Field label="Gastos del banco ($)">
-                        <NumField className={inputCls} value={v.gcr_banco} placeholder="0" onCommit={n => update(v.id, 'gcr_banco', n)} />
+                      <Field label="Póliza vehículo ($)">
+                        <NumField className={inputCls} value={v.poliza_vehiculo_banco} placeholder="0" onCommit={n => update(v.id, 'poliza_vehiculo_banco', n)} />
+                      </Field>
+                      <Field label="Póliza vida ($)">
+                        <NumField className={inputCls} value={v.poliza_vida_banco} placeholder="0" onCommit={n => update(v.id, 'poliza_vida_banco', n)} />
+                      </Field>
+                      <Field label="Honorarios profesionales ($)">
+                        <NumField className={inputCls} value={v.honorarios_banco} placeholder="0" onCommit={n => update(v.id, 'honorarios_banco', n)} />
+                      </Field>
+                      <Field label="Gastos internos ($)">
+                        <NumField className={inputCls} value={v.gastos_internos_banco} placeholder="0" onCommit={n => update(v.id, 'gastos_internos_banco', n)} />
+                      </Field>
+                      <Field label="Alfombras ($)">
+                        <NumField className={inputCls} value={v.alfombras_banco} placeholder="0" onCommit={n => update(v.id, 'alfombras_banco', n)} />
                       </Field>
                       <Field label="Cuota mensual banco ($/mes)">
                         <NumField className={inputCls} value={v.cuota_banco} placeholder="0" onCommit={n => update(v.id, 'cuota_banco', n)} />
                       </Field>
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Total gastos banco: <span className="font-bold text-oriental-black">
+                        ${((v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                      </span> (más diferencial cambiario, calculado al cotizar)
+                    </p>
                   </div>
 
                   {/* Info del auto */}
