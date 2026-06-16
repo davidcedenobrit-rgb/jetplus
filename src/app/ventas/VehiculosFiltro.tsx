@@ -23,7 +23,8 @@ interface Vehiculo {
   honorarios_banco?: number | null
   gastos_internos_banco?: number | null
   alfombras_banco?: number | null
-  cuota_banco?: number | null
+  diferencial_pct?: number | null
+  tasa_banco_pct?: number | null
 }
 
 const WA = '584149989010'

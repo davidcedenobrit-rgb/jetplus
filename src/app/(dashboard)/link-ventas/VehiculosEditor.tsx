@@ -60,7 +60,8 @@ interface Vehiculo {
   honorarios_banco: number | null
   gastos_internos_banco: number | null
   alfombras_banco: number | null
-  cuota_banco: number | null
+  diferencial_pct: number | null
+  tasa_banco_pct: number | null
 }
 
 const CMAP: Record<string, string> = {
@@ -137,7 +138,8 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   ac500_visible: false, ac500_6m_cuota: null, ac500_9m_cuota: null, ac500_12m_cuota: null,
   placa_monto: 400,
   poliza_vehiculo_banco: null, poliza_vida_banco: null, honorarios_banco: null,
-  gastos_internos_banco: null, alfombras_banco: null, cuota_banco: null,
+  gastos_internos_banco: null, alfombras_banco: null,
+  diferencial_pct: 30, tasa_banco_pct: 16,
 }
 
 export default function VehiculosEditor({ initialVehiculos, showroomStock }: { initialVehiculos: Vehiculo[]; showroomStock: ShowroomItem[] }) {
@@ -253,7 +255,8 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       placa_monto: v.placa_monto,
       poliza_vehiculo_banco: v.poliza_vehiculo_banco, poliza_vida_banco: v.poliza_vida_banco,
       honorarios_banco: v.honorarios_banco, gastos_internos_banco: v.gastos_internos_banco,
-      alfombras_banco: v.alfombras_banco, cuota_banco: v.cuota_banco,
+      alfombras_banco: v.alfombras_banco,
+      diferencial_pct: v.diferencial_pct, tasa_banco_pct: v.tasa_banco_pct,
       updated_at: new Date().toISOString(),
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
@@ -533,15 +536,50 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                       <Field label="Alfombras ($)">
                         <NumField className={inputCls} value={v.alfombras_banco} placeholder="0" onCommit={n => update(v.id, 'alfombras_banco', n)} />
                       </Field>
-                      <Field label="Cuota mensual banco ($/mes)">
-                        <NumField className={inputCls} value={v.cuota_banco} placeholder="0" onCommit={n => update(v.id, 'cuota_banco', n)} />
+                      <Field label="Diferencial cambiario (%)">
+                        <NumField className={inputCls} value={v.diferencial_pct} placeholder="30" onCommit={n => update(v.id, 'diferencial_pct', n)} />
+                      </Field>
+                      <Field label="Tasa banco (% anual)">
+                        <NumField className={inputCls} value={v.tasa_banco_pct} placeholder="16" onCommit={n => update(v.id, 'tasa_banco_pct', n)} />
                       </Field>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Total gastos banco: <span className="font-bold text-oriental-black">
-                        ${((v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                      </span> (más diferencial cambiario, calculado al cotizar)
-                    </p>
+                    {(() => {
+                      const precio = v.cash ?? 0
+                      const iva = precio * 0.16
+                      const placa = v.placa_monto ?? 400
+                      const totalVeh = precio + iva + placa
+                      const financiamiento = totalVeh * 0.70
+                      const diferencialPct = v.diferencial_pct ?? 30
+                      const diferencial = financiamiento * diferencialPct / 100
+                      const gastosFijos = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
+                      const totalGastos = gastosFijos + diferencial
+                      const inicial = totalVeh * 0.30
+                      const totalInicial = inicial + totalGastos
+                      const tasa = (v.tasa_banco_pct ?? 16) / 100 / 12
+                      const cuota = tasa > 0 ? financiamiento * tasa * Math.pow(1 + tasa, 24) / (Math.pow(1 + tasa, 24) - 1) : financiamiento / 24
+                      const fmtN = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      if (precio <= 0) return null
+                      return (
+                        <div className="mt-3 bg-oriental-black rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="text-center">
+                            <p className="text-gray-400 text-[10px] uppercase tracking-wider">Total vehículo</p>
+                            <p className="text-white font-bold text-sm">${fmtN(totalVeh)}</p>
+                          </div>
+                          <div className="text-center border-l border-gray-700">
+                            <p className="text-gray-400 text-[10px] uppercase tracking-wider">Inicial cliente (30%)</p>
+                            <p className="text-white font-bold text-sm">${fmtN(totalInicial)}</p>
+                          </div>
+                          <div className="text-center border-l border-gray-700">
+                            <p className="text-gray-400 text-[10px] uppercase tracking-wider">Financiamiento banco (70%)</p>
+                            <p className="text-white font-bold text-sm">${fmtN(financiamiento)}</p>
+                          </div>
+                          <div className="text-center border-l border-gray-700">
+                            <p className="text-gray-400 text-[10px] uppercase tracking-wider">Cuota mensual (auto)</p>
+                            <p className="text-oriental-red font-extrabold text-sm">${fmtN(cuota)}/mes</p>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   {/* Info del auto */}

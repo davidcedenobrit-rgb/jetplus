@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     // Obtener vehículo
     const { data: vehiculo } = await supabase
       .from('catalogo_ventas')
-      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, cuota_banco')
+      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, diferencial_pct, tasa_banco_pct')
       .eq('id', vehiculoId)
       .eq('disponible', true)
       .single()
@@ -71,28 +71,18 @@ export async function POST(req: Request) {
 
     // Diferencial plan 100% Banco
     let diferencial = 0
-    let tasaBCVSnap: number | null = null
-    let tasaVHMSnap: number | null = null
     let totalVehiculoBanco = 0
 
     if (plan === 'banco_100' && modalidad === 'credito_24') {
-      const { data: tasasRows } = await supabase
-        .from('config_cotizaciones')
-        .select('clave, valor')
-      const tm: Record<string, number> = {}
-      for (const r of tasasRows ?? []) tm[r.clave] = Number(r.valor)
-      tasaBCVSnap = tm['tasa_bcv'] ?? 0
-      tasaVHMSnap = tm['tasa_vehimotors'] ?? 0
       const placaMonto = Number(vehiculo.placa_monto) || 400
       totalVehiculoBanco = precioBase + iva + placaMonto
-      const financiamientoBanco = totalVehiculoBanco * 0.70
-      if (tasaBCVSnap > 0 && tasaVHMSnap > tasaBCVSnap) {
-        diferencial = financiamientoBanco * (tasaVHMSnap - tasaBCVSnap) / tasaBCVSnap
-      }
     }
 
     let gastosBase: number
     if (plan === 'banco_100' && modalidad === 'credito_24') {
+      const diferencialPct = Number(vehiculo.diferencial_pct) || 30
+      const financiamientoBanco = totalVehiculoBanco * 0.70
+      diferencial = financiamientoBanco * diferencialPct / 100
       gastosBase =
         (Number(vehiculo.poliza_vehiculo_banco) || 0) +
         (Number(vehiculo.poliza_vida_banco) || 0) +
@@ -118,7 +108,10 @@ export async function POST(req: Request) {
       const inicialBanco = totalVehiculoBanco * 0.30
       totalInicial = inicialBanco + gastos
       financiamientoMonto = totalVehiculoBanco * 0.70
-      cuotaMensual = Number(vehiculo.cuota_banco) || 0
+      const tasaBanco = Number(vehiculo.tasa_banco_pct) || 16
+      const r = tasaBanco / 100 / 12
+      const financiamiento = totalVehiculoBanco * 0.70
+      cuotaMensual = financiamiento * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
       costoTotal = totalInicial + cuotaMensual * 24
     } else {
       const inicial40 = precioBase * 0.4
@@ -156,8 +149,8 @@ export async function POST(req: Request) {
         iva_monto: iva,
         gastos_monto: gastos,
         diferencial_monto: diferencial > 0 ? diferencial : null,
-        tasa_bcv_snap: tasaBCVSnap,
-        tasa_vhm_snap: tasaVHMSnap,
+        tasa_bcv_snap: null,
+        tasa_vhm_snap: null,
         total_inicial: totalInicial,
         financiamiento_monto: financiamientoMonto,
         cuota_mensual: cuotaMensual,

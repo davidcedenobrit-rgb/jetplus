@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 interface Vehiculo {
   id: string
@@ -16,20 +16,20 @@ interface Vehiculo {
   honorarios_banco?: number | null
   gastos_internos_banco?: number | null
   alfombras_banco?: number | null
-  cuota_banco?: number | null
+  diferencial_pct?: number | null
+  tasa_banco_pct?: number | null
 }
 
 type Step = 'pin' | 'form' | 'sending' | 'success' | 'error'
 type Modalidad = 'contado' | 'credito_24'
 type Plan = 'vehimotors' | 'banco_100'
-interface Tasas { tasa_bcv: number; tasa_vhm: number }
 
 function fmt(n: number | null | undefined) {
   if (!n) return '0,00'
   return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: Tasas | null) {
+function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan) {
   const precio = v.cash ?? 0
   const iva = precio * 0.16
   if (modalidad === 'contado') {
@@ -40,16 +40,16 @@ function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: Tasas | 
     const placaMonto = v.placa_monto ?? 400
     const totalVehiculo = precio + iva + placaMonto
     const financiamientoBanco = totalVehiculo * 0.70
-    let diferencial = 0
-    if (tasas && tasas.tasa_bcv > 0 && tasas.tasa_vhm > tasas.tasa_bcv) {
-      diferencial = financiamientoBanco * (tasas.tasa_vhm - tasas.tasa_bcv) / tasas.tasa_bcv
-    }
+    const diferencialPct = v.diferencial_pct ?? 30
+    const diferencial = financiamientoBanco * diferencialPct / 100
     const gastosBanco = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
     const gastos = gastosBanco + diferencial
     const inicialBanco = totalVehiculo * 0.30
     const totalInicial = inicialBanco + gastos
     const financiamiento = totalVehiculo * 0.70
-    const cuota = v.cuota_banco ?? 0
+    const tasaBanco = v.tasa_banco_pct ?? 16
+    const r = tasaBanco / 100 / 12
+    const cuota = financiamiento * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
     return { iva, gastos, totalVehiculo, inicialBanco, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
   }
   const gastos = v.gcr ?? 0
@@ -67,14 +67,6 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
   const [vendedoraNombre, setVendedoraNombre] = useState('')
   const [modalidad, setModalidad] = useState<Modalidad>('contado')
   const [plan, setPlan] = useState<Plan>('vehimotors')
-  const [tasas, setTasas] = useState<Tasas | null>(null)
-
-  useEffect(() => {
-    fetch('/api/cotizaciones/tasas')
-      .then(r => r.json())
-      .then(d => setTasas({ tasa_bcv: d.tasa_bcv, tasa_vhm: d.tasa_vhm }))
-      .catch(() => {})
-  }, [])
   const [form, setForm] = useState({
     clienteNombre: '', clienteCiRif: '', clienteCorreo: '',
     clienteTelefono: '', clienteDireccion: '',
@@ -84,7 +76,7 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
 
-  const calc = calcular(vehiculo, modalidad, plan, tasas)
+  const calc = calcular(vehiculo, modalidad, plan)
 
   async function verificarPin() {
     if (!/^[A-Za-z]\d{3}$/.test(pin.trim())) { setPinError('El código debe ser una letra seguida de 3 dígitos (ej: D198)'); return }
@@ -245,9 +237,6 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
                       </button>
                     ))}
                   </div>
-                  {plan === 'banco_100' && !tasas && (
-                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 5 }}>Cargando tasas...</p>
-                  )}
                 </div>
               )}
 

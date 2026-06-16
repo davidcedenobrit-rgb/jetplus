@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface Vehiculo {
@@ -19,13 +19,13 @@ interface Vehiculo {
   honorarios_banco?: number | null
   gastos_internos_banco?: number | null
   alfombras_banco?: number | null
-  cuota_banco?: number | null
+  diferencial_pct?: number | null
+  tasa_banco_pct?: number | null
 }
 
 type Step = 'vehiculo' | 'form' | 'sending' | 'success'
 type Modalidad = 'contado' | 'credito_24'
 type Plan = 'vehimotors' | 'banco_100'
-interface Tasas { tasa_bcv: number; tasa_vhm: number }
 
 const ROJAS_CODIGO = 'R000'
 
@@ -38,7 +38,7 @@ function fm(n: number | null | undefined) {
   return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: Tasas | null) {
+function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan) {
   const precio = v.cash ?? 0
   const iva = precio * 0.16
   if (modalidad === 'contado') {
@@ -49,13 +49,14 @@ function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: Tasas
     const placaMonto = v.placa_monto ?? 400
     const totalVeh = precio + iva + placaMonto
     const fin = totalVeh * 0.70
-    let dif = 0
-    if (tasas && tasas.tasa_bcv > 0 && tasas.tasa_vhm > tasas.tasa_bcv)
-      dif = fin * (tasas.tasa_vhm - tasas.tasa_bcv) / tasas.tasa_bcv
+    const dif = fin * (v.diferencial_pct ?? 30) / 100
     const gastosBanco = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
     const gastos = gastosBanco + dif
     const inicial = totalVeh * 0.30
-    return { label: 'TOTAL INICIAL A PAGAR', total: inicial + gastos, cuota: v.cuota_banco ?? 0, financiamiento: fin }
+    const tasaBanco = v.tasa_banco_pct ?? 16
+    const r = tasaBanco / 100 / 12
+    const cuota = fin * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
+    return { label: 'TOTAL INICIAL A PAGAR', total: inicial + gastos, cuota, financiamiento: fin }
   }
   const gastos = v.gcr ?? 0
   const inicial = precio * 0.4 + iva + gastos
@@ -72,14 +73,9 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
   const [vehiculoSel, setVehiculoSel] = useState<Vehiculo | null>(null)
   const [modalidad, setModalidad] = useState<Modalidad>('contado')
   const [plan, setPlan] = useState<Plan>('vehimotors')
-  const [tasas, setTasas] = useState<Tasas | null>(null)
   const [form, setForm] = useState({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false })
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
-
-  useEffect(() => {
-    fetch('/api/cotizaciones/tasas').then(r => r.json()).then(d => setTasas({ tasa_bcv: d.tasa_bcv, tasa_vhm: d.tasa_vhm })).catch(() => {})
-  }, [])
 
   function seleccionarVehiculo(v: Vehiculo) {
     setVehiculoSel(v)
@@ -117,7 +113,7 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
     setErrorMsg(''); setNumeroCot('')
   }
 
-  const resumen = vehiculoSel ? calcResumen(vehiculoSel, modalidad, plan, tasas) : null
+  const resumen = vehiculoSel ? calcResumen(vehiculoSel, modalidad, plan) : null
 
   /* ── PASO 1: Seleccionar vehículo ── */
   if (step === 'vehiculo') {
