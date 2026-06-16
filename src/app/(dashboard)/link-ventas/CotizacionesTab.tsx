@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -90,15 +91,30 @@ function MontoRow({ label, value, highlight }: { label: string; value: number | 
 }
 
 /* ── Detail Panel ── */
-function DetailPanel({ cot, onClose, onEstadoChange }: {
+function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange }: {
   cot: Cotizacion
   onClose: () => void
   onEstadoChange: (id: string, estado: Estado, motivo: string | null) => void
+  onMontosChange: (id: string, partial: Partial<Cotizacion>) => void
 }) {
+  const router = useRouter()
+  const [cot, setCot] = useState(cotInicial)
   const [saving, setSaving] = useState(false)
   const [pendingEstado, setPendingEstado] = useState<Estado | null>(null)
   const [motivo, setMotivo] = useState(cot.motivo_rechazo ?? '')
   const [motivoError, setMotivoError] = useState('')
+
+  // Editar montos
+  const [editando, setEditando] = useState(false)
+  const [eForm, setEForm] = useState({
+    precio_base: String(cot.precio_base),
+    gastos_monto: String(cot.gastos_monto),
+    cuota_mensual: String(cot.cuota_mensual ?? ''),
+    modalidad: cot.modalidad as 'contado' | 'credito_24',
+    plan: cot.plan as 'vehimotors' | 'banco_100',
+  })
+  const [eError, setEError] = useState('')
+  const [eSaving, setESaving] = useState(false)
 
   async function cambiarEstado(estado: Estado) {
     if (estado === 'rechazada' && !motivo.trim()) { setMotivoError('Indica el motivo del rechazo.'); return }
@@ -112,22 +128,41 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
       })
       if (res.ok) {
         onEstadoChange(cot.id, estado, estado === 'rechazada' ? motivo.trim() : null)
+        setCot(prev => ({ ...prev, estado, motivo_rechazo: estado === 'rechazada' ? motivo.trim() : null }))
         setPendingEstado(null)
       }
     } finally { setSaving(false) }
   }
 
+  async function guardarMontos() {
+    setEError('')
+    const precio_base = parseFloat(eForm.precio_base.replace(',', '.'))
+    const gastos_monto = parseFloat(eForm.gastos_monto.replace(',', '.'))
+    const cuota_mensual = eForm.cuota_mensual ? parseFloat(eForm.cuota_mensual.replace(',', '.')) : null
+    if (isNaN(precio_base) || precio_base <= 0) { setEError('Precio base inválido'); return }
+    if (isNaN(gastos_monto) || gastos_monto < 0) { setEError('Gastos inválidos'); return }
+    setESaving(true)
+    const res = await fetch(`/api/cotizaciones/${cot.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accion: 'editar_montos', precio_base, gastos_monto, cuota_mensual, modalidad: eForm.modalidad, plan: eForm.plan }),
+    })
+    setESaving(false)
+    if (!res.ok) { const j = await res.json(); setEError(j.error ?? 'Error'); return }
+    const { data } = await res.json()
+    const updated = { ...cot, ...data }
+    setCot(updated)
+    onMontosChange(cot.id, data)
+    setEditando(false)
+  }
+
   const es24 = cot.modalidad === 'credito_24'
+  const inCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red bg-white'
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
-      {/* Backdrop */}
       <div className="flex-1 bg-black/40" />
-      {/* Panel */}
-      <div
-        className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col"
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
           <div>
@@ -135,12 +170,8 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
             <p className="text-xs text-gray-400 mt-0.5">{fmtFecha(cot.fecha)} · vence {fmtFecha(cot.vencimiento)}</p>
           </div>
           <div className="flex items-center gap-2">
-            <a
-              href={`/api/cotizaciones/${cot.id}/pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-red text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
-            >
+            <a href={`/api/cotizaciones/${cot.id}/pdf`} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-oriental-red text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors">
               Ver PDF
             </a>
             <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors text-sm">✕</button>
@@ -148,6 +179,14 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
         </div>
 
         <div className="flex-1 px-5 py-4 space-y-5">
+          {/* Registrar venta */}
+          <button
+            onClick={() => { onClose(); router.push(`/vehiculos/nuevo?cotizacionId=${cot.id}`) }}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm transition-colors"
+          >
+            🚗 Registrar venta desde esta cotización
+          </button>
+
           {/* Estado actual */}
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</span>
@@ -165,21 +204,68 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
 
           {/* Montos */}
           <div>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Desglose económico</p>
-            <div className="bg-white border border-gray-100 rounded-xl px-4">
-              <MontoRow label="Precio base" value={cot.precio_base} />
-              <MontoRow label="IVA (16%)" value={cot.iva_monto} />
-              <MontoRow label="Gastos" value={cot.gastos_monto} />
-              {es24 && cot.financiamiento_monto != null && (
-                <MontoRow label={cot.plan === 'banco_100' ? 'Financiamiento 70%' : 'Financiamiento 60%'} value={cot.financiamiento_monto} />
-              )}
-              <div className="pt-1">
-                <MontoRow label={es24 ? 'Total inicial a pagar' : 'Total a pagar'} value={cot.total_inicial} highlight />
-              </div>
-              {es24 && cot.cuota_mensual != null && (
-                <MontoRow label="Cuota mensual × 24" value={cot.cuota_mensual} />
-              )}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Desglose económico</p>
+              <button onClick={() => { setEditando(e => !e); setEError('') }}
+                className="text-[11px] font-bold text-oriental-red hover:underline">
+                {editando ? 'Cancelar edición' : 'Editar montos'}
+              </button>
             </div>
+
+            {editando ? (
+              <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Modalidad</label>
+                    <select className={inCls} value={eForm.modalidad} onChange={e => setEForm(p => ({ ...p, modalidad: e.target.value as 'contado'|'credito_24' }))}>
+                      <option value="contado">Contado</option>
+                      <option value="credito_24">Crédito 24m</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Plan</label>
+                    <select className={inCls} value={eForm.plan} onChange={e => setEForm(p => ({ ...p, plan: e.target.value as 'vehimotors'|'banco_100' }))}>
+                      <option value="vehimotors">Vehimotors</option>
+                      <option value="banco_100">100% Banco</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-500 mb-1">Precio base ($)</label>
+                  <input className={inCls} value={eForm.precio_base} onChange={e => setEForm(p => ({ ...p, precio_base: e.target.value }))} placeholder="30000" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-500 mb-1">Gastos totales ($) — puede ajustar para aplicar descuento</label>
+                  <input className={inCls} value={eForm.gastos_monto} onChange={e => setEForm(p => ({ ...p, gastos_monto: e.target.value }))} placeholder="3500" />
+                </div>
+                {eForm.modalidad === 'credito_24' && (
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Cuota mensual ($/mes)</label>
+                    <input className={inCls} value={eForm.cuota_mensual} onChange={e => setEForm(p => ({ ...p, cuota_mensual: e.target.value }))} placeholder="1200" />
+                  </div>
+                )}
+                {eError && <p className="text-xs text-red-600">{eError}</p>}
+                <button onClick={guardarMontos} disabled={eSaving}
+                  className="w-full py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50">
+                  {eSaving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-100 rounded-xl px-4">
+                <MontoRow label="Precio base" value={cot.precio_base} />
+                <MontoRow label="IVA (16%)" value={cot.iva_monto} />
+                <MontoRow label="Gastos" value={cot.gastos_monto} />
+                {es24 && cot.financiamiento_monto != null && (
+                  <MontoRow label={cot.plan === 'banco_100' ? 'Financiamiento 70%' : 'Financiamiento 60%'} value={cot.financiamiento_monto} />
+                )}
+                <div className="pt-1">
+                  <MontoRow label={es24 ? 'Total inicial a pagar' : 'Total a pagar'} value={cot.total_inicial} highlight />
+                </div>
+                {es24 && cot.cuota_mensual != null && (
+                  <MontoRow label="Cuota mensual × 24" value={cot.cuota_mensual} />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Cliente */}
@@ -203,7 +289,6 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
 
           <InfoRow label="Vendedora" value={cot.vendedora_nombre} />
 
-          {/* Motivo rechazo (si existe) */}
           {cot.estado === 'rechazada' && cot.motivo_rechazo && (
             <div className="bg-red-50 border border-red-100 rounded-xl p-4">
               <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">Motivo de rechazo</p>
@@ -216,9 +301,7 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3">Cambiar estado</p>
             <div className="flex gap-2">
               {(['aceptada', 'pospuesta', 'sin_respuesta', 'rechazada'] as Estado[]).map(e => (
-                <button
-                  key={e}
-                  onClick={() => { setPendingEstado(e); setMotivoError('') }}
+                <button key={e} onClick={() => { setPendingEstado(e); setMotivoError('') }}
                   className={`flex-1 py-2 px-2 rounded-lg border-2 text-[11px] font-bold transition-all ${
                     pendingEstado === e
                       ? e === 'aceptada'  ? 'border-green-500 bg-green-50 text-green-700'
@@ -226,37 +309,23 @@ function DetailPanel({ cot, onClose, onEstadoChange }: {
                         : e === 'pospuesta' ? 'border-amber-400 bg-amber-50 text-amber-700'
                         : 'border-gray-400 bg-gray-100 text-gray-700'
                       : 'border-gray-200 text-gray-400 hover:border-gray-300'
-                  }`}
-                >
-                  {ESTADO_CFG[e].label}
-                </button>
+                  }`}>{ESTADO_CFG[e].label}</button>
               ))}
             </div>
-
             {pendingEstado === 'rechazada' && (
               <div className="mt-3">
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Motivo del rechazo *</label>
-                <textarea
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red resize-none"
-                  rows={3}
-                  placeholder="Ej: El cliente prefirió otro modelo, financiamiento no aprobado..."
-                  value={motivo}
-                  onChange={e => { setMotivo(e.target.value); setMotivoError('') }}
-                />
+                <textarea className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red resize-none"
+                  rows={3} placeholder="Ej: El cliente prefirió otro modelo..."
+                  value={motivo} onChange={e => { setMotivo(e.target.value); setMotivoError('') }} />
                 {motivoError && <p className="text-xs text-red-600 mt-1">{motivoError}</p>}
               </div>
             )}
-
             {pendingEstado && (
               <div className="flex gap-2 mt-3">
-                <button onClick={() => setPendingEstado(null)} className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => cambiarEstado(pendingEstado)}
-                  disabled={saving}
-                  className="flex-1 py-2 bg-oriental-black text-white rounded-lg text-xs font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
-                >
+                <button onClick={() => setPendingEstado(null)} className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">Cancelar</button>
+                <button onClick={() => cambiarEstado(pendingEstado)} disabled={saving}
+                  className="flex-1 py-2 bg-oriental-black text-white rounded-lg text-xs font-bold hover:bg-gray-800 transition-colors disabled:opacity-50">
                   {saving ? 'Guardando...' : 'Confirmar cambio'}
                 </button>
               </div>
@@ -287,6 +356,11 @@ export default function CotizacionesTab() {
   const handleEstadoChange = useCallback((id: string, estado: Estado, motivo: string | null) => {
     setCotizaciones(prev => prev.map(c => c.id === id ? { ...c, estado, motivo_rechazo: motivo } : c))
     setSelected(prev => prev && prev.id === id ? { ...prev, estado, motivo_rechazo: motivo } : prev)
+  }, [])
+
+  const handleMontosChange = useCallback((id: string, partial: Partial<Cotizacion>) => {
+    setCotizaciones(prev => prev.map(c => c.id === id ? { ...c, ...partial } : c))
+    setSelected(prev => prev && prev.id === id ? { ...prev, ...partial } : prev)
   }, [])
 
   const visible = filtro === 'todas' ? cotizaciones : cotizaciones.filter(c => c.estado === filtro)
@@ -326,6 +400,7 @@ export default function CotizacionesTab() {
           cot={selected}
           onClose={() => setSelected(null)}
           onEstadoChange={handleEstadoChange}
+          onMontosChange={handleMontosChange}
         />
       )}
 

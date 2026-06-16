@@ -49,6 +49,11 @@ export default function NuevoVehiculoPage() {
   const [showroomSeleccionado, setShowroomSeleccionado] = useState<VehiculoShowroom | null>(null)
   const [loadingShowroom, setLoadingShowroom] = useState(true)
 
+  // Prefill desde cotización
+  const [cotizacionInfo, setCotizacionInfo] = useState<{
+    numero: string; cliente_nombre: string; cliente_ci_rif: string; modalidad: string; cuota_mensual: number | null
+  } | null>(null)
+
   const [marca, setMarca] = useState<'MG' | 'MAXUS'>('MG')
   const [modelo, setModelo] = useState('')
   const [version, setVersion] = useState('')
@@ -128,11 +133,49 @@ export default function NuevoVehiculoPage() {
   }, [])
 
   useEffect(() => {
+    const cotId = searchParams.get('cotizacionId')
+    if (!cotId) return
+    fetch(`/api/cotizaciones/${cotId}`)
+      .then(r => r.json())
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((cot: any) => {
+        if (!cot || cot.error) return
+        if (cot.marca === 'MG' || cot.marca === 'MAXUS') setMarca(cot.marca)
+        if (cot.modelo) setModelo(cot.modelo)
+        if (cot.modalidad === 'contado') {
+          setTipoCompra('contado')
+        } else {
+          setTipoCompra('financiado')
+          setPlan('personalizado')
+          if (cot.precio_base) setCalcBase(String(cot.precio_base))
+          if (cot.total_inicial) { setOrMonto(String(cot.total_inicial)); setOrCuotas('0') }
+          if (cot.financiamiento_monto) { setVhMonto(String(cot.financiamiento_monto)); setVhCuotas('24') }
+        }
+        setCotizacionInfo({
+          numero: cot.numero,
+          cliente_nombre: cot.cliente_nombre,
+          cliente_ci_rif: cot.cliente_ci_rif,
+          modalidad: cot.modalidad,
+          cuota_mensual: cot.cuota_mensual,
+        })
+      })
+  }, [])
+
+  useEffect(() => {
     supabase.from('vehiculos_showroom').select('*')
       .in('estado', ['en_agencia', 'reservado'])
       .order('created_at', { ascending: false })
       .then(({ data }) => { setVehiculosShowroom((data ?? []) as VehiculoShowroom[]); setLoadingShowroom(false) })
   }, [])
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (loadingShowroom) return
+    const sid = searchParams.get('showroomId')
+    if (!sid) return
+    const sv = vehiculosShowroom.find(v => v.id === sid)
+    if (sv) seleccionarShowroom(sv)
+  }, [loadingShowroom])
 
   function seleccionarShowroom(v: VehiculoShowroom | null) {
     setShowroomSeleccionado(v)
@@ -594,6 +637,26 @@ export default function NuevoVehiculoPage() {
             <div className="w-1 h-4 bg-oriental-red rounded-full" />
             Propietario
           </h2>
+
+          {cotizacionInfo && (
+            <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-green-800 text-xs font-bold uppercase tracking-wider">Cotización {cotizacionInfo.numero}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${cotizacionInfo.modalidad === 'contado' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                  {cotizacionInfo.modalidad === 'contado' ? 'Contado' : 'Crédito 24m'}
+                </span>
+              </div>
+              <p className="font-semibold text-green-900 text-sm">{cotizacionInfo.cliente_nombre}</p>
+              <p className="text-green-700 text-xs">{cotizacionInfo.cliente_ci_rif}</p>
+              {cotizacionInfo.cuota_mensual != null && (
+                <p className="text-green-600 text-xs mt-1">
+                  Cuota mensual cotizada: <span className="font-bold">${cotizacionInfo.cuota_mensual.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                </p>
+              )}
+              <p className="text-green-600 text-[11px] mt-2 font-medium">Busca al cliente por nombre o cédula para vincularlo al vehículo.</p>
+            </div>
+          )}
+
           <div className="relative">
             <label className="label">Buscar cliente *</label>
             <div className="relative">

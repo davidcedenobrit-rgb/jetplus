@@ -288,6 +288,16 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
             </div>
           )}
 
+          {/* Registrar venta */}
+          {esJose && v.estado !== 'vendido' && (
+            <Link
+              href={`/vehiculos/nuevo?showroomId=${id}`}
+              className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm transition-colors"
+            >
+              <Car size={16} /> Registrar venta
+            </Link>
+          )}
+
           {/* Panel de acciones */}
           <ShowroomAcciones vehiculo={v} esJose={esJose} userId={user.id} />
         </div>
