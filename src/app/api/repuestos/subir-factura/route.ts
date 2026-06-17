@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
-      .select('id, numero, token_factura')
+      .select('id, numero, token_factura, numero_cotizacion_vehimotors')
       .eq('id', id).eq('token_factura', token).single()
 
     if (!sol) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       notas: 'Factura cargada por Vehimotors',
     })
 
-    await notificarFacturaRecibida({ numero: sol.numero, solicitudId: id, facturaUrl: urlData.publicUrl })
+    await notificarFacturaRecibida({ numero: sol.numero, solicitudId: id, facturaUrl: urlData.publicUrl, numeroCotizacion: sol.numero_cotizacion_vehimotors ?? null })
 
     revalidatePath('/repuestos')
     revalidatePath(`/repuestos/${id}`)

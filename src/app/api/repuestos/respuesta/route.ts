@@ -65,8 +65,6 @@ export async function GET(req: NextRequest) {
     notas: `Vehimotors respondió: ${tipo}`,
   })
 
-  await notificarRespuestaVehimotors({ numero: solicitud.numero, tipo, solicitudId: id })
-
   const items = (solicitud.repuestos_items ?? []) as {
     id: string; descripcion: string; referencia: string | null; cantidad: number
   }[]
@@ -127,9 +125,10 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Caso "hay_todo" / "parcial": guardar cotización + items ──────
-    const obs     = formData.get('observaciones') as string | null
-    const file    = formData.get('cotizacion') as File | null
-    const itemIds = formData.getAll('item_id') as string[]
+    const obs              = formData.get('observaciones') as string | null
+    const numeroCotizacion = (formData.get('numero_cotizacion') as string | null)?.trim() || null
+    const file             = formData.get('cotizacion') as File | null
+    const itemIds          = formData.getAll('item_id') as string[]
 
     for (const itemId of itemIds) {
       const disponible  = formData.get(`disp_${itemId}`) === 'on'
@@ -176,8 +175,17 @@ export async function POST(req: NextRequest) {
     await supabase.from('solicitudes_repuestos').update({
       cotizacion_observaciones: obs || null,
       cotizacion_url: cotizacionUrl,
+      ...(numeroCotizacion ? { numero_cotizacion_vehimotors: numeroCotizacion } : {}),
       updated_at: new Date().toISOString(),
     }).eq('id', id)
+
+    // Re-fetch tipo from existing estado to determine notification type
+    const { data: updatedSol } = await supabase
+      .from('solicitudes_repuestos')
+      .select('respuesta_vehimotors')
+      .eq('id', id).single()
+    const tipo = (updatedSol?.respuesta_vehimotors ?? 'hay_todo') as 'hay_todo' | 'no_hay' | 'parcial'
+    await notificarRespuestaVehimotors({ numero: solicitud.numero, tipo, solicitudId: id, numeroCotizacion })
 
     return new NextResponse(paginaGracias(solicitud.numero, cotizacionUrl), { headers: { 'Content-Type': 'text/html' } })
   } catch {
@@ -285,6 +293,8 @@ function paginaCotizacion(
       ${itemsHtml ? '<hr class="divider"/>' : ''}
       ${esParcial ? `<label class="lbl">Observaciones adicionales (opcional)</label>
       <textarea name="observaciones" placeholder="Ej: El sensor de oxígeno llega en 3 días hábiles..."></textarea>` : ''}
+      <label class="lbl">Número de cotización (SA) <span style="color:#9ca3af;font-weight:400;text-transform:none">(opcional)</span></label>
+      <input type="text" name="numero_cotizacion" placeholder="Ej: SA03789" style="text-transform:uppercase"/>
       <label class="lbl">Cotización con precios${esParcial ? ' de los disponibles' : ''} <span style="color:#C41E3A">*</span></label>
       <input type="file" name="cotizacion" accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls" required/>
       <button type="submit" class="btn">📤 Enviar cotización</button>

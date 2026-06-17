@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
-      .select('*, repuestos_items(*)')
+      .select('*, repuestos_items(*), numero_cotizacion_vehimotors')
       .eq('id', solicitudId).single()
 
     if (!sol) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     await enviarConfirmacionPago({
       numero: sol.numero, solicitudId, tokenPago: sol.token_pago,
       comprobanteUrl, items, retencionUrl: sol.retencion_url ?? null,
-      numeroCotizacion: numeroCotizacion ?? null,
+      numeroCotizacion: sol.numero_cotizacion_vehimotors ?? numeroCotizacion ?? null,
     })
 
     await supabase.from('solicitudes_repuestos').update({

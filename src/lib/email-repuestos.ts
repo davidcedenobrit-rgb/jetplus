@@ -90,8 +90,9 @@ export async function enviarSolicitudCotizacion(opts: {
 // ── 2. Notificación interna cuando Vehimotors responde ─────────────
 export async function notificarRespuestaVehimotors(opts: {
   numero: string; tipo: 'hay_todo' | 'no_hay' | 'parcial'; solicitudId: string
+  numeroCotizacion?: string | null
 }) {
-  const { numero, tipo, solicitudId } = opts
+  const { numero, tipo, solicitudId, numeroCotizacion } = opts
   const textos = {
     hay_todo: { emoji: '✅', label: 'Hay todo disponible',   color: '#16a34a' },
     no_hay:   { emoji: '❌', label: 'Sin disponibilidad',    color: '#dc2626' },
@@ -101,10 +102,14 @@ export async function notificarRespuestaVehimotors(opts: {
   const body = `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:${t.color};letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Respuesta de Vehimotors</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">${t.emoji} ${t.label}</h1>
-    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">Vehimotors respondió a la solicitud <strong>${numero}</strong>. Revisa la cotización adjunta en el Centro de Mando y apruébala para continuar.</p>
+    <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">Vehimotors respondió a la solicitud <strong>${numero}</strong>${numeroCotizacion ? ` — Cotización <strong>${numeroCotizacion}</strong>` : ''}. Revisa la cotización adjunta en el Centro de Mando y apruébala para continuar.</p>
     <div style="text-align:center"><a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Ver en Centro de Mando →</a></div>`
 
-  return getResend().emails.send({ from: FROM, to: [CORREO_OPS], cc: [CORREO_ROJAS, CORREO_MARY], subject: `${t.emoji} Vehimotors respondió — Solicitud ${numero}`, html: wrap(body) })
+  const asunto = numeroCotizacion
+    ? `${t.emoji} Cotización ${numeroCotizacion} de Vehimotors — Solicitud ${numero}`
+    : `${t.emoji} Vehimotors respondió — Solicitud ${numero}`
+
+  return getResend().emails.send({ from: FROM, to: [CORREO_OPS], cc: [CORREO_ROJAS, CORREO_MARY], subject: asunto, html: wrap(body) })
 }
 
 // ── 3. Cotización aprobada → Vehimotors con botón Anexar factura ───
@@ -129,12 +134,16 @@ export async function enviarAprobacionCotizacion(opts: {
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic podrá cargar la factura directamente en nuestro sistema.</p>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: `✅ Cotización aprobada ${numero} — La Oriental Automotors`, html: wrap(body) })
+  const asuntoAprobacion = numeroCotizacion
+    ? `✅ Cotización ${numeroCotizacion} del pedido ${numero} — Aprobada`
+    : `✅ Cotización aprobada ${numero} — La Oriental Automotors`
+
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: asuntoAprobacion, html: wrap(body) })
 }
 
 // ── 4. Notificación interna: factura recibida ──────────────────────
-export async function notificarFacturaRecibida(opts: { numero: string; solicitudId: string; facturaUrl: string }) {
-  const { numero, solicitudId, facturaUrl } = opts
+export async function notificarFacturaRecibida(opts: { numero: string; solicitudId: string; facturaUrl: string; numeroCotizacion?: string | null }) {
+  const { numero, solicitudId, facturaUrl, numeroCotizacion } = opts
   const body = `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#7c3aed;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Factura Recibida</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">📄 Nueva factura — ${numero}</h1>
@@ -144,7 +153,11 @@ export async function notificarFacturaRecibida(opts: { numero: string; solicitud
       <a href="${APP_URL}/repuestos/${solicitudId}" style="${btnStyle('#C41E3A')}">Centro de Mando →</a>
     </div>`
 
-  return getResend().emails.send({ from: FROM, to: [CORREO_MARY, CORREO_ROJAS], cc: [CORREO_OPS], subject: `📄 Factura recibida — Solicitud ${numero}`, html: wrap(body) })
+  const asuntoFactura = numeroCotizacion
+    ? `📄 Factura recibida — Cotización ${numeroCotizacion} · ${numero}`
+    : `📄 Factura recibida — Solicitud ${numero}`
+
+  return getResend().emails.send({ from: FROM, to: [CORREO_MARY, CORREO_ROJAS], cc: [CORREO_OPS], subject: asuntoFactura, html: wrap(body) })
 }
 
 // ── 6. Reporte de recepción a Vehimotors (Arianna) ────────────────
@@ -202,7 +215,11 @@ export async function enviarConfirmacionPago(opts: {
       <a href="${urlGuia}"      style="${btnStyle('#2563eb')}">📦 Cargar guía de despacho</a>
     </div>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: `💰 Pago realizado — Repuestos ${numero}`, html: wrap(body) })
+  const asuntoPago = numeroCotizacion
+    ? `💰 Pago enviado — Cotización ${numeroCotizacion} · ${numero}`
+    : `💰 Pago realizado — Repuestos ${numero}`
+
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: asuntoPago, html: wrap(body) })
 }
 
 // ── 8. Email a almacén para cargar guía ──────────────────────────
