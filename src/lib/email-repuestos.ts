@@ -447,8 +447,8 @@ export async function enviarCorreosPrueba(testTo: string[], soloVhm = false) {
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center;margin-top:16px"><em>[Destino real: Vehimotors × 3 + CC equipo interno]</em></p>`), true)
 
-  // NUEVO: Sin stock — buscar alternativa
-  await send(`[PRUEBA 10/9] ❌ Sin stock — ${numero} — Buscar alternativa`, wrap(`
+  // 10 — Sin stock con observaciones (interno)
+  await send(`❌ Sin stock — ${numero} — Buscar alternativa`, wrap(`
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#dc2626;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Sin Stock — Acción Requerida</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">❌ Vehimotors sin stock — ${numero}</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 20px">Vehimotors confirmó que <strong>no tiene disponibilidad</strong> para los repuestos de la solicitud <strong>${numero}</strong>. Se requiere buscar una solución alternativa para el cliente.</p>
