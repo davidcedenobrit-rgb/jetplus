@@ -396,7 +396,6 @@ export default function EditarCreditoPage() {
           estado: 'pagada',
           monto_pagado: montoCuota,
           fecha_pago: cuota.fecha_vencimiento,
-          updated_at: new Date().toISOString(),
         }).eq('id', cuota.id)
         if (error) { setAntiguedadMsg(`Error actualizando cuota #${cuota.numero_cuota}: ${error.message}`); setAplicandoAntiguedad(false); return }
         restante -= montoCuota
@@ -408,7 +407,6 @@ export default function EditarCreditoPage() {
           estado: 'abono_parcial',
           monto_pagado: montoAbono,
           fecha_pago: cuota.fecha_vencimiento,
-          updated_at: new Date().toISOString(),
         }).eq('id', cuota.id)
         if (error) { setAntiguedadMsg(`Error actualizando cuota #${cuota.numero_cuota}: ${error.message}`); setAplicandoAntiguedad(false); return }
         restante = 0
