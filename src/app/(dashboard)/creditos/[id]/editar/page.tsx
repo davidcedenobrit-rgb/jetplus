@@ -85,6 +85,9 @@ export default function EditarCreditoPage() {
   // Ediciones de cuotas (mapa: cuota_id → { estado, monto, fecha_vencimiento })
   const [edicionesCuotas, setEdicionesCuotas] = useState<Record<string, Partial<{ estado: EstadoCuota; monto: string; fecha_vencimiento: string }>>>({})
 
+  // Cuotas de todos los créditos del vehículo (para pagos históricos)
+  const [cuotasVehiculo, setCuotasVehiculo] = useState<any[]>([])
+
   // Panel Crédito con Antigüedad
   const [aplicandoAntiguedad, setAplicandoAntiguedad] = useState(false)
   const [antiguedadMsg, setAntiguedadMsg] = useState('')
@@ -139,6 +142,17 @@ export default function EditarCreditoPage() {
         .eq('credito_id', idInicial)
         .order('numero_cuota')
       setCuotas(cs ?? [])
+
+      // Cuotas de TODOS los créditos del mismo vehículo (para pagos históricos)
+      const creditosVeh = (todos ?? []).filter((c: any) => c.vehiculo_id === cred.vehiculo_id)
+      if (creditosVeh.length > 0) {
+        const { data: allCuotas } = await supabase
+          .from('cuotas').select('*')
+          .in('credito_id', creditosVeh.map((c: any) => c.id))
+          .order('fecha_vencimiento')
+        setCuotasVehiculo(allCuotas ?? [])
+      }
+
       setLoading(false)
     }
     load()
@@ -373,10 +387,10 @@ export default function EditarCreditoPage() {
     const totalPagado = parseFloat(montoHistorico)
     if (!totalPagado || totalPagado <= 0) { setAntiguedadMsg('Ingresa el monto total ya cobrado'); return }
 
-    // Cuotas pendientes ordenadas
-    const pendientes = [...cuotas]
+    // Todas las cuotas del vehículo pendientes, ordenadas por fecha
+    const pendientes = [...cuotasVehiculo]
       .filter(c => c.estado !== 'pagada')
-      .sort((a, b) => a.numero_cuota - b.numero_cuota)
+      .sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
 
     if (pendientes.length === 0) { setAntiguedadMsg('No hay cuotas pendientes'); return }
 
@@ -386,6 +400,7 @@ export default function EditarCreditoPage() {
     let aplicadas = 0
     let cuotaAbono: any = null
     let montoAbono = 0
+    const saldoDelta: Record<string, number> = {}
 
     for (const cuota of pendientes) {
       const montoCuota = Number(cuota.monto)
@@ -397,7 +412,8 @@ export default function EditarCreditoPage() {
           monto_pagado: montoCuota,
           fecha_pago: cuota.fecha_vencimiento,
         }).eq('id', cuota.id)
-        if (error) { setAntiguedadMsg(`Error actualizando cuota #${cuota.numero_cuota}: ${error.message}`); setAplicandoAntiguedad(false); return }
+        if (error) { setAntiguedadMsg(`Error cuota #${cuota.numero_cuota}: ${error.message}`); setAplicandoAntiguedad(false); return }
+        saldoDelta[cuota.credito_id] = (saldoDelta[cuota.credito_id] ?? 0) + montoCuota
         restante -= montoCuota
         aplicadas++
       } else {
@@ -408,24 +424,37 @@ export default function EditarCreditoPage() {
           monto_pagado: montoAbono,
           fecha_pago: cuota.fecha_vencimiento,
         }).eq('id', cuota.id)
-        if (error) { setAntiguedadMsg(`Error actualizando cuota #${cuota.numero_cuota}: ${error.message}`); setAplicandoAntiguedad(false); return }
+        if (error) { setAntiguedadMsg(`Error cuota #${cuota.numero_cuota}: ${error.message}`); setAplicandoAntiguedad(false); return }
+        saldoDelta[cuota.credito_id] = (saldoDelta[cuota.credito_id] ?? 0) + montoAbono
         restante = 0
         aplicadas++
       }
     }
 
-    // Actualizar saldo del crédito
-    const nuevoSaldo = Math.max(0, (credito?.saldo ?? 0) - totalPagado)
-    const { error: errSaldo } = await supabase.from('creditos').update({ saldo: nuevoSaldo }).eq('id', creditoActivoId)
-    if (errSaldo) { setAntiguedadMsg(`Error actualizando saldo: ${errSaldo.message}`); setAplicandoAntiguedad(false); return }
+    // Actualizar saldo de cada crédito afectado
+    const creditosVeh = creditosCliente.filter(c => c.vehiculo_id === credito?.vehiculo_id)
+    for (const [cId, delta] of Object.entries(saldoDelta)) {
+      const cred = creditosVeh.find((c: any) => c.id === cId)
+      if (!cred) continue
+      const nuevoSaldo = Math.max(0, Number(cred.saldo) - delta)
+      const { error: errSaldo } = await supabase.from('creditos').update({ saldo: nuevoSaldo }).eq('id', cId)
+      if (errSaldo) { setAntiguedadMsg(`Error saldo: ${errSaldo.message}`); setAplicandoAntiguedad(false); return }
+    }
 
-    // Reload cuotas
+    // Reload cuotas del vehículo completo
+    const creditoIds = creditosVeh.map((c: any) => c.id)
+    const { data: allCuotas } = await supabase.from('cuotas').select('*')
+      .in('credito_id', creditoIds).order('fecha_vencimiento')
+    setCuotasVehiculo(allCuotas ?? [])
+
+    // Reload cuotas del crédito activo (para el editor)
     const { data: cs } = await supabase.from('cuotas').select('*').eq('credito_id', creditoActivoId).order('numero_cuota')
     setCuotas(cs ?? [])
     setMontoHistorico('')
 
-    let msg = `✓ $${totalPagado.toFixed(2)} distribuidos: ${aplicadas - (cuotaAbono ? 1 : 0)} cuota${aplicadas - (cuotaAbono ? 1 : 0) !== 1 ? 's' : ''} pagadas completamente`
-    if (cuotaAbono) msg += `, cuota #${cuotaAbono.numero_cuota} con abono de $${montoAbono.toFixed(2)} (pendiente $${(Number(cuotaAbono.monto) - montoAbono).toFixed(2)})`
+    const completadas = aplicadas - (cuotaAbono ? 1 : 0)
+    let msg = `✓ $${totalPagado.toFixed(2)} distribuidos en todos los planes: ${completadas} cuota${completadas !== 1 ? 's' : ''} pagadas`
+    if (cuotaAbono) msg += `, cuota #${cuotaAbono.numero_cuota} con abono $${montoAbono.toFixed(2)} (pendiente $${(Number(cuotaAbono.monto) - montoAbono).toFixed(2)})`
     setAntiguedadMsg(msg)
     setAplicandoAntiguedad(false)
     router.refresh()
@@ -547,18 +576,22 @@ export default function EditarCreditoPage() {
       )}
 
       {/* ── PANEL CRÉDITO CON ANTIGÜEDAD — solo directores ── */}
-      {esDirector && cuotas.length > 0 && (() => {
+      {esDirector && cuotasVehiculo.length > 0 && (() => {
         const cuotasOrdenadas = [...cuotas].sort((a, b) => a.numero_cuota - b.numero_cuota)
-        const pagadas   = cuotas.filter(c => c.estado === 'pagada')
-        const parciales = cuotas.filter(c => c.estado === 'abono_parcial')
+        const pagadas   = cuotasVehiculo.filter(c => c.estado === 'pagada')
+        const parciales = cuotasVehiculo.filter(c => c.estado === 'abono_parcial')
         const montoCobrado = pagadas.reduce((s, c) => s + Number(c.monto_pagado ?? c.monto), 0)
                            + parciales.reduce((s, c) => s + Number(c.monto_pagado ?? 0), 0)
-        const montoTotal = Number(credito?.monto_financiado ?? 0)
+        const montoTotal = creditosCliente
+          .filter(c => c.vehiculo_id === credito?.vehiculo_id)
+          .reduce((s: number, c: any) => s + Number(c.monto_financiado), 0) || Number(credito?.monto_financiado ?? 0)
         const pct = montoTotal > 0 ? Math.min(100, Math.round((montoCobrado / montoTotal) * 100)) : 0
 
         // Preview: cómo se distribuirá el monto histórico ingresado
         const totalInput = parseFloat(montoHistorico) || 0
-        const pendientesOrdenadas = cuotasOrdenadas.filter(c => c.estado !== 'pagada')
+        const pendientesOrdenadas = [...cuotasVehiculo]
+          .filter(c => c.estado !== 'pagada')
+          .sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
         let preview: { cuota: any; tipo: 'pagada' | 'parcial'; monto: number }[] = []
         if (totalInput > 0) {
           let rest = totalInput
@@ -582,7 +615,7 @@ export default function EditarCreditoPage() {
               <div className="bg-white rounded-xl p-3 border border-amber-200 text-center">
                 <p className="text-[10px] text-amber-600 font-semibold uppercase">Total financiado</p>
                 <p className="text-base font-extrabold text-oriental-black">${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
-                <p className="text-[10px] text-oriental-gray">{cuotas.length} cuotas · ${Number(credito?.saldo ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })} saldo</p>
+                <p className="text-[10px] text-oriental-gray">{cuotasVehiculo.length} cuotas · ${Number(montoTotal - montoCobrado).toLocaleString('es-VE', { minimumFractionDigits: 2 })} saldo</p>
               </div>
               <div className="bg-white rounded-xl p-3 border border-green-200 text-center">
                 <p className="text-[10px] text-green-600 font-semibold uppercase">Ya cobrado</p>
@@ -592,7 +625,7 @@ export default function EditarCreditoPage() {
               <div className="bg-white rounded-xl p-3 border border-red-200 text-center">
                 <p className="text-[10px] text-red-600 font-semibold uppercase">Pendiente real</p>
                 <p className="text-base font-extrabold text-oriental-red">${Math.max(0, montoTotal - montoCobrado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
-                <p className="text-[10px] text-oriental-gray">{pendientesOrdenadas.length} cuotas por cobrar</p>
+                <p className="text-[10px] text-oriental-gray">{pendientesOrdenadas.length} cuotas por cobrar en todos los planes</p>
               </div>
             </div>
 
