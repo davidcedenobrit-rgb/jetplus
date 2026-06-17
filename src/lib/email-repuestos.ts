@@ -135,7 +135,7 @@ export async function enviarAprobacionCotizacion(opts: {
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic podrá cargar la factura directamente en nuestro sistema.</p>`
 
   const asuntoAprobacion = numeroCotizacion
-    ? `✅ Cotización ${numeroCotizacion} del pedido ${numero} — Aprobada`
+    ? `Cotización ${numeroCotizacion} aprobada de ${numero}`
     : `✅ Cotización aprobada ${numero} — La Oriental Automotors`
 
   return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: asuntoAprobacion, html: wrap(body) })
@@ -362,7 +362,7 @@ export async function enviarCorreosPrueba(testTo: string[], soloVhm = false) {
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center;margin-top:16px"><em>[Destino real: Ops + CC Rojas + Mary]</em></p>`))
 
   // 3 — Cotización aprobada → Vehimotors
-  await send(`✅ Cotización ${fakeSA} del pedido ${numero} — Aprobada`, wrap(`
+  await send(`Cotización ${fakeSA} aprobada de ${numero}`, wrap(`
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#16a34a;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Cotización Aprobada</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">✅ Cotización numero: ${fakeSA} del pedido ${numero} — Aprobada</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 20px">Hemos aprobado su cotización. Por favor proceda a emitir la factura formal:</p>

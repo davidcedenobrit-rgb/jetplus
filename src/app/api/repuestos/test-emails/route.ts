@@ -5,6 +5,7 @@ import { enviarCorreosPrueba } from '@/lib/email-repuestos'
 const TEST_SECRET = process.env.TEST_EMAIL_SECRET ?? 'prueba-sore-2026'
 
 const DESTINATARIOS_PRUEBA = [
+  'rojasjgx@gmail.com',
   'davidcedenobrit@gmail.com',
   'navigroup.ia@gmail.com',
 ]
