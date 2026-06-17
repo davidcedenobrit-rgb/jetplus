@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
     ...(inclVhm ? CORREOS_VEHIMOTORS : []),
   ]
 
-  const results = await enviarCorreosPrueba(destinatarios)
+  const soloVhm = req.nextUrl.searchParams.get('solo') === 'vhm'
+  const results = await enviarCorreosPrueba(destinatarios, soloVhm)
 
   const ok    = results.filter(r => r.ok).length
   const total = results.length
