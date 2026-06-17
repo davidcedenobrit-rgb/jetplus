@@ -416,7 +416,8 @@ export default function EditarCreditoPage() {
 
     // Actualizar saldo del crédito
     const nuevoSaldo = Math.max(0, (credito?.saldo ?? 0) - totalPagado)
-    await supabase.from('creditos').update({ saldo: nuevoSaldo, updated_at: new Date().toISOString() }).eq('id', creditoActivoId)
+    const { error: errSaldo } = await supabase.from('creditos').update({ saldo: nuevoSaldo }).eq('id', creditoActivoId)
+    if (errSaldo) { setAntiguedadMsg(`Error actualizando saldo: ${errSaldo.message}`); setAplicandoAntiguedad(false); return }
 
     // Reload cuotas
     const { data: cs } = await supabase.from('cuotas').select('*').eq('credito_id', creditoActivoId).order('numero_cuota')
