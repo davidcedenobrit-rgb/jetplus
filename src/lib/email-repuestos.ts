@@ -249,7 +249,7 @@ export async function enviarEmailAlmacen(opts: {
     from: FROM,
     to: correosAlmacen,
     cc: EQUIPO_INTERNO,
-    subject: `📦 Cotización ${numeroCotizacion} pagada del pedido ${numero} — Registrar datos de envío`,
+    subject: `📦 Registrar datos de envío de Cotización ${numeroCotizacion} del pedido ${numero}`,
     html: wrap(body),
   })
 }
@@ -419,7 +419,7 @@ export async function enviarCorreosPrueba(testTo: string[], soloVhm = false) {
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center;margin-top:16px"><em>[Destino real: Mary + Rojas + Ops]</em></p>`))
 
   // 8 — Email a almacén (Vehimotors)
-  await send(`📦 Cotización ${fakeSA} pagada del pedido ${numero} — Registrar datos de envío`, wrap(`
+  await send(`📦 Registrar datos de envío de Cotización ${fakeSA} del pedido ${numero}`, wrap(`
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#2563eb;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Envío de Repuestos</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">📦 Pedido listo para despacho — ${numero}</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 16px">Se ha procesado el pago. Por favor registre los datos de envío.</p>
