@@ -2,34 +2,10 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
-import type { CotizacionPDFData, AC500ScheduleData } from '@/lib/cotizacion-pdf'
+import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-function buildAC500ScheduleFromDB(veh: Record<string, unknown>, meses: 6 | 9 | 12): AC500ScheduleData | null {
-  const reserva = Number(veh.reserva) || 500
-  if (meses === 6) {
-    if (!veh.p6_activo) return null
-    const labels = ['Cuota 1 (Día 0)', 'Cuota 2 (Día 30)', 'Cuota 3 (Día 60)', 'Cuota 4 (Día 90)', 'Cuota 5 (Día 120)', 'Cuota 6 (Entrega)']
-    const cuotas = ['p6_c1','p6_c2','p6_c3','p6_c4','p6_c5','p6_c6'].map((f, i) => ({ label: labels[i], monto: Number(veh[f]) || 0 }))
-    const total = Number(veh.p6_total) || (reserva + cuotas.reduce((s, c) => s + c.monto, 0))
-    return { reserva, meses, cuotas, total }
-  }
-  if (meses === 9) {
-    if (!veh.p9_activo) return null
-    const labels = ['Cuota 1 (Día 0)', 'Cuota 2 (Día 30)', 'Cuota 3 (Día 60)', 'Cuota 4 (Día 90)', 'Cuota 5 (Día 120)', 'Cuota 6 (Día 150)', 'Cuota 7 (Día 180)', 'Cuota 8 (Día 210)', 'Cuota 9 (Entrega)']
-    const cuotas = ['p9_c1','p9_c2','p9_c3','p9_c4','p9_c5','p9_c6','p9_c7','p9_c8','p9_c9'].map((f, i) => ({ label: labels[i], monto: Number(veh[f]) || 0 }))
-    const total = Number(veh.p9_total) || (reserva + cuotas.reduce((s, c) => s + c.monto, 0))
-    return { reserva, meses, cuotas, total }
-  }
-  // 12m
-  if (!veh.p12_activo) return null
-  const labels12 = ['Cuota 1 (Día 0)', 'Cuota 2 (Día 30)', 'Cuota 3 (Día 60)', 'Cuota 4 (Día 90)', 'Cuota 5 (Día 120)', 'Cuota 6 (Día 150)', 'Cuota 7 (Día 180)', 'Cuota 8 (Día 210)', 'Cuota 9 (Día 240)', 'Cuota 10 (Día 270)', 'Cuota 11 (Día 300)', 'Cuota 12 (Entrega)']
-  const cuotas12 = ['p12_c1','p12_c2','p12_c3','p12_c4','p12_c5','p12_c6','p12_c7','p12_c8','p12_c9','p12_c10','p12_c11','p12_c12'].map((f, i) => ({ label: labels12[i], monto: Number(veh[f]) || 0 }))
-  const total12 = Number(veh.p12_total) || (reserva + cuotas12.reduce((s, c) => s + c.monto, 0))
-  return { reserva, meses, cuotas: cuotas12, total: total12 }
 }
 
 export async function POST(req: Request) {
@@ -48,22 +24,22 @@ export async function POST(req: Request) {
       agenteRetencion,
       modalidad,
       plan = 'vehimotors',
-      ac500VehiculoId,
-      ac500Meses,
+      ac500PlanId,
+      ac500Meses: ac500MesesBody,
     } = body
 
     // Validaciones básicas
     if (!codigo || !vehiculoId || !clienteNombre?.trim() || !clienteCiRif?.trim() || !clienteCorreo?.trim() || !modalidad) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
-    if (!['contado', 'credito_24', 'ac500'].includes(modalidad)) {
+    if (!['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
     }
-    if (modalidad !== 'ac500' && !['vehimotors', 'banco_100'].includes(plan)) {
+    if (!['vehimotors', 'banco_100', 'ac500'].includes(plan)) {
       return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
     }
-    if (modalidad === 'ac500' && (!ac500VehiculoId || ![6, 9, 12].includes(Number(ac500Meses)))) {
-      return NextResponse.json({ error: 'Faltan datos del plan AC500' }, { status: 400 })
+    if (plan === 'ac500' && (!ac500PlanId || !ac500MesesBody)) {
+      return NextResponse.json({ error: 'Plan AC500 incompleto' }, { status: 400 })
     }
     if (!/^[A-Za-z]\d{3}$/.test(String(codigo).trim())) {
       return NextResponse.json({ error: 'Código inválido' }, { status: 400 })
@@ -83,130 +59,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Código de vendedora inválido' }, { status: 401 })
     }
 
-    const hoy = new Date()
-    const venc = new Date(hoy)
-    venc.setDate(venc.getDate() + 2)
-
-    // ── AC500 path ──
-    if (modalidad === 'ac500') {
-      const { data: vehiculo } = await supabase
-        .from('catalogo_ventas')
-        .select('brand, model')
-        .eq('id', vehiculoId)
-        .single()
-
-      if (!vehiculo) {
-        return NextResponse.json({ error: 'Vehículo no encontrado en catálogo' }, { status: 404 })
-      }
-
-      const { data: ac500Veh } = await supabase
-        .from('ac500_vehiculos')
-        .select('*')
-        .eq('id', ac500VehiculoId)
-        .single()
-
-      if (!ac500Veh) {
-        return NextResponse.json({ error: 'Vehículo AC500 no encontrado' }, { status: 404 })
-      }
-
-      const meses = Number(ac500Meses) as 6 | 9 | 12
-      const ac500Schedule = buildAC500ScheduleFromDB(ac500Veh, meses)
-      if (!ac500Schedule) {
-        return NextResponse.json({ error: `Plan de ${meses} meses no disponible para este vehículo` }, { status: 400 })
-      }
-
-      const { data: cot, error: insertError } = await supabase
-        .from('cotizaciones')
-        .insert([{
-          fecha: hoy.toISOString().slice(0, 10),
-          vencimiento: venc.toISOString().slice(0, 10),
-          vendedora_nombre: vendedora.nombre,
-          cliente_nombre: clienteNombre.trim(),
-          cliente_ci_rif: clienteCiRif.trim(),
-          cliente_correo: clienteCorreo.trim().toLowerCase(),
-          cliente_telefono: clienteTelefono?.trim() || null,
-          cliente_direccion: clienteDireccion?.trim() || null,
-          cliente_ciudad_estado: clienteCiudadEstado?.trim() || null,
-          cliente_codigo_postal: clienteCodigoPostal?.trim() || null,
-          agente_retencion: !!agenteRetencion,
-          vehiculo_id: vehiculoId,
-          marca: vehiculo.brand,
-          modelo: vehiculo.model,
-          precio_base: ac500Schedule.reserva,
-          modalidad: 'ac500',
-          plan: null,
-          iva_monto: 0,
-          gastos_monto: 0,
-          total_inicial: ac500Schedule.reserva,
-          financiamiento_monto: null,
-          cuota_mensual: null,
-          costo_total: ac500Schedule.total,
-          ac500_vehiculo_id: ac500VehiculoId,
-          ac500_meses: meses,
-          ac500_schedule: ac500Schedule,
-        }])
-        .select()
-        .single()
-
-      if (insertError || !cot) {
-        console.error('[cotizaciones] insert error (ac500):', insertError)
-        return NextResponse.json({ error: 'Error al guardar la cotización' }, { status: 500 })
-      }
-
-      const pdfData: CotizacionPDFData = {
-        numero: cot.numero,
-        fecha: fmtDate(hoy),
-        vencimiento: fmtDate(venc),
-        clienteNombre: clienteNombre.trim(),
-        clienteCiRif: clienteCiRif.trim(),
-        clienteDireccion: clienteDireccion?.trim() || null,
-        clienteCorreo: clienteCorreo.trim().toLowerCase(),
-        clienteTelefono: clienteTelefono?.trim() || null,
-        clienteCiudadEstado: clienteCiudadEstado?.trim() || null,
-        clienteCodigoPostal: clienteCodigoPostal?.trim() || null,
-        agenteRetencion: !!agenteRetencion,
-        marca: vehiculo.brand,
-        modelo: vehiculo.model,
-        precioBase: ac500Schedule.reserva,
-        modalidad: 'ac500',
-        ivaMonto: 0,
-        gastosMonto: 0,
-        totalInicial: ac500Schedule.reserva,
-        financiamientoMonto: null,
-        cuotaMensual: null,
-        costoTotal: ac500Schedule.total,
-        ac500Schedule,
-      }
-
-      const emailResults = await Promise.allSettled([
-        enviarCotizacionCliente(pdfData, cot.token_respuesta),
-        enviarNotificacionRojas({
-          numero: cot.numero,
-          vendedoraNombre: vendedora.nombre,
-          clienteNombre: clienteNombre.trim(),
-          clienteCorreo: clienteCorreo.trim().toLowerCase(),
-          clienteCiRif: clienteCiRif.trim(),
-          marca: vehiculo.brand,
-          modelo: vehiculo.model,
-          modalidad: 'ac500',
-          totalInicial: ac500Schedule.reserva,
-          cuotaMensual: null,
-          costoTotal: ac500Schedule.total,
-          fecha: fmtDate(hoy),
-          ac500Schedule,
-        }),
-      ])
-      emailResults.forEach((r, i) => {
-        if (r.status === 'rejected') console.error(`[cotizaciones] email ${i} error:`, r.reason)
-      })
-
-      return NextResponse.json({ ok: true, numero: cot.numero }, { status: 201 })
-    }
-
-    // ── Standard path (contado / credito_24) ──
+    // Obtener vehículo
     const { data: vehiculo } = await supabase
       .from('catalogo_ventas')
-      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, gcr_banco, cuota_banco')
+      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, diferencial_pct, tasa_banco_pct')
       .eq('id', vehiculoId)
       .eq('disponible', true)
       .single()
@@ -218,31 +74,59 @@ export async function POST(req: Request) {
     const precioBase = Number(vehiculo.cash) || 0
     const iva = precioBase * 0.16
 
+    // AC500 plan lookup
+    let ac500Schedule: AC500ScheduleData | null = null
+    const ac500Meses = ac500MesesBody ? Number(ac500MesesBody) : null
+
+    if (plan === 'ac500' && ac500PlanId) {
+      const { data: planRow } = await supabase
+        .from('planes_ac500')
+        .select('cuota_0, cuota_1, cuota_2, cuota_3, cuota_4, cuota_5, cuota_6, cuota_7, cuota_8, cuota_9, total, modelo, meses')
+        .eq('id', ac500PlanId)
+        .eq('activo', true)
+        .single()
+      if (!planRow) {
+        return NextResponse.json({ error: 'Plan AC500 no encontrado' }, { status: 404 })
+      }
+      const n = Number(planRow.meses)
+      const cuotas: AC500CuotaItem[] = []
+      for (let i = 1; i <= n; i++) {
+        cuotas.push({
+          label: i === n ? `Cuota ${i} (Entrega)` : `Cuota ${i}`,
+          monto: Number((planRow as Record<string, unknown>)[`cuota_${i}`]) || 0,
+        })
+      }
+      ac500Schedule = {
+        reserva: Number(planRow.cuota_0) || 500,
+        meses: n,
+        modelo: String(planRow.modelo ?? ''),
+        cuotas,
+        total: Number(planRow.total) || 0,
+      }
+    }
+
     // Diferencial plan 100% Banco
     let diferencial = 0
-    let tasaBCVSnap: number | null = null
-    let tasaVHMSnap: number | null = null
     let totalVehiculoBanco = 0
 
     if (plan === 'banco_100' && modalidad === 'credito_24') {
-      const { data: tasasRows } = await supabase
-        .from('config_cotizaciones')
-        .select('clave, valor')
-      const tm: Record<string, number> = {}
-      for (const r of tasasRows ?? []) tm[r.clave] = Number(r.valor)
-      tasaBCVSnap = tm['tasa_bcv'] ?? 0
-      tasaVHMSnap = tm['tasa_vehimotors'] ?? 0
       const placaMonto = Number(vehiculo.placa_monto) || 400
       totalVehiculoBanco = precioBase + iva + placaMonto
+      const diferencialPct = Number(vehiculo.diferencial_pct) || 30
       const financiamientoBanco = totalVehiculoBanco * 0.70
-      if (tasaBCVSnap > 0 && tasaVHMSnap > tasaBCVSnap) {
-        diferencial = financiamientoBanco * (tasaVHMSnap - tasaBCVSnap) / tasaBCVSnap
-      }
+      diferencial = financiamientoBanco * diferencialPct / 100
     }
 
     let gastosBase: number
     if (plan === 'banco_100' && modalidad === 'credito_24') {
-      gastosBase = Number(vehiculo.gcr_banco) || 0
+      gastosBase =
+        (Number(vehiculo.poliza_vehiculo_banco) || 0) +
+        (Number(vehiculo.poliza_vida_banco) || 0) +
+        (Number(vehiculo.honorarios_banco) || 0) +
+        (Number(vehiculo.gastos_internos_banco) || 0) +
+        (Number(vehiculo.alfombras_banco) || 0)
+    } else if (plan === 'ac500') {
+      gastosBase = 0
     } else if (modalidad === 'contado') {
       gastosBase = Number(vehiculo.gc) || 0
     } else {
@@ -255,14 +139,22 @@ export async function POST(req: Request) {
     let cuotaMensual: number | null = null
     let costoTotal: number
 
-    if (modalidad === 'contado') {
+    if (plan === 'ac500' && ac500Schedule) {
+      totalInicial = ac500Schedule.reserva
+      costoTotal = ac500Schedule.total
+      financiamientoMonto = costoTotal - totalInicial
+      cuotaMensual = null
+    } else if (modalidad === 'contado') {
       totalInicial = precioBase + iva + gastos
       costoTotal = totalInicial
     } else if (plan === 'banco_100') {
       const inicialBanco = totalVehiculoBanco * 0.30
       totalInicial = inicialBanco + gastos
       financiamientoMonto = totalVehiculoBanco * 0.70
-      cuotaMensual = Number(vehiculo.cuota_banco) || 0
+      const tasaBanco = Number(vehiculo.tasa_banco_pct) || 16
+      const r = tasaBanco / 100 / 12
+      const financiamiento = totalVehiculoBanco * 0.70
+      cuotaMensual = financiamiento * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
       costoTotal = totalInicial + cuotaMensual * 24
     } else {
       const inicial40 = precioBase * 0.4
@@ -271,6 +163,10 @@ export async function POST(req: Request) {
       cuotaMensual = Number(vehiculo.tasa_credito) || 0
       costoTotal = totalInicial + cuotaMensual * 24
     }
+
+    const hoy = new Date()
+    const venc = new Date(hoy)
+    venc.setDate(venc.getDate() + 2)
 
     // Insertar cotización (trigger auto-genera numero y numero_seq)
     const { data: cot, error: insertError } = await supabase
@@ -296,12 +192,14 @@ export async function POST(req: Request) {
         iva_monto: iva,
         gastos_monto: gastos,
         diferencial_monto: diferencial > 0 ? diferencial : null,
-        tasa_bcv_snap: tasaBCVSnap,
-        tasa_vhm_snap: tasaVHMSnap,
+        tasa_bcv_snap: null,
+        tasa_vhm_snap: null,
         total_inicial: totalInicial,
         financiamiento_monto: financiamientoMonto,
         cuota_mensual: cuotaMensual,
         costo_total: costoTotal,
+        ac500_meses: plan === 'ac500' ? ac500Meses : null,
+        ac500_cuotas: plan === 'ac500' && ac500Schedule ? ac500Schedule.cuotas.map(c => c.monto) : null,
       }])
       .select()
       .single()
@@ -335,6 +233,7 @@ export async function POST(req: Request) {
       financiamientoMonto,
       cuotaMensual,
       costoTotal,
+      ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
     }
 
     // Enviar emails (ambos en paralelo, errores no bloqueantes)
@@ -349,10 +248,12 @@ export async function POST(req: Request) {
         marca: vehiculo.brand,
         modelo: vehiculo.model,
         modalidad,
+        plan,
         totalInicial,
         cuotaMensual,
         costoTotal,
         fecha: fmtDate(hoy),
+        ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
       }),
     ])
 

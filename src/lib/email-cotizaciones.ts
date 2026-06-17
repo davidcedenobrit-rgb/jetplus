@@ -60,7 +60,7 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
     React.createElement(CotizacionPDF, { data }) as React.ReactElement<any>
   )
 
-  const isAC500 = data.modalidad === 'ac500'
+  const isAC500 = data.plan === 'ac500'
   const es24 = data.modalidad === 'credito_24'
   const modalidadLabel = isAC500
     ? `Plan Asegúrate $500 — ${data.ac500Schedule?.meses} meses`
@@ -179,7 +179,8 @@ export async function enviarNotificacionRojas(opts: {
   clienteCiRif: string
   marca: string
   modelo: string
-  modalidad: 'contado' | 'credito_24' | 'ac500'
+  modalidad: 'contado' | 'credito_24'
+  plan?: 'vehimotors' | 'banco_100' | 'ac500'
   totalInicial: number
   cuotaMensual: number | null
   costoTotal: number
@@ -187,7 +188,7 @@ export async function enviarNotificacionRojas(opts: {
   ac500Schedule?: AC500ScheduleData
 }) {
   const resend = getResend()
-  const isAC500 = opts.modalidad === 'ac500'
+  const isAC500 = opts.plan === 'ac500'
   const es24 = opts.modalidad === 'credito_24'
   const modalidadLabel = isAC500
     ? `Asegúrate $500 — ${opts.ac500Schedule?.meses ?? ''}m`

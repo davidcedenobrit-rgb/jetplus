@@ -88,7 +88,7 @@ const s = StyleSheet.create({
   ac500ReservaRow: { flexDirection: 'row', justifyContent: 'space-between', padding: '5pt 10pt', borderBottom: `0.5pt solid ${BORDER}`, backgroundColor: '#eff6ff' },
   ac500Row: { flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` },
   ac500Label: { fontSize: 7.5, color: GRAY },
-  ac500ReservaLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#1e3a5f' },
+  ac500ReservaLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BLUE_DARK },
   ac500Val: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK },
   ac500ReservaVal: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BLUE_DARK },
   ac500TotalRow: { flexDirection: 'row', justifyContent: 'space-between', padding: '7pt 10pt', backgroundColor: '#dbeafe' },
@@ -131,7 +131,8 @@ export interface AC500CuotaItem {
 
 export interface AC500ScheduleData {
   reserva: number
-  meses: 6 | 9 | 12
+  meses: number
+  modelo: string
   cuotas: AC500CuotaItem[]
   total: number
 }
@@ -151,8 +152,8 @@ export interface CotizacionPDFData {
   marca: string
   modelo: string
   precioBase: number
-  modalidad: 'contado' | 'credito_24' | 'ac500'
-  plan?: 'vehimotors' | 'banco_100'
+  modalidad: 'contado' | 'credito_24'
+  plan?: 'vehimotors' | 'banco_100' | 'ac500'
   ivaMonto: number
   gastosMonto: number
   totalVehiculo?: number
@@ -164,14 +165,14 @@ export interface CotizacionPDFData {
 }
 
 export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
-  const isAC500 = data.modalidad === 'ac500'
+  const esAC500 = data.plan === 'ac500'
   const es24 = data.modalidad === 'credito_24'
   const esBanco = data.plan === 'banco_100'
-  const modalidadLabel = isAC500
-    ? `PLAN ASEGÚRATE $500 — ${data.ac500Schedule?.meses ?? ''}M`
+  const modalidadLabel = esAC500
+    ? `ASEGÚRATE CON $500 — ${data.ac500Schedule?.meses ?? ''} MESES`
     : es24
-    ? (esBanco ? 'CRÉDITO BANCARIO 24 MESES (30% INICIAL)' : 'CRÉDITO 24 MESES (40% INICIAL)')
-    : 'CONTADO'
+      ? (esBanco ? 'CRÉDITO BANCARIO 24 MESES (30% INICIAL)' : 'CRÉDITO 24 MESES (40% INICIAL)')
+      : 'CONTADO'
 
   return (
     <Document title={`Cotización ${data.numero}`} author="La Oriental Automotors">
@@ -189,7 +190,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             <Text style={s.companyRif}>RIF: J-505692143</Text>
             <Text style={s.companyLine}>AV. UGARTE ALIRIO PELYO · CENTRO PROFESIONAL DAVID</Text>
             <Text style={s.companyLine}>MATURÍN - MONAGAS - VENEZUELA</Text>
-            <Text style={s.companyLine}>TEL: 0414-9989010 · laorientalautomorsc@gmail.com</Text>
+            <Text style={s.companyLine}>TEL: 0414-9989010 · laorientalautomotorsc@gmail.com</Text>
           </View>
         </View>
 
@@ -226,10 +227,6 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 <Text style={s.cotzKey}>Vencimiento:</Text>
                 <Text style={s.cotzVal}>{data.vencimiento}</Text>
               </View>
-              <View style={s.cotzRow}>
-                <Text style={s.cotzKey}>Modalidad:</Text>
-                <Text style={s.cotzVal}>{isAC500 ? 'ASEGÚRATE $500' : es24 ? 'CRÉDITO 24M' : 'CONTADO'}</Text>
-              </View>
               <View style={!data.agenteRetencion ? [s.retBadge, s.retBadgeNo] : s.retBadge}>
                 <Text style={!data.agenteRetencion ? [s.retBadgeText, s.retBadgeNoText] : s.retBadgeText}>
                   AGENTE DE RETENCIÓN: {data.agenteRetencion ? 'SÍ' : 'NO'}
@@ -245,38 +242,35 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             <Text style={[s.tableHeaderText, s.colMarca]}>MARCA</Text>
             <Text style={[s.tableHeaderText, s.colModelo]}>MODELO</Text>
             <Text style={[s.tableHeaderText, s.colCant]}>CANT.</Text>
-            <Text style={[s.tableHeaderText, s.colPrecio]}>{isAC500 ? 'RESERVA ($)' : 'PRECIO UNIT. ($)'}</Text>
-            <Text style={[s.tableHeaderText, s.colImporte]}>{isAC500 ? 'TOTAL PLAN ($)' : 'IMPORTE ($)'}</Text>
+            <Text style={[s.tableHeaderText, s.colPrecio]}>{esAC500 ? 'RESERVA ($)' : 'PRECIO UNIT. ($)'}</Text>
+            <Text style={[s.tableHeaderText, s.colImporte]}>{esAC500 ? 'TOTAL PLAN ($)' : 'IMPORTE ($)'}</Text>
           </View>
           <View style={s.tableRow}>
             <Text style={[s.tableCell, s.colMarca]}>{data.marca}</Text>
             <Text style={[s.tableCell, s.colModelo]}>{data.modelo}</Text>
             <Text style={[s.tableCell, s.colCant, { textAlign: 'center' }]}>1</Text>
-            <Text style={[s.tableCell, s.colPrecio, { textAlign: 'right' }]}>{fmt(isAC500 ? data.ac500Schedule?.reserva : data.precioBase)}</Text>
-            <Text style={[s.tableCell, s.colImporte, { textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{fmt(isAC500 ? data.ac500Schedule?.total : data.precioBase)}</Text>
+            <Text style={[s.tableCell, s.colPrecio, { textAlign: 'right' }]}>{fmt(esAC500 ? data.ac500Schedule?.reserva : data.precioBase)}</Text>
+            <Text style={[s.tableCell, s.colImporte, { textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{fmt(esAC500 ? data.ac500Schedule?.total : data.precioBase)}</Text>
           </View>
 
           {/* ── AC500 Schedule ── */}
-          {isAC500 && data.ac500Schedule && (
+          {esAC500 && data.ac500Schedule && (
             <View style={s.ac500Wrap}>
               <View style={s.ac500Box}>
                 <View style={s.ac500Header}>
-                  <Text style={s.ac500HeaderTitle}>PLAN ASEGÚRATE $500 — {data.ac500Schedule.meses} MESES</Text>
+                  <Text style={s.ac500HeaderTitle}>ASEGÚRATE CON $500 — {data.ac500Schedule.meses} MESES</Text>
                   <Text style={s.ac500HeaderSub}>CRONOGRAMA DE PAGOS</Text>
                 </View>
-                {/* Reserva */}
                 <View style={s.ac500ReservaRow}>
                   <Text style={s.ac500ReservaLabel}>CUOTA 0 — RESERVA (SEPARACIÓN)</Text>
                   <Text style={s.ac500ReservaVal}>${fmt(data.ac500Schedule.reserva)}</Text>
                 </View>
-                {/* Cuotas */}
                 {data.ac500Schedule.cuotas.map((c, i) => (
                   <View key={i} style={s.ac500Row}>
                     <Text style={s.ac500Label}>{c.label}</Text>
                     <Text style={s.ac500Val}>${fmt(c.monto)}</Text>
                   </View>
                 ))}
-                {/* Total */}
                 <View style={s.ac500TotalRow}>
                   <Text style={s.ac500TotalLabel}>TOTAL A PAGAR:</Text>
                   <Text style={s.ac500TotalVal}>${fmt(data.ac500Schedule.total)}</Text>
@@ -285,8 +279,8 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             </View>
           )}
 
-          {/* ── Standard Modalidad + cálculos (non-AC500) ── */}
-          {!isAC500 && (
+          {/* ── Standard modalidad + cálculos (non-AC500) ── */}
+          {!esAC500 && (
             <View style={s.modalidadBlock}>
               {es24 && (
                 <View style={s.noteBox}>
@@ -366,7 +360,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           )}
 
           {/* Plan de financiamiento (solo crédito estándar) */}
-          {es24 && data.financiamientoMonto != null && (
+          {es24 && !esAC500 && data.financiamientoMonto != null && (
             <View style={{ alignItems: 'flex-end', marginTop: 6 }}>
               <View style={[s.finBox, { width: 240 }]}>
                 <View style={s.finHeader}>
@@ -389,13 +383,13 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           )}
 
           {/* Texto legal */}
-          {isAC500 ? (
+          {esAC500 ? (
             <View style={s.legalBox}>
               <Text style={s.legalText}>
                 <Text style={s.legalBold}>PLAN ASEGÚRATE $500 — COMPROMISO DE SEPARACIÓN: </Text>
-                El cliente {data.clienteNombre}, R.I.F.: {data.clienteCiRif}, separa el vehículo MARCA: {data.marca}, MODELO: {data.modelo}, bajo el PLAN ASEGÚRATE $500 a {data.ac500Schedule?.meses} meses, comprometiéndose a realizar los pagos según el cronograma indicado.{'\n\n'}
+                El cliente {data.clienteNombre}, R.I.F.: {data.clienteCiRif}, separa el vehículo MARCA: {data.marca}, MODELO: {data.modelo}, bajo el PLAN ASEGÚRATE $500 a {data.ac500Schedule?.meses} meses, comprometiéndose a realizar los pagos según el cronograma indicado anteriormente.{'\n\n'}
                 <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
-                Los montos indicados están sujetos a disponibilidad y condiciones vigentes al momento de la separación. La reserva no es reembolsable una vez procesada.
+                FIRMÓ, ACEPTÓ, ESTOY DE ACUERDO Y ASUMO EL COMPROMISO EN LO DESCRITO ANTERIORMENTE
               </Text>
             </View>
           ) : es24 ? (
@@ -445,10 +439,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           {/* Condiciones */}
           <Text style={s.condTitle}>CONDICIONES:</Text>
           <Text style={s.condText}>
-            {isAC500
-              ? 'El plan de separación "Asegúrate $500" implica el compromiso de pago de las cuotas según el cronograma presentado. El vehículo quedará reservado durante la vigencia del plan. En caso de incumplimiento de los pagos establecidos, La Oriental Automotors se reserva el derecho de liberar el vehículo para otros compradores.'
-              : 'Los Planes de Venta no pueden ser modificados luego de su aprobación y representan un compromiso de pago por parte del comprador. Es responsabilidad única del comprador y el Banco la aprobación del crédito bancario, entendiendo que debe ser aprobado y firmado dentro del plazo establecido. En caso de ser financiado, el comprador deberá pagar sus cuotas entre el primero (1°) y el quinto (5°) día de cada mes.'
-            }
+            Los Planes de Venta no pueden ser modificados luego de su aprobación y representan un compromiso de pago por parte del comprador. Es responsabilidad única del comprador y el Banco la aprobación del crédito bancario, entendiendo que debe ser aprobado y firmado dentro del plazo establecido. En caso de ser financiado, el comprador deberá pagar sus cuotas entre el primero (1°) y el quinto (5°) día de cada mes.
           </Text>
         </View>
 
