@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface Vehiculo {
@@ -23,9 +23,27 @@ interface Vehiculo {
   tasa_banco_pct?: number | null
 }
 
+interface PlanAC500 {
+  id: string
+  marca: string
+  modelo: string
+  meses: number
+  cuota_0: number
+  cuota_1: number
+  cuota_2: number
+  cuota_3: number
+  cuota_4: number
+  cuota_5: number
+  cuota_6: number
+  cuota_7: number
+  cuota_8: number
+  cuota_9: number
+  total: number
+}
+
 type Step = 'vehiculo' | 'form' | 'sending' | 'success'
 type Modalidad = 'contado' | 'credito_24'
-type Plan = 'vehimotors' | 'banco_100'
+type Plan = 'vehimotors' | 'banco_100' | 'ac500'
 
 const ROJAS_CODIGO = 'R000'
 
@@ -63,6 +81,17 @@ function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan) {
   return { label: 'INICIAL A PAGAR', total: inicial, cuota: v.tasa_credito ?? 0, financiamiento: precio * 0.6 }
 }
 
+function buildCuotasPreview(p: PlanAC500): { label: string; monto: number }[] {
+  const arr: { label: string; monto: number }[] = [{ label: 'Cuota 0 — Reserva (Pago inicial)', monto: p.cuota_0 }]
+  for (let i = 1; i <= p.meses; i++) {
+    arr.push({
+      label: i === p.meses ? `Cuota ${i} (Entrega)` : `Cuota ${i}`,
+      monto: p[`cuota_${i}` as keyof PlanAC500] as number,
+    })
+  }
+  return arr
+}
+
 const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red bg-white'
 const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1'
 
@@ -77,10 +106,33 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
 
+  // AC500
+  const [ac500Meses, setAc500Meses] = useState<6 | 9>(6)
+  const [planesAC500, setPlanesAC500] = useState<PlanAC500[]>([])
+  const [planAC500Sel, setPlanAC500Sel] = useState<PlanAC500 | null>(null)
+  const [loadingPlanes, setLoadingPlanes] = useState(false)
+
+  useEffect(() => {
+    if (plan !== 'ac500') return
+    setLoadingPlanes(true)
+    setPlanAC500Sel(null)
+    fetch(`/api/planes-ac500?meses=${ac500Meses}`)
+      .then(r => r.json())
+      .then((data: PlanAC500[]) => {
+        const lista = data ?? []
+        const filtered = vehiculoSel ? lista.filter(p => p.marca === vehiculoSel.brand) : lista
+        setPlanesAC500(filtered)
+        setLoadingPlanes(false)
+      })
+      .catch(() => setLoadingPlanes(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, ac500Meses, vehiculoSel?.brand])
+
   function seleccionarVehiculo(v: Vehiculo) {
     setVehiculoSel(v)
     setModalidad('contado')
     setPlan('vehimotors')
+    setPlanAC500Sel(null)
     setStep('form')
   }
 
@@ -88,6 +140,7 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
     if (!vehiculoSel) return
     if (!form.clienteNombre.trim() || !form.clienteCiRif.trim() || !form.clienteCorreo.trim()) { setErrorMsg('Nombre, C.I./RIF y correo son obligatorios.'); return }
     if (!/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
+    if (plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
     setStep('sending'); setErrorMsg('')
     try {
       const r = await fetch('/api/cotizaciones', {
@@ -98,7 +151,9 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
           clienteCorreo: form.clienteCorreo, clienteTelefono: form.clienteTelefono || null,
           clienteDireccion: form.clienteDireccion || null, clienteCiudadEstado: form.clienteCiudadEstado || null,
           clienteCodigoPostal: form.clienteCodigoPostal || null, agenteRetencion: form.agenteRetencion,
-          modalidad, plan: modalidad === 'credito_24' ? plan : 'vehimotors',
+          modalidad: 'credito_24',
+          plan,
+          ...(plan === 'ac500' && planAC500Sel ? { ac500PlanId: planAC500Sel.id, ac500Meses } : {}),
         }),
       })
       const json = await r.json()
@@ -111,9 +166,16 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
     setStep('vehiculo'); setVehiculoSel(null); setModalidad('contado'); setPlan('vehimotors')
     setForm({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false })
     setErrorMsg(''); setNumeroCot('')
+    setPlanAC500Sel(null); setPlanesAC500([])
   }
 
-  const resumen = vehiculoSel ? calcResumen(vehiculoSel, modalidad, plan) : null
+  const resumen = vehiculoSel
+    ? plan === 'ac500'
+      ? planAC500Sel
+        ? { label: 'PAGO INICIAL (Cuota 0)', total: planAC500Sel.cuota_0, cuota: null, financiamiento: planAC500Sel.total - planAC500Sel.cuota_0 }
+        : null
+      : calcResumen(vehiculoSel, modalidad, plan)
+    : null
 
   /* ── PASO 1: Seleccionar vehículo ── */
   if (step === 'vehiculo') {
@@ -165,6 +227,8 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
   /* ── PASO 2: Formulario ── */
   if (step === 'form' || step === 'sending') {
     const isSending = step === 'sending'
+    const cuotasPreview = planAC500Sel ? buildCuotasPreview(planAC500Sel) : []
+
     return (
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 mb-6">
@@ -176,16 +240,23 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
         {/* Modalidad */}
         <div className="card p-4 mb-4">
           <p className={labelCls}>Modalidad de venta</p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {([['contado', 'Contado'], ['credito_24', 'Crédito 24 meses']] as [Modalidad, string][]).map(([val, lbl]) => (
-              <button key={val} onClick={() => setModalidad(val)}
-                className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${modalidad === val ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+              <button key={val} onClick={() => { setModalidad(val); if (val === 'contado') setPlan('vehimotors') }}
+                className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${modalidad === val && plan !== 'ac500' ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
                 {lbl}
               </button>
             ))}
+            <button
+              onClick={() => { setModalidad('credito_24'); setPlan('ac500') }}
+              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${plan === 'ac500' ? 'border-blue-800 bg-blue-800 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+            >
+              🛡 Asegúrate $500
+            </button>
           </div>
 
-          {modalidad === 'credito_24' && (
+          {/* Sub-plan para crédito 24 */}
+          {modalidad === 'credito_24' && plan !== 'ac500' && (
             <div className="mt-3">
               <p className={labelCls}>Plan de financiamiento</p>
               <div className="flex gap-2">
@@ -199,8 +270,69 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
             </div>
           )}
 
-          {/* Resumen */}
-          {resumen && (
+          {/* AC500 — selector de meses y plan */}
+          {plan === 'ac500' && (
+            <div className="mt-3 space-y-3">
+              <div>
+                <p className={labelCls}>Plazo</p>
+                <div className="flex gap-2">
+                  {([6, 9] as (6 | 9)[]).map(m => (
+                    <button key={m} onClick={() => setAc500Meses(m)}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${ac500Meses === m ? 'border-blue-800 bg-blue-800 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                      {m} meses
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className={labelCls}>Modelo del plan</p>
+                {loadingPlanes ? (
+                  <p className="text-xs text-gray-400 py-2">Cargando planes...</p>
+                ) : planesAC500.length === 0 ? (
+                  <p className="text-xs text-amber-700 py-2">No hay planes disponibles para esta marca.</p>
+                ) : (
+                  <select
+                    className={inputCls}
+                    value={planAC500Sel?.id ?? ''}
+                    onChange={e => {
+                      const found = planesAC500.find(p => p.id === e.target.value) ?? null
+                      setPlanAC500Sel(found)
+                    }}
+                  >
+                    <option value="">— Seleccionar modelo —</option>
+                    {planesAC500.map(p => (
+                      <option key={p.id} value={p.id}>{p.modelo}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Cuota schedule preview */}
+              {planAC500Sel && cuotasPreview.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2">
+                    Plan {planAC500Sel.meses} meses — {planAC500Sel.modelo}
+                  </p>
+                  <div className="space-y-1">
+                    {cuotasPreview.map((c, i) => (
+                      <div key={i} className="flex justify-between items-center">
+                        <span className="text-xs text-gray-600">{c.label}</span>
+                        <span className={`text-xs font-bold ${i === 0 ? 'text-blue-800' : 'text-gray-800'}`}>${fmt(c.monto)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between items-center pt-1 mt-1 border-t border-blue-300">
+                      <span className="text-xs font-bold text-blue-900 uppercase">Total</span>
+                      <span className="text-sm font-bold text-blue-900">${fmt(planAC500Sel.total)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Resumen financiero (non-AC500) */}
+          {resumen && plan !== 'ac500' && (
             <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-2">Resumen estimado</p>
               <div className="flex justify-between items-center">
@@ -213,6 +345,16 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
                   <span className="text-sm font-bold text-amber-700">${fmt(resumen.cuota)}</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Resumen AC500 — inicial */}
+          {plan === 'ac500' && resumen && (
+            <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">{resumen.label}</span>
+                <span className="text-sm font-bold text-blue-900">${fmt(resumen.total)}</span>
+              </div>
             </div>
           )}
         </div>

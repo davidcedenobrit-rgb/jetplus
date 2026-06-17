@@ -7,6 +7,7 @@ const DARK = '#111827'
 const GRAY = '#6b7280'
 const LIGHT = '#f9fafb'
 const BORDER = '#e5e7eb'
+const BLUE_DARK = '#1e3a5f'
 
 const s = StyleSheet.create({
   page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 40 },
@@ -78,6 +79,22 @@ const s = StyleSheet.create({
   finTotalLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: GRAY, textTransform: 'uppercase' },
   finTotalVal: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#15803d' },
 
+  // AC500 schedule table
+  ac500Wrap: { marginTop: 12 },
+  ac500Box: { border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' },
+  ac500Header: { backgroundColor: BLUE_DARK, padding: '7pt 10pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  ac500HeaderTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#fff' },
+  ac500HeaderSub: { fontSize: 7.5, color: '#93c5fd' },
+  ac500ReservaRow: { flexDirection: 'row', justifyContent: 'space-between', padding: '5pt 10pt', borderBottom: `0.5pt solid ${BORDER}`, backgroundColor: '#eff6ff' },
+  ac500Row: { flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` },
+  ac500Label: { fontSize: 7.5, color: GRAY },
+  ac500ReservaLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BLUE_DARK },
+  ac500Val: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK },
+  ac500ReservaVal: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BLUE_DARK },
+  ac500TotalRow: { flexDirection: 'row', justifyContent: 'space-between', padding: '7pt 10pt', backgroundColor: '#dbeafe' },
+  ac500TotalLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: BLUE_DARK },
+  ac500TotalVal: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: BLUE_DARK },
+
   legalBox: { marginTop: 8, backgroundColor: LIGHT, border: `1pt solid ${BORDER}`, borderRadius: 6, padding: '7pt 12pt' },
   legalText: { fontSize: 7.5, color: GRAY, lineHeight: 1.5 },
   legalBold: { fontFamily: 'Helvetica-Bold', color: DARK },
@@ -107,6 +124,19 @@ function fmt(n: number | null | undefined) {
   return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+export interface AC500CuotaItem {
+  label: string
+  monto: number
+}
+
+export interface AC500ScheduleData {
+  reserva: number
+  meses: number
+  modelo: string
+  cuotas: AC500CuotaItem[]
+  total: number
+}
+
 export interface CotizacionPDFData {
   numero: string
   fecha: string
@@ -123,7 +153,7 @@ export interface CotizacionPDFData {
   modelo: string
   precioBase: number
   modalidad: 'contado' | 'credito_24'
-  plan?: 'vehimotors' | 'banco_100'
+  plan?: 'vehimotors' | 'banco_100' | 'ac500'
   ivaMonto: number
   gastosMonto: number
   totalVehiculo?: number
@@ -131,14 +161,18 @@ export interface CotizacionPDFData {
   financiamientoMonto: number | null
   cuotaMensual: number | null
   costoTotal: number
+  ac500Schedule?: AC500ScheduleData
 }
 
 export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
+  const esAC500 = data.plan === 'ac500'
   const es24 = data.modalidad === 'credito_24'
   const esBanco = data.plan === 'banco_100'
-  const modalidadLabel = es24
-    ? (esBanco ? 'CRÉDITO BANCARIO 24 MESES (30% INICIAL)' : 'CRÉDITO 24 MESES (40% INICIAL)')
-    : 'CONTADO'
+  const modalidadLabel = esAC500
+    ? `ASEGÚRATE CON $500 — ${data.ac500Schedule?.meses ?? ''} MESES`
+    : es24
+      ? (esBanco ? 'CRÉDITO BANCARIO 24 MESES (30% INICIAL)' : 'CRÉDITO 24 MESES (40% INICIAL)')
+      : 'CONTADO'
 
   return (
     <Document title={`Cotización ${data.numero}`} author="La Oriental Automotors">
@@ -208,97 +242,125 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             <Text style={[s.tableHeaderText, s.colMarca]}>MARCA</Text>
             <Text style={[s.tableHeaderText, s.colModelo]}>MODELO</Text>
             <Text style={[s.tableHeaderText, s.colCant]}>CANT.</Text>
-            <Text style={[s.tableHeaderText, s.colPrecio]}>PRECIO UNIT. ($)</Text>
-            <Text style={[s.tableHeaderText, s.colImporte]}>IMPORTE ($)</Text>
+            <Text style={[s.tableHeaderText, s.colPrecio]}>{esAC500 ? 'RESERVA ($)' : 'PRECIO UNIT. ($)'}</Text>
+            <Text style={[s.tableHeaderText, s.colImporte]}>{esAC500 ? 'TOTAL PLAN ($)' : 'IMPORTE ($)'}</Text>
           </View>
           <View style={s.tableRow}>
             <Text style={[s.tableCell, s.colMarca]}>{data.marca}</Text>
             <Text style={[s.tableCell, s.colModelo]}>{data.modelo}</Text>
             <Text style={[s.tableCell, s.colCant, { textAlign: 'center' }]}>1</Text>
-            <Text style={[s.tableCell, s.colPrecio, { textAlign: 'right' }]}>{fmt(data.precioBase)}</Text>
-            <Text style={[s.tableCell, s.colImporte, { textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{fmt(data.precioBase)}</Text>
+            <Text style={[s.tableCell, s.colPrecio, { textAlign: 'right' }]}>{fmt(esAC500 ? data.ac500Schedule?.reserva : data.precioBase)}</Text>
+            <Text style={[s.tableCell, s.colImporte, { textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{fmt(esAC500 ? data.ac500Schedule?.total : data.precioBase)}</Text>
           </View>
 
-          {/* Modalidad + cálculos */}
-          <View style={s.modalidadBlock}>
-            {es24 && (
-              <View style={s.noteBox}>
-                <Text style={s.noteText}>
-                  (Nota: si el cliente es agente de retención, deberá presentar retención al momento de ser facturado para que se le reconozca el 75% del IVA.)
-                </Text>
+          {/* ── AC500 Schedule ── */}
+          {esAC500 && data.ac500Schedule && (
+            <View style={s.ac500Wrap}>
+              <View style={s.ac500Box}>
+                <View style={s.ac500Header}>
+                  <Text style={s.ac500HeaderTitle}>ASEGÚRATE CON $500 — {data.ac500Schedule.meses} MESES</Text>
+                  <Text style={s.ac500HeaderSub}>CRONOGRAMA DE PAGOS</Text>
+                </View>
+                <View style={s.ac500ReservaRow}>
+                  <Text style={s.ac500ReservaLabel}>CUOTA 0 — RESERVA (SEPARACIÓN)</Text>
+                  <Text style={s.ac500ReservaVal}>${fmt(data.ac500Schedule.reserva)}</Text>
+                </View>
+                {data.ac500Schedule.cuotas.map((c, i) => (
+                  <View key={i} style={s.ac500Row}>
+                    <Text style={s.ac500Label}>{c.label}</Text>
+                    <Text style={s.ac500Val}>${fmt(c.monto)}</Text>
+                  </View>
+                ))}
+                <View style={s.ac500TotalRow}>
+                  <Text style={s.ac500TotalLabel}>TOTAL A PAGAR:</Text>
+                  <Text style={s.ac500TotalVal}>${fmt(data.ac500Schedule.total)}</Text>
+                </View>
               </View>
-            )}
-            {!es24 && <View style={s.noteBox} />}
-
-            <View style={s.calcBox}>
-              <View style={s.calcHeader}>
-                <Text style={s.calcHeaderLabel}>MODALIDAD DE VENTAS</Text>
-                <Text style={s.calcHeaderVal}>{modalidadLabel}</Text>
-              </View>
-
-              {es24 && esBanco ? (
-                <>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>Total Precio Vehículo</Text>
-                    <Text style={s.calcVal}>{fmt(data.totalVehiculo ?? 0)}</Text>
-                  </View>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>Inicial (30%)</Text>
-                    <Text style={s.calcVal}>{fmt((data.totalVehiculo ?? 0) * 0.30)}</Text>
-                  </View>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
-                    <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
-                  </View>
-                  <View style={s.calcTotalRow}>
-                    <Text style={s.calcTotalLabel}>TOTAL INICIAL A PAGAR:</Text>
-                    <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
-                  </View>
-                </>
-              ) : es24 ? (
-                <>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>40% Precio Base</Text>
-                    <Text style={s.calcVal}>{fmt(data.precioBase * 0.4)}</Text>
-                  </View>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>I.V.A. 16%</Text>
-                    <Text style={s.calcVal}>{fmt(data.ivaMonto)}</Text>
-                  </View>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
-                    <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
-                  </View>
-                  <View style={s.calcTotalRow}>
-                    <Text style={s.calcTotalLabel}>INICIAL TOTAL A PAGAR:</Text>
-                    <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>100% Precio Base</Text>
-                    <Text style={s.calcVal}>{fmt(data.precioBase)}</Text>
-                  </View>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>I.V.A. 16%</Text>
-                    <Text style={s.calcVal}>{fmt(data.ivaMonto)}</Text>
-                  </View>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
-                    <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
-                  </View>
-                  <View style={s.calcTotalRow}>
-                    <Text style={s.calcTotalLabel}>TOTAL A PAGAR:</Text>
-                    <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
-                  </View>
-                </>
-              )}
             </View>
-          </View>
+          )}
 
-          {/* Plan de financiamiento (solo crédito) */}
-          {es24 && data.financiamientoMonto != null && (
+          {/* ── Standard modalidad + cálculos (non-AC500) ── */}
+          {!esAC500 && (
+            <View style={s.modalidadBlock}>
+              {es24 && (
+                <View style={s.noteBox}>
+                  <Text style={s.noteText}>
+                    (Nota: si el cliente es agente de retención, deberá presentar retención al momento de ser facturado para que se le reconozca el 75% del IVA.)
+                  </Text>
+                </View>
+              )}
+              {!es24 && <View style={s.noteBox} />}
+
+              <View style={s.calcBox}>
+                <View style={s.calcHeader}>
+                  <Text style={s.calcHeaderLabel}>MODALIDAD DE VENTAS</Text>
+                  <Text style={s.calcHeaderVal}>{modalidadLabel}</Text>
+                </View>
+
+                {es24 && esBanco ? (
+                  <>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>Total Precio Vehículo</Text>
+                      <Text style={s.calcVal}>{fmt(data.totalVehiculo ?? 0)}</Text>
+                    </View>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>Inicial (30%)</Text>
+                      <Text style={s.calcVal}>{fmt((data.totalVehiculo ?? 0) * 0.30)}</Text>
+                    </View>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
+                      <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
+                    </View>
+                    <View style={s.calcTotalRow}>
+                      <Text style={s.calcTotalLabel}>TOTAL INICIAL A PAGAR:</Text>
+                      <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
+                    </View>
+                  </>
+                ) : es24 ? (
+                  <>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>40% Precio Base</Text>
+                      <Text style={s.calcVal}>{fmt(data.precioBase * 0.4)}</Text>
+                    </View>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>I.V.A. 16%</Text>
+                      <Text style={s.calcVal}>{fmt(data.ivaMonto)}</Text>
+                    </View>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
+                      <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
+                    </View>
+                    <View style={s.calcTotalRow}>
+                      <Text style={s.calcTotalLabel}>INICIAL TOTAL A PAGAR:</Text>
+                      <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>100% Precio Base</Text>
+                      <Text style={s.calcVal}>{fmt(data.precioBase)}</Text>
+                    </View>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>I.V.A. 16%</Text>
+                      <Text style={s.calcVal}>{fmt(data.ivaMonto)}</Text>
+                    </View>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
+                      <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
+                    </View>
+                    <View style={s.calcTotalRow}>
+                      <Text style={s.calcTotalLabel}>TOTAL A PAGAR:</Text>
+                      <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Plan de financiamiento (solo crédito estándar) */}
+          {es24 && !esAC500 && data.financiamientoMonto != null && (
             <View style={{ alignItems: 'flex-end', marginTop: 6 }}>
               <View style={[s.finBox, { width: 240 }]}>
                 <View style={s.finHeader}>
@@ -321,7 +383,16 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           )}
 
           {/* Texto legal */}
-          {es24 ? (
+          {esAC500 ? (
+            <View style={s.legalBox}>
+              <Text style={s.legalText}>
+                <Text style={s.legalBold}>PLAN ASEGÚRATE $500 — COMPROMISO DE SEPARACIÓN: </Text>
+                El cliente {data.clienteNombre}, R.I.F.: {data.clienteCiRif}, separa el vehículo MARCA: {data.marca}, MODELO: {data.modelo}, bajo el PLAN ASEGÚRATE $500 a {data.ac500Schedule?.meses} meses, comprometiéndose a realizar los pagos según el cronograma indicado anteriormente.{'\n\n'}
+                <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
+                FIRMÓ, ACEPTÓ, ESTOY DE ACUERDO Y ASUMO EL COMPROMISO EN LO DESCRITO ANTERIORMENTE
+              </Text>
+            </View>
+          ) : es24 ? (
             <View style={s.legalBox}>
               <Text style={s.legalText}>
                 <Text style={s.legalBold}>VEHÍCULO NO HA SIDO PAGADO EN SU TOTALIDAD POR PARTE DEL CLIENTE: </Text>

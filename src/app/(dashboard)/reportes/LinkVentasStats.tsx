@@ -125,7 +125,7 @@ export default function LinkVentasStats() {
   // Por modalidad
   const byModalidad: Record<string, number> = {}
   cotizaciones.forEach(c => {
-    const lbl = c.modalidad === 'contado' ? 'Contado' : c.plan === 'banco_100' ? 'Plan 100% Banco' : 'Crédito 24m'
+    const lbl = c.plan === 'ac500' ? 'Asegúrate $500' : c.modalidad === 'contado' ? 'Contado' : c.plan === 'banco_100' ? 'Plan 100% Banco' : 'Crédito 24m'
     byModalidad[lbl] = (byModalidad[lbl] ?? 0) + 1
   })
 

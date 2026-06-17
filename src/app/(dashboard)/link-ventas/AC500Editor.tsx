@@ -22,6 +22,12 @@ interface AC500 {
   p9_c4: number | null; p9_c5: number | null; p9_c6: number | null
   p9_c7: number | null; p9_c8: number | null; p9_c9: number | null
   p9_total: number | null
+  p12_activo: boolean | null
+  p12_c1: number | null; p12_c2: number | null; p12_c3: number | null
+  p12_c4: number | null; p12_c5: number | null; p12_c6: number | null
+  p12_c7: number | null; p12_c8: number | null; p12_c9: number | null
+  p12_c10: number | null; p12_c11: number | null; p12_c12: number | null
+  p12_total: number | null
 }
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
@@ -42,11 +48,14 @@ const P6_FIELDS: (keyof AC500)[] = ['p6_c1', 'p6_c2', 'p6_c3', 'p6_c4', 'p6_c5',
 const P6_LABELS = ['Cuota 1 (Día 0)', 'Cuota 2 (Día 30)', 'Cuota 3 (Día 60)', 'Cuota 4 (Día 90)', 'Cuota 5 (Día 120)', 'Cuota 6 (Entrega)']
 const P9_FIELDS: (keyof AC500)[] = ['p9_c1', 'p9_c2', 'p9_c3', 'p9_c4', 'p9_c5', 'p9_c6', 'p9_c7', 'p9_c8', 'p9_c9']
 const P9_LABELS = ['Cuota 1 (Día 0)', 'Cuota 2 (Día 30)', 'Cuota 3 (Día 60)', 'Cuota 4 (Día 90)', 'Cuota 5 (Día 120)', 'Cuota 6 (Día 150)', 'Cuota 7 (Día 180)', 'Cuota 8 (Día 210)', 'Cuota 9 (Entrega)']
+const P12_FIELDS: (keyof AC500)[] = ['p12_c1','p12_c2','p12_c3','p12_c4','p12_c5','p12_c6','p12_c7','p12_c8','p12_c9','p12_c10','p12_c11','p12_c12']
+const P12_LABELS = ['Cuota 1 (Día 0)', 'Cuota 2 (Día 30)', 'Cuota 3 (Día 60)', 'Cuota 4 (Día 90)', 'Cuota 5 (Día 120)', 'Cuota 6 (Día 150)', 'Cuota 7 (Día 180)', 'Cuota 8 (Día 210)', 'Cuota 9 (Día 240)', 'Cuota 10 (Día 270)', 'Cuota 11 (Día 300)', 'Cuota 12 (Entrega)']
 
 const EMPTY: Omit<AC500, 'id'> = {
   brand: 'MG', model: '', img_url: '', colores: 'plata,gris,negro,blanco', orden: 99, disponible: true, reserva: 500,
   p6_activo: false, p6_c1: null, p6_c2: null, p6_c3: null, p6_c4: null, p6_c5: null, p6_c6: null, p6_total: null,
   p9_activo: false, p9_c1: null, p9_c2: null, p9_c3: null, p9_c4: null, p9_c5: null, p9_c6: null, p9_c7: null, p9_c8: null, p9_c9: null, p9_total: null,
+  p12_activo: false, p12_c1: null, p12_c2: null, p12_c3: null, p12_c4: null, p12_c5: null, p12_c6: null, p12_c7: null, p12_c8: null, p12_c9: null, p12_c10: null, p12_c11: null, p12_c12: null, p12_total: null,
 }
 
 function sumPlan(v: AC500, fields: (keyof AC500)[]) {
@@ -86,12 +95,14 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
     setSaving(prev => ({ ...prev, [id]: true }))
     const p6_total = v.p6_activo ? sumPlan(v, P6_FIELDS) : null
     const p9_total = v.p9_activo ? sumPlan(v, P9_FIELDS) : null
-    setItems(prev => prev.map(x => x.id === id ? { ...x, p6_total, p9_total } : x))
+    const p12_total = v.p12_activo ? sumPlan(v, P12_FIELDS) : null
+    setItems(prev => prev.map(x => x.id === id ? { ...x, p6_total, p9_total, p12_total } : x))
     const { error } = await supabase.from('ac500_vehiculos').update({
       brand: v.brand, model: v.model, img_url: v.img_url, colores: v.colores,
       orden: v.orden, disponible: v.disponible, reserva: v.reserva,
       p6_activo: v.p6_activo, p6_c1: v.p6_c1, p6_c2: v.p6_c2, p6_c3: v.p6_c3, p6_c4: v.p6_c4, p6_c5: v.p6_c5, p6_c6: v.p6_c6, p6_total,
       p9_activo: v.p9_activo, p9_c1: v.p9_c1, p9_c2: v.p9_c2, p9_c3: v.p9_c3, p9_c4: v.p9_c4, p9_c5: v.p9_c5, p9_c6: v.p9_c6, p9_c7: v.p9_c7, p9_c8: v.p9_c8, p9_c9: v.p9_c9, p9_total,
+      p12_activo: v.p12_activo, p12_c1: v.p12_c1, p12_c2: v.p12_c2, p12_c3: v.p12_c3, p12_c4: v.p12_c4, p12_c5: v.p12_c5, p12_c6: v.p12_c6, p12_c7: v.p12_c7, p12_c8: v.p12_c8, p12_c9: v.p12_c9, p12_c10: v.p12_c10, p12_c11: v.p12_c11, p12_c12: v.p12_c12, p12_total,
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
     if (error) { showToast('Error al guardar', false); return }
@@ -162,6 +173,7 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
           const isDirty = dirty[v.id], isSaving = saving[v.id], isSaved = saved[v.id], open = expanded[v.id]
           const live6 = v.p6_activo ? sumPlan(v, P6_FIELDS) : null
           const live9 = v.p9_activo ? sumPlan(v, P9_FIELDS) : null
+          const live12 = v.p12_activo ? sumPlan(v, P12_FIELDS) : null
 
           return (
             <div key={v.id} className={`card p-4 transition-all ${isDirty ? 'border-2 border-orange-300' : 'border border-gray-200'}`}>
@@ -198,6 +210,7 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
                 Editar cronograma de cuotas
                 {v.p6_activo && <span className="bg-gray-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">6m</span>}
                 {v.p9_activo && <span className="bg-oriental-gold text-white text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: '#ca8a04' }}>9m</span>}
+                {v.p12_activo && <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: '#1e3a5f' }}>12m</span>}
               </button>
 
               {open && (
@@ -241,6 +254,28 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
                         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 text-sm">
                           <span className="text-gray-500">Total (reserva + cuotas)</span>
                           <span className="font-bold text-green-700">${(live9 ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </>
+                    ) : <p className="text-xs text-gray-400">Plan desactivado. Actívalo para editar las cuotas.</p>}
+                  </div>
+
+                  {/* Plan 12 meses */}
+                  <div className="border border-gray-200 rounded-xl p-4 lg:col-span-2">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-bold text-oriental-black">Plan 12 meses</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{v.p12_activo ? 'Activo' : 'Inactivo'}</span>
+                        <Toggle on={!!v.p12_activo} onClick={() => update(v.id, 'p12_activo', !v.p12_activo)} />
+                      </div>
+                    </div>
+                    {v.p12_activo ? (
+                      <>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {P12_FIELDS.map((f, i) => <NumField key={f} v={v} field={f} label={P12_LABELS[i]} />)}
+                        </div>
+                        <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 text-sm">
+                          <span className="text-gray-500">Total (reserva + cuotas)</span>
+                          <span className="font-bold text-green-700">${(live12 ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
                         </div>
                       </>
                     ) : <p className="text-xs text-gray-400">Plan desactivado. Actívalo para editar las cuotas.</p>}

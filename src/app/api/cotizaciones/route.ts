@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
-import type { CotizacionPDFData } from '@/lib/cotizacion-pdf'
+import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -24,6 +24,8 @@ export async function POST(req: Request) {
       agenteRetencion,
       modalidad,
       plan = 'vehimotors',
+      ac500PlanId,
+      ac500Meses: ac500MesesBody,
     } = body
 
     // Validaciones básicas
@@ -33,8 +35,11 @@ export async function POST(req: Request) {
     if (!['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
     }
-    if (!['vehimotors', 'banco_100'].includes(plan)) {
+    if (!['vehimotors', 'banco_100', 'ac500'].includes(plan)) {
       return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
+    }
+    if (plan === 'ac500' && (!ac500PlanId || !ac500MesesBody)) {
+      return NextResponse.json({ error: 'Plan AC500 incompleto' }, { status: 400 })
     }
     if (!/^[A-Za-z]\d{3}$/.test(String(codigo).trim())) {
       return NextResponse.json({ error: 'Código inválido' }, { status: 400 })
@@ -69,6 +74,37 @@ export async function POST(req: Request) {
     const precioBase = Number(vehiculo.cash) || 0
     const iva = precioBase * 0.16
 
+    // AC500 plan lookup
+    let ac500Schedule: AC500ScheduleData | null = null
+    const ac500Meses = ac500MesesBody ? Number(ac500MesesBody) : null
+
+    if (plan === 'ac500' && ac500PlanId) {
+      const { data: planRow } = await supabase
+        .from('planes_ac500')
+        .select('cuota_0, cuota_1, cuota_2, cuota_3, cuota_4, cuota_5, cuota_6, cuota_7, cuota_8, cuota_9, total, modelo, meses')
+        .eq('id', ac500PlanId)
+        .eq('activo', true)
+        .single()
+      if (!planRow) {
+        return NextResponse.json({ error: 'Plan AC500 no encontrado' }, { status: 404 })
+      }
+      const n = Number(planRow.meses)
+      const cuotas: AC500CuotaItem[] = []
+      for (let i = 1; i <= n; i++) {
+        cuotas.push({
+          label: i === n ? `Cuota ${i} (Entrega)` : `Cuota ${i}`,
+          monto: Number((planRow as Record<string, unknown>)[`cuota_${i}`]) || 0,
+        })
+      }
+      ac500Schedule = {
+        reserva: Number(planRow.cuota_0) || 500,
+        meses: n,
+        modelo: String(planRow.modelo ?? ''),
+        cuotas,
+        total: Number(planRow.total) || 0,
+      }
+    }
+
     // Diferencial plan 100% Banco
     let diferencial = 0
     let totalVehiculoBanco = 0
@@ -76,19 +112,21 @@ export async function POST(req: Request) {
     if (plan === 'banco_100' && modalidad === 'credito_24') {
       const placaMonto = Number(vehiculo.placa_monto) || 400
       totalVehiculoBanco = precioBase + iva + placaMonto
+      const diferencialPct = Number(vehiculo.diferencial_pct) || 30
+      const financiamientoBanco = totalVehiculoBanco * 0.70
+      diferencial = financiamientoBanco * diferencialPct / 100
     }
 
     let gastosBase: number
     if (plan === 'banco_100' && modalidad === 'credito_24') {
-      const diferencialPct = Number(vehiculo.diferencial_pct) || 30
-      const financiamientoBanco = totalVehiculoBanco * 0.70
-      diferencial = financiamientoBanco * diferencialPct / 100
       gastosBase =
         (Number(vehiculo.poliza_vehiculo_banco) || 0) +
         (Number(vehiculo.poliza_vida_banco) || 0) +
         (Number(vehiculo.honorarios_banco) || 0) +
         (Number(vehiculo.gastos_internos_banco) || 0) +
         (Number(vehiculo.alfombras_banco) || 0)
+    } else if (plan === 'ac500') {
+      gastosBase = 0
     } else if (modalidad === 'contado') {
       gastosBase = Number(vehiculo.gc) || 0
     } else {
@@ -101,7 +139,12 @@ export async function POST(req: Request) {
     let cuotaMensual: number | null = null
     let costoTotal: number
 
-    if (modalidad === 'contado') {
+    if (plan === 'ac500' && ac500Schedule) {
+      totalInicial = ac500Schedule.reserva
+      costoTotal = ac500Schedule.total
+      financiamientoMonto = costoTotal - totalInicial
+      cuotaMensual = null
+    } else if (modalidad === 'contado') {
       totalInicial = precioBase + iva + gastos
       costoTotal = totalInicial
     } else if (plan === 'banco_100') {
@@ -155,6 +198,8 @@ export async function POST(req: Request) {
         financiamiento_monto: financiamientoMonto,
         cuota_mensual: cuotaMensual,
         costo_total: costoTotal,
+        ac500_meses: plan === 'ac500' ? ac500Meses : null,
+        ac500_cuotas: plan === 'ac500' && ac500Schedule ? ac500Schedule.cuotas.map(c => c.monto) : null,
       }])
       .select()
       .single()
@@ -188,6 +233,7 @@ export async function POST(req: Request) {
       financiamientoMonto,
       cuotaMensual,
       costoTotal,
+      ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
     }
 
     // Enviar emails (ambos en paralelo, errores no bloqueantes)
@@ -202,10 +248,12 @@ export async function POST(req: Request) {
         marca: vehiculo.brand,
         modelo: vehiculo.model,
         modalidad,
+        plan,
         totalInicial,
         cuotaMensual,
         costoTotal,
         fecha: fmtDate(hoy),
+        ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
       }),
     ])
 

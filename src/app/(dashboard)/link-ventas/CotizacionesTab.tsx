@@ -23,7 +23,7 @@ interface Cotizacion {
   agente_retencion: boolean
   marca: string
   modelo: string
-  modalidad: 'contado' | 'credito_24'
+  modalidad: 'contado' | 'credito_24' | 'ac500'
   plan: string
   precio_base: number
   iva_monto: number
@@ -65,6 +65,7 @@ function EstadoBadge({ estado }: { estado: Estado }) {
 }
 
 function ModalidadBadge({ modalidad, plan }: { modalidad: string; plan: string }) {
+  if (modalidad === 'ac500') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-900 text-white">Asegúrate $500</span>
   if (modalidad === 'contado') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700">Contado</span>
   if (plan === 'banco_100') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700">100% Banco</span>
   return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-50 text-yellow-700">Crédito 24m</span>
