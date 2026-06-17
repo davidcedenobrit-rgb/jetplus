@@ -392,25 +392,25 @@ export default function EditarCreditoPage() {
       if (restante <= 0) break
 
       if (restante >= montoCuota) {
-        // Cuota completa
-        await supabase.from('cuotas').update({
+        const { error } = await supabase.from('cuotas').update({
           estado: 'pagada',
           monto_pagado: montoCuota,
           fecha_pago: cuota.fecha_vencimiento,
           updated_at: new Date().toISOString(),
         }).eq('id', cuota.id)
+        if (error) { setAntiguedadMsg(`Error actualizando cuota #${cuota.numero_cuota}: ${error.message}`); setAplicandoAntiguedad(false); return }
         restante -= montoCuota
         aplicadas++
       } else {
-        // Abono parcial — lo que queda del monto histórico
         cuotaAbono = cuota
         montoAbono = restante
-        await supabase.from('cuotas').update({
+        const { error } = await supabase.from('cuotas').update({
           estado: 'abono_parcial',
           monto_pagado: montoAbono,
           fecha_pago: cuota.fecha_vencimiento,
           updated_at: new Date().toISOString(),
         }).eq('id', cuota.id)
+        if (error) { setAntiguedadMsg(`Error actualizando cuota #${cuota.numero_cuota}: ${error.message}`); setAplicandoAntiguedad(false); return }
         restante = 0
         aplicadas++
       }
@@ -429,6 +429,7 @@ export default function EditarCreditoPage() {
     if (cuotaAbono) msg += `, cuota #${cuotaAbono.numero_cuota} con abono de $${montoAbono.toFixed(2)} (pendiente $${(Number(cuotaAbono.monto) - montoAbono).toFixed(2)})`
     setAntiguedadMsg(msg)
     setAplicandoAntiguedad(false)
+    router.refresh()
   }
 
   if (loading) {
