@@ -164,8 +164,9 @@ export async function notificarFacturaRecibida(opts: { numero: string; solicitud
 export async function enviarReporteRecepcion(opts: {
   numero: string; solicitudId: string
   tieneNovedad: boolean; notas?: string | null; fotoUrl?: string | null
+  numeroCotizacion?: string | null
 }) {
-  const { numero, solicitudId, tieneNovedad, notas, fotoUrl } = opts
+  const { numero, solicitudId, tieneNovedad, notas, fotoUrl, numeroCotizacion } = opts
 
   const body = tieneNovedad ? `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#d97706;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Recepción</p>
@@ -182,8 +183,8 @@ export async function enviarReporteRecepcion(opts: {
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">El pedido <strong>${numero}</strong> fue recibido en nuestro taller en perfectas condiciones. Sin novedades. Gracias.</p>`
 
   const asunto = tieneNovedad
-    ? `⚠️ Novedad en pedido ${numero} — La Oriental Automotors`
-    : `✅ Pedido ${numero} recibido sin novedad — La Oriental Automotors`
+    ? `⚠️ Novedad en pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} — La Oriental Automotors`
+    : `✅ Pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} recibido sin novedad`
 
   return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: asunto, html: wrap(body) })
 }
@@ -248,7 +249,7 @@ export async function enviarEmailAlmacen(opts: {
     from: FROM,
     to: correosAlmacen,
     cc: EQUIPO_INTERNO,
-    subject: `📦 Pedido ${numero} — Registrar datos de envío`,
+    subject: `📦 Cotización ${numeroCotizacion} pagada del pedido ${numero} — Registrar datos de envío`,
     html: wrap(body),
   })
 }
@@ -418,7 +419,7 @@ export async function enviarCorreosPrueba(testTo: string[], soloVhm = false) {
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center;margin-top:16px"><em>[Destino real: Mary + Rojas + Ops]</em></p>`))
 
   // 8 — Email a almacén (Vehimotors)
-  await send(`📦 Pedido ${numero} — Registrar datos de envío`, wrap(`
+  await send(`📦 Cotización ${fakeSA} pagada del pedido ${numero} — Registrar datos de envío`, wrap(`
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#2563eb;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Envío de Repuestos</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">📦 Pedido listo para despacho — ${numero}</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 16px">Se ha procesado el pago. Por favor registre los datos de envío.</p>
@@ -430,14 +431,14 @@ export async function enviarCorreosPrueba(testTo: string[], soloVhm = false) {
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center"><em>[Destino real: almacén Vehimotors + CC equipo interno]</em></p>`), true)
 
   // 9a — Recepción sin novedad → Vehimotors
-  await send(`✅ Pedido ${numero} recibido sin novedad — La Oriental Automotors`, wrap(`
+  await send(`✅ Pedido ${numero} de la cotización ${fakeSA} recibido sin novedad`, wrap(`
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#16a34a;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Recepción</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">✅ Pedido recibido sin novedad — ${numero}</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">El pedido <strong>${numero}</strong> fue recibido en perfectas condiciones. Sin novedades. Gracias.</p>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center;margin-top:16px"><em>[Destino real: Vehimotors × 3 + CC equipo interno]</em></p>`), true)
 
   // 9b — Recepción con novedad → Vehimotors
-  await send(`⚠️ Novedad en pedido ${numero} — La Oriental Automotors`, wrap(`
+  await send(`⚠️ Novedad en pedido ${numero} de la cotización ${fakeSA} — La Oriental Automotors`, wrap(`
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#d97706;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Recepción</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">⚠️ Novedad en pedido — ${numero}</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 16px">Se reporta una novedad en la recepción de <strong>${numero}</strong>.</p>

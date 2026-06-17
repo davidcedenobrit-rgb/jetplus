@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
-      .select('numero')
+      .select('numero, numero_cotizacion_vehimotors')
       .eq('id', solicitudId).single()
 
     if (!sol) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     await enviarReporteRecepcion({
       numero: sol.numero, solicitudId,
       tieneNovedad, notas: notas || null, fotoUrl,
+      numeroCotizacion: sol.numero_cotizacion_vehimotors ?? null,
     })
 
     revalidatePath('/repuestos')
