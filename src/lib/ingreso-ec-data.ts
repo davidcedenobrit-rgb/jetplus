@@ -57,15 +57,21 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
     if (creditosVehiculo.length > 0) {
       const { data: cuotas, error: cuotasErr } = await admin
         .from('cuotas')
-        .select('id, estado, credito_id')
+        .select('id, estado, monto, monto_pagado, credito_id')
         .in('credito_id', creditosVehiculo.map((c: any) => c.id))
       if (cuotasErr) console.error('[fetchECData] cuotas:', cuotasErr)
       cuotasVehiculo = cuotas ?? []
     }
 
     ecTotalFinanciado = creditosVehiculo.reduce((s: number, c: any) => s + Number(c.monto_financiado ?? 0), 0)
-    ecTotalSaldo = creditosVehiculo.reduce((s: number, c: any) => s + Number(c.saldo ?? 0), 0)
-    const ecTotalPagado = ecTotalFinanciado - ecTotalSaldo
+
+    // Calcular desde cuotas reales (credito.saldo puede estar desactualizado)
+    const ecTotalPagado = cuotasVehiculo.reduce((s: number, q: any) => {
+      if (q.estado === 'pagada') return s + Number(q.monto_pagado ?? q.monto)
+      if (q.estado === 'abono_parcial') return s + Number(q.monto_pagado ?? 0)
+      return s
+    }, 0)
+    ecTotalSaldo = Math.max(0, ecTotalFinanciado - ecTotalPagado)
     ecPct = ecTotalFinanciado > 0 ? Math.round((ecTotalPagado / ecTotalFinanciado) * 100) : 0
     ecPagadas = cuotasVehiculo.filter((c: any) => c.estado === 'pagada').length
     ecPendientes = cuotasVehiculo.filter((c: any) => c.estado === 'pendiente').length
@@ -74,6 +80,11 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
     creditosDesglose = creditosVehiculo.map((c: any) => {
       const cuotasCred = cuotasVehiculo.filter((q: any) => q.credito_id === c.id)
       const pagadasCred = cuotasCred.filter((q: any) => q.estado === 'pagada').length
+      const saldoCred = Math.max(0, Number(c.monto_financiado ?? 0) - cuotasCred.reduce((s: number, q: any) => {
+        if (q.estado === 'pagada') return s + Number(q.monto_pagado ?? q.monto)
+        if (q.estado === 'abono_parcial') return s + Number(q.monto_pagado ?? 0)
+        return s
+      }, 0))
       const planTipo = c.plan_tipo
       const planNombre =
         planTipo === 'inicial_la_oriental' ? 'La Oriental'
@@ -81,7 +92,7 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
         : 'Crédito'
       return {
         planNombre,
-        saldo: Number(c.saldo ?? 0),
+        saldo: saldoCred,
         totalCuotas: cuotasCred.length,
         cuotasPagadas: pagadasCred,
       }
