@@ -32,6 +32,20 @@ export default async function CreditosPage({
 
   const { data: creditos } = await query
 
+  // Fetch cuotas for all credits to compute real saldo
+  const creditoIds = (creditos ?? []).map(c => c.id)
+  let cuotasMap = new Map<string, any[]>()
+  if (creditoIds.length > 0) {
+    const { data: cuotas } = await supabase
+      .from('cuotas')
+      .select('credito_id, estado, monto, monto_pagado')
+      .in('credito_id', creditoIds)
+    for (const q of cuotas ?? []) {
+      if (!cuotasMap.has(q.credito_id)) cuotasMap.set(q.credito_id, [])
+      cuotasMap.get(q.credito_id)!.push(q)
+    }
+  }
+
   // Agrupar por vehiculo_id (un vehículo puede tener varios créditos)
   const grupos = new Map<string, typeof creditos>()
   for (const c of creditos ?? []) {
@@ -111,7 +125,14 @@ export default async function CreditosPage({
 
                 // Totales consolidados del grupo
                 const totalFinanciado = grupo!.reduce((s, c) => s + Number(c.monto_financiado), 0)
-                const totalSaldo = grupo!.reduce((s, c) => s + Number(c.saldo), 0)
+                const totalSaldo = grupo!.reduce((s, c) => {
+                  const qs = cuotasMap.get(c.id) ?? []
+                  return s + qs.reduce((acc: number, q: any) => {
+                    if (q.estado === 'pendiente' || q.estado === 'vencida') return acc + Number(q.monto)
+                    if (q.estado === 'abono_parcial') return acc + Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
+                    return acc
+                  }, 0)
+                }, 0)
                 const totalCuotas = grupo!.reduce((s, c) => s + Number(c.num_cuotas), 0)
                 const porcentajePagado = totalFinanciado > 0
                   ? ((totalFinanciado - totalSaldo) / totalFinanciado) * 100 : 0
