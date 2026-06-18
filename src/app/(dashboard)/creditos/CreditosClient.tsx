@@ -187,6 +187,11 @@ export default function CreditosClient({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
+                        {(!primero.placa || primero.placa.trim() === '') && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
+                            AC500
+                          </span>
+                        )}
                         {tipos.map(tipo => (
                           <span key={tipo} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${planBadge(tipo)}`}>
                             {planLabel(tipo)}
