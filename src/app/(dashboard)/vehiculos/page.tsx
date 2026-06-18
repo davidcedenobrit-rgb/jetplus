@@ -6,12 +6,20 @@ import VehiculosClient from './VehiculosClient'
 export default async function VehiculosPage() {
   const supabase = await createClient()
 
-  const { data: vehiculos } = await supabase
-    .from('vehiculos')
-    .select('*, clientes(nombre, cedula_rif)')
-    .order('created_at', { ascending: false })
+  const [{ data: vehiculos }, { data: ac500Creds }] = await Promise.all([
+    supabase
+      .from('vehiculos')
+      .select('*, clientes(nombre, cedula_rif)')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('creditos')
+      .select('vehiculo_id')
+      .eq('plan_tipo', 'inicial_la_oriental')
+      .not('vehiculo_id', 'is', null),
+  ])
 
   const lista = vehiculos ?? []
+  const ac500Ids = (ac500Creds ?? []).map(c => c.vehiculo_id as string)
 
   return (
     <div className="p-4 lg:p-8">
@@ -25,7 +33,7 @@ export default async function VehiculosPage() {
         </Link>
       </div>
 
-      <VehiculosClient vehiculos={lista} />
+      <VehiculosClient vehiculos={lista} ac500Ids={ac500Ids} />
     </div>
   )
 }

@@ -28,10 +28,12 @@ function PillBtn({ active, onClick, children }: { active: boolean; onClick: () =
   )
 }
 
-export default function VehiculosClient({ vehiculos }: { vehiculos: any[] }) {
+export default function VehiculosClient({ vehiculos, ac500Ids = [] }: { vehiculos: any[]; ac500Ids?: string[] }) {
+  const ac500Set = useMemo(() => new Set(ac500Ids), [ac500Ids])
   const [marca, setMarca] = useState<string | null>(null)
   const [modelo, setModelo] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
+  const [filtroAc500, setFiltroAc500] = useState<'todos' | 'ac500' | 'no_ac500'>('todos')
 
   const marcas = useMemo(() => {
     const set = new Set(vehiculos.map(v => v.marca).filter(Boolean))
@@ -49,6 +51,8 @@ export default function VehiculosClient({ vehiculos }: { vehiculos: any[] }) {
     return vehiculos.filter(v => {
       if (marca && v.marca !== marca) return false
       if (modelo && v.modelo !== modelo) return false
+      if (filtroAc500 === 'ac500' && !ac500Set.has(v.id)) return false
+      if (filtroAc500 === 'no_ac500' && ac500Set.has(v.id)) return false
       if (q) {
         const haystack = [v.placa, v.modelo, v.marca, v.version, v.color, v.clientes?.nombre, v.clientes?.cedula_rif]
           .filter(Boolean).join(' ').toLowerCase()
@@ -56,14 +60,14 @@ export default function VehiculosClient({ vehiculos }: { vehiculos: any[] }) {
       }
       return true
     })
-  }, [vehiculos, marca, modelo, busqueda])
+  }, [vehiculos, marca, modelo, busqueda, filtroAc500, ac500Set])
 
   function seleccionarMarca(m: string) {
     if (marca === m) { setMarca(null); setModelo(null) }
     else { setMarca(m); setModelo(null) }
   }
 
-  const hayFiltros = marca || modelo || busqueda.trim()
+  const hayFiltros = marca || modelo || busqueda.trim() || filtroAc500 !== 'todos'
 
   return (
     <div>
@@ -107,6 +111,19 @@ export default function VehiculosClient({ vehiculos }: { vehiculos: any[] }) {
             )}
           </div>
         )}
+
+        {/* Filtro AC500 */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14">Plan</span>
+          <PillBtn active={filtroAc500 === 'todos'} onClick={() => setFiltroAc500('todos')}>Todos</PillBtn>
+          <PillBtn active={filtroAc500 === 'ac500'} onClick={() => setFiltroAc500('ac500')}>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+              AC500
+            </span>
+          </PillBtn>
+          <PillBtn active={filtroAc500 === 'no_ac500'} onClick={() => setFiltroAc500('no_ac500')}>Sin AC500</PillBtn>
+        </div>
       </div>
 
       {/* Contador */}
@@ -114,7 +131,7 @@ export default function VehiculosClient({ vehiculos }: { vehiculos: any[] }) {
         <p className="text-xs text-oriental-gray mb-3">
           Mostrando <strong className="text-oriental-black">{visible.length}</strong> de {vehiculos.length} vehículos
           {hayFiltros && (
-            <button onClick={() => { setMarca(null); setModelo(null); setBusqueda('') }} className="ml-2 text-oriental-red hover:underline">
+            <button onClick={() => { setMarca(null); setModelo(null); setBusqueda(''); setFiltroAc500('todos') }} className="ml-2 text-oriental-red hover:underline">
               Limpiar todo
             </button>
           )}
@@ -152,7 +169,15 @@ export default function VehiculosClient({ vehiculos }: { vehiculos: any[] }) {
                     <p className="text-xs text-oriental-gray">{v.clientes?.cedula_rif}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="capitalize text-oriental-gray text-sm">{v.tipo_compra}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="capitalize text-oriental-gray text-sm">{v.tipo_compra}</span>
+                      {ac500Set.has(v.id) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full w-fit">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                          AC500
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${estadoColors[v.estado] ?? 'bg-gray-100 text-gray-700'}`}>
@@ -171,7 +196,7 @@ export default function VehiculosClient({ vehiculos }: { vehiculos: any[] }) {
                   <td colSpan={6} className="px-4 py-16 text-center">
                     <Car size={32} className="mx-auto text-gray-300 mb-3" />
                     <p className="text-oriental-gray text-sm">No hay vehículos con estos filtros</p>
-                    <button onClick={() => { setMarca(null); setModelo(null); setBusqueda('') }} className="text-oriental-red text-sm font-medium hover:underline mt-1">
+                    <button onClick={() => { setMarca(null); setModelo(null); setBusqueda(''); setFiltroAc500('todos') }} className="text-oriental-red text-sm font-medium hover:underline mt-1">
                       Limpiar filtros
                     </button>
                   </td>
