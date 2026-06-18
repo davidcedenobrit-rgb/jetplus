@@ -47,9 +47,10 @@ function categorizarVehiculo(v: any, planes: string[]): FiltroVenta {
   const tieneInicial = planes.includes('inicial_la_oriental')
   const tieneVehimotors = planes.includes('financiamiento_vehimotors')
 
+  // AC500 = carro sin placa (viene de China, proceso pendiente de placa)
+  if (!v.placa || v.placa.trim() === '') return 'ac500'
   if (v.tipo_compra === 'contado') return 'contado'
-  // La Oriental inicial siempre viene acompañada de Vehimotors → F. LAO + Vehi
-  if (tieneInicial && tieneVehimotors) return 'f_lao_vehi'
+  if (tieneInicial) return 'f_lao_vehi'
   if (tieneVehimotors) return 'f_vehimotor'
   return 'contado'
 }

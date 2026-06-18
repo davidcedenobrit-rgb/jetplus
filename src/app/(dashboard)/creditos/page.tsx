@@ -1,18 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { CreditCard, Plus } from 'lucide-react'
-
-const planBadge = (tipo: string | null) =>
-  tipo === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-700' :
-  tipo === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700' :
-  tipo === 'cuota_especial' ? 'bg-teal-100 text-teal-700' :
-  'bg-gray-100 text-gray-500'
-
-const planLabel = (tipo: string | null) =>
-  tipo === 'inicial_la_oriental' ? 'La Oriental' :
-  tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
-  tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' : 'Sin clasificar'
+import { Plus } from 'lucide-react'
+import CreditosClient from './CreditosClient'
 
 export default async function CreditosPage({
   searchParams,
@@ -22,46 +11,39 @@ export default async function CreditosPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  // Traer todos los créditos con info de cliente
   let query = supabase
     .from('creditos')
-    .select('*, clientes(nombre, cedula_rif)')
+    .select('*, clientes(nombre, cedula_rif), vehiculos(tipo_compra)')
     .order('created_at', { ascending: false })
 
   if (params.estado) query = query.eq('estado', params.estado)
 
   const { data: creditos } = await query
 
-  // Fetch cuotas for all credits to compute real saldo
+  // Fetch cuotas para calcular saldo real
   const creditoIds = (creditos ?? []).map(c => c.id)
-  let cuotasMap = new Map<string, any[]>()
+  const cuotasObj: Record<string, { estado: string; monto: number; monto_pagado: number }[]> = {}
   if (creditoIds.length > 0) {
     const { data: cuotas } = await supabase
       .from('cuotas')
       .select('credito_id, estado, monto, monto_pagado')
       .in('credito_id', creditoIds)
     for (const q of cuotas ?? []) {
-      if (!cuotasMap.has(q.credito_id)) cuotasMap.set(q.credito_id, [])
-      cuotasMap.get(q.credito_id)!.push(q)
+      if (!cuotasObj[q.credito_id]) cuotasObj[q.credito_id] = []
+      cuotasObj[q.credito_id].push(q)
     }
   }
 
-  // Agrupar por vehiculo_id (un vehículo puede tener varios créditos)
+  // Agrupar por vehiculo_id
   const grupos = new Map<string, typeof creditos>()
   for (const c of creditos ?? []) {
-    const key = c.vehiculo_id ?? c.id // fallback si no tiene vehiculo
+    const key = c.vehiculo_id ?? c.id
     if (!grupos.has(key)) grupos.set(key, [])
     grupos.get(key)!.push(c)
   }
 
-  const vehiculos = Array.from(grupos.values())
-
-  const estadoColors: Record<string, string> = {
-    activo: 'bg-green-100 text-green-800',
-    pagado: 'bg-blue-100 text-blue-800',
-    mora: 'bg-red-100 text-red-800',
-    cancelado: 'bg-gray-200 text-gray-400',
-  }
+  const grupos_arr = Array.from(grupos.values()).filter((g): g is any[] => g !== null)
+  const totalCreditos = creditos?.length ?? 0
 
   return (
     <div className="p-4 lg:p-8">
@@ -69,9 +51,9 @@ export default async function CreditosPage({
         <div>
           <h1 className="text-2xl font-bold text-oriental-black">Créditos</h1>
           <p className="text-oriental-gray text-sm mt-1">
-            {vehiculos.length} {vehiculos.length === 1 ? 'vehículo' : 'vehículos'} financiados
-            {creditos && creditos.length !== vehiculos.length && (
-              <span className="text-oriental-gray/60"> · {creditos.length} créditos</span>
+            {grupos_arr.length} {grupos_arr.length === 1 ? 'vehículo' : 'vehículos'} financiados
+            {totalCreditos !== grupos_arr.length && (
+              <span className="text-oriental-gray/60"> · {totalCreditos} créditos</span>
             )}
           </p>
         </div>
@@ -81,8 +63,8 @@ export default async function CreditosPage({
         </Link>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2 mb-6">
+      {/* Filtro estado (server-side) */}
+      <div className="flex gap-2 mb-5">
         {[
           { value: '', label: 'Todos' },
           { value: 'activo', label: 'Activos' },
@@ -103,104 +85,7 @@ export default async function CreditosPage({
         ))}
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-oriental-bg border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Cliente</th>
-                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Placa</th>
-                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Financiamiento</th>
-                <th className="text-right px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Total financiado</th>
-                <th className="text-right px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Saldo total</th>
-                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Cuotas</th>
-                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Estado</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {vehiculos.map(grupo => {
-                const primero = grupo![0]
-                const cliente = (primero as any).clientes
-
-                // Totales consolidados del grupo
-                const totalFinanciado = grupo!.reduce((s, c) => s + Number(c.monto_financiado), 0)
-                const totalSaldo = grupo!.reduce((s, c) => {
-                  const qs = cuotasMap.get(c.id) ?? []
-                  return s + qs.reduce((acc: number, q: any) => {
-                    if (q.estado === 'pendiente' || q.estado === 'vencida') return acc + Number(q.monto)
-                    if (q.estado === 'abono_parcial') return acc + Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
-                    return acc
-                  }, 0)
-                }, 0)
-                const totalCuotas = grupo!.reduce((s, c) => s + Number(c.num_cuotas), 0)
-                const porcentajePagado = totalFinanciado > 0
-                  ? ((totalFinanciado - totalSaldo) / totalFinanciado) * 100 : 0
-
-                // Estado general: mora > activo > pagado
-                const estadoGeneral = grupo!.some(c => c.estado === 'mora') ? 'mora'
-                  : grupo!.every(c => c.estado === 'pagado') ? 'pagado'
-                  : 'activo'
-
-                // Tipos de financiamiento únicos
-                const tipos = [...new Set(grupo!.map(c => c.plan_tipo))]
-
-                // Link al primer crédito (la vista unificada muestra todos)
-                const detailLink = `/creditos/${primero.id}`
-
-                return (
-                  <tr key={primero.vehiculo_id ?? primero.id} className="hover:bg-oriental-bg/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-oriental-black">{cliente?.nombre}</p>
-                      <p className="text-xs text-oriental-gray">{cliente?.cedula_rif}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-bold">{primero.placa ?? '—'}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {tipos.map(tipo => (
-                          <span key={tipo} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${planBadge(tipo)}`}>
-                            {planLabel(tipo)}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-oriental-black">
-                      {formatCurrency(totalFinanciado, primero.moneda)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <p className="font-bold text-oriental-red">{formatCurrency(totalSaldo, primero.moneda)}</p>
-                      <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                        <div className="bg-green-500 h-1 rounded-full" style={{ width: `${Math.min(100, porcentajePagado)}%` }} />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-oriental-gray">{totalCuotas} cuotas</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${estadoColors[estadoGeneral] ?? 'bg-gray-100 text-gray-700'}`}>
-                        {estadoGeneral}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link href={detailLink} className="text-oriental-red hover:text-oriental-red-dark font-medium text-xs">
-                        Ver detalle
-                      </Link>
-                    </td>
-                  </tr>
-                )
-              })}
-              {vehiculos.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
-                    <CreditCard size={32} className="mx-auto text-gray-300 mb-3" />
-                    <p className="text-oriental-gray text-sm">No hay créditos registrados</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CreditosClient grupos={grupos_arr} cuotasObj={cuotasObj} />
     </div>
   )
 }
