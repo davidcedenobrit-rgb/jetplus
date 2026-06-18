@@ -59,20 +59,26 @@ export default function NuevoClientePage() {
     setLoading(true)
     setError('')
 
-    // 1. Crear cliente
-    const { data: clienteData, error: insertError } = await supabase
-      .from('clientes')
-      .insert({ ...parsed.data, correo: parsed.data.correo || null, activo: true })
-      .select('id')
-      .single()
-
-    if (insertError || !clienteData) {
-      setError(insertError?.message ?? 'Error al crear cliente')
+    // 1. Crear cliente via API route (admin client — evita problemas de sesión browser)
+    let clienteId: string
+    try {
+      const res = await fetch('/api/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...parsed.data, correo: parsed.data.correo || null }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.id) {
+        setError(json.error ?? 'Error al crear cliente')
+        setLoading(false)
+        return
+      }
+      clienteId = json.id
+    } catch {
+      setError('Error de conexión al crear el cliente. Intenta de nuevo.')
       setLoading(false)
       return
     }
-
-    const clienteId = clienteData.id
 
     // 2. Si hay showroom seleccionado, crear vehículo y vincularlo
     if (showroomSeleccionado) {
