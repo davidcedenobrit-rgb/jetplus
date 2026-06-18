@@ -113,6 +113,7 @@ export default function NuevoVehiculoPage() {
   const [ceFrecuencia, setCeFrecuencia] = useState('trimestral')
   const [ceFecha, setCeFecha] = useState(new Date().toISOString().split('T')[0])
   const [ceObs, setCeObs] = useState('')
+  const [ceMontoHistorico, setCeMontoHistorico] = useState('')
 
   // ── Calculadora de precio (Plan Personalizado) ──
   const [calcBase, setCalcBase] = useState('')
@@ -528,8 +529,9 @@ export default function NuevoVehiculoPage() {
         // Cuota especial (tercer bloque paralelo — ej: trimestral simultánea)
         const ceActivo2 = ceActivo && calcCuotaEspecial.cuotas > 0 && calcCuotaEspecial.montoCuota > 0
         if (ceActivo2) {
-          const ceTotalMonto  = calcCuotaEspecial.monto || calcCuotaEspecial.totalCuotas
-          const ceSaldoInicial = ceTotalMonto
+          const ceTotalMonto   = calcCuotaEspecial.monto || calcCuotaEspecial.totalCuotas
+          const ceHistorico    = parseFloat(ceMontoHistorico) || 0
+          const ceSaldoInicial = Math.max(0, ceTotalMonto - ceHistorico)
           const { data: creditoCe, error: errCe } = await supabase.from('creditos').insert({
             cliente_id: clienteSeleccionado.id, vehiculo_id: vehiculo.id, placa: vehiculo.placa,
             monto_financiado: ceTotalMonto,
@@ -541,7 +543,7 @@ export default function NuevoVehiculoPage() {
             observaciones: ceObs || `Cuota especial ${ceFrecuencia}`,
           }).select().single()
           if (errCe || !creditoCe) { setError(errCe?.message ?? 'Error creando cuota especial'); setLoading(false); return }
-          await supabase.from('cuotas').insert(buildCuotas(creditoCe.id, calcCuotaEspecial.cuotas, calcCuotaEspecial.montoCuota, ceFrecuencia, ceFecha, `Cuota especial ${ceFrecuencia}`))
+          await supabase.from('cuotas').insert(buildCuotas(creditoCe.id, calcCuotaEspecial.cuotas, calcCuotaEspecial.montoCuota, ceFrecuencia, ceFecha, `Cuota especial ${ceFrecuencia}`, ceHistorico))
           if (!primerCreditoId) primerCreditoId = creditoCe.id
         }
 
@@ -1501,6 +1503,38 @@ export default function NuevoVehiculoPage() {
                         <textarea className="textarea" rows={2} placeholder="Condiciones especiales de esta cuota paralela..."
                           value={ceObs} onChange={e => setCeObs(e.target.value)} />
                       </div>
+                      {/* Pagos previos cuota especial */}
+                      {(parseInt(ceCuotas) || 0) > 0 && (parseFloat(ceMontoCuota) || 0) > 0 && (() => {
+                        const hist = parseFloat(ceMontoHistorico) || 0
+                        const mc   = parseFloat(ceMontoCuota) || 0
+                        const completas = hist > 0 ? Math.min(Math.floor(hist / mc), parseInt(ceCuotas) || 0) : 0
+                        const sobrante  = hist > 0 ? hist - completas * mc : 0
+                        const saldoRest = Math.max(0, ((parseInt(ceCuotas) || 0) * mc) - hist)
+                        return (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                            <div className="flex items-start gap-2 mb-3">
+                              <span className="text-amber-500 text-base">📋</span>
+                              <div>
+                                <p className="text-xs font-bold text-amber-800">¿Cliente con pagos previos en cuotas especiales?</p>
+                                <p className="text-[11px] text-amber-600">Ingresa el total ya cobrado. El sistema marca las cuotas como pagadas automáticamente.</p>
+                              </div>
+                            </div>
+                            <div className="relative mb-3">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
+                              <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
+                                placeholder="0.00 — monto total ya cobrado"
+                                value={ceMontoHistorico} onChange={e => setCeMontoHistorico(e.target.value)} />
+                            </div>
+                            {hist > 0 && mc > 0 && (
+                              <div className="space-y-1.5">
+                                {completas > 0 && <p className="text-[11px] text-green-700 font-semibold">✓ {completas} cuota{completas > 1 ? 's' : ''} pagada{completas > 1 ? 's' : ''} completamente</p>}
+                                {sobrante > 0.01 && <p className="text-[11px] text-yellow-700 font-semibold">⚡ Cuota #{completas + 1} con abono parcial de {formatUSD(sobrante)} · pendiente {formatUSD(mc - sobrante)}</p>}
+                                <p className="text-[11px] text-oriental-gray font-semibold">Saldo restante: {formatUSD(saldoRest)}</p>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
                       {calcCuotaEspecial.cuotas > 0 && calcCuotaEspecial.montoCuota > 0 && (
                         <div className="bg-teal-700 rounded-lg p-4 grid grid-cols-3 gap-3">
                           <div className="text-center">

@@ -8,8 +8,9 @@ import CotizacionesTab from './CotizacionesTab'
 import CotizacionCDMTab from './CotizacionCDMTab'
 import TasasEditor from './TasasEditor'
 import ClientesHistorialTab from './ClientesHistorialTab'
+import PromocionesTab from './PromocionesTab'
 
-type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas' | 'clientes'
+type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas' | 'clientes' | 'promociones'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
@@ -25,6 +26,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock }: { cat
     { key: 'generar', label: 'Generar cotización' },
     { key: 'tasas', label: 'Tasas' },
     { key: 'clientes', label: 'Historial de clientes' },
+    { key: 'promociones', label: 'Promociones Especiales' },
   ]
 
   return (
@@ -50,6 +52,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock }: { cat
       {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} />}
       {tab === 'tasas' && <TasasEditor />}
       {tab === 'clientes' && <ClientesHistorialTab />}
+      {tab === 'promociones' && <PromocionesTab catalogo={catalogo} />}
     </div>
   )
 }
