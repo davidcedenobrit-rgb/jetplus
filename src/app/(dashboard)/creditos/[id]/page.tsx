@@ -53,6 +53,7 @@ export default async function CreditoDetallePage({
 
   // Ventana de 7 días para estado "Por cobrar"
   const hoyDate = new Date()
+  const hoyStr  = hoyDate.toISOString().split('T')[0]
   const en7Date = new Date(hoyDate); en7Date.setDate(hoyDate.getDate() + 7)
   const en7Str  = en7Date.toISOString().split('T')[0]
 
@@ -135,8 +136,9 @@ export default async function CreditoDetallePage({
   const cuotasPendientes = cuotasEnriquecidas.filter(c => c.estado === 'pendiente').length
   const cuotasVencidas   = cuotasEnriquecidas.filter(c => c.estado === 'vencida').length
   const cuotasAbono      = cuotasEnriquecidas.filter(c => c.estado === 'abono_parcial').length
-  // Desglose de pendientes: por cobrar (≤7 días) vs. al día (>7 días)
-  const cuotasPorCobrar  = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento <= en7Str).length
+  // Desglose de pendientes: vencida visual (pasada), por cobrar (hoy…+7d), al día (>7d)
+  const cuotasVencidasVisual = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento < hoyStr).length
+  const cuotasPorCobrar  = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento >= hoyStr && c.fecha_vencimiento <= en7Str).length
   const cuotasAlDia      = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento >  en7Str).length
 
   // Estado general del vehículo (si alguno en mora → mora, si todos pagados → pagado)
@@ -236,7 +238,7 @@ export default async function CreditoDetallePage({
                 <p className="text-[10px] text-green-600">Pagadas</p>
               </div>
               <div className="bg-red-50 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-red-700">{cuotasVencidas}</p>
+                <p className="text-lg font-bold text-red-700">{cuotasVencidas + cuotasVencidasVisual}</p>
                 <p className="text-[10px] text-red-600">Vencidas</p>
               </div>
               <div className="bg-yellow-50 rounded-lg p-2 text-center">
@@ -300,10 +302,9 @@ export default async function CreditoDetallePage({
               </Link>
 
               {/* Botón recordatorio WhatsApp */}
-              {cliente.whatsapp && (cuotasVencidas > 0 || cuotasPorCobrar > 0) && (() => {
-                const hoyStr = new Date().toISOString().split('T')[0]
+              {cliente.whatsapp && (cuotasVencidas + cuotasVencidasVisual > 0 || cuotasPorCobrar > 0) && (() => {
                 const vencidas = cuotasEnriquecidas
-                  .filter((c: any) => c.estado === 'vencida')
+                  .filter((c: any) => c.estado === 'vencida' || (c.estado === 'pendiente' && c.fecha_vencimiento < hoyStr))
                   .reduce((acc: any[], c: any) => {
                     const cred = creditos.find((cr: any) => cr.id === c.credito_id)
                     const label = `${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''}${vehiculo?.placa ? ` · ${vehiculo.placa}` : ''} (${planLabel(cred?.plan_tipo)})`
@@ -393,17 +394,18 @@ export default async function CreditoDetallePage({
                         ? `/ingresos/nuevo?placa=${encodeURIComponent(placaCuota)}&cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
                         : `/ingresos/nuevo?cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
 
-                      const esPagada      = cuota.estado === 'pagada'
-                      const esAbono       = cuota.estado === 'abono_parcial'
-                      const esVencida     = cuota.estado === 'vencida'
-                      const esPendiente   = cuota.estado === 'pendiente'
-                      const esPorCobrar   = esPendiente && cuota.fecha_vencimiento <= en7Str
-                      const esAlDia       = esPendiente && cuota.fecha_vencimiento >  en7Str
+                      const esPagada        = cuota.estado === 'pagada'
+                      const esAbono         = cuota.estado === 'abono_parcial'
+                      const esVencida       = cuota.estado === 'vencida'
+                      const esPendiente     = cuota.estado === 'pendiente'
+                      const esVencidaVisual = esPendiente && cuota.fecha_vencimiento < hoyStr
+                      const esPorCobrar     = esPendiente && !esVencidaVisual && cuota.fecha_vencimiento <= en7Str
+                      const esAlDia         = esPendiente && cuota.fecha_vencimiento >  en7Str
 
-                      const rowBg = esPagada    ? 'bg-green-50/50'
-                                  : esAbono     ? 'bg-amber-50/60'
-                                  : esVencida   ? 'bg-red-50/40'
-                                  : esPorCobrar ? 'bg-yellow-50/40'
+                      const rowBg = esPagada        ? 'bg-green-50/50'
+                                  : esAbono         ? 'bg-amber-50/60'
+                                  : esVencida || esVencidaVisual ? 'bg-red-50/40'
+                                  : esPorCobrar     ? 'bg-yellow-50/40'
                                   : 'hover:bg-oriental-bg/50'
 
                       return (
@@ -419,7 +421,7 @@ export default async function CreditoDetallePage({
                         </td>
 
                         {/* Vencimiento */}
-                        <td className={`px-3 py-3 text-sm ${esVencida ? 'text-red-600 font-semibold' : 'text-oriental-gray'}`}>
+                        <td className={`px-3 py-3 text-sm ${esVencida || esVencidaVisual ? 'text-red-600 font-semibold' : 'text-oriental-gray'}`}>
                           {formatDate(cuota.fecha_vencimiento)}
                         </td>
 
@@ -490,7 +492,7 @@ export default async function CreditoDetallePage({
                                 />
                               )}
                             </div>
-                          ) : esVencida ? (
+                          ) : esVencida || esVencidaVisual ? (
                             <div className="space-y-1.5">
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
                                 Vencida
