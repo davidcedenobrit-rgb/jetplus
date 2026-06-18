@@ -105,6 +105,7 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
   const [form, setForm] = useState({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false })
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
+  const [showPreview, setShowPreview] = useState(false)
 
   // AC500
   const [ac500Meses, setAc500Meses] = useState<6 | 9>(6)
@@ -169,6 +170,15 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
     setPlanAC500Sel(null); setPlanesAC500([])
   }
 
+  function handleVistaPrevia() {
+    if (!vehiculoSel) return
+    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim() || !form.clienteCorreo.trim()) { setErrorMsg('Nombre, C.I./RIF y correo son obligatorios para la vista previa.'); return }
+    if (!/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
+    if (plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
+    setErrorMsg('')
+    setShowPreview(true)
+  }
+
   const resumen = vehiculoSel
     ? plan === 'ac500'
       ? planAC500Sel
@@ -230,6 +240,7 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
     const cuotasPreview = planAC500Sel ? buildCuotasPreview(planAC500Sel) : []
 
     return (
+      <>
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => setStep('vehiculo')} className="text-oriental-gray hover:text-oriental-black text-sm font-medium">← Cambiar vehículo</button>
@@ -408,16 +419,201 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={() => setStep('vehiculo')} className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
             Cancelar
           </button>
+          <button onClick={handleVistaPrevia} disabled={isSending}
+            className="px-4 py-2.5 border-2 border-oriental-black text-oriental-black rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50">
+            👁 Vista previa
+          </button>
           <button onClick={enviar} disabled={isSending}
             className="flex-1 py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50">
-            {isSending ? 'Generando cotización...' : '📄 Generar y enviar cotización'}
+            {isSending ? 'Generando cotización...' : '📄 Generar y enviar'}
           </button>
         </div>
       </div>
+
+      {/* ── MODAL VISTA PREVIA ── */}
+      {showPreview && vehiculoSel && (() => {
+        const prev = vehiculoSel
+        const hoyDate = new Date()
+        const vencDate = new Date(hoyDate); vencDate.setDate(vencDate.getDate() + 2)
+        const fDate = (d: Date) => d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        const precioBase = prev.cash ?? 0
+        const iva = precioBase * 0.16
+
+        type Row = [string, number]
+        let rows: Row[] = []
+        let labelInicial = 'TOTAL A PAGAR'
+        let totalInicial = 0
+        let cuotaMensual: number | null = null
+        let financiamiento: number | null = null
+        let costoTotal: number | null = null
+
+        if (plan === 'ac500') {
+          // handled in AC500 block
+        } else if (modalidad === 'contado') {
+          const gastos = prev.gc ?? 0
+          rows = [['100% Precio Base', precioBase], ['I.V.A. 16%', iva], ['Gastos (traslado, póliza, notaría)', gastos]]
+          totalInicial = precioBase + iva + gastos
+          labelInicial = 'TOTAL A PAGAR'
+        } else if (plan === 'banco_100') {
+          const placaMonto = prev.placa_monto ?? 400
+          const totalVeh = precioBase + iva + placaMonto
+          const fin = totalVeh * 0.70
+          const dif = fin * (prev.diferencial_pct ?? 30) / 100
+          const gastosBanco = (prev.poliza_vehiculo_banco ?? 0) + (prev.poliza_vida_banco ?? 0) + (prev.honorarios_banco ?? 0) + (prev.gastos_internos_banco ?? 0) + (prev.alfombras_banco ?? 0) + dif
+          totalInicial = totalVeh * 0.30 + gastosBanco
+          financiamiento = fin
+          const r = (prev.tasa_banco_pct ?? 16) / 100 / 12
+          cuotaMensual = fin * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
+          costoTotal = totalInicial + cuotaMensual * 24
+          rows = [['Total Precio Vehículo', totalVeh], ['Inicial (30%)', totalVeh * 0.30], ['Gastos banco', gastosBanco]]
+          labelInicial = 'TOTAL INICIAL A PAGAR'
+        } else {
+          const gastos = prev.gcr ?? 0
+          const inicial40 = precioBase * 0.4
+          totalInicial = inicial40 + iva + gastos
+          financiamiento = precioBase * 0.6
+          cuotaMensual = prev.tasa_credito ?? 0
+          costoTotal = totalInicial + (cuotaMensual ?? 0) * 24
+          rows = [['40% Precio Base', inicial40], ['I.V.A. 16%', iva], ['Gastos (traslado, póliza, notaría)', gastos]]
+          labelInicial = 'INICIAL A PAGAR'
+        }
+
+        const planBadge = plan === 'ac500' ? '🛡 Asegúrate $500' : modalidad === 'contado' ? 'Contado' : plan === 'banco_100' ? 'Crédito 100% Banco' : 'Crédito 24m — Vehimotors'
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+            <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto shadow-2xl">
+              {/* Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between rounded-t-2xl">
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Vista previa de cotización</p>
+                  <p className="text-base font-bold text-oriental-black">{prev.brand} {prev.model}</p>
+                </div>
+                <button onClick={() => setShowPreview(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold transition-colors">✕</button>
+              </div>
+
+              <div className="px-5 py-4 space-y-4">
+                {/* Plan badge */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold bg-oriental-black text-white px-3 py-1.5 rounded-full">{planBadge}</span>
+                  <span className="text-xs text-gray-400">válida por 2 días hábiles</span>
+                </div>
+
+                {/* Client + cotizacion meta */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Datos del cliente</p>
+                    {([['Cliente', form.clienteNombre], ['C.I./RIF', form.clienteCiRif], ['Correo', form.clienteCorreo], form.clienteTelefono ? ['Teléfono', form.clienteTelefono] : null] as ([string, string] | null)[]).filter((x): x is [string, string] => Boolean(x)).map(([k, v]) => (
+                      <div key={k}>
+                        <p className="text-[10px] text-gray-400">{k}</p>
+                        <p className="text-xs font-semibold text-oriental-black break-all">{v || '—'}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-red-50 border border-red-100 rounded-xl p-3">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cotización</p>
+                    <p className="text-sm font-extrabold text-oriental-red mb-2">PROVISIONAL</p>
+                    <div className="space-y-1.5">
+                      <div>
+                        <p className="text-[10px] text-gray-400">Fecha</p>
+                        <p className="text-xs font-bold text-oriental-black">{fDate(hoyDate)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400">Vencimiento</p>
+                        <p className="text-xs font-bold text-oriental-black">{fDate(vencDate)}</p>
+                      </div>
+                      {form.agenteRetencion && <span className="inline-block text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">Ag. Retención</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financial summary (non-AC500) */}
+                {plan !== 'ac500' && (
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-oriental-black px-4 py-2.5">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Resumen financiero</p>
+                    </div>
+                    {rows.map(([label, val]) => (
+                      <div key={label} className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                        <span className="text-xs text-gray-500">{label}</span>
+                        <span className="text-xs font-semibold text-oriental-black">${fmt(val)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between items-center px-4 py-3 bg-amber-50">
+                      <span className="text-xs font-bold text-amber-800 uppercase">{labelInicial}</span>
+                      <span className="text-sm font-extrabold text-amber-900">${fmt(totalInicial)}</span>
+                    </div>
+                    {financiamiento != null && cuotaMensual != null && (
+                      <>
+                        <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">{plan === 'banco_100' ? 'Financiamiento 70%' : 'Financiamiento 60%'}</span>
+                          <span className="text-xs font-semibold text-oriental-black">${fmt(financiamiento)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">24 cuotas mensuales</span>
+                          <span className="text-xs font-semibold text-oriental-black">${fmt(cuotaMensual)} c/u</span>
+                        </div>
+                        {costoTotal != null && (
+                          <div className="flex justify-between items-center px-4 py-3 bg-green-50">
+                            <span className="text-xs font-bold text-green-800 uppercase">Costo Total</span>
+                            <span className="text-sm font-extrabold text-green-900">${fmt(costoTotal)}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* AC500 schedule preview */}
+                {plan === 'ac500' && planAC500Sel && (() => {
+                  const cprev = buildCuotasPreview(planAC500Sel)
+                  return (
+                    <div className="border border-blue-200 rounded-xl overflow-hidden">
+                      <div className="bg-blue-900 px-4 py-2.5 flex justify-between items-center">
+                        <p className="text-xs font-bold text-white">ASEGÚRATE $500 — {planAC500Sel.meses} MESES</p>
+                        <p className="text-[10px] text-blue-300">Cronograma de pagos</p>
+                      </div>
+                      <div className="bg-blue-50 flex justify-between items-center px-4 py-2.5 border-b border-blue-200">
+                        <span className="text-xs font-bold text-blue-900">Cuota 0 — Reserva (Separación)</span>
+                        <span className="text-xs font-bold text-blue-900">${fmt(planAC500Sel.cuota_0)}</span>
+                      </div>
+                      {cprev.slice(1).map((c, i) => (
+                        <div key={i} className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">{c.label}</span>
+                          <span className="text-xs font-semibold text-oriental-black">${fmt(c.monto)}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
+                        <span className="text-xs font-bold text-blue-900 uppercase">Total a pagar</span>
+                        <span className="text-sm font-extrabold text-blue-900">${fmt(planAC500Sel.total)}</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                <p className="text-[11px] text-gray-400 text-center bg-gray-50 rounded-lg px-3 py-2">
+                  Los precios son referenciales y están sujetos a disponibilidad al momento de la compra.
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex gap-3">
+                <button onClick={() => setShowPreview(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 font-medium hover:bg-gray-50 transition-colors">
+                  Volver a editar
+                </button>
+                <button onClick={() => { setShowPreview(false); enviar() }} className="flex-1 py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors">
+                  📄 Enviar cotización
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+      </>
     )
   }
 
