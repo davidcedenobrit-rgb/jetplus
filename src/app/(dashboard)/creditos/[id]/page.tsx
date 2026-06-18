@@ -127,10 +127,16 @@ export default async function CreditoDetallePage({
 
   // Resumen consolidado
   const totalFinanciado = creditos.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
-  const totalSaldo = creditos.reduce((s: number, c: any) => s + Number(c.saldo), 0)
   const totalInicial = creditos.reduce((s: number, c: any) => s + Number(c.inicial), 0)
-  const porcentajePagado = totalFinanciado > 0
-    ? ((totalFinanciado - totalSaldo) / totalFinanciado) * 100 : 0
+
+  // Calcular pagado desde las cuotas reales (más confiable que credito.saldo)
+  const totalPagado = cuotasEnriquecidas.reduce((s: number, c: any) => {
+    if (c.estado === 'pagada') return s + Number(c.monto_pagado ?? c.monto)
+    if (c.estado === 'abono_parcial') return s + Number(c.monto_pagado ?? 0)
+    return s
+  }, 0)
+  const totalSaldo = Math.max(0, totalFinanciado - totalPagado)
+  const porcentajePagado = totalFinanciado > 0 ? (totalPagado / totalFinanciado) * 100 : 0
 
   const cuotasPagadas    = cuotasEnriquecidas.filter(c => c.estado === 'pagada').length
   const cuotasPendientes = cuotasEnriquecidas.filter(c => c.estado === 'pendiente').length
@@ -218,7 +224,7 @@ export default async function CreditoDetallePage({
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-oriental-gray">Ya pagado</span>
-                <span className="font-bold text-green-600">{formatCurrency(Math.max(0, totalFinanciado - totalSaldo), credito.moneda)}</span>
+                <span className="font-bold text-green-600">{formatCurrency(totalPagado, credito.moneda)}</span>
               </div>
             </div>
 
