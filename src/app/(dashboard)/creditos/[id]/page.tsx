@@ -272,6 +272,11 @@ export default async function CreditoDetallePage({
                 {creditos.map((c: any) => {
                   const cuotasCred = cuotasEnriquecidas.filter(q => q.credito_id === c.id)
                   const pagadas = cuotasCred.filter(q => q.estado === 'pagada').length
+                  const saldoCred = Math.max(0, Number(c.monto_financiado) - cuotasCred.reduce((s: number, q: any) => {
+                    if (q.estado === 'pagada') return s + Number(q.monto_pagado ?? q.monto)
+                    if (q.estado === 'abono_parcial') return s + Number(q.monto_pagado ?? 0)
+                    return s
+                  }, 0))
                   return (
                     <div key={c.id} className={`rounded-lg p-3 border ${c.id === id ? 'border-oriental-red/30 bg-oriental-red/5' : 'border-gray-100'}`}>
                       <div className="flex items-center justify-between mb-1">
@@ -282,8 +287,8 @@ export default async function CreditoDetallePage({
                       </div>
                       <div className="flex justify-between mt-1">
                         <span className="text-xs text-oriental-gray">Saldo</span>
-                        <span className={`text-xs font-bold ${Number(c.saldo) > 0 ? 'text-oriental-red' : 'text-green-600'}`}>
-                          {formatCurrency(c.saldo, c.moneda)}
+                        <span className={`text-xs font-bold ${saldoCred > 0 ? 'text-oriental-red' : 'text-green-600'}`}>
+                          {formatCurrency(saldoCred, c.moneda)}
                         </span>
                       </div>
                       <Link href={`/creditos/${c.id}`} className="text-[10px] text-oriental-gray hover:text-oriental-black mt-1 block">
