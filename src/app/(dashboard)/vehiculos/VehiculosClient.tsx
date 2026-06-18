@@ -13,14 +13,14 @@ const estadoColors: Record<string, string> = {
   reservado: 'bg-purple-100 text-purple-800',
 }
 
-type FiltroVenta = 'todos' | 'ac500' | 'contado' | 'f_lao' | 'f_vehimotor'
+type FiltroVenta = 'todos' | 'ac500' | 'contado' | 'f_lao_vehi' | 'f_vehimotor'
 
 const FILTROS: { value: FiltroVenta; label: string; color: string }[] = [
-  { value: 'todos',       label: 'Todos',         color: '' },
-  { value: 'ac500',       label: 'AC500',          color: 'bg-emerald-50 border-emerald-400 text-emerald-800' },
-  { value: 'contado',     label: 'Contado',        color: 'bg-blue-50 border-blue-400 text-blue-800' },
-  { value: 'f_lao',       label: 'F. LAO',         color: 'bg-purple-50 border-purple-400 text-purple-800' },
-  { value: 'f_vehimotor', label: 'F. Vehimotor',  color: 'bg-indigo-50 border-indigo-400 text-indigo-800' },
+  { value: 'todos',        label: 'Todos',          color: '' },
+  { value: 'ac500',        label: 'AC500',           color: 'bg-emerald-50 border-emerald-400 text-emerald-800' },
+  { value: 'contado',      label: 'Contado',         color: 'bg-blue-50 border-blue-400 text-blue-800' },
+  { value: 'f_lao_vehi',   label: 'F. LAO + Vehi',  color: 'bg-purple-50 border-purple-400 text-purple-800' },
+  { value: 'f_vehimotor',  label: 'F. Vehimotor',   color: 'bg-indigo-50 border-indigo-400 text-indigo-800' },
 ]
 
 function PillBtn({ active, onClick, children, colorClass }: {
@@ -48,18 +48,18 @@ function categorizarVehiculo(v: any, planes: string[]): FiltroVenta {
   const tieneVehimotors = planes.includes('financiamiento_vehimotors')
 
   if (v.tipo_compra === 'contado') return 'contado'
-  if (tieneInicial && tieneVehimotors) return 'ac500'
-  if (tieneInicial) return 'f_lao'
+  // La Oriental inicial siempre viene acompañada de Vehimotors → F. LAO + Vehi
+  if (tieneInicial && tieneVehimotors) return 'f_lao_vehi'
   if (tieneVehimotors) return 'f_vehimotor'
-  return 'contado' // fallback para compras sin crédito registrado
+  return 'contado'
 }
 
 const badgeVenta: Record<FiltroVenta, { label: string; cls: string }> = {
-  todos:       { label: '',            cls: '' },
-  ac500:       { label: 'AC500',       cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-  contado:     { label: 'Contado',     cls: 'text-blue-700 bg-blue-50 border-blue-200' },
-  f_lao:       { label: 'F. LAO',      cls: 'text-purple-700 bg-purple-50 border-purple-200' },
-  f_vehimotor: { label: 'F. Vehimot', cls: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+  todos:        { label: '',              cls: '' },
+  ac500:        { label: 'AC500',         cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+  contado:      { label: 'Contado',       cls: 'text-blue-700 bg-blue-50 border-blue-200' },
+  f_lao_vehi:   { label: 'F. LAO + Vehi', cls: 'text-purple-700 bg-purple-50 border-purple-200' },
+  f_vehimotor:  { label: 'F. Vehimot',   cls: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
 }
 
 export default function VehiculosClient({
