@@ -65,6 +65,8 @@ export const CATEGORIAS_EGRESO_LABEL: Record<string, string> = {
 
 export const METODOS_PAGO = [
   'Transferencia bancaria',
+  'Transferencia bancaria a Vehimotor',
+  'Transferencia bancaria a Oriental',
   'Pago móvil',
   'Zelle',
   'Binance',
