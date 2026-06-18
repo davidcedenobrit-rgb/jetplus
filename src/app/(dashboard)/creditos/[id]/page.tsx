@@ -129,13 +129,14 @@ export default async function CreditoDetallePage({
   const totalFinanciado = creditos.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
   const totalInicial = creditos.reduce((s: number, c: any) => s + Number(c.inicial), 0)
 
-  // Calcular pagado desde las cuotas reales (más confiable que credito.saldo)
-  const totalPagado = cuotasEnriquecidas.reduce((s: number, c: any) => {
-    if (c.estado === 'pagada') return s + Number(c.monto_pagado ?? c.monto)
-    if (c.estado === 'abono_parcial') return s + Number(c.monto_pagado ?? 0)
+  // Saldo = suma de lo que falta pagar en cuotas pendientes/vencidas/abono
+  // (el inicial ya está pagado al crear el crédito, así que no suma al saldo)
+  const totalSaldo = cuotasEnriquecidas.reduce((s: number, c: any) => {
+    if (c.estado === 'pendiente' || c.estado === 'vencida') return s + Number(c.monto)
+    if (c.estado === 'abono_parcial') return s + Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0))
     return s
   }, 0)
-  const totalSaldo = Math.max(0, totalFinanciado - totalPagado)
+  const totalPagado = Math.max(0, totalFinanciado - totalSaldo)
   const porcentajePagado = totalFinanciado > 0 ? (totalPagado / totalFinanciado) * 100 : 0
 
   const cuotasPagadas    = cuotasEnriquecidas.filter(c => c.estado === 'pagada').length
@@ -272,11 +273,11 @@ export default async function CreditoDetallePage({
                 {creditos.map((c: any) => {
                   const cuotasCred = cuotasEnriquecidas.filter(q => q.credito_id === c.id)
                   const pagadas = cuotasCred.filter(q => q.estado === 'pagada').length
-                  const saldoCred = Math.max(0, Number(c.monto_financiado) - cuotasCred.reduce((s: number, q: any) => {
-                    if (q.estado === 'pagada') return s + Number(q.monto_pagado ?? q.monto)
-                    if (q.estado === 'abono_parcial') return s + Number(q.monto_pagado ?? 0)
+                  const saldoCred = cuotasCred.reduce((s: number, q: any) => {
+                    if (q.estado === 'pendiente' || q.estado === 'vencida') return s + Number(q.monto)
+                    if (q.estado === 'abono_parcial') return s + Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
                     return s
-                  }, 0))
+                  }, 0)
                   return (
                     <div key={c.id} className={`rounded-lg p-3 border ${c.id === id ? 'border-oriental-red/30 bg-oriental-red/5' : 'border-gray-100'}`}>
                       <div className="flex items-center justify-between mb-1">

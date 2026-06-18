@@ -79,26 +79,26 @@ export default async function VehiculoDetallePage({
     cuotasResumen = cuotas ?? []
   }
 
-  // Calcular métricas financieras desde cuotas reales (más confiable que credito.saldo)
+  // Calcular métricas financieras desde cuotas pendientes (incluye el inicial ya pagado)
   const totalFinanciado = (creditos ?? []).reduce((s: number, c: any) => s + Number(c.monto_financiado ?? 0), 0)
-  const totalPagado = cuotasResumen.reduce((s: number, c: any) => {
-    if (c.estado === 'pagada') return s + Number(c.monto_pagado ?? c.monto)
-    if (c.estado === 'abono_parcial') return s + Number(c.monto_pagado ?? 0)
+  const totalSaldo = cuotasResumen.reduce((s: number, c: any) => {
+    if (c.estado === 'pendiente' || c.estado === 'vencida') return s + Number(c.monto)
+    if (c.estado === 'abono_parcial') return s + Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0))
     return s
   }, 0)
-  const totalSaldo = Math.max(0, totalFinanciado - totalPagado)
+  const totalPagado = Math.max(0, totalFinanciado - totalSaldo)
   const porcentajePagado = totalFinanciado > 0 ? Math.round((totalPagado / totalFinanciado) * 100) : 0
 
-  // Saldo por crédito calculado desde sus cuotas (para el Desglose)
+  // Saldo por crédito calculado desde sus cuotas pendientes (para el Desglose)
   const saldoPorCredito = (creditoId: string, montoFinanciado: number) => {
-    const pagado = cuotasResumen
+    const pendiente = cuotasResumen
       .filter((q: any) => q.credito_id === creditoId)
       .reduce((s: number, q: any) => {
-        if (q.estado === 'pagada') return s + Number(q.monto_pagado ?? q.monto)
-        if (q.estado === 'abono_parcial') return s + Number(q.monto_pagado ?? 0)
+        if (q.estado === 'pendiente' || q.estado === 'vencida') return s + Number(q.monto)
+        if (q.estado === 'abono_parcial') return s + Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
         return s
       }, 0)
-    return Math.max(0, Number(montoFinanciado) - pagado)
+    return pendiente
   }
 
   const cuotasPagadas = cuotasResumen.filter((c: any) => c.estado === 'pagada').length

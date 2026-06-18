@@ -65,13 +65,12 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
 
     ecTotalFinanciado = creditosVehiculo.reduce((s: number, c: any) => s + Number(c.monto_financiado ?? 0), 0)
 
-    // Calcular desde cuotas reales (credito.saldo puede estar desactualizado)
-    const ecTotalPagado = cuotasVehiculo.reduce((s: number, q: any) => {
-      if (q.estado === 'pagada') return s + Number(q.monto_pagado ?? q.monto)
-      if (q.estado === 'abono_parcial') return s + Number(q.monto_pagado ?? 0)
+    // Saldo = cuotas pendientes (el inicial ya pagado al crear el crédito no suma)
+    ecTotalSaldo = cuotasVehiculo.reduce((s: number, q: any) => {
+      if (q.estado === 'pendiente' || q.estado === 'vencida') return s + Number(q.monto)
+      if (q.estado === 'abono_parcial') return s + Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
       return s
     }, 0)
-    ecTotalSaldo = Math.max(0, ecTotalFinanciado - ecTotalPagado)
     ecPct = ecTotalFinanciado > 0 ? Math.round((ecTotalPagado / ecTotalFinanciado) * 100) : 0
     ecPagadas = cuotasVehiculo.filter((c: any) => c.estado === 'pagada').length
     ecPendientes = cuotasVehiculo.filter((c: any) => c.estado === 'pendiente').length
@@ -80,11 +79,11 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
     creditosDesglose = creditosVehiculo.map((c: any) => {
       const cuotasCred = cuotasVehiculo.filter((q: any) => q.credito_id === c.id)
       const pagadasCred = cuotasCred.filter((q: any) => q.estado === 'pagada').length
-      const saldoCred = Math.max(0, Number(c.monto_financiado ?? 0) - cuotasCred.reduce((s: number, q: any) => {
-        if (q.estado === 'pagada') return s + Number(q.monto_pagado ?? q.monto)
-        if (q.estado === 'abono_parcial') return s + Number(q.monto_pagado ?? 0)
+      const saldoCred = cuotasCred.reduce((s: number, q: any) => {
+        if (q.estado === 'pendiente' || q.estado === 'vencida') return s + Number(q.monto)
+        if (q.estado === 'abono_parcial') return s + Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
         return s
-      }, 0))
+      }, 0)
       const planTipo = c.plan_tipo
       const planNombre =
         planTipo === 'inicial_la_oriental' ? 'La Oriental'
