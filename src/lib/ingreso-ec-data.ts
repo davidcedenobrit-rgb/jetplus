@@ -71,7 +71,7 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
       if (q.estado === 'abono_parcial') return s + Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
       return s
     }, 0)
-    ecPct = ecTotalFinanciado > 0 ? Math.round((ecTotalPagado / ecTotalFinanciado) * 100) : 0
+    ecPct = ecTotalFinanciado > 0 ? Math.round(((ecTotalFinanciado - ecTotalSaldo) / ecTotalFinanciado) * 100) : 0
     ecPagadas = cuotasVehiculo.filter((c: any) => c.estado === 'pagada').length
     ecPendientes = cuotasVehiculo.filter((c: any) => c.estado === 'pendiente').length
     ecVencidas = cuotasVehiculo.filter((c: any) => c.estado === 'vencida').length
