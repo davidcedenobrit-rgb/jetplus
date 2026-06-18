@@ -63,10 +63,27 @@ export const CATEGORIAS_EGRESO_LABEL: Record<string, string> = {
   otros: 'Otros',
 }
 
+export const BANCOS_VEHIMOTORS = [
+  { nombre: 'Bancamiga',          cuenta: '0172-0110-7511-0601-8060' },
+  { nombre: 'Delsur',             cuenta: '0157-0056-4637-5621-5020' },
+  { nombre: 'Mercantil',          cuenta: '0105-0699-9316-9922-6628' },
+  { nombre: 'Provincial',         cuenta: '0108-0956-8701-0002-6927' },
+  { nombre: 'Banco Exterior',     cuenta: '0115-0010-2110-0629-0115' },
+  { nombre: 'Banco del Tesoro',   cuenta: '0163-0903-6790-3300-8739' },
+  { nombre: 'BNC',                cuenta: '0191-0098-7121-9828-9943' },
+  { nombre: 'Banesco',            cuenta: '0134-0031-8103-1115-9963' },
+  { nombre: 'Banco de Venezuela', cuenta: '0102-0762-2100-0008-3409' },
+  { nombre: 'Banplus',            cuenta: '0174-0131-9513-1479-5780' },
+  { nombre: '100% Banco',         cuenta: '0156-0030-6602-0216-3130' },
+  { nombre: 'Bancaribe',          cuenta: '0114-0165-1516-5027-0262' },
+  { nombre: 'Banco Fondo Común',  cuenta: '0151-0100-8010-0363-8142' },
+]
+
 export const METODOS_PAGO = [
   'Transferencia bancaria',
   'Transferencia bancaria a Vehimotor',
   'Transferencia bancaria a Oriental',
+  ...BANCOS_VEHIMOTORS.map(b => `VM- ${b.nombre}`),
   'Pago móvil',
   'Zelle',
   'Binance',
@@ -90,4 +107,5 @@ export const BANCOS_VE = [
   'Bicentenario',
   'BNC',
   'Otro',
+  ...BANCOS_VEHIMOTORS.map(b => `VM- ${b.nombre}`),
 ]

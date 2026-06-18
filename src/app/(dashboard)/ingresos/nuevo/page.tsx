@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
+import { METODOS_PAGO, BANCOS_VE, BANCOS_VEHIMOTORS } from '@/lib/utils'
 import { IngresoSchema } from '@/lib/validations'
 import { ArrowLeft, Save, Search, X, Car, Hash, Check, CreditCard, AlertCircle, Calendar } from 'lucide-react'
 import Link from 'next/link'
@@ -1064,7 +1064,14 @@ function NuevoIngresoPageInner() {
             )}
             <div>
               <label className="label">Método de pago *</label>
-              <select className="select" value={metodoPago} onChange={e => setMetodoPago(e.target.value)} required>
+              <select className="select" value={metodoPago} onChange={e => {
+                const val = e.target.value
+                setMetodoPago(val)
+                if (val.startsWith('VM- ')) {
+                  setBancoEmisor(val)
+                  setBancoReceptor(val)
+                }
+              }} required>
                 <option value="">Seleccionar...</option>
                 {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
