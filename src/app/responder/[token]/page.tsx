@@ -14,9 +14,19 @@ export default async function ResponderPage({
 
   const { data: cot } = await supabase
     .from('cotizaciones')
-    .select('numero, marca, modelo, total_inicial, cliente_nombre, estado')
+    .select('numero, marca, modelo, total_inicial, cliente_nombre, estado, descuento_solicitado')
     .eq('token_respuesta', token)
     .single()
+
+  const accionInicial =
+    r === 'aceptar'    ? 'aceptada' as const :
+    r === 'posponer'   ? 'pospuesta' as const :
+    r === 'rechazar'   ? 'rechazar_motivo' as const :
+    r === 'descuento'  ? 'descuento_form' as const :
+    undefined
+
+  // Allow showing form if: sin_respuesta OR has pending discount request (cotización was re-sent)
+  const puedeResponder = cot && (cot.estado === 'sin_respuesta' || cot.descuento_solicitado)
 
   return (
     <div style={{ minHeight: '100vh', background: '#F2F2F2', fontFamily: "'Inter', system-ui, sans-serif", display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 40 }}>
@@ -28,7 +38,7 @@ export default async function ResponderPage({
             <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginBottom: 8 }}>Enlace no válido</h2>
             <p style={{ color: '#6b7280', fontSize: 14 }}>Este enlace de cotización no existe o ya expiró.</p>
           </div>
-        ) : cot.estado !== 'sin_respuesta' ? (
+        ) : !puedeResponder ? (
           <div style={{ padding: '48px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>
               {cot.estado === 'aceptada' ? '✅' : cot.estado === 'pospuesta' ? '⏸' : '❌'}
@@ -46,7 +56,7 @@ export default async function ResponderPage({
             modelo={cot.modelo}
             totalInicial={Number(cot.total_inicial)}
             clienteNombre={cot.cliente_nombre}
-            accionInicial={r === 'aceptar' ? 'aceptada' : r === 'posponer' ? 'pospuesta' : r === 'rechazar' ? 'rechazar_motivo' : undefined}
+            accionInicial={accionInicial}
           />
         )}
 

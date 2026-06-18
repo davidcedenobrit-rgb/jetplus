@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 
 const LOGO = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
 
-type Step = 'idle' | 'rechazar_motivo' | 'loading' | 'done' | 'error'
+type Step = 'idle' | 'rechazar_motivo' | 'descuento_form' | 'loading' | 'done' | 'descuento_ok' | 'error'
 
 export default function RespuestaForm({
   token,
@@ -21,9 +21,13 @@ export default function RespuestaForm({
   modelo: string
   totalInicial: number
   clienteNombre: string
-  accionInicial?: 'aceptada' | 'pospuesta' | 'rechazar_motivo'
+  accionInicial?: 'aceptada' | 'pospuesta' | 'rechazar_motivo' | 'descuento_form'
 }) {
-  const [step, setStep] = useState<Step>(accionInicial === 'rechazar_motivo' ? 'rechazar_motivo' : 'idle')
+  const [step, setStep] = useState<Step>(
+    accionInicial === 'rechazar_motivo' ? 'rechazar_motivo'
+    : accionInicial === 'descuento_form' ? 'descuento_form'
+    : 'idle'
+  )
 
   useEffect(() => {
     if (accionInicial === 'aceptada' || accionInicial === 'pospuesta') {
@@ -31,7 +35,9 @@ export default function RespuestaForm({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
   const [motivo, setMotivo] = useState('')
+  const [motivoDescuento, setMotivoDescuento] = useState('')
   const [respuestaLabel, setRespuestaLabel] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -59,6 +65,25 @@ export default function RespuestaForm({
     }
   }
 
+  async function solicitarDescuento() {
+    setStep('loading')
+    try {
+      const res = await fetch('/api/cotizaciones/solicitar-descuento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, motivo: motivoDescuento.trim() || null }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error ?? 'Error')
+      }
+      setStep('descuento_ok')
+    } catch (e: any) {
+      setErrorMsg(e.message ?? 'Error al procesar')
+      setStep('error')
+    }
+  }
+
   const fmt = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   if (step === 'done') {
@@ -70,6 +95,19 @@ export default function RespuestaForm({
           Tu respuesta <strong style={{ color: '#111' }}>"{respuestaLabel}"</strong> fue registrada.
         </p>
         <p style={{ color: '#9ca3af', fontSize: 13 }}>Un asesor de La Oriental se pondrá en contacto contigo pronto.</p>
+      </div>
+    )
+  }
+
+  if (step === 'descuento_ok') {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 0' }}>
+        <div style={{ fontSize: 52, marginBottom: 16 }}>💬</div>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 8 }}>¡Solicitud enviada!</h2>
+        <p style={{ color: '#6b7280', fontSize: 15, marginBottom: 8 }}>
+          Hemos notificado a nuestro equipo. Te contactaremos con una propuesta actualizada pronto.
+        </p>
+        <p style={{ color: '#9ca3af', fontSize: 13 }}>La Oriental Automotors · MG &amp; MAXUS</p>
       </div>
     )
   }
@@ -123,12 +161,35 @@ export default function RespuestaForm({
             <button onClick={() => setStep('idle')} style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: '12px', borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>← Volver</button>
             <button
               onClick={() => {
-                if (!motivo.trim()) { setErrorMsg(''); enviar('rechazada', '(Sin motivo indicado)') }
+                if (!motivo.trim()) enviar('rechazada', '(Sin motivo indicado)')
                 else enviar('rechazada', motivo.trim())
               }}
               style={{ flex: 2, background: '#dc2626', color: '#fff', border: 'none', padding: '12px', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
             >
               Confirmar rechazo
+            </button>
+          </div>
+        </div>
+      ) : step === 'descuento_form' ? (
+        <div>
+          <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14, padding: '16px 18px', marginBottom: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#92400e', margin: '0 0 6px' }}>💬 Solicitar revisión de precio</p>
+            <p style={{ fontSize: 13, color: '#78350f', margin: 0 }}>Cuéntanos qué precio se adapta mejor a ti y nuestro equipo te enviará una propuesta actualizada.</p>
+          </div>
+          <textarea
+            value={motivoDescuento}
+            onChange={e => setMotivoDescuento(e.target.value)}
+            placeholder="Ej: el precio está un poco alto para mi presupuesto, ¿hay algún descuento disponible?"
+            rows={3}
+            style={{ width: '100%', borderRadius: 12, border: '1.5px solid #fde68a', padding: '10px 14px', fontSize: 13, fontFamily: 'inherit', resize: 'none', outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
+          />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setStep('idle')} style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: '12px', borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>← Volver</button>
+            <button
+              onClick={solicitarDescuento}
+              style={{ flex: 2, background: '#92400e', color: '#fff', border: 'none', padding: '12px', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
+            >
+              Enviar solicitud
             </button>
           </div>
         </div>
@@ -141,6 +202,15 @@ export default function RespuestaForm({
             style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', padding: '16px 20px', borderRadius: 14, fontWeight: 800, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: step === 'loading' ? .6 : 1 }}
           >
             ✅ Sí, acepto esta cotización
+          </button>
+
+          {/* Solicitar descuento */}
+          <button
+            disabled={step === 'loading'}
+            onClick={() => setStep('descuento_form')}
+            style={{ width: '100%', background: '#fffbeb', color: '#92400e', border: '2px solid #fde68a', padding: '14px 20px', borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: step === 'loading' ? .6 : 1 }}
+          >
+            💬 Solicitar revisión de precio
           </button>
 
           {/* Posponer */}

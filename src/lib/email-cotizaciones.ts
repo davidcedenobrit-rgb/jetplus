@@ -129,6 +129,14 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
         </tr>
         <tr>
           <td style="padding-bottom:10px">
+            <a href="${responderUrl}?r=descuento"
+              style="display:block;background:#fffbeb;color:#92400e;padding:12px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700;text-align:center;border:2px solid #fde68a">
+              💬 Solicitar revisión de precio
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:10px">
             <a href="${responderUrl}?r=posponer"
               style="display:block;background:#fff;color:#374151;padding:12px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700;text-align:center;border:2px solid #d1d5db">
               ⏸ Por ahora no compraré
@@ -234,4 +242,56 @@ export async function enviarNotificacionRojas(opts: {
   })
 
   if (error) throw new Error(`Resend error (rojas): ${JSON.stringify(error)}`)
+}
+
+export async function enviarNotificacionDescuento(opts: {
+  numero: string
+  clienteNombre: string
+  clienteCorreo: string
+  marca: string
+  modelo: string
+  totalInicial: number
+  cuotaMensual: number | null
+  motivo: string | null
+  cotizacionId: string
+}) {
+  const resend = getResend()
+
+  const body = `
+    <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">💬 Solicitud de revisión de precio</p>
+    <h1 style="font-family:sans-serif;font-size:18px;font-weight:800;color:#111;margin:0 0 4px">Un cliente pidió revisión del precio</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">El cliente ha solicitado una revisión del precio antes de tomar una decisión.</p>
+
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;margin-bottom:18px">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${row('N° Cotización', `<span style="font-family:monospace;color:#C41E3A">${opts.numero}</span>`)}
+        ${row('Cliente', opts.clienteNombre)}
+        ${row('Correo', opts.clienteCorreo)}
+        ${row('Vehículo', `${opts.marca} ${opts.modelo}`)}
+        ${row('Total inicial', `<strong style="font-size:15px;color:#92400e">$${fmt(opts.totalInicial)}</strong>`)}
+        ${opts.cuotaMensual ? row('Cuota mensual', `<strong>$${fmt(opts.cuotaMensual)}</strong>`) : ''}
+      </table>
+    </div>
+
+    ${opts.motivo ? `
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:18px">
+      <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px">Mensaje del cliente</p>
+      <p style="font-family:sans-serif;font-size:14px;color:#111;margin:0;font-style:italic">"${opts.motivo}"</p>
+    </div>
+    ` : ''}
+
+    <a href="${APP_URL}/link-ventas"
+      style="display:inline-block;background:#92400e;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700">
+      Editar y reenviar cotización →
+    </a>
+  `
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: [ROJAS],
+    subject: `💬 ${opts.clienteNombre} solicita revisión de precio — ${opts.numero} · ${opts.marca} ${opts.modelo}`,
+    html: wrap(body),
+  })
+
+  if (error) throw new Error(`Resend error (descuento): ${JSON.stringify(error)}`)
 }

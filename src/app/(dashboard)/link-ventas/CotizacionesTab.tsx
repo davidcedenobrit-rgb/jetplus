@@ -34,6 +34,8 @@ interface Cotizacion {
   costo_total: number
   estado: Estado
   motivo_rechazo: string | null
+  descuento_solicitado: boolean
+  motivo_descuento: string | null
   created_at: string
 }
 
@@ -116,6 +118,24 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
   })
   const [eError, setEError] = useState('')
   const [eSaving, setESaving] = useState(false)
+
+  // Reenviar
+  const [reenviarMsg, setReenviarMsg] = useState('')
+  const [reenviarLoading, setReenviarLoading] = useState(false)
+
+  async function reenviarCotizacion() {
+    setReenviarLoading(true); setReenviarMsg('')
+    try {
+      const res = await fetch(`/api/cotizaciones/${cot.id}/reenviar`, { method: 'POST' })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j.error ?? 'Error')
+      setCot(prev => ({ ...prev, descuento_solicitado: false }))
+      onMontosChange(cot.id, { descuento_solicitado: false })
+      setReenviarMsg('✓ Cotización reenviada al cliente.')
+    } catch (e: any) {
+      setReenviarMsg(`Error: ${e.message}`)
+    } finally { setReenviarLoading(false) }
+  }
 
   async function cambiarEstado(estado: Estado) {
     if (estado === 'rechazada' && !motivo.trim()) { setMotivoError('Indica el motivo del rechazo.'); return }
@@ -297,6 +317,52 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
             </div>
           )}
 
+          {/* Solicitud de descuento */}
+          {cot.descuento_solicitado && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💬</span>
+                <div>
+                  <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">Cliente solicita revisión de precio</p>
+                  <p className="text-[11px] text-amber-600 mt-0.5">Edita los montos y reenvía la cotización actualizada al cliente.</p>
+                </div>
+              </div>
+              {cot.motivo_descuento && (
+                <div className="bg-white border border-amber-200 rounded-lg px-3 py-2">
+                  <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1">Mensaje del cliente</p>
+                  <p className="text-sm text-amber-900 italic">"{cot.motivo_descuento}"</p>
+                </div>
+              )}
+              <button
+                onClick={reenviarCotizacion}
+                disabled={reenviarLoading}
+                className="w-full py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+              >
+                {reenviarLoading ? 'Reenviando...' : '📤 Reenviar cotización actualizada al cliente'}
+              </button>
+              {reenviarMsg && (
+                <p className={`text-xs font-semibold ${reenviarMsg.startsWith('✓') ? 'text-green-700' : 'text-red-600'}`}>{reenviarMsg}</p>
+              )}
+            </div>
+          )}
+
+          {/* Reenviar (sin solicitud activa) */}
+          {!cot.descuento_solicitado && (
+            <div className="border border-gray-100 rounded-xl p-4">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Reenviar cotización</p>
+              <button
+                onClick={reenviarCotizacion}
+                disabled={reenviarLoading}
+                className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                {reenviarLoading ? 'Reenviando...' : '📤 Reenviar PDF al cliente'}
+              </button>
+              {reenviarMsg && (
+                <p className={`text-xs font-semibold mt-2 ${reenviarMsg.startsWith('✓') ? 'text-green-700' : 'text-red-600'}`}>{reenviarMsg}</p>
+              )}
+            </div>
+          )}
+
           {/* Cambiar estado */}
           <div className="border border-gray-100 rounded-xl p-4">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3">Cambiar estado</p>
@@ -339,7 +405,7 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
 }
 
 /* ── Main Tab ── */
-type Filtro = 'todas' | Estado
+type Filtro = 'todas' | Estado | 'descuento'
 
 export default function CotizacionesTab() {
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([])
@@ -364,7 +430,9 @@ export default function CotizacionesTab() {
     setSelected(prev => prev && prev.id === id ? { ...prev, ...partial } : prev)
   }, [])
 
-  const visible = filtro === 'todas' ? cotizaciones : cotizaciones.filter(c => c.estado === filtro)
+  const visible = filtro === 'todas' ? cotizaciones
+    : filtro === 'descuento' ? cotizaciones.filter(c => c.descuento_solicitado)
+    : cotizaciones.filter(c => c.estado === filtro)
 
   const counts = {
     todas: cotizaciones.length,
@@ -372,6 +440,7 @@ export default function CotizacionesTab() {
     aceptada: cotizaciones.filter(c => c.estado === 'aceptada').length,
     pospuesta: cotizaciones.filter(c => c.estado === 'pospuesta').length,
     rechazada: cotizaciones.filter(c => c.estado === 'rechazada').length,
+    descuento: cotizaciones.filter(c => c.descuento_solicitado).length,
   }
 
   if (loading) return <div className="card p-8 text-center text-oriental-gray text-sm">Cargando cotizaciones...</div>
@@ -386,12 +455,13 @@ export default function CotizacionesTab() {
     )
   }
 
-  const filtros: { key: Filtro; label: string; count: number }[] = [
-    { key: 'todas',         label: 'Todas',           count: counts.todas },
-    { key: 'sin_respuesta', label: 'Sin respuesta',   count: counts.sin_respuesta },
-    { key: 'aceptada',      label: 'Aceptadas',       count: counts.aceptada },
-    { key: 'pospuesta',     label: 'Por ahora no',    count: counts.pospuesta },
-    { key: 'rechazada',     label: 'No les interesó', count: counts.rechazada },
+  const filtros: { key: Filtro; label: string; count: number; amber?: boolean }[] = [
+    { key: 'todas',         label: 'Todas',              count: counts.todas },
+    { key: 'descuento',     label: '💬 Piden descuento', count: counts.descuento, amber: true },
+    { key: 'sin_respuesta', label: 'Sin respuesta',      count: counts.sin_respuesta },
+    { key: 'aceptada',      label: 'Aceptadas',          count: counts.aceptada },
+    { key: 'pospuesta',     label: 'Por ahora no',       count: counts.pospuesta },
+    { key: 'rechazada',     label: 'No les interesó',    count: counts.rechazada },
   ]
 
   return (
@@ -419,11 +489,14 @@ export default function CotizacionesTab() {
             key={f.key}
             onClick={() => setFiltro(f.key)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
-              filtro === f.key ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'
+              filtro === f.key
+                ? f.amber ? 'border-amber-600 bg-amber-600 text-white' : 'border-oriental-black bg-oriental-black text-white'
+                : f.amber && f.count > 0 ? 'border-amber-400 text-amber-700 hover:border-amber-500 animate-pulse'
+                : 'border-gray-200 text-gray-500 hover:border-gray-300'
             }`}
           >
             {f.label}
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${filtro === f.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${filtro === f.key ? 'bg-white/20 text-white' : f.amber && f.count > 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
               {f.count}
             </span>
           </button>
@@ -477,6 +550,11 @@ export default function CotizacionesTab() {
                     </td>
                     <td className="px-4 py-3">
                       <EstadoBadge estado={c.estado ?? 'sin_respuesta'} />
+                      {c.descuento_solicitado && (
+                        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
+                          💬 Pide descuento
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <a
@@ -503,7 +581,14 @@ export default function CotizacionesTab() {
                     <span className="font-mono text-xs font-bold text-oriental-red">{c.numero}</span>
                     <p className="text-[11px] text-oriental-gray mt-0.5">{fmtFecha(c.fecha)} · {c.vendedora_nombre}</p>
                   </div>
-                  <EstadoBadge estado={c.estado ?? 'sin_respuesta'} />
+                  <div className="flex flex-col items-end gap-1">
+                    <EstadoBadge estado={c.estado ?? 'sin_respuesta'} />
+                    {c.descuento_solicitado && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
+                        💬 Pide descuento
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="font-bold text-sm text-oriental-black">{c.modelo}</p>
                 <p className="text-xs text-oriental-gray mb-2">{c.cliente_nombre} · {c.cliente_ci_rif}</p>
