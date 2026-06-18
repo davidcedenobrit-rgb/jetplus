@@ -64,7 +64,6 @@ export async function POST(req: Request) {
       .from('catalogo_ventas')
       .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, diferencial_pct, tasa_banco_pct')
       .eq('id', vehiculoId)
-      .eq('disponible', true)
       .single()
 
     if (!vehiculo) {
