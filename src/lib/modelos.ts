@@ -9,6 +9,7 @@ export const MODELOS_MG = [
   'MG ZS Sincrónica Clásica',
   'MG ZS AT Clásica',
   'MG RX5 1.5T DCT',
+  'MG RX8 DCT',
   'MG RX9 COM 4x2',
   'MG RX9 LUX 4x4',
   'MG4 URBAN COM',
