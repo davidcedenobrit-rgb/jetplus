@@ -192,7 +192,7 @@ export default function CreditosClient({
                             AC500
                           </span>
                         )}
-                        {tipos.map(tipo => (
+                        {tipos.filter(Boolean).map(tipo => (
                           <span key={tipo} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${planBadge(tipo)}`}>
                             {planLabel(tipo)}
                           </span>
