@@ -6,20 +6,26 @@ import VehiculosClient from './VehiculosClient'
 export default async function VehiculosPage() {
   const supabase = await createClient()
 
-  const [{ data: vehiculos }, { data: ac500Creds }] = await Promise.all([
+  const [{ data: vehiculos }, { data: credPlanes }] = await Promise.all([
     supabase
       .from('vehiculos')
       .select('*, clientes(nombre, cedula_rif)')
       .order('created_at', { ascending: false }),
     supabase
       .from('creditos')
-      .select('vehiculo_id')
-      .eq('plan_tipo', 'inicial_la_oriental')
+      .select('vehiculo_id, plan_tipo')
       .not('vehiculo_id', 'is', null),
   ])
 
   const lista = vehiculos ?? []
-  const ac500Ids = (ac500Creds ?? []).map(c => c.vehiculo_id as string)
+
+  // Build map vehiculo_id → Set of plan_tipos
+  const planesMap: Record<string, string[]> = {}
+  for (const c of credPlanes ?? []) {
+    if (!c.vehiculo_id || !c.plan_tipo) continue
+    if (!planesMap[c.vehiculo_id]) planesMap[c.vehiculo_id] = []
+    if (!planesMap[c.vehiculo_id].includes(c.plan_tipo)) planesMap[c.vehiculo_id].push(c.plan_tipo)
+  }
 
   return (
     <div className="p-4 lg:p-8">
@@ -33,7 +39,7 @@ export default async function VehiculosPage() {
         </Link>
       </div>
 
-      <VehiculosClient vehiculos={lista} ac500Ids={ac500Ids} />
+      <VehiculosClient vehiculos={lista} planesMap={planesMap} />
     </div>
   )
 }

@@ -13,13 +13,27 @@ const estadoColors: Record<string, string> = {
   reservado: 'bg-purple-100 text-purple-800',
 }
 
-function PillBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+type FiltroVenta = 'todos' | 'ac500' | 'contado' | 'f_lao' | 'f_vehimotor'
+
+const FILTROS: { value: FiltroVenta; label: string; color: string }[] = [
+  { value: 'todos',       label: 'Todos',         color: '' },
+  { value: 'ac500',       label: 'AC500',          color: 'bg-emerald-50 border-emerald-400 text-emerald-800' },
+  { value: 'contado',     label: 'Contado',        color: 'bg-blue-50 border-blue-400 text-blue-800' },
+  { value: 'f_lao',       label: 'F. LAO',         color: 'bg-purple-50 border-purple-400 text-purple-800' },
+  { value: 'f_vehimotor', label: 'F. Vehimotor',  color: 'bg-indigo-50 border-indigo-400 text-indigo-800' },
+]
+
+function PillBtn({ active, onClick, children, colorClass }: {
+  active: boolean; onClick: () => void; children: React.ReactNode; colorClass?: string
+}) {
   return (
     <button
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all whitespace-nowrap ${
         active
-          ? 'bg-oriental-black text-white border-oriental-black'
+          ? colorClass
+            ? colorClass + ' border-2'
+            : 'bg-oriental-black text-white border-oriental-black'
           : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
       }`}
     >
@@ -28,12 +42,37 @@ function PillBtn({ active, onClick, children }: { active: boolean; onClick: () =
   )
 }
 
-export default function VehiculosClient({ vehiculos, ac500Ids = [] }: { vehiculos: any[]; ac500Ids?: string[] }) {
-  const ac500Set = useMemo(() => new Set(ac500Ids), [ac500Ids])
+// Determine sale category for a vehicle
+function categorizarVehiculo(v: any, planes: string[]): FiltroVenta {
+  const tieneInicial = planes.includes('inicial_la_oriental')
+  const tieneVehimotors = planes.includes('financiamiento_vehimotors')
+
+  if (v.tipo_compra === 'contado') return 'contado'
+  if (tieneInicial && tieneVehimotors) return 'ac500'
+  if (tieneInicial) return 'f_lao'
+  if (tieneVehimotors) return 'f_vehimotor'
+  return 'contado' // fallback para compras sin crédito registrado
+}
+
+const badgeVenta: Record<FiltroVenta, { label: string; cls: string }> = {
+  todos:       { label: '',            cls: '' },
+  ac500:       { label: 'AC500',       cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+  contado:     { label: 'Contado',     cls: 'text-blue-700 bg-blue-50 border-blue-200' },
+  f_lao:       { label: 'F. LAO',      cls: 'text-purple-700 bg-purple-50 border-purple-200' },
+  f_vehimotor: { label: 'F. Vehimot', cls: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+}
+
+export default function VehiculosClient({
+  vehiculos,
+  planesMap = {},
+}: {
+  vehiculos: any[]
+  planesMap?: Record<string, string[]>
+}) {
   const [marca, setMarca] = useState<string | null>(null)
   const [modelo, setModelo] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
-  const [filtroAc500, setFiltroAc500] = useState<'todos' | 'ac500' | 'no_ac500'>('todos')
+  const [filtroVenta, setFiltroVenta] = useState<FiltroVenta>('todos')
 
   const marcas = useMemo(() => {
     const set = new Set(vehiculos.map(v => v.marca).filter(Boolean))
@@ -46,13 +85,20 @@ export default function VehiculosClient({ vehiculos, ac500Ids = [] }: { vehiculo
     return Array.from(set).sort()
   }, [vehiculos, marca])
 
+  // Pre-categorize all vehicles
+  const vehiculosConCategoria = useMemo(() =>
+    vehiculos.map(v => ({
+      ...v,
+      _categoria: categorizarVehiculo(v, planesMap[v.id] ?? []),
+    })),
+  [vehiculos, planesMap])
+
   const visible = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    return vehiculos.filter(v => {
+    return vehiculosConCategoria.filter(v => {
       if (marca && v.marca !== marca) return false
       if (modelo && v.modelo !== modelo) return false
-      if (filtroAc500 === 'ac500' && !ac500Set.has(v.id)) return false
-      if (filtroAc500 === 'no_ac500' && ac500Set.has(v.id)) return false
+      if (filtroVenta !== 'todos' && v._categoria !== filtroVenta) return false
       if (q) {
         const haystack = [v.placa, v.modelo, v.marca, v.version, v.color, v.clientes?.nombre, v.clientes?.cedula_rif]
           .filter(Boolean).join(' ').toLowerCase()
@@ -60,18 +106,22 @@ export default function VehiculosClient({ vehiculos, ac500Ids = [] }: { vehiculo
       }
       return true
     })
-  }, [vehiculos, marca, modelo, busqueda, filtroAc500, ac500Set])
+  }, [vehiculosConCategoria, marca, modelo, busqueda, filtroVenta])
 
   function seleccionarMarca(m: string) {
     if (marca === m) { setMarca(null); setModelo(null) }
     else { setMarca(m); setModelo(null) }
   }
 
-  const hayFiltros = marca || modelo || busqueda.trim() || filtroAc500 !== 'todos'
+  function limpiarTodo() {
+    setMarca(null); setModelo(null); setBusqueda(''); setFiltroVenta('todos')
+  }
+
+  const hayFiltros = marca || modelo || busqueda.trim() || filtroVenta !== 'todos'
 
   return (
     <div>
-      {/* Barra de búsqueda + filtros */}
+      {/* Filtros */}
       <div className="mb-5 space-y-3">
         {/* Buscador */}
         <div className="relative max-w-sm">
@@ -88,6 +138,21 @@ export default function VehiculosClient({ vehiculos, ac500Ids = [] }: { vehiculo
               <X size={13} />
             </button>
           )}
+        </div>
+
+        {/* Tipo de venta */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14">Tipo</span>
+          {FILTROS.map(f => (
+            <PillBtn
+              key={f.value}
+              active={filtroVenta === f.value}
+              onClick={() => setFiltroVenta(f.value)}
+              colorClass={f.color}
+            >
+              {f.label}
+            </PillBtn>
+          ))}
         </div>
 
         {/* Marca */}
@@ -111,30 +176,15 @@ export default function VehiculosClient({ vehiculos, ac500Ids = [] }: { vehiculo
             )}
           </div>
         )}
-
-        {/* Filtro AC500 */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14">Plan</span>
-          <PillBtn active={filtroAc500 === 'todos'} onClick={() => setFiltroAc500('todos')}>Todos</PillBtn>
-          <PillBtn active={filtroAc500 === 'ac500'} onClick={() => setFiltroAc500('ac500')}>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-              AC500
-            </span>
-          </PillBtn>
-          <PillBtn active={filtroAc500 === 'no_ac500'} onClick={() => setFiltroAc500('no_ac500')}>Sin AC500</PillBtn>
-        </div>
       </div>
 
       {/* Contador */}
       {hayFiltros && (
         <p className="text-xs text-oriental-gray mb-3">
           Mostrando <strong className="text-oriental-black">{visible.length}</strong> de {vehiculos.length} vehículos
-          {hayFiltros && (
-            <button onClick={() => { setMarca(null); setModelo(null); setBusqueda(''); setFiltroAc500('todos') }} className="ml-2 text-oriental-red hover:underline">
-              Limpiar todo
-            </button>
-          )}
+          <button onClick={limpiarTodo} className="ml-2 text-oriental-red hover:underline">
+            Limpiar todo
+          </button>
         </p>
       )}
 
@@ -147,56 +197,57 @@ export default function VehiculosClient({ vehiculos, ac500Ids = [] }: { vehiculo
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Placa</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Vehículo</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Cliente</th>
-                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Tipo compra</th>
+                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Tipo venta</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Estado</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {visible.map(v => (
-                <tr key={v.id} className="hover:bg-oriental-bg/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-sm font-bold bg-gray-100 text-oriental-black px-2 py-1 rounded">
-                      {v.placa ?? 'Sin placa'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-oriental-black">{v.marca} {v.modelo}</p>
-                    <p className="text-xs text-oriental-gray">{[v.version, v.anio, v.color].filter(Boolean).join(' · ')}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-oriental-black">{v.clientes?.nombre}</p>
-                    <p className="text-xs text-oriental-gray">{v.clientes?.cedula_rif}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="capitalize text-oriental-gray text-sm">{v.tipo_compra}</span>
-                      {ac500Set.has(v.id) && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full w-fit">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                          AC500
+              {visible.map(v => {
+                const badge = badgeVenta[v._categoria as FiltroVenta]
+                return (
+                  <tr key={v.id} className="hover:bg-oriental-bg/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-sm font-bold bg-gray-100 text-oriental-black px-2 py-1 rounded">
+                        {v.placa ?? 'Sin placa'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-oriental-black">{v.marca} {v.modelo}</p>
+                      <p className="text-xs text-oriental-gray">{[v.version, v.anio, v.color].filter(Boolean).join(' · ')}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-oriental-black">{v.clientes?.nombre}</p>
+                      <p className="text-xs text-oriental-gray">{v.clientes?.cedula_rif}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      {badge.label ? (
+                        <span className={`inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full border ${badge.cls}`}>
+                          {badge.label}
                         </span>
+                      ) : (
+                        <span className="text-oriental-gray text-sm capitalize">{v.tipo_compra}</span>
                       )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${estadoColors[v.estado] ?? 'bg-gray-100 text-gray-700'}`}>
-                      {v.estado}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/vehiculos/${v.id}`} className="text-oriental-red hover:text-oriental-red-dark font-medium text-xs">
-                      Ver detalle
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${estadoColors[v.estado] ?? 'bg-gray-100 text-gray-700'}`}>
+                        {v.estado}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href={`/vehiculos/${v.id}`} className="text-oriental-red hover:text-oriental-red-dark font-medium text-xs">
+                        Ver detalle
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
               {visible.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-16 text-center">
                     <Car size={32} className="mx-auto text-gray-300 mb-3" />
                     <p className="text-oriental-gray text-sm">No hay vehículos con estos filtros</p>
-                    <button onClick={() => { setMarca(null); setModelo(null); setBusqueda(''); setFiltroAc500('todos') }} className="text-oriental-red text-sm font-medium hover:underline mt-1">
+                    <button onClick={limpiarTodo} className="text-oriental-red text-sm font-medium hover:underline mt-1">
                       Limpiar filtros
                     </button>
                   </td>
