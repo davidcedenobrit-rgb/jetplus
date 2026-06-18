@@ -79,11 +79,28 @@ export default async function VehiculoDetallePage({
     cuotasResumen = cuotas ?? []
   }
 
-  // Calcular métricas financieras
+  // Calcular métricas financieras desde cuotas reales (más confiable que credito.saldo)
   const totalFinanciado = (creditos ?? []).reduce((s: number, c: any) => s + Number(c.monto_financiado ?? 0), 0)
-  const totalSaldo = (creditos ?? []).reduce((s: number, c: any) => s + Number(c.saldo ?? 0), 0)
-  const totalPagado = totalFinanciado - totalSaldo
+  const totalPagado = cuotasResumen.reduce((s: number, c: any) => {
+    if (c.estado === 'pagada') return s + Number(c.monto_pagado ?? c.monto)
+    if (c.estado === 'abono_parcial') return s + Number(c.monto_pagado ?? 0)
+    return s
+  }, 0)
+  const totalSaldo = Math.max(0, totalFinanciado - totalPagado)
   const porcentajePagado = totalFinanciado > 0 ? Math.round((totalPagado / totalFinanciado) * 100) : 0
+
+  // Saldo por crédito calculado desde sus cuotas (para el Desglose)
+  const saldoPorCredito = (creditoId: string, montoFinanciado: number) => {
+    const pagado = cuotasResumen
+      .filter((q: any) => q.credito_id === creditoId)
+      .reduce((s: number, q: any) => {
+        if (q.estado === 'pagada') return s + Number(q.monto_pagado ?? q.monto)
+        if (q.estado === 'abono_parcial') return s + Number(q.monto_pagado ?? 0)
+        return s
+      }, 0)
+    return Math.max(0, Number(montoFinanciado) - pagado)
+  }
+
   const cuotasPagadas = cuotasResumen.filter((c: any) => c.estado === 'pagada').length
   const cuotasPendientes = cuotasResumen.filter((c: any) => c.estado === 'pendiente').length
   const cuotasVencidas = cuotasResumen.filter((c: any) => c.estado === 'vencida').length
@@ -336,7 +353,7 @@ export default async function VehiculoDetallePage({
                         <span className="text-[11px] text-oriental-gray">{pagadasCred}/{cuotasCred.length} cuotas</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-oriental-red">{formatCurrency(Number(c.saldo ?? 0), 'USD')}</span>
+                        <span className="text-xs font-bold text-oriental-red">{formatCurrency(saldoPorCredito(c.id, c.monto_financiado), 'USD')}</span>
                         <ExternalLink size={11} className="text-gray-300 group-hover:text-oriental-gray transition-colors" />
                       </div>
                     </Link>
