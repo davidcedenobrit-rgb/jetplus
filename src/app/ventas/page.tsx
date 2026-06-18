@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import VehiculosFiltro from './VehiculosFiltro'
 import AC500Filtro from './AC500Filtro'
@@ -14,13 +15,17 @@ export const revalidate = 60
 export default async function VentasPage() {
   const supabase = await createClient()
 
-  const [{ data: catalogo }, { data: ac500 }] = await Promise.all([
+  const [{ data: catalogo }, { data: ac500 }, { data: promoVehiculos }, { data: promoData }] = await Promise.all([
     supabase.from('catalogo_ventas').select('*').eq('disponible', true).order('orden'),
     supabase.from('ac500_vehiculos').select('*').eq('disponible', true).order('orden'),
+    supabase.from('promocion_vehiculos').select('*').order('orden').order('created_at'),
+    supabase.from('promociones_especiales').select('*').limit(1).single(),
   ])
 
   const lista = catalogo ?? []
   const acLista = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo)
+  const promoActiva = promoData?.activa === true
+  const promoVehiculosList = promoVehiculos ?? []
 
   return (
     <div style={{ minHeight: '100vh', background: '#F2F2F2', fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -56,6 +61,7 @@ export default async function VentasPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {promoActiva && promoVehiculosList.length > 0 && <a href="#promociones" className="lo-btn-gold">🏷️ Promociones →</a>}
             {acLista.length > 0 && <a href="#ac500" className="lo-btn-gold">🛡️ Plan $500</a>}
             <a href="#vehiculos" className="lo-btn-glass">Ver vehículos ↓</a>
             <a href={`${WA_BASE}?text=${WA_MSG}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">WhatsApp</a>
@@ -79,6 +85,73 @@ export default async function VentasPage() {
           ))}
         </div>
       </div>
+
+      {/* ── PROMOCIONES ESPECIALES ────────────────────────────────────────── */}
+      {promoActiva && promoVehiculosList.length > 0 && (
+        <section id="promociones" style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 48px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>🏷️ Oferta especial</span>
+            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 900, color: '#111827', marginBottom: 10, lineHeight: 1.2 }}>
+              {promoData?.titulo ?? 'Promociones Especiales'}
+            </h2>
+            {promoData?.subtitulo && (
+              <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 520, margin: '0 auto', lineHeight: 1.6 }}>{promoData.subtitulo}</p>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {promoVehiculosList.map((v: {
+              id: string; img_url: string | null; marca: string; modelo: string;
+              precio_base: number; gastos_label: string; gastos_contado: number;
+              mostrar_credito: boolean; gastos_credito: number; cuota_mensual: number;
+            }) => {
+              const iva = v.precio_base * 0.16
+              const totalContado = v.precio_base + iva + v.gastos_contado
+              const ini40 = v.precio_base * 0.40
+              const fin60 = v.precio_base * 0.60
+              const totalInicial = ini40 + iva + v.gastos_credito
+              const fmt = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              const tdH: CSSProperties = { padding: '7px 12px', fontFamily: 'sans-serif', fontSize: 13, fontWeight: 800, color: '#fff', background: '#1a1a1a' }
+              const tdL: CSSProperties = { padding: '6px 12px', fontFamily: 'sans-serif', fontSize: 12, color: '#374151', borderBottom: '1px solid #e5e7eb' }
+              const tdV: CSSProperties = { padding: '6px 12px', fontFamily: 'sans-serif', fontSize: 12, color: '#111827', fontWeight: 700, textAlign: 'right', borderBottom: '1px solid #e5e7eb' }
+              const tdSH: CSSProperties = { padding: '7px 12px', fontFamily: 'sans-serif', fontSize: 12, fontWeight: 800, color: '#fff', background: '#ca8a04', textAlign: 'center' }
+              const tdTotal: CSSProperties = { padding: '8px 12px', fontFamily: 'sans-serif', fontSize: 14, fontWeight: 900, color: '#111827', background: '#fef9c3' }
+              const tdTotalV: CSSProperties = { padding: '8px 12px', fontFamily: 'sans-serif', fontSize: 14, fontWeight: 900, color: '#111827', background: '#fef9c3', textAlign: 'right' }
+              return (
+                <div key={v.id} style={{ border: '2px solid #1a1a1a', borderRadius: 8, overflow: 'hidden', width: '100%', maxWidth: 340, background: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,.08)' }}>
+                  {v.img_url && (
+                    <div style={{ background: '#f9fafb', height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
+                      <img src={v.img_url} alt={v.modelo} style={{ maxHeight: 108, maxWidth: '100%', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                  <table width="100%" cellPadding={0} cellSpacing={0}>
+                    <tbody>
+                      <tr><td colSpan={2} style={tdH}>VEHÍCULO</td></tr>
+                      <tr><td style={tdL}>MARCA:</td><td style={tdV}>{v.marca}</td></tr>
+                      <tr><td style={tdL}>MODELO:</td><td style={tdV}>{v.modelo}</td></tr>
+                      <tr><td colSpan={2} style={tdSH}>MODALIDAD DE CONTADO</td></tr>
+                      <tr><td style={tdL}>100% PRECIO BASE:</td><td style={tdV}>${fmt(v.precio_base)}</td></tr>
+                      <tr><td style={tdL}>I.V.A. (16%):</td><td style={tdV}>${fmt(iva)}</td></tr>
+                      <tr><td style={tdL}>{v.gastos_label}</td><td style={tdV}>${fmt(v.gastos_contado)}</td></tr>
+                      <tr><td style={tdTotal}>TOTAL A PAGAR</td><td style={tdTotalV}>${fmt(totalContado)}</td></tr>
+                      {v.mostrar_credito && (
+                        <>
+                          <tr><td colSpan={2} style={tdSH}>MODALIDAD CRÉDITO 24 MESES (40% INICIAL)</td></tr>
+                          <tr><td style={tdL}>40% PRECIO BASE:</td><td style={tdV}>${fmt(ini40)}</td></tr>
+                          <tr><td style={tdL}>I.V.A. (16%):</td><td style={tdV}>${fmt(iva)}</td></tr>
+                          <tr><td style={tdL}>{v.gastos_label}</td><td style={tdV}>${fmt(v.gastos_credito)}</td></tr>
+                          <tr><td style={tdTotal}>TOTAL INICIAL A PAGAR</td><td style={tdTotalV}>${fmt(totalInicial)}</td></tr>
+                          <tr><td style={tdL}>FINANCIAMIENTO 60%</td><td style={tdV}>${fmt(fin60)}</td></tr>
+                          <tr><td style={tdTotal}>24 CUOTAS MENSUALES:</td><td style={tdTotalV}>${fmt(v.cuota_mensual)}</td></tr>
+                        </>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── VEHÍCULOS ─────────────────────────────────────────────────────── */}
       <section id="vehiculos" style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 16px 56px' }}>

@@ -7,8 +7,10 @@ import VendedorasEditor from './VendedorasEditor'
 import CotizacionesTab from './CotizacionesTab'
 import CotizacionCDMTab from './CotizacionCDMTab'
 import TasasEditor from './TasasEditor'
+import ClientesHistorialTab from './ClientesHistorialTab'
+import PromocionesTab from './PromocionesTab'
 
-type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas'
+type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas' | 'clientes' | 'promociones'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; ac500: any[] }) {
@@ -21,6 +23,8 @@ export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; a
     { key: 'cotizaciones', label: 'Cotizaciones' },
     { key: 'generar', label: 'Generar cotización' },
     { key: 'tasas', label: 'Tasas' },
+    { key: 'clientes', label: 'Historial de clientes' },
+    { key: 'promociones', label: 'Promociones Especiales' },
   ]
 
   return (
@@ -45,6 +49,8 @@ export default function LinkVentasTabs({ catalogo, ac500 }: { catalogo: any[]; a
       {tab === 'cotizaciones' && <CotizacionesTab />}
       {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} />}
       {tab === 'tasas' && <TasasEditor />}
+      {tab === 'clientes' && <ClientesHistorialTab />}
+      {tab === 'promociones' && <PromocionesTab catalogo={catalogo} />}
     </div>
   )
 }
