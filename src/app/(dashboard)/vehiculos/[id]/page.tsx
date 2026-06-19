@@ -157,6 +157,7 @@ export default async function VehiculoDetallePage({
               <InfoRow icon={Hash} label="Placa" value={vehiculo.placa ?? 'Sin placa'} mono />
               <InfoRow icon={Hash} label="VIN / Chasis" value={vehiculo.vin ?? '—'} mono />
               <InfoRow icon={Hash} label="Serial motor" value={vehiculo.serial_motor ?? '—'} mono />
+              <InfoRow icon={Hash} label="Proforma Vehimotors" value={(vehiculo as any).proforma_vehimotors ?? '—'} mono />
               <InfoRow icon={CreditCard} label="Tipo compra" value={vehiculo.tipo_compra} capitalize />
               <InfoRow icon={Calendar} label="Entrega" value={vehiculo.fecha_entrega ? formatDate(vehiculo.fecha_entrega) : 'Pendiente'} />
             </div>
@@ -173,6 +174,7 @@ export default async function VehiculoDetallePage({
                     placa: vehiculo.placa,
                     vin: vehiculo.vin,
                     serial_motor: vehiculo.serial_motor,
+                    proforma_vehimotors: (vehiculo as any).proforma_vehimotors ?? null,
                     tipo_compra: vehiculo.tipo_compra,
                     estado: vehiculo.estado,
                     fecha_entrega: vehiculo.fecha_entrega,

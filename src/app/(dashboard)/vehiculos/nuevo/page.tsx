@@ -62,6 +62,7 @@ export default function NuevoVehiculoPage() {
   const [placa, setPlaca] = useState('')
   const [vin, setVin] = useState('')
   const [serialMotor, setSerialMotor] = useState('')
+  const [proforma, setProforma] = useState('')
   const [tipoCompra, setTipoCompra] = useState<'contado' | 'financiado'>('contado')
   const [fechaEntrega, setFechaEntrega] = useState('')
   const [observaciones, setObservaciones] = useState('')
@@ -400,6 +401,7 @@ export default function NuevoVehiculoPage() {
       marca, modelo, version: version || null, anio: parseInt(anio) || null,
       color: color || null, placa: placa.toUpperCase() || null, vin: vin.toUpperCase() || null,
       serial_motor: serialMotor.toUpperCase() || null,
+      proforma_vehimotors: proforma.trim() || null,
       tipo_compra: tipoCompra, fecha_entrega: fechaEntrega || null, estado: 'activo',
       observaciones: observaciones || null,
     })
@@ -815,6 +817,10 @@ export default function NuevoVehiculoPage() {
             <div>
               <label className="label">Serial del motor</label>
               <input type="text" className="input font-mono uppercase" placeholder="Serial del motor" value={serialMotor} onChange={e => setSerialMotor(e.target.value.toUpperCase())} />
+            </div>
+            <div>
+              <label className="label">Proforma Vehimotors</label>
+              <input type="text" className="input" placeholder="Código de proforma" value={proforma} onChange={e => setProforma(e.target.value)} />
             </div>
             <div>
               <label className="label">Fecha de entrega</label>

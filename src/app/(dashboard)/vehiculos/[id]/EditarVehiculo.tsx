@@ -14,6 +14,7 @@ interface VehiculoEditable {
   placa: string | null
   vin: string | null
   serial_motor: string | null
+  proforma_vehimotors: string | null
   tipo_compra: string
   estado: string
   fecha_entrega: string | null
@@ -47,6 +48,7 @@ export default function EditarVehiculo({ vehiculoId, vehiculo }: { vehiculoId: s
         placa: form.placa?.trim() || null,
         vin: form.vin?.trim() || null,
         serial_motor: form.serial_motor?.trim() || null,
+        proforma_vehimotors: form.proforma_vehimotors?.trim() || null,
         tipo_compra: form.tipo_compra,
         estado: form.estado,
         fecha_entrega: form.fecha_entrega || null,
@@ -119,6 +121,11 @@ export default function EditarVehiculo({ vehiculoId, vehiculo }: { vehiculoId: s
       <div>
         <label className="block text-[11px] font-semibold text-gray-500 mb-1">Serial motor</label>
         <input className={inputCls} type="text" value={form.serial_motor ?? ''} onChange={e => field('serial_motor', e.target.value)} />
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-semibold text-gray-500 mb-1">Proforma Vehimotors</label>
+        <input className={inputCls} type="text" placeholder="Código de proforma" value={form.proforma_vehimotors ?? ''} onChange={e => field('proforma_vehimotors', e.target.value)} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
