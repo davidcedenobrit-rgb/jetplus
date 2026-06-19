@@ -97,6 +97,7 @@ export const METODOS_PAGO = [
 ]
 
 export const BANCOS_VE = [
+  'Binance USDT',
   'Banesco',
   'Mercantil',
   'BBVA Provincial',

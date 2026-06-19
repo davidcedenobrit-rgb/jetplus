@@ -6,7 +6,7 @@ const CATEGORIAS_EGRESO = [
   'servicios', 'vehimotors', 'bancos_comisiones', 'alquiler', 'taller', 'repuestos', 'otros',
 ] as const
 
-const MONEDA = ['USD', 'VES'] as const
+const MONEDA = ['USD', 'VES', 'USDT'] as const
 const TIPO_CLIENTE = ['natural', 'juridico'] as const
 const MARCA_VEHICULO = ['MG', 'MAXUS'] as const
 const TIPO_COMPRA = ['contado', 'financiado'] as const
