@@ -107,5 +107,5 @@ export const BANCOS_VE = [
   'Bicentenario',
   'BNC',
   'Otro',
-  ...BANCOS_VEHIMOTORS.map(b => `VM- ${b.nombre}`),
+  ...BANCOS_VEHIMOTORS.map(b => b.nombre),
 ]

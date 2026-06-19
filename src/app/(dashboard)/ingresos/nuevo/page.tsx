@@ -1068,8 +1068,9 @@ function NuevoIngresoPageInner() {
                 const val = e.target.value
                 setMetodoPago(val)
                 if (val.startsWith('VM- ')) {
-                  setBancoEmisor(val)
-                  setBancoReceptor(val)
+                  const banco = val.replace('VM- ', '')
+                  setBancoEmisor(banco)
+                  setBancoReceptor(banco)
                 }
               }} required>
                 <option value="">Seleccionar...</option>
