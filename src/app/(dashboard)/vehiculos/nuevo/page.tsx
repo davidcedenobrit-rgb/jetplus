@@ -43,6 +43,13 @@ export default function NuevoVehiculoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [showCrearCliente, setShowCrearCliente] = useState(false)
+  const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevaCedula, setNuevaCedula] = useState('')
+  const [nuevoTipo, setNuevoTipo] = useState<'natural' | 'juridico'>('natural')
+  const [nuevoTelefono, setNuevoTelefono] = useState('')
+  const [creandoCliente, setCreandoCliente] = useState(false)
+  const [errorCrearCliente, setErrorCrearCliente] = useState('')
 
   // Showroom
   const [vehiculosShowroom, setVehiculosShowroom] = useState<VehiculoShowroom[]>([])
@@ -349,6 +356,34 @@ export default function NuevoVehiculoPage() {
     setPrecioTotalVehiculo(calculadora.base.toFixed(2))
   }
 
+  async function crearClienteRapido() {
+    if (!nuevoNombre.trim() || !nuevaCedula.trim()) {
+      setErrorCrearCliente('Nombre y cédula/RIF son requeridos')
+      return
+    }
+    setCreandoCliente(true)
+    setErrorCrearCliente('')
+    const { data, error: err } = await supabase.from('clientes').insert({
+      nombre: nuevoNombre.trim(),
+      cedula_rif: nuevaCedula.trim().toUpperCase(),
+      tipo: nuevoTipo,
+      telefono: nuevoTelefono.trim() || null,
+      activo: true,
+    }).select().single()
+    if (err || !data) {
+      setErrorCrearCliente(err?.message ?? 'Error al crear cliente')
+      setCreandoCliente(false)
+      return
+    }
+    setClienteSeleccionado(data)
+    setClienteQuery(data.nombre)
+    setShowCrearCliente(false)
+    setNuevoNombre('')
+    setNuevaCedula('')
+    setNuevoTelefono('')
+    setCreandoCliente(false)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!clienteSeleccionado) { setError('Selecciona un cliente'); return }
@@ -626,6 +661,66 @@ export default function NuevoVehiculoPage() {
               </div>
             )}
           </div>
+
+          {!clienteSeleccionado && (
+            <div className="mt-3">
+              {!showCrearCliente ? (
+                <button type="button" onClick={() => setShowCrearCliente(true)}
+                  className="text-xs font-semibold text-oriental-red hover:underline flex items-center gap-1">
+                  + Crear cliente nuevo
+                </button>
+              ) : (
+                <div className="mt-2 border border-blue-200 rounded-xl p-4 bg-blue-50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-blue-900 uppercase tracking-wider">Nuevo cliente</p>
+                    <button type="button" onClick={() => { setShowCrearCliente(false); setErrorCrearCliente('') }}
+                      className="text-blue-400 hover:text-blue-600">
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Nombre *</label>
+                      <input type="text" className="input" placeholder="Nombre completo" value={nuevoNombre}
+                        onChange={e => setNuevoNombre(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="label">Cédula / RIF *</label>
+                      <input type="text" className="input font-mono uppercase" placeholder="V12345678"
+                        value={nuevaCedula} onChange={e => setNuevaCedula(e.target.value.toUpperCase())} />
+                    </div>
+                    <div>
+                      <label className="label">Tipo</label>
+                      <div className="flex gap-2">
+                        {(['natural', 'juridico'] as const).map(t => (
+                          <button key={t} type="button" onClick={() => setNuevoTipo(t)}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors capitalize ${
+                              nuevoTipo === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                            }`}>
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Teléfono</label>
+                      <input type="text" className="input" placeholder="0412-1234567" value={nuevoTelefono}
+                        onChange={e => setNuevoTelefono(e.target.value)} />
+                    </div>
+                  </div>
+                  {errorCrearCliente && (
+                    <p className="text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle size={12} /> {errorCrearCliente}
+                    </p>
+                  )}
+                  <button type="button" onClick={crearClienteRapido} disabled={creandoCliente}
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-lg text-sm transition-colors">
+                    {creandoCliente ? 'Guardando...' : 'Registrar cliente'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Selector Showroom */}
