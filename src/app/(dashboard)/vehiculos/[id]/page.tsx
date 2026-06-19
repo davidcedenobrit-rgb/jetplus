@@ -162,7 +162,13 @@ export default async function VehiculoDetallePage({
               <InfoRow icon={Calendar} label="Entrega" value={vehiculo.fecha_entrega ? formatDate(vehiculo.fecha_entrega) : 'Pendiente'} />
             </div>
             {puedeEditar && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
+                <Link
+                  href={`/creditos/nuevo?vehiculo_id=${id}`}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-oriental-red-dark transition-colors"
+                >
+                  <CreditCard size={13} /> Crear crédito
+                </Link>
                 <EditarVehiculo
                   vehiculoId={id}
                   vehiculo={{

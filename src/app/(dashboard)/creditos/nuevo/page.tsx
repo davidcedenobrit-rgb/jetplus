@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Save, Search, X, Car, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -47,6 +47,7 @@ function getCuotasFromPlan(p: PlanAC500): { numero: number; monto: number; dia: 
 
 export default function NuevoCreditoPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -123,6 +124,22 @@ export default function NuevoCreditoPage() {
     const total = base + iva + admin
     return { base, iva, admin, total }
   }, [precioBase, gastosAdmin])
+
+  // Pre-cargar vehículo y cliente si viene desde la página del vehículo
+  useEffect(() => {
+    const vid = searchParams.get('vehiculo_id')
+    if (!vid) return
+    ;(async () => {
+      const { data: v } = await supabase.from('vehiculos').select('*').eq('id', vid).single()
+      if (!v) return
+      const { data: c } = await supabase.from('clientes').select('*').eq('id', v.cliente_id).single()
+      if (!c) return
+      setClienteSeleccionado(c)
+      setClienteQuery(c.nombre)
+      setVehiculos([v])
+      setVehiculoSeleccionado(v)
+    })()
+  }, [])
 
   // Buscar clientes
   useEffect(() => {
