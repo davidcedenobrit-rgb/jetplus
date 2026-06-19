@@ -1064,15 +1064,7 @@ function NuevoIngresoPageInner() {
             )}
             <div>
               <label className="label">Método de pago *</label>
-              <select className="select" value={metodoPago} onChange={e => {
-                const val = e.target.value
-                setMetodoPago(val)
-                if (val.startsWith('VM- ')) {
-                  const banco = val.replace('VM- ', '')
-                  setBancoEmisor(banco)
-                  setBancoReceptor(banco)
-                }
-              }} required>
+              <select className="select" value={metodoPago} onChange={e => setMetodoPago(e.target.value)} required>
                 <option value="">Seleccionar...</option>
                 {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
               </select>

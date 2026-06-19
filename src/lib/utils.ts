@@ -83,7 +83,6 @@ export const METODOS_PAGO = [
   'Transferencia bancaria',
   'Transferencia bancaria a Vehimotor',
   'Transferencia bancaria a Oriental',
-  ...BANCOS_VEHIMOTORS.map(b => `VM- ${b.nombre}`),
   'Pago móvil',
   'Zelle',
   'Binance',
