@@ -120,7 +120,7 @@ export default function NuevoClientePage() {
       }
     }
 
-    router.push('/clientes')
+    router.push(`/clientes/${clienteId}`)
     router.refresh()
   }
 
