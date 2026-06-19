@@ -223,18 +223,25 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
                 <Text style={[s.tableHeaderText, { flex: 0.5 }]}>Cuota</Text>
                 <Text style={[s.tableHeaderText, { flex: 1 }]}>Plan</Text>
                 <Text style={[s.tableHeaderText, { flex: 1.2 }]}>Vencimiento</Text>
-                <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Monto cuota</Text>
-                <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Abonado</Text>
+                <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Monto total</Text>
+                <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Aplicado</Text>
+                <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Pendiente</Text>
               </View>
-              {data.cuotasAplicadas.map((ci, idx) => (
-                <View key={idx} style={s.tableRow}>
-                  <Text style={[s.tableCell, { flex: 0.5, fontFamily: 'Helvetica-Bold' }]}>#{ci.numeroCuota}</Text>
-                  <Text style={[s.tableCell, { flex: 1 }]}>{ci.planNombre}</Text>
-                  <Text style={[s.tableCell, { flex: 1.2, fontSize: 8 }]}>{fmtDate(ci.fechaVencimiento)}</Text>
-                  <Text style={[s.tableCellRight, { flex: 1 }]}>USD {fmtNum(ci.montoTotal)}</Text>
-                  <Text style={[s.tableCellRight, { flex: 1, fontFamily: 'Helvetica-Bold' }]}>USD {fmtNum(ci.montoAplicado)}</Text>
-                </View>
-              ))}
+              {data.cuotasAplicadas.map((ci, idx) => {
+                const pendiente = Math.max(0, ci.montoTotal - ci.montoAplicado)
+                return (
+                  <View key={idx} style={s.tableRow}>
+                    <Text style={[s.tableCell, { flex: 0.5, fontFamily: 'Helvetica-Bold' }]}>#{ci.numeroCuota}</Text>
+                    <Text style={[s.tableCell, { flex: 1 }]}>{ci.planNombre}</Text>
+                    <Text style={[s.tableCell, { flex: 1.2, fontSize: 8 }]}>{fmtDate(ci.fechaVencimiento)}</Text>
+                    <Text style={[s.tableCellRight, { flex: 1 }]}>USD {fmtNum(ci.montoTotal)}</Text>
+                    <Text style={[s.tableCellRight, { flex: 1, fontFamily: 'Helvetica-Bold' }]}>USD {fmtNum(ci.montoAplicado)}</Text>
+                    <Text style={[s.tableCellRight, { flex: 1, color: pendiente > 0 ? '#dc2626' : '#16a34a' }]}>
+                      {pendiente > 0 ? `USD ${fmtNum(pendiente)}` : '—'}
+                    </Text>
+                  </View>
+                )
+              })}
             </View>
             <View style={s.divider} />
           </>
