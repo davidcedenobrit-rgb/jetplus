@@ -13,6 +13,7 @@ import type { Cliente, Vehiculo } from '@/types/database'
 const CONCEPTOS = [
   'Cuota de vehículo',
   'Cuota de inicial',
+  'Cuota de inicial + vehículo',
   'Inicial de vehículo',
   'Saldo de vehículo',
   'Trámite vehicular',
