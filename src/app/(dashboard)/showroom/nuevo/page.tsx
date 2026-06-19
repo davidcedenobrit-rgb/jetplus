@@ -21,6 +21,7 @@ export default function NuevoShowroomPage() {
   const [placa, setPlaca] = useState('')
   const [vin, setVin] = useState('')
   const [serialMotor, setSerialMotor] = useState('')
+  const [proforma, setProforma] = useState('')
   const [fechaLlegada, setFechaLlegada] = useState(new Date().toISOString().split('T')[0])
   const [observaciones, setObservaciones] = useState('')
 
@@ -42,6 +43,7 @@ export default function NuevoShowroomPage() {
       placa: placa.toUpperCase() || null,
       vin: vin || null,
       serial_motor: serialMotor || null,
+      proforma_vehimotors: proforma.trim() || null,
       fecha_llegada: fechaLlegada,
       estado: 'llegada',
       observaciones: observaciones || null,
@@ -123,6 +125,10 @@ export default function NuevoShowroomPage() {
             <div>
               <label className="label">Serial de motor</label>
               <input type="text" className="input font-mono" placeholder="Serial motor" value={serialMotor} onChange={e => setSerialMotor(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Proforma Vehimotors</label>
+              <input type="text" className="input" placeholder="Código de proforma" value={proforma} onChange={e => setProforma(e.target.value)} />
             </div>
             <div>
               <label className="label">Fecha de llegada</label>

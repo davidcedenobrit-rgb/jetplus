@@ -26,6 +26,7 @@ export default function EditarShowroomForm({ vehiculo }: Props) {
   const [placa, setPlaca] = useState(vehiculo.placa ?? '')
   const [vin, setVin] = useState(vehiculo.vin ?? '')
   const [serialMotor, setSerialMotor] = useState(vehiculo.serial_motor ?? '')
+  const [proforma, setProforma] = useState((vehiculo as any).proforma_vehimotors ?? '')
   const [fechaLlegada, setFechaLlegada] = useState(vehiculo.fecha_llegada ?? new Date().toISOString().split('T')[0])
   const [observaciones, setObservaciones] = useState(vehiculo.observaciones ?? '')
 
@@ -49,6 +50,7 @@ export default function EditarShowroomForm({ vehiculo }: Props) {
         placa: placa.toUpperCase() || null,
         vin: vin || null,
         serial_motor: serialMotor || null,
+        proforma_vehimotors: proforma.trim() || null,
         fecha_llegada: fechaLlegada,
         observaciones: observaciones || null,
         updated_at: new Date().toISOString(),
@@ -181,6 +183,16 @@ export default function EditarShowroomForm({ vehiculo }: Props) {
                 placeholder="Serial motor"
                 value={serialMotor}
                 onChange={e => setSerialMotor(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Proforma Vehimotors</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="Código de proforma"
+                value={proforma}
+                onChange={e => setProforma(e.target.value)}
               />
             </div>
             <div>
