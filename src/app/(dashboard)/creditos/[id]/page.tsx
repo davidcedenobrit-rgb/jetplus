@@ -97,6 +97,7 @@ export default async function CreditoDetallePage({
     .select('*, credito_id')
     .in('credito_id', creditoIds)
     .order('fecha_vencimiento')
+    .order('numero_cuota')
 
   // Enriquecer cada cuota con el plan_tipo de su crédito
   const cuotasEnriquecidas = (todasCuotas ?? []).map((cuota: any) => {
