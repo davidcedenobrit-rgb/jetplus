@@ -31,11 +31,15 @@ const FRECUENCIAS = ['mensual', 'quincenal', 'semanal', 'único pago']
 const planLabel = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'La Oriental' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
-  tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' : 'Crédito'
+  tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' :
+  tipo === 'asegurate_500' ? 'Asegúrate $500' :
+  tipo === 'credito_40_60' ? '40/60 Vehimotors' : 'Crédito'
 
 const planBadgeClass = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-700' :
   tipo === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700' :
+  tipo === 'asegurate_500' ? 'bg-yellow-100 text-yellow-700' :
+  tipo === 'credito_40_60' ? 'bg-orange-100 text-orange-700' :
   'bg-gray-100 text-gray-600'
 
 const estadoBadgeClass = (estado: string) =>

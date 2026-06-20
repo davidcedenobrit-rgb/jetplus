@@ -24,6 +24,8 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
     const planNombre =
       planTipo === 'inicial_la_oriental' ? 'La Oriental'
       : planTipo === 'financiamiento_vehimotors' ? 'Vehimotors'
+      : planTipo === 'asegurate_500' ? 'Asegúrate $500'
+      : planTipo === 'credito_40_60' ? '40/60 Vehimotors'
       : 'Crédito'
     return {
       numeroCuota: cuota?.numero_cuota ?? 0,
@@ -88,6 +90,8 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
       const planNombre =
         planTipo === 'inicial_la_oriental' ? 'La Oriental'
         : planTipo === 'financiamiento_vehimotors' ? 'Vehimotors'
+        : planTipo === 'asegurate_500' ? 'Asegúrate $500'
+        : planTipo === 'credito_40_60' ? '40/60 Vehimotors'
         : 'Crédito'
       return {
         planNombre,

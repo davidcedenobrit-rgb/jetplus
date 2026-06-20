@@ -196,6 +196,7 @@ export default function NuevoVehiculoPage() {
       setPlaca(v.placa ?? '')
       setVin(v.vin ?? '')
       setSerialMotor(v.serial_motor ?? '')
+      setProforma((v as any).proforma_vehimotors ?? '')
     }
   }
 
@@ -625,18 +626,28 @@ export default function NuevoVehiculoPage() {
         inicial, saldo, num_cuotas: numCuotas,
         frecuencia_pago: 'mensual',
         fecha_inicio: fechaInicio, moneda: 'USD', estado: 'activo', observaciones: obsCompleta,
+        plan_tipo: plan === 'asegurate_500' ? 'asegurate_500' : 'credito_40_60',
       }).select().single()
 
       if (creditoError) { setError(creditoError.message); setLoading(false); return }
 
       // Generar cuotas
-      let cuotasData: { credito_id: string; numero_cuota: number; fecha_vencimiento: string; monto: number; estado: string; mora: number }[] = []
+      let cuotasData: { credito_id: string; numero_cuota: number; fecha_vencimiento: string; monto: number; estado: string; mora: number; concepto?: string }[] = []
 
-      if (plan === 'asegurate_500' && cuotasAC500) {
-        cuotasData = cuotasAC500.map((c, i) => {
+      if (plan === 'asegurate_500' && cuotasAC500 && planAC500Sel) {
+        const cuota0 = {
+          credito_id: creditoCreado.id,
+          numero_cuota: 0,
+          fecha_vencimiento: fechaInicio,
+          monto: planAC500Sel.cuota_0,
+          estado: 'pendiente',
+          mora: 0,
+          concepto: 'Reserva inicial — Asegúrate con $500',
+        }
+        cuotasData = [cuota0, ...cuotasAC500.map((c, i) => {
           const fecha = new Date(fechaInicio); fecha.setDate(fecha.getDate() + (i * 30))
           return { credito_id: creditoCreado.id, numero_cuota: c.numero, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: c.monto, estado: 'pendiente', mora: 0 }
-        })
+        })]
       } else {
         const cuotaUsada = parseFloat(vh4060MontoCuota) || calc4060?.cuota || (saldo / numCuotas)
         cuotasData = Array.from({ length: numCuotas }, (_, i) => {

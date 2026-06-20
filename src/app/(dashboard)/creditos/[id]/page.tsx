@@ -14,12 +14,16 @@ const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const planLabel = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'La Oriental' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
-  tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' : 'Sin clasificar'
+  tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' :
+  tipo === 'asegurate_500' ? 'Asegúrate $500' :
+  tipo === 'credito_40_60' ? '40/60 Vehimotors' : 'Sin clasificar'
 
 const planBadge = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-800' :
   tipo === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-800' :
   tipo === 'cuota_especial' ? 'bg-teal-100 text-teal-800' :
+  tipo === 'asegurate_500' ? 'bg-yellow-100 text-yellow-800' :
+  tipo === 'credito_40_60' ? 'bg-orange-100 text-orange-800' :
   'bg-gray-100 text-gray-500'
 
 const cuotaEstadoColors: Record<string, string> = {
@@ -692,9 +696,13 @@ export default async function CreditoDetallePage({
               const planTipo = cuota._plan_tipo
               const planBgColor = planTipo === 'inicial_la_oriental' ? '#f3e8ff'
                                 : planTipo === 'financiamiento_vehimotors' ? '#e0e7ff'
+                                : planTipo === 'asegurate_500' ? '#fef9c3'
+                                : planTipo === 'credito_40_60' ? '#ffedd5'
                                 : '#f0fdfa'
               const planTextColor = planTipo === 'inicial_la_oriental' ? '#7e22ce'
                                   : planTipo === 'financiamiento_vehimotors' ? '#3730a3'
+                                  : planTipo === 'asegurate_500' ? '#a16207'
+                                  : planTipo === 'credito_40_60' ? '#c2410c'
                                   : '#0f766e'
 
               return (

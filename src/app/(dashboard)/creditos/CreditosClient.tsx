@@ -18,15 +18,19 @@ const FILTROS_PLAN: { value: FiltroPlan; label: string; activeClass: string }[] 
 ]
 
 const planBadge = (tipo: string | null) =>
-  tipo === 'inicial_la_oriental'     ? 'bg-purple-100 text-purple-700' :
+  tipo === 'inicial_la_oriental'       ? 'bg-purple-100 text-purple-700' :
   tipo === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700' :
-  tipo === 'cuota_especial'           ? 'bg-teal-100 text-teal-700' :
+  tipo === 'cuota_especial'            ? 'bg-teal-100 text-teal-700' :
+  tipo === 'asegurate_500'             ? 'bg-yellow-100 text-yellow-700' :
+  tipo === 'credito_40_60'             ? 'bg-orange-100 text-orange-700' :
   'bg-gray-100 text-gray-500'
 
 const planLabel = (tipo: string | null) =>
-  tipo === 'inicial_la_oriental'      ? 'La Oriental' :
+  tipo === 'inicial_la_oriental'       ? 'La Oriental' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
-  tipo === 'cuota_especial'            ? 'C. Especial' : 'Sin clasificar'
+  tipo === 'cuota_especial'            ? 'C. Especial' :
+  tipo === 'asegurate_500'             ? 'Aseg. $500' :
+  tipo === 'credito_40_60'             ? '40/60' : 'Sin clasificar'
 
 const estadoColors: Record<string, string> = {
   activo:    'bg-green-100 text-green-800',

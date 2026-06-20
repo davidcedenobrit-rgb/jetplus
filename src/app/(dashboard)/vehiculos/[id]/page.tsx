@@ -113,12 +113,16 @@ export default async function VehiculoDetallePage({
   const planLabel = (tipo: string | null) =>
     tipo === 'inicial_la_oriental' ? 'La Oriental' :
     tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
-    tipo === 'cuota_especial' ? 'Cuota Especial' : 'Crédito'
+    tipo === 'cuota_especial' ? 'Cuota Especial' :
+    tipo === 'asegurate_500' ? 'Asegúrate $500' :
+    tipo === 'credito_40_60' ? '40/60 Vehimotors' : 'Crédito'
 
   const planBadge = (tipo: string | null) =>
     tipo === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-700' :
     tipo === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700' :
     tipo === 'cuota_especial' ? 'bg-teal-100 text-teal-700' :
+    tipo === 'asegurate_500' ? 'bg-yellow-100 text-yellow-700' :
+    tipo === 'credito_40_60' ? 'bg-orange-100 text-orange-700' :
     'bg-gray-100 text-gray-500'
 
   const estadoColors: Record<string, string> = {

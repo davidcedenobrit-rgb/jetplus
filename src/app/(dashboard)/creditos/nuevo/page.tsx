@@ -476,6 +476,7 @@ export default function NuevoCreditoPage() {
         moneda: 'USD',
         estado: 'activo',
         observaciones: obsCompleta,
+        plan_tipo: plan === 'asegurate_500' ? 'asegurate_500' : 'credito_40_60',
       })
       .select()
       .single()
@@ -483,14 +484,23 @@ export default function NuevoCreditoPage() {
     if (creditoError) { setError(creditoError.message); setLoading(false); return }
 
     // Generar cuotas
-    let cuotasData: { credito_id: string; numero_cuota: number; fecha_vencimiento: string; monto: number; estado: string; mora: number }[] = []
+    let cuotasData: { credito_id: string; numero_cuota: number; fecha_vencimiento: string; monto: number; estado: string; mora: number; concepto?: string }[] = []
 
-    if (plan === 'asegurate_500' && cuotasAC500) {
-      cuotasData = cuotasAC500.map((c, i) => {
+    if (plan === 'asegurate_500' && cuotasAC500 && planAC500Sel) {
+      const cuota0 = {
+        credito_id: creditoCreado.id,
+        numero_cuota: 0,
+        fecha_vencimiento: fechaInicio,
+        monto: planAC500Sel.cuota_0,
+        estado: 'pendiente',
+        mora: 0,
+        concepto: 'Reserva inicial — Asegúrate con $500',
+      }
+      cuotasData = [cuota0, ...cuotasAC500.map((c, i) => {
         const fecha = new Date(fechaInicio)
         fecha.setDate(fecha.getDate() + (i * 30))
         return { credito_id: creditoCreado.id, numero_cuota: c.numero, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: c.monto, estado: 'pendiente', mora: 0 }
-      })
+      })]
     } else if (plan === 'credito_40_60' && calc4060) {
       cuotasData = Array.from({ length: 24 }, (_, i) => {
         const fecha = new Date(fechaInicio)
