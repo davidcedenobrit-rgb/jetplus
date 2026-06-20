@@ -162,7 +162,17 @@ export default async function VehiculoDetallePage({
               <InfoRow icon={Hash} label="VIN / Chasis" value={vehiculo.vin ?? '—'} mono />
               <InfoRow icon={Hash} label="Serial motor" value={vehiculo.serial_motor ?? '—'} mono />
               <InfoRow icon={Hash} label="Proforma Vehimotors" value={(vehiculo as any).proforma_vehimotors ?? '—'} mono />
-              <InfoRow icon={CreditCard} label="Tipo compra" value={vehiculo.tipo_compra} capitalize />
+              {/* Tipo compra + plan de crédito */}
+              <div className="flex items-center gap-2 text-sm flex-wrap">
+                <CreditCard size={14} className="text-oriental-gray flex-shrink-0" />
+                <span className="text-oriental-gray">Tipo compra:</span>
+                <span className="text-oriental-black font-medium capitalize">{vehiculo.tipo_compra}</span>
+                {(creditos ?? []).map((c: any) => c.plan_tipo).filter(Boolean).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i).map((tipo: string) => (
+                  <span key={tipo} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${planBadge(tipo)}`}>
+                    {planLabel(tipo)}
+                  </span>
+                ))}
+              </div>
               <InfoRow icon={Calendar} label="Entrega" value={vehiculo.fecha_entrega ? formatDate(vehiculo.fecha_entrega) : 'Pendiente'} />
             </div>
             {puedeEditar && (
