@@ -8,6 +8,7 @@ import Link from 'next/link'
 import type { Cliente, VehiculoShowroom } from '@/types/database'
 import { VehiculoSchema, CreditoSchema } from '@/lib/validations'
 import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
+import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
@@ -43,6 +44,16 @@ export default function NuevoVehiculoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
+
+  // Ingreso de inicial
+  const [registrarIngresoInicial, setRegistrarIngresoInicial] = useState(false)
+  const [ingresoInicialMonto, setIngresoInicialMonto] = useState('')
+  const [ingresoInicialMetodo, setIngresoInicialMetodo] = useState('')
+  const [ingresoInicialFecha, setIngresoInicialFecha] = useState(new Date().toISOString().split('T')[0])
+  const [ingresoInicialReferencia, setIngresoInicialReferencia] = useState('')
+  const [ingresoInicialBancoEmisor, setIngresoInicialBancoEmisor] = useState('')
+  const [ingresoInicialBancoReceptor, setIngresoInicialBancoReceptor] = useState('')
+
   const [showCrearCliente, setShowCrearCliente] = useState(false)
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevaCedula, setNuevaCedula] = useState('')
@@ -401,6 +412,39 @@ export default function NuevoVehiculoPage() {
     setPrecioTotalVehiculo(calculadora.base.toFixed(2))
   }
 
+  async function crearIngresoInicial(vehiculoId: string, vehiculoDesc: string, clienteId: string, placa: string | null) {
+    if (!registrarIngresoInicial) return
+    const monto = parseFloat(ingresoInicialMonto)
+    if (!monto || monto <= 0 || !ingresoInicialMetodo) return
+    const year = new Date().getFullYear()
+    const { data: ultimoRecibo } = await supabase.from('ingresos')
+      .select('numero_recibo')
+      .like('numero_recibo', `LOA-REC-${year}-%`)
+      .order('numero_recibo', { ascending: false })
+      .limit(1).single()
+    let nextNum = 1
+    if ((ultimoRecibo as any)?.numero_recibo) {
+      const partes = (ultimoRecibo as any).numero_recibo.split('-')
+      nextNum = (parseInt(partes[partes.length - 1]) || 0) + 1
+    }
+    const numero_recibo = `LOA-REC-${year}-${String(nextNum).padStart(5, '0')}`
+    await supabase.from('ingresos').insert({
+      numero_recibo,
+      cliente_id: clienteId,
+      vehiculo_id: vehiculoId,
+      placa: placa || null,
+      concepto: `Pago de inicial — ${vehiculoDesc}`,
+      monto,
+      moneda: 'USD',
+      metodo_pago: ingresoInicialMetodo,
+      referencia: ingresoInicialReferencia || null,
+      banco_emisor: ingresoInicialBancoEmisor || null,
+      banco_receptor: ingresoInicialBancoReceptor || null,
+      fecha_pago: ingresoInicialFecha,
+      estado: 'registrado',
+    })
+  }
+
   async function crearClienteRapido() {
     if (!nuevoNombre.trim() || !nuevaCedula.trim()) {
       setErrorCrearCliente('Nombre y cédula/RIF son requeridos')
@@ -585,6 +629,7 @@ export default function NuevoVehiculoPage() {
           if (!primerCreditoId) primerCreditoId = creditoCe.id
         }
 
+        await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa)
         router.push(`/creditos/${primerCreditoId}`)
         router.refresh()
         return
@@ -657,6 +702,7 @@ export default function NuevoVehiculoPage() {
       }
 
       await supabase.from('cuotas').insert(cuotasData)
+      await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa)
       router.push(`/creditos/${creditoCreado.id}`)
       router.refresh()
       return
@@ -1725,6 +1771,75 @@ export default function NuevoVehiculoPage() {
                   <textarea className="textarea" rows={2} placeholder="Notas del financiamiento..."
                     value={observaciones} onChange={e => setObservaciones(e.target.value)} />
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pago de inicial */}
+        {tipoCompra === 'financiado' && (
+          <div className={`card p-6 border-2 transition-colors ${registrarIngresoInicial ? 'border-green-300 bg-green-50/30' : 'border-dashed border-gray-200'}`}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider flex items-center gap-2">
+                <div className={`w-1 h-4 rounded-full ${registrarIngresoInicial ? 'bg-green-500' : 'bg-gray-300'}`} />
+                Registrar ingreso de inicial
+              </h2>
+              <button type="button" onClick={() => setRegistrarIngresoInicial(v => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${registrarIngresoInicial ? 'bg-green-500' : 'bg-gray-300'}`}>
+                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${registrarIngresoInicial ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {!registrarIngresoInicial && (
+              <p className="text-xs text-oriental-gray mt-2">Activa para registrar el pago de inicial del cliente como ingreso en el sistema.</p>
+            )}
+            {registrarIngresoInicial && (
+              <div className="mt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Monto recibido (USD) *</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
+                      <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
+                        placeholder="0.00" value={ingresoInicialMonto} onChange={e => setIngresoInicialMonto(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Fecha de pago *</label>
+                    <input type="date" className="input" value={ingresoInicialFecha} onChange={e => setIngresoInicialFecha(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Método de pago *</label>
+                    <select className="select" value={ingresoInicialMetodo} onChange={e => setIngresoInicialMetodo(e.target.value)}>
+                      <option value="">Seleccionar...</option>
+                      {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">N° Referencia</label>
+                    <input type="text" className="input" placeholder="Número de referencia"
+                      value={ingresoInicialReferencia} onChange={e => setIngresoInicialReferencia(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Banco emisor</label>
+                    <select className="select" value={ingresoInicialBancoEmisor} onChange={e => setIngresoInicialBancoEmisor(e.target.value)}>
+                      <option value="">—</option>
+                      {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Banco receptor</label>
+                    <select className="select" value={ingresoInicialBancoReceptor} onChange={e => setIngresoInicialBancoReceptor(e.target.value)}>
+                      <option value="">—</option>
+                      {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {registrarIngresoInicial && (!ingresoInicialMonto || !ingresoInicialMetodo) && (
+                  <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                    <AlertCircle size={14} className="text-yellow-600 flex-shrink-0" />
+                    <p className="text-xs text-yellow-800">Completa el monto y el método de pago para registrar el ingreso.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
