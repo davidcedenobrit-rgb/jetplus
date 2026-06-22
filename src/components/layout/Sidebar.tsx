@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe
+  Shield, ScrollText, Building2, Ban, Globe, Handshake
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -79,6 +79,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             { href: '/ingresos',  label: 'Ingresos',           icon: TrendingUp },
             { href: '/egresos',   label: 'Egresos',            icon: TrendingDown },
             { href: '/creditos',   label: 'Créditos',           icon: CreditCard },
+            { href: '/acuerdos',   label: 'Acuerdos de Pago',   icon: Handshake },
             { href: '/vehimotors', label: 'Vehimotors',         icon: Building2 },
             { href: '/reportes',  label: 'Reportes',           icon: BarChart2 },
           ]
@@ -186,6 +187,18 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
               </Link>
             )
           })}
+
+          {/* Acuerdos de Pago */}
+          {!['arianna', 'almacen'].includes(rol) && (() => {
+            const active = pathname === '/acuerdos' || pathname.startsWith('/acuerdos/')
+            return (
+              <Link href="/acuerdos" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Handshake size={18} />
+                <span className="flex-1">Acuerdos de Pago</span>
+              </Link>
+            )
+          })()}
 
           {/* Vehimotors */}
           {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
