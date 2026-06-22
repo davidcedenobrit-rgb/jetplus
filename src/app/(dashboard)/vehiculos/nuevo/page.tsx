@@ -186,16 +186,13 @@ export default function NuevoVehiculoPage() {
       .in('estado', ['en_agencia', 'reservado'])
       .order('created_at', { ascending: false })
       .then(({ data }) => { setVehiculosShowroom((data ?? []) as VehiculoShowroom[]); setLoadingShowroom(false) })
-  }, [])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (loadingShowroom) return
     const sid = searchParams.get('showroomId')
-    if (!sid) return
-    const sv = vehiculosShowroom.find(v => v.id === sid)
-    if (sv) seleccionarShowroom(sv)
-  }, [loadingShowroom])
+    if (sid) {
+      supabase.from('vehiculos_showroom').select('*').eq('id', sid).single()
+        .then(({ data }) => { if (data) seleccionarShowroom(data as VehiculoShowroom) })
+    }
+  }, [])
 
   function seleccionarShowroom(v: VehiculoShowroom | null) {
     setShowroomSeleccionado(v)
@@ -339,6 +336,20 @@ export default function NuevoVehiculoPage() {
       setCeFecha(fechaEntrega)
     }
   }, [fechaEntrega])
+
+  // ── Auto-rellenar monto inicial según el plan ──────────────────────────────
+  useEffect(() => {
+    if (tipoCompra !== 'financiado') return
+    if (plan === 'asegurate_500' && planAC500Sel) {
+      setIngresoInicialMonto(String(planAC500Sel.cuota_0))
+    } else if (plan === 'personalizado') {
+      const m = parseFloat(orMonto)
+      if (m > 0) setIngresoInicialMonto(m.toFixed(2))
+    } else if (plan === 'credito_40_60') {
+      const m = parseFloat(vh4060Inicial) || calc4060?.inicial || 0
+      if (m > 0) setIngresoInicialMonto(m.toFixed(2))
+    }
+  }, [tipoCompra, plan, planAC500Sel, orMonto, vh4060Inicial, calc4060])
 
   const calcCuotaEspecial = useMemo(() => {
     const monto = parseFloat(ceMonto) || 0
