@@ -128,6 +128,18 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
+          {/* Acuerdos de Pago — debajo de Showroom */}
+          {!['arianna', 'almacen'].includes(rol) && (() => {
+            const active = pathname === '/acuerdos' || pathname.startsWith('/acuerdos/')
+            return (
+              <Link href="/acuerdos" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Handshake size={18} />
+                <span className="flex-1">Acuerdos de Pago</span>
+              </Link>
+            )
+          })()}
+
           {/* Repuestos — visible para todos */}
           {(() => {
             const active = pathname === '/repuestos' || pathname.startsWith('/repuestos/')
@@ -187,18 +199,6 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
               </Link>
             )
           })}
-
-          {/* Acuerdos de Pago */}
-          {!['arianna', 'almacen'].includes(rol) && (() => {
-            const active = pathname === '/acuerdos' || pathname.startsWith('/acuerdos/')
-            return (
-              <Link href="/acuerdos" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Handshake size={18} />
-                <span className="flex-1">Acuerdos de Pago</span>
-              </Link>
-            )
-          })()}
 
           {/* Vehimotors */}
           {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {

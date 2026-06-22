@@ -49,9 +49,10 @@ export default async function AcuerdosPagoPage() {
       : `/ingresos/nuevo?acuerdo=${a.id}&cliente=${a.cliente_id}`
 
     return (
-      <div className={`card border-2 ${borderColor} ${bgColor} p-5`}>
+      <div className={`card border-2 ${borderColor} ${bgColor} p-5 relative`}>
         <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
+            <Link href={`/acuerdos/${a.id}`} className="absolute inset-0 rounded-xl" aria-label="Ver detalle" />
             {/* Estado badge */}
             {completado && (
               <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
