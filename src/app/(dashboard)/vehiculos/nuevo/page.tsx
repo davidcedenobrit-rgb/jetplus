@@ -337,19 +337,24 @@ export default function NuevoVehiculoPage() {
     }
   }, [fechaEntrega])
 
-  // ── Auto-rellenar monto inicial según el plan ──────────────────────────────
+  // ── Auto-rellenar monto inicial según el plan (AC500 y 40/60) ──────────────
   useEffect(() => {
     if (tipoCompra !== 'financiado') return
     if (plan === 'asegurate_500' && planAC500Sel) {
       setIngresoInicialMonto(String(planAC500Sel.cuota_0))
-    } else if (plan === 'personalizado') {
-      const m = parseFloat(orMonto)
-      if (m > 0) setIngresoInicialMonto(m.toFixed(2))
     } else if (plan === 'credito_40_60') {
       const m = parseFloat(vh4060Inicial) || calc4060?.inicial || 0
       if (m > 0) setIngresoInicialMonto(m.toFixed(2))
     }
-  }, [tipoCompra, plan, planAC500Sel, orMonto, vh4060Inicial, calc4060])
+  }, [tipoCompra, plan, planAC500Sel, vh4060Inicial, calc4060])
+
+  // ── Restante de inicial → Crédito La Oriental (plan personalizado) ──────────
+  useEffect(() => {
+    if (!registrarIngresoInicial || plan !== 'personalizado' || !calculadora) return
+    const pagado = parseFloat(ingresoInicialMonto) || 0
+    const restante = Math.max(0, calculadora.totalInicialLaOriental - pagado)
+    setOrMonto(restante.toFixed(2))
+  }, [registrarIngresoInicial, plan, calculadora, ingresoInicialMonto])
 
   const calcCuotaEspecial = useMemo(() => {
     const monto = parseFloat(ceMonto) || 0
@@ -409,17 +414,17 @@ export default function NuevoVehiculoPage() {
 
   function aplicarCalculadora() {
     if (!calculadora) return
-    // La Oriental: monto total + calcular montoCuota si ya hay cuotas definidas
-    setOrMonto(calculadora.totalInicialLaOriental.toFixed(2))
-    const cuotasOrActual = parseInt(orCuotas) || 0
-    if (cuotasOrActual > 0) {
-      setOrMontoCuota((calculadora.totalInicialLaOriental / cuotasOrActual).toFixed(2))
+    // Si el ingreso está activo, orMonto lo maneja el useEffect de restante
+    if (!(registrarIngresoInicial && plan === 'personalizado')) {
+      setOrMonto(calculadora.totalInicialLaOriental.toFixed(2))
+      const cuotasOrActual = parseInt(orCuotas) || 0
+      if (cuotasOrActual > 0) {
+        setOrMontoCuota((calculadora.totalInicialLaOriental / cuotasOrActual).toFixed(2))
+      }
     }
-    // Vehimotors: monto financiado, cuotas y cuota calculada
     setVhMonto(calculadora.financiamientoVh.toFixed(2))
     setVhCuotas(String(calculadora.n))
     setVhMontoCuota(calculadora.cuotaVh.toFixed(2))
-    // Precio de referencia del vehículo
     setPrecioTotalVehiculo(calculadora.base.toFixed(2))
   }
 
@@ -1320,6 +1325,91 @@ export default function NuevoVehiculoPage() {
                   </div>
                 </div>
 
+                {/* Ingreso de inicial — integrado con la calculadora */}
+                <div className={`border-2 rounded-xl transition-colors ${registrarIngresoInicial ? 'border-green-300 bg-green-50/30' : 'border-dashed border-gray-200'}`}>
+                  <div className="flex items-center justify-between p-5 pb-3">
+                    <h3 className="text-sm font-bold text-oriental-black flex items-center gap-2">
+                      <div className={`w-1 h-4 rounded-full ${registrarIngresoInicial ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      Registrar ingreso de inicial
+                    </h3>
+                    <button type="button" onClick={() => setRegistrarIngresoInicial(v => !v)}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${registrarIngresoInicial ? 'bg-green-500' : 'bg-gray-300'}`}>
+                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${registrarIngresoInicial ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {!registrarIngresoInicial && (
+                    <p className="text-xs text-oriental-gray px-5 pb-4">Activa para registrar cuánto pagó el cliente de inicial. El restante se carga automáticamente al Crédito La Oriental.</p>
+                  )}
+                  {registrarIngresoInicial && (
+                    <div className="px-5 pb-5 space-y-4">
+                      {calculadora && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 flex items-center justify-between text-sm">
+                          <span className="text-amber-700 text-xs">Total inicial (calculadora):</span>
+                          <span className="font-bold text-amber-900">{formatUSD(calculadora.totalInicialLaOriental)}</span>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="label">Monto recibido (USD) *</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
+                            <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
+                              placeholder="0.00" value={ingresoInicialMonto} onChange={e => setIngresoInicialMonto(e.target.value)} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="label">Fecha de pago *</label>
+                          <input type="date" className="input" value={ingresoInicialFecha} onChange={e => setIngresoInicialFecha(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="label">Método de pago *</label>
+                          <select className="select" value={ingresoInicialMetodo} onChange={e => setIngresoInicialMetodo(e.target.value)}>
+                            <option value="">Seleccionar...</option>
+                            {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="label">N° Referencia</label>
+                          <input type="text" className="input" placeholder="Número de referencia"
+                            value={ingresoInicialReferencia} onChange={e => setIngresoInicialReferencia(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="label">Banco emisor</label>
+                          <select className="select" value={ingresoInicialBancoEmisor} onChange={e => setIngresoInicialBancoEmisor(e.target.value)}>
+                            <option value="">—</option>
+                            {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="label">Banco receptor</label>
+                          <select className="select" value={ingresoInicialBancoReceptor} onChange={e => setIngresoInicialBancoReceptor(e.target.value)}>
+                            <option value="">—</option>
+                            {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      {calculadora && (
+                        <div className={`border rounded-lg px-4 py-3 flex items-center justify-between text-sm ${
+                          (parseFloat(ingresoInicialMonto) || 0) > calculadora.totalInicialLaOriental
+                            ? 'bg-red-50 border-red-200'
+                            : 'bg-purple-50 border-purple-200'
+                        }`}>
+                          <span className="text-purple-800 text-xs font-semibold">→ Restante → Crédito La Oriental:</span>
+                          <span className="font-extrabold text-purple-700 text-base">
+                            {formatUSD(Math.max(0, calculadora.totalInicialLaOriental - (parseFloat(ingresoInicialMonto) || 0)))}
+                          </span>
+                        </div>
+                      )}
+                      {(!ingresoInicialMonto || !ingresoInicialMetodo) && (
+                        <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                          <AlertCircle size={14} className="text-yellow-600 flex-shrink-0" />
+                          <p className="text-xs text-yellow-800">Completa el monto y el método de pago para registrar el ingreso.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Precio del vehículo */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                   <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider mb-3">Precio del vehículo</p>
@@ -1787,8 +1877,8 @@ export default function NuevoVehiculoPage() {
           </div>
         )}
 
-        {/* Pago de inicial */}
-        {tipoCompra === 'financiado' && (
+        {/* Pago de inicial — AC500 y 40/60 (personalizado lo tiene integrado en la calculadora) */}
+        {tipoCompra === 'financiado' && plan !== 'personalizado' && (
           <div className={`card p-6 border-2 transition-colors ${registrarIngresoInicial ? 'border-green-300 bg-green-50/30' : 'border-dashed border-gray-200'}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider flex items-center gap-2">
