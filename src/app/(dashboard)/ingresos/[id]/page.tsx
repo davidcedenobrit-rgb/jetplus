@@ -46,7 +46,7 @@ export default async function IngresoDetallePage({
   // Cuotas aplicadas en este ingreso (para el recibo)
   const { data: cuotasAplicadas } = await supabase
     .from('cuota_ingresos')
-    .select('monto_aplicado, cuotas(numero_cuota, monto, fecha_vencimiento, concepto, credito_id, creditos(plan_tipo))')
+    .select('monto_aplicado, cuotas(numero_cuota, monto, monto_pagado, estado, fecha_vencimiento, concepto, credito_id, creditos(plan_tipo))')
     .eq('ingreso_id', id)
 
   // Vehículo vinculado
@@ -254,16 +254,23 @@ export default async function IngresoDetallePage({
                             <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Vencimiento</th>
                             <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Monto cuota</th>
                             <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Abonado este recibo</th>
+                            <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Saldo cuota</th>
                           </tr>
                         </thead>
                         <tbody>
                           {(cuotasAplicadas ?? []).map((ci: any, idx: number) => {
                             const cuota = ci.cuotas
                             const planTipo = cuota?.creditos?.plan_tipo
-                            const planNombre = planTipo === 'inicial_la_oriental' ? 'La Oriental' :
-                              planTipo === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Crédito'
+                            const planNombre =
+                              planTipo === 'inicial_la_oriental' ? 'La Oriental' :
+                              planTipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
+                              planTipo === 'asegurate_500' ? 'Asegúrate $500' :
+                              planTipo === 'credito_40_60' ? '40/60 Vehimotors' :
+                              planTipo === 'cuota_especial' ? 'Cuota especial' : 'Crédito'
                             const montoTotal = Number(cuota?.monto ?? 0)
                             const aplicado = Number(ci.monto_aplicado)
+                            const montoPagado = Number(cuota?.monto_pagado ?? 0)
+                            const saldoCuota = Math.max(0, montoTotal - montoPagado)
                             return (
                               <tr key={idx} className="border-b border-gray-100 last:border-0">
                                 <td className="px-3 py-2 font-semibold text-oriental-black">#{cuota?.numero_cuota ?? '—'}</td>
@@ -278,6 +285,9 @@ export default async function IngresoDetallePage({
                                 </td>
                                 <td className="px-3 py-2 text-right font-bold text-oriental-black">
                                   ${aplicado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className={`px-3 py-2 text-right font-bold ${saldoCuota > 0 ? 'text-oriental-red' : 'text-green-600'}`}>
+                                  ${saldoCuota.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
                                 </td>
                               </tr>
                             )
@@ -411,12 +421,20 @@ export default async function IngresoDetallePage({
                           {creditosVehiculo.map((c: any) => {
                             const cuotasCred = cuotasVehiculo.filter((q: any) => q.credito_id === c.id)
                             const pagadasCred = cuotasCred.filter((q: any) => q.estado === 'pagada').length
-                            const planLabel = c.plan_tipo === 'inicial_la_oriental' ? 'La Oriental'
-                              : c.plan_tipo === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Crédito'
+                            const planLabel =
+                              c.plan_tipo === 'inicial_la_oriental' ? 'La Oriental' :
+                              c.plan_tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
+                              c.plan_tipo === 'asegurate_500' ? 'Asegúrate $500' :
+                              c.plan_tipo === 'credito_40_60' ? '40/60 Vehimotors' :
+                              c.plan_tipo === 'cuota_especial' ? 'Cuota especial' : 'Crédito'
                             const planBg = c.plan_tipo === 'inicial_la_oriental'
                               ? 'bg-purple-50 text-purple-700 border-purple-200'
                               : c.plan_tipo === 'financiamiento_vehimotors'
                               ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              : c.plan_tipo === 'asegurate_500'
+                              ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                              : c.plan_tipo === 'credito_40_60'
+                              ? 'bg-orange-50 text-orange-700 border-orange-200'
                               : 'bg-gray-50 text-gray-600 border-gray-200'
                             return (
                               <div key={c.id} className={`flex items-center justify-between p-2 rounded-lg border ${planBg}`}>
