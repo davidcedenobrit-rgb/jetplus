@@ -4,6 +4,7 @@ import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, Handshake, User, Car, PlusCircle, CreditCard, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react'
 import EditarAcuerdo from './EditarAcuerdo'
+import EliminarAcuerdo from './EliminarAcuerdo'
 
 export default async function AcuerdoDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -76,7 +77,8 @@ export default async function AcuerdoDetallePage({ params }: { params: Promise<{
           </div>
           <p className="text-oriental-gray text-sm mt-0.5">Registrado el {formatDate(acuerdo.created_at)}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <EliminarAcuerdo acuerdoId={id} />
           <EditarAcuerdo acuerdo={{
             id: acuerdo.id,
             monto_acordado: acordado,
