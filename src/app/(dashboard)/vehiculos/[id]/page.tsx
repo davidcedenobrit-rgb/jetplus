@@ -70,13 +70,24 @@ export default async function VehiculoDetallePage({
     .order('plan_tipo')
 
   let cuotasResumen: any[] = []
+  let acuerdoActivo: any = null
   if (creditos && creditos.length > 0) {
     const creditoIds = creditos.map((c: any) => c.id)
-    const { data: cuotas } = await supabase
-      .from('cuotas')
-      .select('id, estado, monto, monto_pagado, credito_id')
-      .in('credito_id', creditoIds)
-    cuotasResumen = cuotas ?? []
+    const [cuotasRes, acuerdoRes] = await Promise.all([
+      supabase
+        .from('cuotas')
+        .select('id, estado, monto, monto_pagado, credito_id')
+        .in('credito_id', creditoIds),
+      supabase
+        .from('acuerdos_inicial')
+        .select('id, monto_acordado, monto_pagado, estado, fecha_limite, credito_id')
+        .in('credito_id', creditoIds)
+        .not('estado', 'in', '("completado","cancelado")')
+        .limit(1)
+        .maybeSingle(),
+    ])
+    cuotasResumen = cuotasRes.data ?? []
+    acuerdoActivo = acuerdoRes.data ?? null
   }
 
   // Calcular métricas financieras desde cuotas pendientes (incluye el inicial ya pagado)
@@ -148,6 +159,56 @@ export default async function VehiculoDetallePage({
           <p className="text-oriental-gray text-sm mt-0.5">{[vehiculo.version, vehiculo.anio, vehiculo.color].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
+
+      {/* ⚠ Alerta: Inicial incompleta — no tramitar */}
+      {acuerdoActivo && (() => {
+        const acordado = Number(acuerdoActivo.monto_acordado)
+        const pagado   = Number(acuerdoActivo.monto_pagado ?? 0)
+        const pendiente = Math.max(0, acordado - pagado)
+        const pct = acordado > 0 ? Math.min(100, (pagado / acordado) * 100) : 0
+        if (pendiente <= 0.01) return null
+        return (
+          <div className="mb-6 rounded-2xl border-2 border-red-300 bg-red-50 p-5">
+            <div className="flex items-start gap-3">
+              <AlertCircle size={22} className="text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-bold text-red-700 text-base">Inicial incompleta — No tramitar</p>
+                <p className="text-sm text-red-600 mt-0.5">
+                  El cliente tiene un acuerdo de pago pendiente. No se puede iniciar ningún trámite vehicular hasta que cancele el saldo del inicial.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-6 text-sm">
+                  <div>
+                    <p className="text-xs text-red-400 uppercase tracking-wide">Acordado</p>
+                    <p className="font-bold text-red-800">{formatCurrency(acordado, 'USD')}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-red-400 uppercase tracking-wide">Pagado</p>
+                    <p className="font-bold text-green-700">{formatCurrency(pagado, 'USD')}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-red-400 uppercase tracking-wide">Pendiente</p>
+                    <p className="font-extrabold text-red-700 text-lg">{formatCurrency(pendiente, 'USD')}</p>
+                  </div>
+                </div>
+                <div className="mt-2 w-full bg-red-100 rounded-full h-2.5">
+                  <div className="bg-red-500 h-2.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                {acuerdoActivo.fecha_limite && (
+                  <p className="text-xs text-red-600 mt-2">
+                    Fecha límite del acuerdo: <strong>{formatDate(acuerdoActivo.fecha_limite)}</strong>
+                  </p>
+                )}
+                <Link
+                  href={`/creditos/${acuerdoActivo.credito_id}`}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:underline"
+                >
+                  Ver acuerdo de pago <ExternalLink size={11} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Info */}

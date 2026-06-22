@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, CircleDot, PlusCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, CircleDot, PlusCircle, AlertCircle } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import RevertirCuotaButton from './RevertirCuotaButton'
 import PrintButton from './PrintButton'
@@ -436,6 +436,14 @@ export default async function CreditoDetallePage({
                     )}
                     {acuerdo.observaciones && (
                       <p className="text-xs text-oriental-gray italic">"{acuerdo.observaciones}"</p>
+                    )}
+                    {pendiente > 0.01 && (
+                      <div className="mt-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                        <AlertCircle size={15} className="text-red-500 flex-shrink-0" />
+                        <p className="text-xs font-semibold text-red-700">
+                          No tramitar ante Vehimotors hasta que el cliente complete el pago del inicial.
+                        </p>
+                      </div>
                     )}
                   </div>
                 )
