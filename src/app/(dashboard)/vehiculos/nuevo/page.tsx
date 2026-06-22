@@ -22,7 +22,10 @@ interface PlanAC500 {
 interface PagoInicial {
   id: string; monto: string; metodo: string; referencia: string
   bancoEmisor: string; bancoReceptor: string
+  montoBs: string; tasaCambio: string
 }
+
+const METODOS_BS = ['Transferencia bancaria', 'Pago móvil', 'Depósito bancario', 'Efectivo VES', 'Cheque']
 
 function formatUSD(n: number) {
   if (n == null || isNaN(n)) return '$0.00'
@@ -54,7 +57,7 @@ export default function NuevoVehiculoPage() {
   const [registrarIngresoInicial, setRegistrarIngresoInicial] = useState(false)
   const [ingresoInicialFecha, setIngresoInicialFecha] = useState(new Date().toISOString().split('T')[0])
   const [pagosIniciales, setPagosIniciales] = useState<PagoInicial[]>([
-    { id: '1', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '' }
+    { id: '1', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '' }
   ])
 
   const [showCrearCliente, setShowCrearCliente] = useState(false)
@@ -453,6 +456,8 @@ export default function NuevoVehiculoPage() {
     for (const pago of pagosValidos) {
       const numero_recibo = `LOA-REC-${year}-${String(nextNum).padStart(5, '0')}`
       nextNum++
+      const montoBs = parseFloat(pago.montoBs) || null
+      const tasaCambio = parseFloat(pago.tasaCambio) || null
       await supabase.from('ingresos').insert({
         numero_recibo,
         cliente_id: clienteId,
@@ -467,15 +472,27 @@ export default function NuevoVehiculoPage() {
         banco_receptor: pago.bancoReceptor || null,
         fecha_pago: ingresoInicialFecha,
         estado: 'registrado',
+        monto_bs: montoBs,
+        tasa_cambio: tasaCambio,
       })
     }
   }
 
   function updatePago(id: string, field: keyof PagoInicial, value: string) {
-    setPagosIniciales(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p))
+    setPagosIniciales(prev => prev.map(p => {
+      if (p.id !== id) return p
+      const updated = { ...p, [field]: value }
+      // Auto-calc USD equivalent when Bs. amount or rate changes
+      if (field === 'montoBs' || field === 'tasaCambio') {
+        const bs = parseFloat(field === 'montoBs' ? value : p.montoBs) || 0
+        const tasa = parseFloat(field === 'tasaCambio' ? value : p.tasaCambio) || 0
+        if (bs > 0 && tasa > 0) updated.monto = (bs / tasa).toFixed(2)
+      }
+      return updated
+    }))
   }
   function addPago() {
-    setPagosIniciales(prev => [...prev, { id: String(Date.now()), monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '' }])
+    setPagosIniciales(prev => [...prev, { id: String(Date.now()), monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '' }])
   }
   function removePago(id: string) {
     if (pagosIniciales.length <= 1) return
@@ -1420,6 +1437,31 @@ export default function NuevoVehiculoPage() {
                                 {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
                               </select>
                             </div>
+                            {METODOS_BS.includes(pago.metodo) && (<>
+                              <div className="md:col-span-2 pt-1 border-t border-orange-100">
+                                <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Detalle en Bolívares</p>
+                              </div>
+                              <div>
+                                <label className="label">Monto en Bs.</label>
+                                <input type="number" step="0.01" min="0" className="input"
+                                  placeholder="0.00" value={pago.montoBs} onChange={e => updatePago(pago.id, 'montoBs', e.target.value)} />
+                              </div>
+                              <div>
+                                <label className="label">Tasa Bs./USD</label>
+                                <input type="number" step="0.01" min="0" className="input"
+                                  placeholder="40.00" value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
+                              </div>
+                              {pago.montoBs && pago.tasaCambio && (
+                                <div className="md:col-span-2">
+                                  <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 flex items-center justify-between text-sm">
+                                    <span className="text-orange-700 text-xs font-semibold">≈ Equivalente USD:</span>
+                                    <span className="font-extrabold text-orange-900">
+                                      {formatUSD((parseFloat(pago.montoBs) || 0) / (parseFloat(pago.tasaCambio) || 1))}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </>)}
                           </div>
                         </div>
                       ))}
@@ -1989,6 +2031,31 @@ export default function NuevoVehiculoPage() {
                           {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
                         </select>
                       </div>
+                      {METODOS_BS.includes(pago.metodo) && (<>
+                        <div className="md:col-span-2 pt-1 border-t border-orange-100">
+                          <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Detalle en Bolívares</p>
+                        </div>
+                        <div>
+                          <label className="label">Monto en Bs.</label>
+                          <input type="number" step="0.01" min="0" className="input"
+                            placeholder="0.00" value={pago.montoBs} onChange={e => updatePago(pago.id, 'montoBs', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="label">Tasa Bs./USD</label>
+                          <input type="number" step="0.01" min="0" className="input"
+                            placeholder="40.00" value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
+                        </div>
+                        {pago.montoBs && pago.tasaCambio && (
+                          <div className="md:col-span-2">
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 flex items-center justify-between text-sm">
+                              <span className="text-orange-700 text-xs font-semibold">≈ Equivalente USD:</span>
+                              <span className="font-extrabold text-orange-900">
+                                {formatUSD((parseFloat(pago.montoBs) || 0) / (parseFloat(pago.tasaCambio) || 1))}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </>)}
                     </div>
                   </div>
                 ))}
