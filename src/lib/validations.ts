@@ -9,7 +9,7 @@ const CATEGORIAS_EGRESO = [
 const MONEDA = ['USD', 'VES', 'USDT'] as const
 const TIPO_CLIENTE = ['natural', 'juridico'] as const
 const MARCA_VEHICULO = ['MG', 'MAXUS'] as const
-const TIPO_COMPRA = ['contado', 'financiado'] as const
+const TIPO_COMPRA = ['contado', 'financiado', 'asegurate_500', 'credito_40_60', 'credito', 'financiamiento'] as const
 const FRECUENCIA_PAGO = ['mensual', 'quincenal', 'semanal', 'trimestral'] as const
 
 export const LoginSchema = z.object({
@@ -85,6 +85,7 @@ export const VehiculoSchema = z.object({
   placa: z.string().max(10).optional().nullable(),
   vin: z.string().max(50).optional().nullable(),
   serial_motor: z.string().max(50).optional().nullable(),
+  proforma_vehimotors: z.string().max(50).optional().nullable(),
   tipo_compra: z.enum(TIPO_COMPRA),
   fecha_entrega: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   estado: z.string().max(50).default('disponible'),
