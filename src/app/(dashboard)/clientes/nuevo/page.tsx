@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Save, Store, CheckCircle2, Car, X } from 'lucide-react'
+import { ArrowLeft, Save, Store, CheckCircle2, Car, X, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { ClienteSchema } from '@/lib/validations'
 import type { VehiculoShowroom } from '@/types/database'
@@ -17,6 +17,9 @@ export default function NuevoClientePage() {
   const [nombre, setNombre] = useState('')
   const [cedulaRif, setCedulaRif] = useState('')
   const [tipo, setTipo] = useState<'natural' | 'juridico'>('natural')
+
+  const [clienteDuplicado, setClienteDuplicado] = useState<{ id: string; nombre: string } | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [telefono, setTelefono] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [correo, setCorreo] = useState('')
@@ -41,6 +44,23 @@ export default function NuevoClientePage() {
     }
     cargarShowroom()
   }, [])
+
+  useEffect(() => {
+    const val = cedulaRif.trim()
+    setClienteDuplicado(null)
+    if (!val) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('clientes')
+        .select('id, nombre')
+        .ilike('cedula_rif', val)
+        .limit(1)
+        .maybeSingle()
+      if (data) setClienteDuplicado({ id: data.id, nombre: data.nombre })
+    }, 500)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [cedulaRif])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -232,7 +252,26 @@ export default function NuevoClientePage() {
             </div>
             <div>
               <label className="label">{tipo === 'juridico' ? 'RIF' : 'Cédula / RIF'} *</label>
-              <input type="text" className="input font-mono" placeholder={tipo === 'juridico' ? 'J-12345678-9' : 'V-12345678'} value={cedulaRif} onChange={e => setCedulaRif(e.target.value)} required />
+              <input
+                type="text"
+                className={`input font-mono ${clienteDuplicado ? 'border-amber-400 focus:ring-amber-400' : ''}`}
+                placeholder={tipo === 'juridico' ? 'J-12345678-9' : 'V-12345678'}
+                value={cedulaRif}
+                onChange={e => setCedulaRif(e.target.value)}
+                required
+              />
+              {clienteDuplicado && (
+                <div className="mt-1.5 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <AlertTriangle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs">
+                    <span className="text-amber-800 font-semibold">Ya existe un cliente con esta cédula/RIF: </span>
+                    <Link href={`/clientes/${clienteDuplicado.id}`} className="text-amber-700 underline font-bold hover:text-amber-900" target="_blank">
+                      {clienteDuplicado.nombre}
+                    </Link>
+                    <span className="text-amber-700"> — Verifica si es el mismo antes de continuar.</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="label">Teléfono</label>

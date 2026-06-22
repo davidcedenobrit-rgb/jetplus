@@ -525,6 +525,20 @@ export default function NuevoVehiculoPage() {
     }
     setCreandoCliente(true)
     setErrorCrearCliente('')
+
+    // Check for duplicate cedula/RIF before inserting
+    const { data: existente } = await supabase
+      .from('clientes')
+      .select('id, nombre')
+      .ilike('cedula_rif', nuevaCedula.trim())
+      .limit(1)
+      .maybeSingle()
+    if (existente) {
+      setErrorCrearCliente(`Ya existe: ${existente.nombre} (ID: ${existente.id.slice(0, 8)}…) — usa la búsqueda para seleccionarlo.`)
+      setCreandoCliente(false)
+      return
+    }
+
     const { data, error: err } = await supabase.from('clientes').insert({
       nombre: nuevoNombre.trim(),
       cedula_rif: nuevaCedula.trim().toUpperCase(),
