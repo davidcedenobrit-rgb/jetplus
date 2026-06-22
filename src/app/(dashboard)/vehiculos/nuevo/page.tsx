@@ -636,6 +636,31 @@ export default function NuevoVehiculoPage() {
       }).eq('id', showroomSeleccionado.id)
     }
 
+    // ── MODO ACUERDO DE PAGO ──────────────────────────────────────────────────
+    // Si hay acuerdo activo: crea solo el vehículo + acuerdo, SIN crédito todavía.
+    // El crédito se creará desde el detalle del vehículo una vez que el inicial esté pagado.
+    if (acuerdoActivo && parseFloat(acuerdoMonto) > 0) {
+      const { data: acuerdo, error: acuerdoErr } = await supabase
+        .from('acuerdos_inicial')
+        .insert({
+          vehiculo_id: vehiculo.id,
+          credito_id: null,
+          cliente_id: clienteSeleccionado.id,
+          monto_acordado: parseFloat(acuerdoMonto),
+          monto_pagado: 0,
+          fecha_limite: acuerdoFechaLimite || null,
+          observaciones: acuerdoObs || null,
+          estado: 'pendiente',
+        }).select().single()
+      if (acuerdoErr || !acuerdo) {
+        setError(acuerdoErr?.message ?? 'Error al crear el acuerdo'); setLoading(false); return
+      }
+      await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa, (acuerdo as any).id)
+      router.push(`/vehiculos/${vehiculo.id}`)
+      router.refresh()
+      return
+    }
+
     // Si es financiado, crear crédito automáticamente
     if (tipoCompra === 'financiado') {
 
@@ -755,22 +780,7 @@ export default function NuevoVehiculoPage() {
           if (!primerCreditoId) primerCreditoId = creditoCe.id
         }
 
-        // Crear acuerdo de inicial si está activo
-        let acuerdoId: string | null = null
-        if (acuerdoActivo && parseFloat(acuerdoMonto) > 0) {
-          const { data: acuerdo } = await supabase.from('acuerdos_inicial').insert({
-            vehiculo_id: vehiculo.id,
-            credito_id: primerCreditoId || null,
-            cliente_id: clienteSeleccionado.id,
-            monto_acordado: parseFloat(acuerdoMonto),
-            monto_pagado: 0,
-            fecha_limite: acuerdoFechaLimite || null,
-            observaciones: acuerdoObs || null,
-            estado: 'pendiente',
-          }).select().single()
-          acuerdoId = (acuerdo as any)?.id ?? null
-        }
-        await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa, acuerdoId)
+        await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa)
         router.push(`/creditos/${primerCreditoId}`)
         router.refresh()
         return
@@ -2240,7 +2250,7 @@ export default function NuevoVehiculoPage() {
 
         <div className="flex items-center gap-3">
           <button type="submit" className="btn-primary flex items-center gap-2 py-3 px-6" disabled={loading}>
-            <Save size={16} /> {loading ? 'Guardando...' : tipoCompra === 'financiado' ? 'Registrar vehículo y crear crédito' : 'Registrar vehículo'}
+            <Save size={16} /> {loading ? 'Guardando...' : acuerdoActivo ? 'Registrar con Acuerdo de Pago' : tipoCompra === 'financiado' ? 'Registrar vehículo y crear crédito' : 'Registrar vehículo'}
           </button>
           <Link href="/vehiculos" className="btn-secondary py-3 px-6">Cancelar</Link>
         </div>

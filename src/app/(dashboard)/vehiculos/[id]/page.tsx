@@ -70,24 +70,25 @@ export default async function VehiculoDetallePage({
     .order('plan_tipo')
 
   let cuotasResumen: any[] = []
-  let acuerdoActivo: any = null
+  // El acuerdo se consulta siempre por vehiculo_id, independiente de si hay crédito
+  const [acuerdoRes] = await Promise.all([
+    supabase
+      .from('acuerdos_inicial')
+      .select('id, monto_acordado, monto_pagado, estado, fecha_limite, credito_id')
+      .eq('vehiculo_id', id)
+      .not('estado', 'in', '("completado","cancelado")')
+      .limit(1)
+      .maybeSingle(),
+  ])
+  const acuerdoActivo: any = acuerdoRes.data ?? null
+
   if (creditos && creditos.length > 0) {
     const creditoIds = creditos.map((c: any) => c.id)
-    const [cuotasRes, acuerdoRes] = await Promise.all([
-      supabase
-        .from('cuotas')
-        .select('id, estado, monto, monto_pagado, credito_id')
-        .in('credito_id', creditoIds),
-      supabase
-        .from('acuerdos_inicial')
-        .select('id, monto_acordado, monto_pagado, estado, fecha_limite, credito_id')
-        .in('credito_id', creditoIds)
-        .not('estado', 'in', '("completado","cancelado")')
-        .limit(1)
-        .maybeSingle(),
-    ])
-    cuotasResumen = cuotasRes.data ?? []
-    acuerdoActivo = acuerdoRes.data ?? null
+    const { data: cuotas } = await supabase
+      .from('cuotas')
+      .select('id, estado, monto, monto_pagado, credito_id')
+      .in('credito_id', creditoIds)
+    cuotasResumen = cuotas ?? []
   }
 
   // Calcular métricas financieras desde cuotas pendientes (incluye el inicial ya pagado)
@@ -198,12 +199,22 @@ export default async function VehiculoDetallePage({
                     Fecha límite del acuerdo: <strong>{formatDate(acuerdoActivo.fecha_limite)}</strong>
                   </p>
                 )}
-                <Link
-                  href={`/creditos/${acuerdoActivo.credito_id}`}
-                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:underline"
-                >
-                  Ver acuerdo de pago <ExternalLink size={11} />
-                </Link>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <Link
+                    href={`/ingresos/nuevo?acuerdo=${acuerdoActivo.id}&cliente=${vehiculo.cliente_id ?? ''}&vehiculo=${id}&placa=${vehiculo.placa ?? ''}`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors"
+                  >
+                    Registrar pago
+                  </Link>
+                  {acuerdoActivo.credito_id && (
+                    <Link
+                      href={`/creditos/${acuerdoActivo.credito_id}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:underline"
+                    >
+                      Ver acuerdo completo <ExternalLink size={11} />
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           </div>
