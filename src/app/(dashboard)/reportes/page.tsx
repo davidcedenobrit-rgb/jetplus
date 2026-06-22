@@ -659,6 +659,17 @@ export default function ReportesPage() {
   const [vhVencidosList, setVhVencidosList]       = useState<ClienteVencido[]>([])
   const [generalVencidosList, setGeneralVencidosList] = useState<ClienteVencido[]>([])
 
+  // ── Asegúrate $500
+  const [acPagadas, setAcPagadas] = useState(0)
+  const [acPendientes, setAcPendientes] = useState(0)
+  const [acVencidas, setAcVencidas] = useState(0)
+  const [acMontoPagado, setAcMontoPagado] = useState(0)
+  const [acMontoPendiente, setAcMontoPendiente] = useState(0)
+  const [acMontoVencido, setAcMontoVencido] = useState(0)
+  const [acFiltro, setAcFiltro] = useState<FiltroEstado>('todos')
+  const [acClienteList, setAcClienteList] = useState<ClienteCartera[]>([])
+  const [acVencidosList, setAcVencidosList] = useState<ClienteVencido[]>([])
+
   // ── Deudores / Pagadores
   const [topDeudores, setTopDeudores] = useState<{ nombre: string; cedula: string; saldo: number; creditos: number }[]>([])
   const [topPagadores, setTopPagadores] = useState<{ nombre: string; cedula: string; pagadas: number; total: number }[]>([])
@@ -873,6 +884,49 @@ export default function ReportesPage() {
       }
     })
     setGeneralClienteList(Object.values(genMap))
+
+    // ── Asegúrate $500
+    const acCreditos = creditos.filter((c: any) => c.plan_tipo === 'asegurate_500')
+    const acCreditoIds = new Set(acCreditos.map((c: any) => c.id))
+    const acCuotas = cuotas.filter((c: any) => acCreditoIds.has(c.credito_id))
+    const acPag  = acCuotas.filter((c: any) => c.estado === 'pagada')
+    const acPend = acCuotas.filter((c: any) => c.estado === 'pendiente' || c.estado === 'abono_parcial')
+    const acVenc = acCuotas.filter((c: any) => c.estado === 'vencida')
+    setAcPagadas(acPag.length)
+    setAcPendientes(acPend.length)
+    setAcVencidas(acVenc.length)
+    setAcMontoPagado(acPag.reduce((s: number, c: any) => s + Number(c.monto ?? 0), 0))
+    setAcMontoPendiente([...acPend, ...acVenc].reduce((s: number, c: any) =>
+      s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
+    setAcMontoVencido(acVenc.reduce((s: number, c: any) =>
+      s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
+
+    // ── Listado clientes AC500
+    const acList: Record<string, any> = {}
+    acCreditos.forEach((c: any) => {
+      const cl = c.clientes; if (!cl) return
+      const cuotasCred = acCuotas.filter((q: any) => q.credito_id === c.id)
+      const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
+      const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
+      const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      const cpendSorted = [...cpend].sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
+      const proxima = cpendSorted[0]
+      acList[c.id] = {
+        nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—', creditoId: c.id,
+        totalCuotas: cuotasCred.length,
+        cuotasPagadas: cpag.length, cuotasPendientes: cpend.length, cuotasVencidas: cvenc.length,
+        montoPagado: cpag.reduce((s: number, q: any) => s + Number(q.monto ?? 0), 0),
+        montoPendiente: [...cpend, ...cvenc].reduce((s: number, q: any) =>
+          s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
+        montoVencido: cvenc.reduce((s: number, q: any) =>
+          s + Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0)), 0),
+        proximaCuotaMonto: proxima ? Math.max(0, Number(proxima.monto ?? 0) - Number(proxima.monto_pagado ?? 0)) : 0,
+        proximaCuotaFecha: proxima?.fecha_vencimiento ?? '',
+        estadoGeneral: estadoCliente(cvenc, cpend),
+      }
+    })
+    setAcClienteList(Object.values(acList))
+    setAcVencidosList(computeVencidos(creditos, cuotas, hoyStr, 'asegurate_500'))
 
     // ── Aging de vencidas por cartera
     setOrVencidosList(computeVencidos(creditos, cuotas, hoyStr, 'inicial_la_oriental'))
@@ -1140,7 +1194,66 @@ export default function ReportesPage() {
             </div>
           </section>
 
-          {/* ══ 5. LISTADO GENERAL ════════════════════════════════════════ */}
+          {/* ══ 5. CARTERA ASEGÚRATE $500 ════════════════════════════════ */}
+          <section>
+            <SectionTitle>Cartera Asegúrate $500 — financiamiento especial</SectionTitle>
+            <div className="card p-6 space-y-5">
+
+              {/* KPIs de cuotas */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-green-50 rounded-xl p-4 text-center border border-green-100">
+                  <CheckCircle2 size={20} className="text-green-600 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-green-700">{acPagadas}</p>
+                  <p className="text-xs text-green-600 font-semibold">Cuotas cobradas a clientes</p>
+                  <p className="text-sm font-bold text-green-800 mt-1">{formatCurrency(acMontoPagado)}</p>
+                </div>
+                <div className="bg-yellow-50 rounded-xl p-4 text-center border border-yellow-100">
+                  <Clock size={20} className="text-yellow-600 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-yellow-700">{acPendientes}</p>
+                  <p className="text-xs text-yellow-600 font-semibold">Cuotas pendientes de cobro</p>
+                  <p className="text-sm font-bold text-yellow-800 mt-1">{formatCurrency(acMontoPendiente)}</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
+                  <AlertCircle size={20} className="text-red-500 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-red-700">{acVencidas}</p>
+                  <p className="text-xs text-red-600 font-semibold">Cuotas vencidas</p>
+                  <p className="text-sm font-bold text-red-800 mt-1">{acVencidas > 0 ? 'Requieren gestión' : 'Sin vencidas'}</p>
+                </div>
+              </div>
+
+              {/* Resumen para directores */}
+              <div className="border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <CircleDot size={15} className="text-yellow-500" />
+                  <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Reporte Asegúrate $500</p>
+                  <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">Asegúrate $500</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-100">
+                    <p className="text-xs text-yellow-600 font-semibold mb-1">✓ Ya cobrado — listo para reportar</p>
+                    <p className="text-2xl font-extrabold text-yellow-800">{formatCurrency(acMontoPagado)}</p>
+                    <p className="text-[11px] text-yellow-500 mt-1">{acPagadas} cuota{acPagadas !== 1 ? 's' : ''} recibida{acPagadas !== 1 ? 's' : ''} de clientes</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                    <p className="text-xs text-amber-600 font-semibold mb-1">⏳ Pendiente por cobrar a clientes</p>
+                    <p className="text-2xl font-extrabold text-amber-800">{formatCurrency(acMontoPendiente)}</p>
+                    <p className="text-[11px] text-amber-500 mt-1">{acPendientes + acVencidas} cuota{(acPendientes + acVencidas) !== 1 ? 's' : ''} sin cobrar</p>
+                  </div>
+                </div>
+              </div>
+
+              <ListaClientesBlock
+                lista={acClienteList} filtro={acFiltro} setFiltro={setAcFiltro}
+                subtituloImprimir="Reporte Cartera Asegúrate $500"
+              />
+              {acClienteList.length === 0 && !loading && (
+                <p className="text-center text-sm text-oriental-gray py-4 border-t border-gray-100">No hay créditos de Asegúrate $500 registrados</p>
+              )}
+              <AgingVencidosBlock lista={acVencidosList} subtituloImprimir="Cartera Asegúrate $500" />
+            </div>
+          </section>
+
+          {/* ══ 6. LISTADO GENERAL ════════════════════════════════════════ */}
           <section>
             <SectionTitle>Listado general de clientes — todos los créditos</SectionTitle>
             <div className="card p-6">
