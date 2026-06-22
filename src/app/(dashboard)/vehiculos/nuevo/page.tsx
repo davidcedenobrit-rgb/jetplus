@@ -53,6 +53,12 @@ export default function NuevoVehiculoPage() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
 
+  // Acuerdo de pago de inicial
+  const [acuerdoActivo, setAcuerdoActivo] = useState(false)
+  const [acuerdoMonto, setAcuerdoMonto] = useState('')
+  const [acuerdoFechaLimite, setAcuerdoFechaLimite] = useState('')
+  const [acuerdoObs, setAcuerdoObs] = useState('')
+
   // Ingreso de inicial — soporta múltiples métodos de pago
   const [registrarIngresoInicial, setRegistrarIngresoInicial] = useState(false)
   const [ingresoInicialFecha, setIngresoInicialFecha] = useState(new Date().toISOString().split('T')[0])
@@ -415,16 +421,21 @@ export default function NuevoVehiculoPage() {
   // ── Restante de inicial → Crédito La Oriental (plan personalizado) ──────────
   const totalPagadoInicial = pagosIniciales.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0)
   useEffect(() => {
-    if (!registrarIngresoInicial || plan !== 'personalizado' || !calculadora) return
-    const restante = Math.max(0, calculadora.totalInicialLaOriental - totalPagadoInicial)
+    if (plan !== 'personalizado' || !calculadora) return
+    if (!acuerdoActivo && !registrarIngresoInicial) return
+    // Si hay acuerdo, el efectivo acordado determina el crédito; si no, lo que pagó hoy
+    const cashPortion = acuerdoActivo
+      ? (parseFloat(acuerdoMonto) || 0)
+      : totalPagadoInicial
+    const restante = Math.max(0, calculadora.totalInicialLaOriental - cashPortion)
     setOrMonto(restante.toFixed(2))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registrarIngresoInicial, plan, calculadora, totalPagadoInicial])
+  }, [plan, calculadora, acuerdoActivo, acuerdoMonto, registrarIngresoInicial, totalPagadoInicial])
 
   function aplicarCalculadora() {
     if (!calculadora) return
-    // Si el ingreso está activo, orMonto lo maneja el useEffect de restante
-    if (!(registrarIngresoInicial && plan === 'personalizado')) {
+    // Si el acuerdo o el ingreso están activos, orMonto lo maneja el useEffect de restante
+    if (!((acuerdoActivo || registrarIngresoInicial) && plan === 'personalizado')) {
       setOrMonto(calculadora.totalInicialLaOriental.toFixed(2))
       const cuotasOrActual = parseInt(orCuotas) || 0
       if (cuotasOrActual > 0) {
@@ -437,7 +448,7 @@ export default function NuevoVehiculoPage() {
     setPrecioTotalVehiculo(calculadora.base.toFixed(2))
   }
 
-  async function crearIngresoInicial(vehiculoId: string, vehiculoDesc: string, clienteId: string, placa: string | null) {
+  async function crearIngresoInicial(vehiculoId: string, vehiculoDesc: string, clienteId: string, placa: string | null, acuerdoId?: string | null) {
     if (!registrarIngresoInicial) return
     const pagosValidos = pagosIniciales.filter(p => parseFloat(p.monto) > 0 && p.metodo)
     if (pagosValidos.length === 0) return
@@ -474,7 +485,15 @@ export default function NuevoVehiculoPage() {
         estado: 'registrado',
         monto_bs: montoBs,
         tasa_cambio: tasaCambio,
+        acuerdo_inicial_id: acuerdoId ?? null,
       })
+    }
+    // Actualizar monto_pagado en el acuerdo
+    if (acuerdoId && pagosValidos.length > 0) {
+      const totalPagado = pagosValidos.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0)
+      await supabase.from('acuerdos_inicial')
+        .update({ monto_pagado: totalPagado, updated_at: new Date().toISOString() })
+        .eq('id', acuerdoId)
     }
   }
 
@@ -683,7 +702,22 @@ export default function NuevoVehiculoPage() {
           if (!primerCreditoId) primerCreditoId = creditoCe.id
         }
 
-        await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa)
+        // Crear acuerdo de inicial si está activo
+        let acuerdoId: string | null = null
+        if (acuerdoActivo && parseFloat(acuerdoMonto) > 0) {
+          const { data: acuerdo } = await supabase.from('acuerdos_inicial').insert({
+            vehiculo_id: vehiculo.id,
+            credito_id: primerCreditoId || null,
+            cliente_id: clienteSeleccionado.id,
+            monto_acordado: parseFloat(acuerdoMonto),
+            monto_pagado: 0,
+            fecha_limite: acuerdoFechaLimite || null,
+            observaciones: acuerdoObs || null,
+            estado: 'pendiente',
+          }).select().single()
+          acuerdoId = (acuerdo as any)?.id ?? null
+        }
+        await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa, acuerdoId)
         router.push(`/creditos/${primerCreditoId}`)
         router.refresh()
         return
@@ -1363,12 +1397,72 @@ export default function NuevoVehiculoPage() {
                   </div>
                 </div>
 
+                {/* ── ACUERDO DE PAGO DE INICIAL ── */}
+                <div className={`border-2 rounded-xl transition-colors ${acuerdoActivo ? 'border-blue-300 bg-blue-50/30' : 'border-dashed border-gray-200'}`}>
+                  <div className="flex items-center justify-between p-5 pb-3">
+                    <h3 className="text-sm font-bold text-oriental-black flex items-center gap-2">
+                      <div className={`w-1 h-4 rounded-full ${acuerdoActivo ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                      Acuerdo de pago de inicial
+                    </h3>
+                    <button type="button" onClick={() => setAcuerdoActivo(v => !v)}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${acuerdoActivo ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${acuerdoActivo ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {!acuerdoActivo && (
+                    <p className="text-xs text-oriental-gray px-5 pb-4">Activa si el cliente pagará la inicial en varias partes a lo largo de días. Define el monto acordado y registra cada pago como ingreso desde el detalle del crédito.</p>
+                  )}
+                  {acuerdoActivo && (
+                    <div className="px-5 pb-5 space-y-4">
+                      {calculadora && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 flex items-center justify-between text-sm">
+                          <span className="text-blue-700 text-xs">Total inicial calculado:</span>
+                          <span className="font-bold text-blue-900">{formatUSD(calculadora.totalInicialLaOriental)}</span>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="label">Monto acordado a pagar (USD) *</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
+                            <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
+                              placeholder="0.00" value={acuerdoMonto} onChange={e => setAcuerdoMonto(e.target.value)} />
+                          </div>
+                          <p className="text-[10px] text-oriental-gray mt-1">Lo que el cliente se compromete a pagar en efectivo (el restante va a Crédito La Oriental)</p>
+                        </div>
+                        <div>
+                          <label className="label">Fecha límite de pago</label>
+                          <input type="date" className="input" value={acuerdoFechaLimite} onChange={e => setAcuerdoFechaLimite(e.target.value)} />
+                          <p className="text-[10px] text-oriental-gray mt-1">Opcional — fecha máxima para completar el acuerdo</p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="label">Observaciones del acuerdo</label>
+                          <input type="text" className="input" placeholder="Ej: Pagará $3k el lunes, $4k el miércoles, $1k el viernes"
+                            value={acuerdoObs} onChange={e => setAcuerdoObs(e.target.value)} />
+                        </div>
+                      </div>
+                      {calculadora && parseFloat(acuerdoMonto) > 0 && (
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 flex items-center justify-between text-sm">
+                          <span className="text-purple-800 text-xs font-semibold">→ Restante → Crédito La Oriental:</span>
+                          <span className="font-extrabold text-purple-700 text-base">
+                            {formatUSD(Math.max(0, calculadora.totalInicialLaOriental - (parseFloat(acuerdoMonto) || 0)))}
+                          </span>
+                        </div>
+                      )}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-xs text-blue-800 flex items-start gap-2">
+                        <AlertCircle size={13} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                        <span>Los pagos parciales se registran como ingresos desde el detalle del crédito una vez creado. Activa &quot;Registrar primer pago&quot; abajo si el cliente pagó algo hoy.</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Ingreso de inicial — integrado con la calculadora */}
                 <div className={`border-2 rounded-xl transition-colors ${registrarIngresoInicial ? 'border-green-300 bg-green-50/30' : 'border-dashed border-gray-200'}`}>
                   <div className="flex items-center justify-between p-5 pb-3">
                     <h3 className="text-sm font-bold text-oriental-black flex items-center gap-2">
                       <div className={`w-1 h-4 rounded-full ${registrarIngresoInicial ? 'bg-green-500' : 'bg-gray-300'}`} />
-                      Registrar ingreso de inicial
+                      {acuerdoActivo ? 'Registrar primer pago de hoy' : 'Registrar ingreso de inicial'}
                     </h3>
                     <button type="button" onClick={() => setRegistrarIngresoInicial(v => !v)}
                       className={`relative w-11 h-6 rounded-full transition-colors ${registrarIngresoInicial ? 'bg-green-500' : 'bg-gray-300'}`}>
@@ -1376,7 +1470,11 @@ export default function NuevoVehiculoPage() {
                     </button>
                   </div>
                   {!registrarIngresoInicial && (
-                    <p className="text-xs text-oriental-gray px-5 pb-4">Activa para registrar cuánto pagó el cliente de inicial. El restante se carga automáticamente al Crédito La Oriental.</p>
+                    <p className="text-xs text-oriental-gray px-5 pb-4">
+                      {acuerdoActivo
+                        ? 'Activa si el cliente realizó su primer pago hoy. Los siguientes pagos se registran desde el detalle del crédito.'
+                        : 'Activa para registrar cuánto pagó el cliente de inicial. El restante se carga automáticamente al Crédito La Oriental.'}
+                    </p>
                   )}
                   {registrarIngresoInicial && (
                     <div className="px-5 pb-5 space-y-3">

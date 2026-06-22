@@ -100,6 +100,8 @@ function NuevoIngresoPageInner() {
   const [tasaCambio, setTasaCambio] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [rolUsuario, setRolUsuario] = useState<string>('')
+  const [acuerdoInicialId, setAcuerdoInicialId] = useState<string | null>(null)
+  const [acuerdoInfo, setAcuerdoInfo] = useState<{ monto_acordado: number; monto_pagado: number } | null>(null)
 
   // Cargar rol del usuario para mostrar advertencia si aplica
   useEffect(() => {
@@ -113,6 +115,9 @@ function NuevoIngresoPageInner() {
     const placaParam = searchParams.get('placa')
     const cuotaIdParam = searchParams.get('cuota_id')
     const montoParam = searchParams.get('monto')
+    const acuerdoParam = searchParams.get('acuerdo')
+    const clienteParam = searchParams.get('cliente')
+    const vehiculoParam = searchParams.get('vehiculo')
 
     if (cuotaIdParam) {
       preselectedCuotaIdRef.current = cuotaIdParam
@@ -124,9 +129,37 @@ function NuevoIngresoPageInner() {
       setPlacaQuery(placaParam.toUpperCase())
       buscarPorPlaca(placaParam.toUpperCase())
     }
-    // Si viene concepto de cuota, pre-seleccionar
     if (cuotaIdParam) {
       setConcepto('Cuota de vehículo')
+    }
+    // Auto-cargar desde acuerdo de inicial
+    if (acuerdoParam) {
+      setAcuerdoInicialId(acuerdoParam)
+      supabase.from('acuerdos_inicial')
+        .select('monto_acordado, monto_pagado, clientes(id, nombre, cedula_rif, telefono, whatsapp), vehiculos(marca, modelo, placa)')
+        .eq('id', acuerdoParam)
+        .single()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then(({ data }: { data: any }) => {
+          if (!data) return
+          setAcuerdoInfo({ monto_acordado: Number(data.monto_acordado), monto_pagado: Number(data.monto_pagado) })
+          const pendiente = Math.max(0, Number(data.monto_acordado) - Number(data.monto_pagado))
+          if (pendiente > 0) setMonto(pendiente.toFixed(2))
+          const veh = data.vehiculos
+          if (veh) setConcepto(`Pago de inicial — ${veh.marca} ${veh.modelo}${veh.placa ? ' ' + veh.placa : ''}`)
+          if (data.clientes) {
+            setClienteSeleccionado(data.clientes)
+            setClienteQuery(data.clientes.nombre)
+          }
+        })
+    }
+    // Pre-cargar vehiculo desde param (sin acuerdo)
+    if (vehiculoParam && !acuerdoParam && clienteParam) {
+      supabase.from('clientes').select('*').eq('id', clienteParam).single()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then(({ data }: { data: any }) => {
+          if (data) { setClienteSeleccionado(data); setClienteQuery(data.nombre) }
+        })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -489,9 +522,21 @@ function NuevoIngresoPageInner() {
       tasa_cambio: moneda === 'VES' && tasaCambio ? parseFloat(tasaCambio) : null,
       estado: 'pendiente_aprobacion',
       registrado_por: user.id,
+      acuerdo_inicial_id: acuerdoInicialId ?? null,
     }).select('id').single()
 
     if (insertError || !inserted) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
+
+    // Actualizar monto_pagado en el acuerdo
+    if (acuerdoInicialId && parsed.data.monto > 0) {
+      const nuevoMontoPagado = (acuerdoInfo?.monto_pagado ?? 0) + parsed.data.monto
+      const acordado = acuerdoInfo?.monto_acordado ?? 0
+      await supabase.from('acuerdos_inicial').update({
+        monto_pagado: nuevoMontoPagado,
+        estado: nuevoMontoPagado >= acordado ? 'completado' : 'pendiente',
+        updated_at: new Date().toISOString(),
+      }).eq('id', acuerdoInicialId)
+    }
 
     if (comprobantes.length > 0) {
       await supabase.from('archivos').insert(
@@ -627,6 +672,21 @@ function NuevoIngresoPageInner() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+
+        {/* Banner: acuerdo de inicial */}
+        {acuerdoInicialId && acuerdoInfo && (
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 flex items-start gap-3">
+            <div className="w-2 h-full min-h-[40px] bg-blue-500 rounded-full flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-bold text-blue-900 text-sm">Pago de acuerdo de inicial</p>
+              <div className="flex items-center gap-4 mt-1 text-xs text-blue-700 flex-wrap">
+                <span>Acordado: <strong>${acuerdoInfo.monto_acordado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong></span>
+                <span>Pagado: <strong>${acuerdoInfo.monto_pagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong></span>
+                <span className="font-bold text-blue-900">Pendiente: <strong>${Math.max(0, acuerdoInfo.monto_acordado - acuerdoInfo.monto_pagado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong></span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── BÚSQUEDA ── */}
         <div className="card p-6">

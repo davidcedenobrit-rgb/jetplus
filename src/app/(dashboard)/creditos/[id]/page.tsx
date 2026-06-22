@@ -130,6 +130,14 @@ export default async function CreditoDetallePage({
     })
   }
 
+  // Acuerdo de pago de inicial (si existe para este crédito)
+  const { data: acuerdoData } = await supabase
+    .from('acuerdos_inicial')
+    .select('*, ingresos(id, numero_recibo, monto, moneda, metodo_pago, fecha_pago, monto_bs, tasa_cambio)')
+    .eq('credito_id', id)
+    .maybeSingle()
+  const acuerdo = acuerdoData as any
+
   // Resumen consolidado
   const totalFinanciado = creditos.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
   const totalInicial = creditos.reduce((s: number, c: any) => s + Number(c.inicial), 0)
@@ -372,6 +380,92 @@ export default async function CreditoDetallePage({
 
           <DeleteButton table="creditos" id={id} redirectTo="/creditos" label="Eliminar crédito" />
         </div>
+
+        {/* Acuerdo de pago de inicial */}
+        {acuerdo && (
+          <div className="lg:col-span-3">
+            <div className={`card p-6 border-2 ${acuerdo.estado === 'completado' ? 'border-green-300 bg-green-50/20' : acuerdo.estado === 'cancelado' ? 'border-gray-200 bg-gray-50' : 'border-blue-300 bg-blue-50/20'}`}>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 className="font-bold text-oriental-black flex items-center gap-2">
+                  <div className={`w-2 h-6 rounded-full ${acuerdo.estado === 'completado' ? 'bg-green-500' : 'bg-blue-500'}`} />
+                  Acuerdo de pago de inicial
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                    acuerdo.estado === 'completado' ? 'bg-green-100 text-green-700' :
+                    acuerdo.estado === 'cancelado' ? 'bg-gray-200 text-gray-500' :
+                    'bg-blue-100 text-blue-700'}`}>
+                    {acuerdo.estado}
+                  </span>
+                </h2>
+                {acuerdo.estado !== 'completado' && acuerdo.estado !== 'cancelado' && (
+                  <Link
+                    href={`/ingresos/nuevo?acuerdo=${acuerdo.id}&cliente=${credito.cliente_id}&vehiculo=${credito.vehiculo_id}&placa=${credito.placa ?? ''}`}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors"
+                  >
+                    <PlusCircle size={14} /> Registrar pago
+                  </Link>
+                )}
+              </div>
+              {/* Barra de progreso */}
+              {(() => {
+                const acordado = Number(acuerdo.monto_acordado)
+                const pagado = Number(acuerdo.monto_pagado)
+                const pct = acordado > 0 ? Math.min(100, (pagado / acordado) * 100) : 0
+                const pendiente = Math.max(0, acordado - pagado)
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-end justify-between text-sm flex-wrap gap-2">
+                      <div>
+                        <p className="text-xs text-oriental-gray">Acordado</p>
+                        <p className="font-extrabold text-blue-800 text-xl">{formatCurrency(acordado, credito.moneda)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-oriental-gray">Pagado</p>
+                        <p className="font-bold text-green-700 text-lg">{formatCurrency(pagado, credito.moneda)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-oriental-gray">Pendiente</p>
+                        <p className={`font-bold text-lg ${pendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(pendiente, credito.moneda)}</p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div className="bg-blue-500 h-3 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-xs text-oriental-gray text-right">{pct.toFixed(0)}% completado</p>
+                    {acuerdo.fecha_limite && (
+                      <p className="text-xs text-oriental-gray">Fecha límite: <strong>{formatDate(acuerdo.fecha_limite)}</strong></p>
+                    )}
+                    {acuerdo.observaciones && (
+                      <p className="text-xs text-oriental-gray italic">"{acuerdo.observaciones}"</p>
+                    )}
+                  </div>
+                )
+              })()}
+              {/* Pagos realizados */}
+              {(acuerdo.ingresos ?? []).length > 0 && (
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider mb-3">Pagos registrados</p>
+                  <div className="space-y-2">
+                    {(acuerdo.ingresos as any[]).map((ing: any) => (
+                      <div key={ing.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-2.5 border border-blue-100 text-sm">
+                        <div>
+                          <p className="font-semibold text-oriental-black">{formatCurrency(ing.monto, ing.moneda)}</p>
+                          <p className="text-xs text-oriental-gray">{ing.metodo_pago} · {formatDate(ing.fecha_pago)}
+                            {ing.monto_bs && ing.tasa_cambio && (
+                              <span className="ml-1 text-orange-600">· Bs. {Number(ing.monto_bs).toLocaleString('es-VE')} @ {Number(ing.tasa_cambio).toLocaleString('es-VE')}</span>
+                            )}
+                          </p>
+                        </div>
+                        <Link href={`/ingresos/${ing.id}`} className="text-xs text-oriental-red hover:underline font-medium">
+                          {ing.numero_recibo}
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tabla unificada de cuotas */}
         <div className="lg:col-span-3">
