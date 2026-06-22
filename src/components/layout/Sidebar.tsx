@@ -139,8 +139,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* Clientes → Egresos */}
-          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.slice(0, 4).map(({ href, label, icon: Icon }) => {
+          {/* Clientes → Ingresos */}
+          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.slice(0, 3).map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <Link key={href} href={href} onClick={onClose}
@@ -150,6 +150,18 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
               </Link>
             )
           })}
+
+          {/* Egresos — visible para todos excepto almacén */}
+          {rol !== 'almacen' && (() => {
+            const active = pathname === '/egresos' || pathname.startsWith('/egresos/')
+            return (
+              <Link href="/egresos" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <TrendingDown size={18} />
+                Egresos
+              </Link>
+            )
+          })()}
 
           {/* Link de Ventas — debajo de Egresos */}
           {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director'].includes(rol) && (() => {
