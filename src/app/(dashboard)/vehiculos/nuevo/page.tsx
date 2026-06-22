@@ -19,6 +19,37 @@ interface PlanAC500 {
   cuota_8: number; cuota_9: number; total: number
 }
 
+// Tipo que refleja la tabla ac500_vehiculos (fuente de verdad del CDM)
+interface AC500Vehiculo {
+  id: string; brand: string; model: string; disponible: boolean | null; reserva: number | null
+  p6_activo: boolean | null; p6_c1: number | null; p6_c2: number | null; p6_c3: number | null
+  p6_c4: number | null; p6_c5: number | null; p6_c6: number | null; p6_total: number | null
+  p9_activo: boolean | null; p9_c1: number | null; p9_c2: number | null; p9_c3: number | null
+  p9_c4: number | null; p9_c5: number | null; p9_c6: number | null; p9_c7: number | null
+  p9_c8: number | null; p9_c9: number | null; p9_total: number | null
+}
+
+function ac500ToPlan(v: AC500Vehiculo, meses: 6 | 9): PlanAC500 {
+  if (meses === 6) {
+    return {
+      id: v.id, marca: v.brand, modelo: v.model, meses: 6,
+      cuota_0: v.reserva ?? 0,
+      cuota_1: v.p6_c1 ?? 0, cuota_2: v.p6_c2 ?? 0, cuota_3: v.p6_c3 ?? 0,
+      cuota_4: v.p6_c4 ?? 0, cuota_5: v.p6_c5 ?? 0, cuota_6: v.p6_c6 ?? 0,
+      cuota_7: 0, cuota_8: 0, cuota_9: 0,
+      total: v.p6_total ?? 0,
+    }
+  }
+  return {
+    id: v.id, marca: v.brand, modelo: v.model, meses: 9,
+    cuota_0: v.reserva ?? 0,
+    cuota_1: v.p9_c1 ?? 0, cuota_2: v.p9_c2 ?? 0, cuota_3: v.p9_c3 ?? 0,
+    cuota_4: v.p9_c4 ?? 0, cuota_5: v.p9_c5 ?? 0, cuota_6: v.p9_c6 ?? 0,
+    cuota_7: v.p9_c7 ?? 0, cuota_8: v.p9_c8 ?? 0, cuota_9: v.p9_c9 ?? 0,
+    total: v.p9_total ?? 0,
+  }
+}
+
 interface PagoInicial {
   id: string; monto: string; metodo: string; referencia: string
   bancoEmisor: string; bancoReceptor: string
@@ -233,14 +264,22 @@ export default function NuevoVehiculoPage() {
     return () => clearTimeout(t)
   }, [clienteQuery])
 
-  // Cargar planes AC500
+  // Cargar planes AC500 desde ac500_vehiculos (fuente de verdad del CDM)
   useEffect(() => {
     if (tipoCompra !== 'financiado' || plan !== 'asegurate_500') return
     setLoadingPlanes(true)
     setPlanAC500Sel(null)
-    supabase.from('planes_ac500').select('*').eq('meses', cuotasAsegurate).eq('activo', true)
-      .order('marca').order('modelo')
-      .then(({ data }) => { setPlanesAC500((data as PlanAC500[]) ?? []); setLoadingPlanes(false) })
+    const activoField = cuotasAsegurate === 6 ? 'p6_activo' : 'p9_activo'
+    supabase.from('ac500_vehiculos')
+      .select('id,brand,model,disponible,reserva,p6_activo,p6_c1,p6_c2,p6_c3,p6_c4,p6_c5,p6_c6,p6_total,p9_activo,p9_c1,p9_c2,p9_c3,p9_c4,p9_c5,p9_c6,p9_c7,p9_c8,p9_c9,p9_total')
+      .eq('disponible', true)
+      .eq(activoField, true)
+      .order('brand').order('model')
+      .then(({ data }) => {
+        const planes = (data ?? []).map(v => ac500ToPlan(v as AC500Vehiculo, cuotasAsegurate))
+        setPlanesAC500(planes)
+        setLoadingPlanes(false)
+      })
   }, [tipoCompra, plan, cuotasAsegurate])
 
   // Auto-seleccionar plan AC500 si el modelo coincide
