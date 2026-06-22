@@ -19,6 +19,11 @@ interface PlanAC500 {
   cuota_8: number; cuota_9: number; total: number
 }
 
+interface PagoInicial {
+  id: string; monto: string; metodo: string; referencia: string
+  bancoEmisor: string; bancoReceptor: string
+}
+
 function formatUSD(n: number) {
   if (n == null || isNaN(n)) return '$0.00'
   return new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n)
@@ -45,14 +50,12 @@ export default function NuevoVehiculoPage() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
 
-  // Ingreso de inicial
+  // Ingreso de inicial — soporta múltiples métodos de pago
   const [registrarIngresoInicial, setRegistrarIngresoInicial] = useState(false)
-  const [ingresoInicialMonto, setIngresoInicialMonto] = useState('')
-  const [ingresoInicialMetodo, setIngresoInicialMetodo] = useState('')
   const [ingresoInicialFecha, setIngresoInicialFecha] = useState(new Date().toISOString().split('T')[0])
-  const [ingresoInicialReferencia, setIngresoInicialReferencia] = useState('')
-  const [ingresoInicialBancoEmisor, setIngresoInicialBancoEmisor] = useState('')
-  const [ingresoInicialBancoReceptor, setIngresoInicialBancoReceptor] = useState('')
+  const [pagosIniciales, setPagosIniciales] = useState<PagoInicial[]>([
+    { id: '1', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '' }
+  ])
 
   const [showCrearCliente, setShowCrearCliente] = useState(false)
   const [nuevoNombre, setNuevoNombre] = useState('')
@@ -337,24 +340,18 @@ export default function NuevoVehiculoPage() {
     }
   }, [fechaEntrega])
 
-  // ── Auto-rellenar monto inicial según el plan (AC500 y 40/60) ──────────────
+  // ── Auto-rellenar primer pago según el plan (AC500 y 40/60) ──────────────────
   useEffect(() => {
     if (tipoCompra !== 'financiado') return
+    let monto = ''
     if (plan === 'asegurate_500' && planAC500Sel) {
-      setIngresoInicialMonto(String(planAC500Sel.cuota_0))
+      monto = String(planAC500Sel.cuota_0)
     } else if (plan === 'credito_40_60') {
       const m = parseFloat(vh4060Inicial) || calc4060?.inicial || 0
-      if (m > 0) setIngresoInicialMonto(m.toFixed(2))
+      if (m > 0) monto = m.toFixed(2)
     }
+    if (monto) setPagosIniciales(prev => prev.map((p, i) => i === 0 ? { ...p, monto } : p))
   }, [tipoCompra, plan, planAC500Sel, vh4060Inicial, calc4060])
-
-  // ── Restante de inicial → Crédito La Oriental (plan personalizado) ──────────
-  useEffect(() => {
-    if (!registrarIngresoInicial || plan !== 'personalizado' || !calculadora) return
-    const pagado = parseFloat(ingresoInicialMonto) || 0
-    const restante = Math.max(0, calculadora.totalInicialLaOriental - pagado)
-    setOrMonto(restante.toFixed(2))
-  }, [registrarIngresoInicial, plan, calculadora, ingresoInicialMonto])
 
   const calcCuotaEspecial = useMemo(() => {
     const monto = parseFloat(ceMonto) || 0
@@ -412,6 +409,15 @@ export default function NuevoVehiculoPage() {
     return { base, iva, ivaPct, pctInicial, gastosContado, gastosCredito, contadoTotal, inicialBase, totalInicialLaOriental, financiamientoVh, cuotaVh, n, tasaAnual }
   }, [calcBase, calcIvaPct, calcGastosContado, calcGastosCredito, calcPctInicial, calcTasaAnual, calcNumCuotasVh])
 
+  // ── Restante de inicial → Crédito La Oriental (plan personalizado) ──────────
+  const totalPagadoInicial = pagosIniciales.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0)
+  useEffect(() => {
+    if (!registrarIngresoInicial || plan !== 'personalizado' || !calculadora) return
+    const restante = Math.max(0, calculadora.totalInicialLaOriental - totalPagadoInicial)
+    setOrMonto(restante.toFixed(2))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registrarIngresoInicial, plan, calculadora, totalPagadoInicial])
+
   function aplicarCalculadora() {
     if (!calculadora) return
     // Si el ingreso está activo, orMonto lo maneja el useEffect de restante
@@ -430,9 +436,10 @@ export default function NuevoVehiculoPage() {
 
   async function crearIngresoInicial(vehiculoId: string, vehiculoDesc: string, clienteId: string, placa: string | null) {
     if (!registrarIngresoInicial) return
-    const monto = parseFloat(ingresoInicialMonto)
-    if (!monto || monto <= 0 || !ingresoInicialMetodo) return
+    const pagosValidos = pagosIniciales.filter(p => parseFloat(p.monto) > 0 && p.metodo)
+    if (pagosValidos.length === 0) return
     const year = new Date().getFullYear()
+    // Obtener el próximo número una sola vez y luego incrementar localmente
     const { data: ultimoRecibo } = await supabase.from('ingresos')
       .select('numero_recibo')
       .like('numero_recibo', `LOA-REC-${year}-%`)
@@ -443,22 +450,36 @@ export default function NuevoVehiculoPage() {
       const partes = (ultimoRecibo as any).numero_recibo.split('-')
       nextNum = (parseInt(partes[partes.length - 1]) || 0) + 1
     }
-    const numero_recibo = `LOA-REC-${year}-${String(nextNum).padStart(5, '0')}`
-    await supabase.from('ingresos').insert({
-      numero_recibo,
-      cliente_id: clienteId,
-      vehiculo_id: vehiculoId,
-      placa: placa || null,
-      concepto: `Pago de inicial — ${vehiculoDesc}`,
-      monto,
-      moneda: 'USD',
-      metodo_pago: ingresoInicialMetodo,
-      referencia: ingresoInicialReferencia || null,
-      banco_emisor: ingresoInicialBancoEmisor || null,
-      banco_receptor: ingresoInicialBancoReceptor || null,
-      fecha_pago: ingresoInicialFecha,
-      estado: 'registrado',
-    })
+    for (const pago of pagosValidos) {
+      const numero_recibo = `LOA-REC-${year}-${String(nextNum).padStart(5, '0')}`
+      nextNum++
+      await supabase.from('ingresos').insert({
+        numero_recibo,
+        cliente_id: clienteId,
+        vehiculo_id: vehiculoId,
+        placa: placa || null,
+        concepto: `Pago de inicial — ${vehiculoDesc}`,
+        monto: parseFloat(pago.monto),
+        moneda: 'USD',
+        metodo_pago: pago.metodo,
+        referencia: pago.referencia || null,
+        banco_emisor: pago.bancoEmisor || null,
+        banco_receptor: pago.bancoReceptor || null,
+        fecha_pago: ingresoInicialFecha,
+        estado: 'registrado',
+      })
+    }
+  }
+
+  function updatePago(id: string, field: keyof PagoInicial, value: string) {
+    setPagosIniciales(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p))
+  }
+  function addPago() {
+    setPagosIniciales(prev => [...prev, { id: String(Date.now()), monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '' }])
+  }
+  function removePago(id: string) {
+    if (pagosIniciales.length <= 1) return
+    setPagosIniciales(prev => prev.filter(p => p.id !== id))
   }
 
   async function crearClienteRapido() {
@@ -1341,69 +1362,94 @@ export default function NuevoVehiculoPage() {
                     <p className="text-xs text-oriental-gray px-5 pb-4">Activa para registrar cuánto pagó el cliente de inicial. El restante se carga automáticamente al Crédito La Oriental.</p>
                   )}
                   {registrarIngresoInicial && (
-                    <div className="px-5 pb-5 space-y-4">
+                    <div className="px-5 pb-5 space-y-3">
+                      {/* Referencia total calculadora */}
                       {calculadora && (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 flex items-center justify-between text-sm">
                           <span className="text-amber-700 text-xs">Total inicial (calculadora):</span>
                           <span className="font-bold text-amber-900">{formatUSD(calculadora.totalInicialLaOriental)}</span>
                         </div>
                       )}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="label">Monto recibido (USD) *</label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
-                            <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
-                              placeholder="0.00" value={ingresoInicialMonto} onChange={e => setIngresoInicialMonto(e.target.value)} />
+                      {/* Fecha compartida */}
+                      <div className="max-w-xs">
+                        <label className="label">Fecha de pago *</label>
+                        <input type="date" className="input" value={ingresoInicialFecha} onChange={e => setIngresoInicialFecha(e.target.value)} />
+                      </div>
+                      {/* Filas de pago */}
+                      {pagosIniciales.map((pago, idx) => (
+                        <div key={pago.id} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-white">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Pago {idx + 1}</span>
+                            {pagosIniciales.length > 1 && (
+                              <button type="button" onClick={() => removePago(pago.id)}
+                                className="text-xs text-red-400 hover:text-red-600 font-semibold">Eliminar</button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="label">Monto (USD) *</label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
+                                <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
+                                  placeholder="0.00" value={pago.monto} onChange={e => updatePago(pago.id, 'monto', e.target.value)} />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="label">Método *</label>
+                              <select className="select" value={pago.metodo} onChange={e => updatePago(pago.id, 'metodo', e.target.value)}>
+                                <option value="">Seleccionar...</option>
+                                {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="label">N° Referencia</label>
+                              <input type="text" className="input" placeholder="Número de referencia"
+                                value={pago.referencia} onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="label">Banco emisor</label>
+                              <select className="select" value={pago.bancoEmisor} onChange={e => updatePago(pago.id, 'bancoEmisor', e.target.value)}>
+                                <option value="">—</option>
+                                {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                              </select>
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="label">Banco receptor</label>
+                              <select className="select" value={pago.bancoReceptor} onChange={e => updatePago(pago.id, 'bancoReceptor', e.target.value)}>
+                                <option value="">—</option>
+                                {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                              </select>
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <label className="label">Fecha de pago *</label>
-                          <input type="date" className="input" value={ingresoInicialFecha} onChange={e => setIngresoInicialFecha(e.target.value)} />
+                      ))}
+                      <button type="button" onClick={addPago}
+                        className="w-full py-2.5 border-2 border-dashed border-green-300 text-green-700 hover:bg-green-50 rounded-xl text-sm font-semibold transition-colors">
+                        + Agregar método de pago
+                      </button>
+                      {/* Total recibido y restante */}
+                      {pagosIniciales.length > 1 && (
+                        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 text-sm">
+                          <span className="text-green-800 font-semibold">Total recibido:</span>
+                          <span className="font-extrabold text-green-800">{formatUSD(totalPagadoInicial)}</span>
                         </div>
-                        <div>
-                          <label className="label">Método de pago *</label>
-                          <select className="select" value={ingresoInicialMetodo} onChange={e => setIngresoInicialMetodo(e.target.value)}>
-                            <option value="">Seleccionar...</option>
-                            {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="label">N° Referencia</label>
-                          <input type="text" className="input" placeholder="Número de referencia"
-                            value={ingresoInicialReferencia} onChange={e => setIngresoInicialReferencia(e.target.value)} />
-                        </div>
-                        <div>
-                          <label className="label">Banco emisor</label>
-                          <select className="select" value={ingresoInicialBancoEmisor} onChange={e => setIngresoInicialBancoEmisor(e.target.value)}>
-                            <option value="">—</option>
-                            {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="label">Banco receptor</label>
-                          <select className="select" value={ingresoInicialBancoReceptor} onChange={e => setIngresoInicialBancoReceptor(e.target.value)}>
-                            <option value="">—</option>
-                            {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
-                          </select>
-                        </div>
-                      </div>
+                      )}
                       {calculadora && (
                         <div className={`border rounded-lg px-4 py-3 flex items-center justify-between text-sm ${
-                          (parseFloat(ingresoInicialMonto) || 0) > calculadora.totalInicialLaOriental
+                          totalPagadoInicial > calculadora.totalInicialLaOriental
                             ? 'bg-red-50 border-red-200'
                             : 'bg-purple-50 border-purple-200'
                         }`}>
                           <span className="text-purple-800 text-xs font-semibold">→ Restante → Crédito La Oriental:</span>
                           <span className="font-extrabold text-purple-700 text-base">
-                            {formatUSD(Math.max(0, calculadora.totalInicialLaOriental - (parseFloat(ingresoInicialMonto) || 0)))}
+                            {formatUSD(Math.max(0, calculadora.totalInicialLaOriental - totalPagadoInicial))}
                           </span>
                         </div>
                       )}
-                      {(!ingresoInicialMonto || !ingresoInicialMetodo) && (
+                      {pagosIniciales.some(p => !p.monto || !p.metodo) && (
                         <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
                           <AlertCircle size={14} className="text-yellow-600 flex-shrink-0" />
-                          <p className="text-xs text-yellow-800">Completa el monto y el método de pago para registrar el ingreso.</p>
+                          <p className="text-xs text-yellow-800">Completa el monto y el método en cada fila de pago.</p>
                         </div>
                       )}
                     </div>
@@ -1891,54 +1937,75 @@ export default function NuevoVehiculoPage() {
               </button>
             </div>
             {!registrarIngresoInicial && (
-              <p className="text-xs text-oriental-gray mt-2">Activa para registrar el pago de inicial del cliente como ingreso en el sistema.</p>
+              <p className="text-xs text-oriental-gray mt-2">Activa para registrar el pago de inicial. Soporta múltiples métodos de pago.</p>
             )}
             {registrarIngresoInicial && (
-              <div className="mt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Monto recibido (USD) *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
-                      <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
-                        placeholder="0.00" value={ingresoInicialMonto} onChange={e => setIngresoInicialMonto(e.target.value)} />
+              <div className="mt-4 space-y-3">
+                <div className="max-w-xs">
+                  <label className="label">Fecha de pago *</label>
+                  <input type="date" className="input" value={ingresoInicialFecha} onChange={e => setIngresoInicialFecha(e.target.value)} />
+                </div>
+                {pagosIniciales.map((pago, idx) => (
+                  <div key={pago.id} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-white">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Pago {idx + 1}</span>
+                      {pagosIniciales.length > 1 && (
+                        <button type="button" onClick={() => removePago(pago.id)}
+                          className="text-xs text-red-400 hover:text-red-600 font-semibold">Eliminar</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="label">Monto (USD) *</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
+                          <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
+                            placeholder="0.00" value={pago.monto} onChange={e => updatePago(pago.id, 'monto', e.target.value)} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="label">Método *</label>
+                        <select className="select" value={pago.metodo} onChange={e => updatePago(pago.id, 'metodo', e.target.value)}>
+                          <option value="">Seleccionar...</option>
+                          {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label">N° Referencia</label>
+                        <input type="text" className="input" placeholder="Número de referencia"
+                          value={pago.referencia} onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="label">Banco emisor</label>
+                        <select className="select" value={pago.bancoEmisor} onChange={e => updatePago(pago.id, 'bancoEmisor', e.target.value)}>
+                          <option value="">—</option>
+                          {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="label">Banco receptor</label>
+                        <select className="select" value={pago.bancoReceptor} onChange={e => updatePago(pago.id, 'bancoReceptor', e.target.value)}>
+                          <option value="">—</option>
+                          {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="label">Fecha de pago *</label>
-                    <input type="date" className="input" value={ingresoInicialFecha} onChange={e => setIngresoInicialFecha(e.target.value)} />
+                ))}
+                <button type="button" onClick={addPago}
+                  className="w-full py-2.5 border-2 border-dashed border-green-300 text-green-700 hover:bg-green-50 rounded-xl text-sm font-semibold transition-colors">
+                  + Agregar método de pago
+                </button>
+                {pagosIniciales.length > 1 && (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 text-sm">
+                    <span className="text-green-800 font-semibold">Total recibido:</span>
+                    <span className="font-extrabold text-green-800">{formatUSD(totalPagadoInicial)}</span>
                   </div>
-                  <div>
-                    <label className="label">Método de pago *</label>
-                    <select className="select" value={ingresoInicialMetodo} onChange={e => setIngresoInicialMetodo(e.target.value)}>
-                      <option value="">Seleccionar...</option>
-                      {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">N° Referencia</label>
-                    <input type="text" className="input" placeholder="Número de referencia"
-                      value={ingresoInicialReferencia} onChange={e => setIngresoInicialReferencia(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="label">Banco emisor</label>
-                    <select className="select" value={ingresoInicialBancoEmisor} onChange={e => setIngresoInicialBancoEmisor(e.target.value)}>
-                      <option value="">—</option>
-                      {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">Banco receptor</label>
-                    <select className="select" value={ingresoInicialBancoReceptor} onChange={e => setIngresoInicialBancoReceptor(e.target.value)}>
-                      <option value="">—</option>
-                      {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
-                  </div>
-                </div>
-                {registrarIngresoInicial && (!ingresoInicialMonto || !ingresoInicialMetodo) && (
+                )}
+                {pagosIniciales.some(p => !p.monto || !p.metodo) && (
                   <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
                     <AlertCircle size={14} className="text-yellow-600 flex-shrink-0" />
-                    <p className="text-xs text-yellow-800">Completa el monto y el método de pago para registrar el ingreso.</p>
+                    <p className="text-xs text-yellow-800">Completa el monto y el método en cada fila de pago.</p>
                   </div>
                 )}
               </div>
