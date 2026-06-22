@@ -133,9 +133,13 @@ export default function EditarVehiculo({ vehiculoId, vehiculo }: { vehiculoId: s
           <label className="block text-[11px] font-semibold text-gray-500 mb-1">Tipo de compra</label>
           <select className={inputCls} value={form.tipo_compra} onChange={e => field('tipo_compra', e.target.value)}>
             <option value="contado">Contado</option>
-            <option value="credito">Crédito</option>
-            <option value="financiamiento">Financiamiento</option>
-            <option value="financiado">Financiado</option>
+            <option value="financiado">Financiado (personalizado)</option>
+            <option value="asegurate_500">Asegúrate $500</option>
+            <option value="credito_40_60">40/60 Vehimotors</option>
+            {/* valores legacy */}
+            {['credito', 'financiamiento'].includes(form.tipo_compra) && (
+              <option value={form.tipo_compra}>{form.tipo_compra}</option>
+            )}
           </select>
         </div>
         <div>

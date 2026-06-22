@@ -166,7 +166,11 @@ export default async function VehiculoDetallePage({
               <div className="flex items-center gap-2 text-sm flex-wrap">
                 <CreditCard size={14} className="text-oriental-gray flex-shrink-0" />
                 <span className="text-oriental-gray">Tipo compra:</span>
-                <span className="text-oriental-black font-medium capitalize">{vehiculo.tipo_compra}</span>
+                <span className="text-oriental-black font-medium capitalize">
+                  {vehiculo.tipo_compra === 'asegurate_500' ? 'Asegúrate $500' :
+                   vehiculo.tipo_compra === 'credito_40_60' ? '40/60 Vehimotors' :
+                   vehiculo.tipo_compra}
+                </span>
                 {(creditos ?? []).map((c: any) => c.plan_tipo).filter(Boolean).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i).map((tipo: string) => (
                   <span key={tipo} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${planBadge(tipo)}`}>
                     {planLabel(tipo)}
