@@ -1514,7 +1514,7 @@ export default function NuevoVehiculoPage() {
                       )}
                       <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-xs text-blue-800 flex items-start gap-2">
                         <AlertCircle size={13} className="text-blue-500 flex-shrink-0 mt-0.5" />
-                        <span>Los pagos parciales se registran como ingresos desde el detalle del crédito una vez creado. Activa &quot;Registrar primer pago&quot; abajo si el cliente pagó algo hoy.</span>
+                        <span>Al guardar con acuerdo activo <strong>no se crea el crédito todavía</strong>. Cada pago que haga el cliente se registra como ingreso con recibo desde el detalle del vehículo. Una vez que complete el inicial, se crea el crédito.</span>
                       </div>
                     </div>
                   )}
