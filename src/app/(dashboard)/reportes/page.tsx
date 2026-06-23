@@ -4,10 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
 import LinkVentasStats from './LinkVentasStats'
+import AvisoCobro from './AvisoCobro'
+import BitacoraCobro from './BitacoraCobro'
 import {
   TrendingUp, TrendingDown, Wallet, BarChart2, Filter,
   Users, Car, CreditCard, CheckCircle2, AlertCircle, Clock,
   Award, AlertTriangle, DollarSign, Building2, CircleDot,
+  Bell, Search,
 } from 'lucide-react'
 
 const METODO_LABEL: Record<string, string> = {
@@ -37,7 +40,8 @@ type ClienteCartera = {
 type FiltroEstado = 'todos' | 'pendiente' | 'vencida' | 'pagada'
 
 type ClienteVencido = {
-  nombre: string; cedula: string; placa: string; creditoId: string
+  clienteId: string; nombre: string; cedula: string; placa: string; creditoId: string
+  telefono: string | null; whatsapp: string | null; correo: string | null
   cuotasVencidas: number; montoVencido: number
   diasMaxVencido: number; bucket: 1 | 2 | 3 | 4 | 5
 }
@@ -80,8 +84,9 @@ function computeVencidos(
     const montoQ = Math.max(0, Number(q.monto ?? 0) - Number(q.monto_pagado ?? 0))
     if (!byCredito[cred.id]) {
       byCredito[cred.id] = {
-        nombre: cl.nombre, cedula: cl.cedula_rif, placa: cred.placa ?? '—',
+        clienteId: cl.id, nombre: cl.nombre, cedula: cl.cedula_rif, placa: cred.placa ?? '—',
         creditoId: cred.id, cuotasVencidas: 0, montoVencido: 0, diasMaxVencido: 0, bucket: 1,
+        telefono: cl.telefono ?? null, whatsapp: cl.whatsapp ?? null, correo: cl.correo ?? null,
       }
     }
     byCredito[cred.id].cuotasVencidas += 1
@@ -146,6 +151,8 @@ function StatCard({ value, label, sub, bg, textColor, subColor }: {
 
 function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencido[]; subtituloImprimir: string }) {
   const [selectedBucket, setSelectedBucket] = useState<1|2|3|4|5|null>(null)
+  const [avisoCobro, setAvisoCobro] = useState<ClienteVencido | null>(null)
+  const [bitacora, setBitacora] = useState<ClienteVencido | null>(null)
   const fmt = (n: number) => formatCurrency(n)
   const fmtUSD = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2 })
 
@@ -333,6 +340,7 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
                 <th className={`text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Días vencido</th>
                 <th className={`text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Monto vencido</th>
                 <th className={`text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Tramo</th>
+                <th className={`text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider ${bucketInfo?.text ?? 'text-oriental-gray'}`}>Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -361,12 +369,55 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
                         {b.rango}
                       </span>
                     </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5 justify-center">
+                        <button
+                          onClick={() => setAvisoCobro(c)}
+                          title="Aviso de cobro"
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-oriental-red text-white text-[11px] font-semibold hover:bg-red-700 transition-colors"
+                        >
+                          <Bell size={11} /> Aviso
+                        </button>
+                        <button
+                          onClick={() => setBitacora(c)}
+                          title="Bitácora de cobro"
+                          className="p-1.5 rounded-lg border border-gray-200 text-oriental-gray hover:bg-gray-100 transition-colors"
+                        >
+                          <Search size={13} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {avisoCobro && (
+        <AvisoCobro
+          clienteId={avisoCobro.clienteId}
+          nombre={avisoCobro.nombre}
+          cedula={avisoCobro.cedula}
+          telefono={avisoCobro.telefono}
+          whatsapp={avisoCobro.whatsapp}
+          correo={avisoCobro.correo}
+          cuotasVencidas={avisoCobro.cuotasVencidas}
+          montoVencido={avisoCobro.montoVencido}
+          diasMaxVencido={avisoCobro.diasMaxVencido}
+          placa={avisoCobro.placa}
+          onClose={() => setAvisoCobro(null)}
+          onSent={() => setAvisoCobro(null)}
+        />
+      )}
+
+      {bitacora && (
+        <BitacoraCobro
+          clienteId={bitacora.clienteId}
+          nombre={bitacora.nombre}
+          onClose={() => setBitacora(null)}
+        />
       )}
     </div>
   )
@@ -707,7 +758,7 @@ export default function ReportesPage() {
     ] = await Promise.all([
       supabase.from('clientes').select('id').eq('activo', true),
       supabase.from('vehiculos').select('id, marca, modelo, tipo_compra'),
-      supabase.from('creditos').select('id, plan_tipo, saldo, monto_financiado, placa, cliente_id, clientes(id, nombre, cedula_rif)'),
+      supabase.from('creditos').select('id, plan_tipo, saldo, monto_financiado, placa, cliente_id, clientes(id, nombre, cedula_rif, telefono, whatsapp, correo)'),
       supabase.from('cuotas').select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id'),
       supabase.from('ingresos').select('id, monto, metodo_pago, estado, fecha_pago')
         .gte('fecha_pago', fechaDesde).lte('fecha_pago', fechaHasta),

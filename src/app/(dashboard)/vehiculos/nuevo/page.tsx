@@ -84,6 +84,13 @@ export default function NuevoVehiculoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [showCrearCliente, setShowCrearCliente] = useState(false)
+  const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevaCedula, setNuevaCedula] = useState('')
+  const [nuevoTipo, setNuevoTipo] = useState<'natural' | 'juridico'>('natural')
+  const [nuevoTelefono, setNuevoTelefono] = useState('')
+  const [creandoCliente, setCreandoCliente] = useState(false)
+  const [errorCrearCliente, setErrorCrearCliente] = useState('')
 
   // Acuerdo de pago de inicial
   const [acuerdoActivo, setAcuerdoActivo] = useState(false)
@@ -493,7 +500,6 @@ export default function NuevoVehiculoPage() {
     const pagosValidos = pagosIniciales.filter(p => parseFloat(p.monto) > 0 && p.metodo)
     if (pagosValidos.length === 0) return
     const year = new Date().getFullYear()
-    // Obtener el próximo número una sola vez y luego incrementar localmente
     const { data: ultimoRecibo } = await supabase.from('ingresos')
       .select('numero_recibo')
       .like('numero_recibo', `LOA-REC-${year}-%`)
@@ -529,7 +535,6 @@ export default function NuevoVehiculoPage() {
         acuerdo_inicial_id: acuerdoId ?? null,
       })
     }
-    // Actualizar monto_pagado en el acuerdo
     if (acuerdoId && pagosValidos.length > 0) {
       const totalPagado = pagosValidos.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0)
       await supabase.from('acuerdos_inicial')
@@ -542,7 +547,6 @@ export default function NuevoVehiculoPage() {
     setPagosIniciales(prev => prev.map(p => {
       if (p.id !== id) return p
       const updated = { ...p, [field]: value }
-      // Auto-calc USD equivalent when Bs. amount or rate changes
       if (field === 'montoBs' || field === 'tasaCambio') {
         const bs = parseFloat(field === 'montoBs' ? value : p.montoBs) || 0
         const tasa = parseFloat(field === 'tasaCambio' ? value : p.tasaCambio) || 0
@@ -559,6 +563,7 @@ export default function NuevoVehiculoPage() {
     setPagosIniciales(prev => prev.filter(p => p.id !== id))
   }
 
+
   async function crearClienteRapido() {
     if (!nuevoNombre.trim() || !nuevaCedula.trim()) {
       setErrorCrearCliente('Nombre y cédula/RIF son requeridos')
@@ -567,7 +572,6 @@ export default function NuevoVehiculoPage() {
     setCreandoCliente(true)
     setErrorCrearCliente('')
 
-    // Check for duplicate cedula/RIF before inserting
     const { data: existente } = await supabase
       .from('clientes')
       .select('id, nombre')
@@ -579,6 +583,7 @@ export default function NuevoVehiculoPage() {
       setCreandoCliente(false)
       return
     }
+
 
     const { data, error: err } = await supabase.from('clientes').insert({
       nombre: nuevoNombre.trim(),
@@ -618,8 +623,6 @@ export default function NuevoVehiculoPage() {
     setLoading(true)
     setError('')
 
-    // Upsert por placa: si ya existe un vehículo con esa placa lo actualiza,
-    // si no existe lo crea. Evita el error de duplicate key en todos los casos.
     const upsertData = {
       cliente_id: clienteSeleccionado.id,
       ...parsed.data,
