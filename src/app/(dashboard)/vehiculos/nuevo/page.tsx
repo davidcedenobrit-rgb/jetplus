@@ -1622,8 +1622,8 @@ export default function NuevoVehiculoPage() {
                               </div>
                               <div>
                                 <label className="label">Tasa Bs./USD</label>
-                                <input type="number" step="0.01" min="0" className="input"
-                                  placeholder="40.00" value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
+                                <input type="number" step="0.0001" min="0" className="input"
+                                  placeholder="40.0012" value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
                               </div>
                               {pago.montoBs && pago.tasaCambio && (
                                 <div className="md:col-span-2">
@@ -2216,8 +2216,8 @@ export default function NuevoVehiculoPage() {
                         </div>
                         <div>
                           <label className="label">Tasa Bs./USD</label>
-                          <input type="number" step="0.01" min="0" className="input"
-                            placeholder="40.00" value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
+                          <input type="number" step="0.0001" min="0" className="input"
+                            placeholder="40.0012" value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
                         </div>
                         {pago.montoBs && pago.tasaCambio && (
                           <div className="md:col-span-2">

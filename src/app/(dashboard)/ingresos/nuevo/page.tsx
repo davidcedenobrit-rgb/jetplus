@@ -1114,8 +1114,8 @@ function NuevoIngresoPageInner() {
             {moneda === 'VES' && (
               <div>
                 <label className="label">Tasa del día (Bs/$) *</label>
-                <input type="number" step="0.01" min="0" className="input font-semibold"
-                  placeholder="Ej: 36.50" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} required />
+                <input type="number" step="0.0001" min="0" className="input font-semibold"
+                  placeholder="Ej: 36.5012" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} required />
                 {tasaCambio && parseFloat(monto) > 0 && (
                   <p className="text-xs text-oriental-gray mt-1">
                     Equivale a ~${(parseFloat(monto) / parseFloat(tasaCambio)).toFixed(2)} USD
