@@ -2,6 +2,7 @@ import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 
 const LOGO = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
+// logoSrc se inyecta desde la ruta del servidor para usar el archivo local sin whitespace
 const RED = '#C41E3A'
 const GOLD = '#ca8a04'
 const DARK = '#111827'
@@ -15,7 +16,7 @@ const s = StyleSheet.create({
 
   header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '12pt 28pt 10pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoWrap: { flexShrink: 0 },
-  logo: { width: 220, height: 90, objectFit: 'cover' },
+  logo: { width: 240, height: 48, objectFit: 'contain' },
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
   companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
@@ -139,6 +140,7 @@ export interface AC500ScheduleData {
 }
 
 export interface CotizacionPDFData {
+  logoSrc?: string
   numero: string
   fecha: string
   vencimiento: string
@@ -184,7 +186,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
         {/* Header */}
         <View style={s.header}>
           <View style={s.logoWrap}>
-            <Image src={LOGO} style={s.logo} />
+            <Image src={data.logoSrc ?? LOGO} style={s.logo} />
           </View>
           <View style={s.companyBlock}>
             <Text style={s.companyName}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
