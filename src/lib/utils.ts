@@ -4,7 +4,12 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs)
 }
 
+const ISO_CURRENCIES = new Set(['USD', 'EUR', 'VES', 'VEF', 'GBP', 'BRL', 'COP', 'MXN', 'ARS', 'CLP', 'PEN', 'UYU', 'BOB', 'PYG', 'DOP', 'CRC', 'GTQ', 'HNL', 'NIO', 'PAB'])
+
 export function formatCurrency(amount: number, currency = 'USD'): string {
+  if (!ISO_CURRENCIES.has(currency)) {
+    return `${amount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+  }
   return new Intl.NumberFormat('es-VE', {
     style: 'currency',
     currency,
