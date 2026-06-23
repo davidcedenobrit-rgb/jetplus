@@ -30,6 +30,9 @@ const planLabel = (tipo: string | null) =>
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
   tipo === 'cuota_especial' ? 'Cuota Especial' : 'Crédito'
 
+const METODOS_BS = ['Transferencia bancaria', 'Pago móvil', 'Depósito bancario', 'Efectivo VES', 'Cheque',
+  'Transferencia bancaria a Vehimotor', 'Transferencia bancaria a Oriental']
+
 const planBadgeClass = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 'text-purple-700 bg-purple-50 border-purple-200' :
   tipo === 'financiamiento_vehimotors' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' :
@@ -98,6 +101,7 @@ function NuevoIngresoPageInner() {
   const [fechaPago, setFechaPago] = useState(new Date().toISOString().split('T')[0])
   const [observaciones, setObservaciones] = useState('')
   const [tasaCambio, setTasaCambio] = useState('')
+  const [montoBs, setMontoBs] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [rolUsuario, setRolUsuario] = useState<string>('')
   const [acuerdoInicialId, setAcuerdoInicialId] = useState<string | null>(null)
@@ -465,7 +469,7 @@ function NuevoIngresoPageInner() {
       referencia: referencia || null,
       fecha_pago: fechaPago,
       observaciones: observaciones || null,
-      tasa_cambio: moneda === 'VES' && tasaCambio ? parseFloat(tasaCambio) : null,
+      tasa_cambio: tasaCambio ? parseFloat(tasaCambio) : null,
     })
     if (!parsed.success) {
       setError(parsed.error.errors[0]?.message ?? 'Datos inválidos')
@@ -519,7 +523,8 @@ function NuevoIngresoPageInner() {
       referencia: referencia || null,
       fecha_pago: fechaPago,
       observaciones: observaciones || null,
-      tasa_cambio: moneda === 'VES' && tasaCambio ? parseFloat(tasaCambio) : null,
+      tasa_cambio: tasaCambio ? parseFloat(tasaCambio) : null,
+      monto_bs: moneda === 'VES' ? (parseFloat(monto) || null) : (montoBs ? parseFloat(montoBs) || null : null),
       estado: 'pendiente_aprobacion',
       registrado_por: user.id,
       acuerdo_inicial_id: acuerdoInicialId ?? null,
@@ -1122,6 +1127,25 @@ function NuevoIngresoPageInner() {
                   </p>
                 )}
               </div>
+            )}
+            {METODOS_BS.includes(metodoPago) && moneda !== 'VES' && (
+              <>
+                <div>
+                  <label className="label">Monto en Bs. (opcional)</label>
+                  <input type="number" step="0.01" min="0" className="input"
+                    placeholder="0.00" value={montoBs} onChange={e => setMontoBs(e.target.value)} />
+                </div>
+                <div>
+                  <label className="label">Tasa Bs./USD</label>
+                  <input type="number" step="0.0001" min="0" className="input font-semibold"
+                    placeholder="Ej: 40.5012" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} />
+                  {montoBs && tasaCambio && parseFloat(tasaCambio) > 0 && (
+                    <p className="text-xs text-oriental-gray mt-1">
+                      ≈ ${(parseFloat(montoBs) / parseFloat(tasaCambio)).toFixed(2)} USD
+                    </p>
+                  )}
+                </div>
+              </>
             )}
             <div>
               <label className="label">Método de pago *</label>
