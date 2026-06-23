@@ -15,7 +15,7 @@ const s = StyleSheet.create({
 
   header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '12pt 28pt 10pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoWrap: { flexShrink: 0 },
-  logo: { width: 380, height: 140 },
+  logo: { width: 220, height: 90, objectFit: 'cover' },
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
   companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
