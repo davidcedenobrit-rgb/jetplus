@@ -1,3 +1,4 @@
+import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 
 const LOGO = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
