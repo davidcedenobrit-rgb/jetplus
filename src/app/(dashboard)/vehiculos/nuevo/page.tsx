@@ -618,35 +618,21 @@ export default function NuevoVehiculoPage() {
     setLoading(true)
     setError('')
 
-    // Si el vehículo viene del showroom y ya tiene un vehiculo_id, reutilizar ese registro
-    // en lugar de insertar uno nuevo (evita duplicate key en placa)
-    let vehiculo: any
-    if (showroomSeleccionado?.vehiculo_id) {
-      const { data: vExistente, error: fetchErr } = await supabase
-        .from('vehiculos')
-        .update({
-          cliente_id: clienteSeleccionado.id,
-          precio_base: calculadora ? parseFloat(calcBase) || null : parseFloat(precioBase) || null,
-          precio_total: parseFloat(precioTotalVehiculo) || null,
-          monto_contado: parseFloat(montoContado) || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', showroomSeleccionado.vehiculo_id)
-        .select()
-        .single()
-      if (fetchErr || !vExistente) { setError(fetchErr?.message ?? 'Error al actualizar vehículo'); setLoading(false); return }
-      vehiculo = vExistente
-    } else {
-      const { data: vNuevo, error: insertError } = await supabase.from('vehiculos').insert({
-        cliente_id: clienteSeleccionado.id,
-        ...parsed.data,
-        precio_base: calculadora ? parseFloat(calcBase) || null : parseFloat(precioBase) || null,
-        precio_total: parseFloat(precioTotalVehiculo) || null,
-        monto_contado: parseFloat(montoContado) || null,
-      }).select().single()
-      if (insertError || !vNuevo) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
-      vehiculo = vNuevo
+    // Upsert por placa: si ya existe un vehículo con esa placa lo actualiza,
+    // si no existe lo crea. Evita el error de duplicate key en todos los casos.
+    const upsertData = {
+      cliente_id: clienteSeleccionado.id,
+      ...parsed.data,
+      precio_base: calculadora ? parseFloat(calcBase) || null : parseFloat(precioBase) || null,
+      precio_total: parseFloat(precioTotalVehiculo) || null,
+      monto_contado: parseFloat(montoContado) || null,
     }
+    const { data: vehiculo, error: upsertError } = await supabase
+      .from('vehiculos')
+      .upsert(upsertData, { onConflict: 'placa', ignoreDuplicates: false })
+      .select()
+      .single()
+    if (upsertError || !vehiculo) { setError(upsertError?.message ?? 'Error al guardar'); setLoading(false); return }
 
     // Vincular showroom si se seleccionó uno
     if (showroomSeleccionado) {
