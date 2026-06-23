@@ -116,8 +116,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })}
 
-          {/* Vehículo Showroom — oculto para Arianna y Almacén */}
-          {!['arianna', 'almacen'].includes(rol) && (() => {
+          {/* Vehículo Showroom */}
+          {!['almacen'].includes(rol) && (() => {
             const active = pathname === '/showroom' || pathname.startsWith('/showroom/')
             return (
               <Link href="/showroom" onClick={onClose}
