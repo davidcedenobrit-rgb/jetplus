@@ -13,9 +13,9 @@ const BLUE_DARK = '#1e3a5f'
 const s = StyleSheet.create({
   page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 40 },
 
-  header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '16pt 28pt 12pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '12pt 28pt 10pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoWrap: { flexShrink: 0 },
-  logo: { width: 280, height: 82, objectFit: 'contain', objectPositionX: 0 },
+  logo: { width: 250, height: 110, objectFit: 'contain', objectPositionX: 0 },
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
   companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
