@@ -6,6 +6,7 @@ import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, Circle
 import DeleteButton from '@/components/DeleteButton'
 import RevertirCuotaButton from './RevertirCuotaButton'
 import PrintButton from './PrintButton'
+import BitacoraButton from './BitacoraButton'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
 import { getNombreRemitente } from '@/lib/remitente'
 
@@ -173,8 +174,11 @@ export default async function CreditoDetallePage({
           </div>
           <p className="text-oriental-gray text-sm mt-0.5">{cliente?.nombre} · {credito.placa ?? 'Sin placa'}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <PrintButton />
+          {cliente?.id && (
+            <BitacoraButton clienteId={cliente.id} nombre={cliente.nombre ?? ''} />
+          )}
           {vehiculo?.placa && (
             <Link
               href={`/ingresos/nuevo?placa=${encodeURIComponent(vehiculo.placa)}`}
