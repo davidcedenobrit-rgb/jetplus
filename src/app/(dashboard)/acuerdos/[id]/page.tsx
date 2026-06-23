@@ -27,7 +27,7 @@ export default async function AcuerdoDetallePage({ params }: { params: Promise<{
   // Ingresos vinculados a este acuerdo
   const { data: ingresos } = await supabase
     .from('ingresos')
-    .select('id, numero_recibo, concepto, monto, moneda, metodo_pago, fecha_pago, banco_emisor, referencia, estado')
+    .select('id, numero_recibo, concepto, monto, moneda, metodo_pago, fecha_pago, banco_emisor, referencia, estado, monto_bs, tasa_cambio')
     .eq('acuerdo_inicial_id', id)
     .order('fecha_pago', { ascending: false })
 
@@ -240,6 +240,11 @@ export default async function AcuerdoDetallePage({ params }: { params: Promise<{
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-bold text-oriental-black text-base">{formatCurrency(ing.monto, ing.moneda)}</span>
+                        {ing.monto_bs && (
+                          <span className="text-xs text-orange-600 font-semibold">
+                            = Bs.S {Number(ing.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{ing.metodo_pago}</span>
                         {ing.estado === 'anulado' && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">Anulado</span>
@@ -249,6 +254,7 @@ export default async function AcuerdoDetallePage({ params }: { params: Promise<{
                         {formatDate(ing.fecha_pago)}
                         {ing.banco_emisor && ` · ${ing.banco_emisor}`}
                         {ing.referencia && ` · Ref: ${ing.referencia}`}
+                        {ing.tasa_cambio && ` · Tasa: ${Number(ing.tasa_cambio).toFixed(4)} Bs/$`}
                       </p>
                       {ing.concepto && <p className="text-xs text-oriental-gray mt-0.5">{ing.concepto}</p>}
                     </div>
