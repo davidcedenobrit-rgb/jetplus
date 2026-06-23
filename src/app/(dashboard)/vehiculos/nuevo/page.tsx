@@ -105,14 +105,6 @@ export default function NuevoVehiculoPage() {
     { id: '1', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }
   ])
 
-  const [showCrearCliente, setShowCrearCliente] = useState(false)
-  const [nuevoNombre, setNuevoNombre] = useState('')
-  const [nuevaCedula, setNuevaCedula] = useState('')
-  const [nuevoTipo, setNuevoTipo] = useState<'natural' | 'juridico'>('natural')
-  const [nuevoTelefono, setNuevoTelefono] = useState('')
-  const [creandoCliente, setCreandoCliente] = useState(false)
-  const [errorCrearCliente, setErrorCrearCliente] = useState('')
-
   // Showroom
   const [vehiculosShowroom, setVehiculosShowroom] = useState<VehiculoShowroom[]>([])
   const [showroomSeleccionado, setShowroomSeleccionado] = useState<VehiculoShowroom | null>(null)
