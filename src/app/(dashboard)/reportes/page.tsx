@@ -158,7 +158,7 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
 
   const cntBucket = (id: number) => lista.filter(c => c.bucket === id).length
   const haySome = lista.length > 0
-  const listaFiltrada = selectedBucket !== null ? lista.filter(c => c.bucket === selectedBucket) : []
+  const listaFiltrada = selectedBucket !== null ? lista.filter(c => c.bucket === selectedBucket) : lista
   const bucketInfo = selectedBucket !== null ? BUCKETS[selectedBucket - 1] : null
 
   function toggleBucket(id: 1|2|3|4|5) {
@@ -323,11 +323,6 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
           <p className="text-sm font-semibold text-green-700">Sin cuotas vencidas</p>
           <p className="text-xs text-green-600 mt-1">La cartera está al día</p>
         </div>
-      ) : selectedBucket === null ? (
-        /* Hint cuando ningún bucket está seleccionado */
-        <p className="text-center text-xs text-oriental-gray py-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-          Toca un tramo para ver el detalle de clientes
-        </p>
       ) : listaFiltrada.length === 0 ? null : (
         /* Tabla dropdown filtrada por bucket */
         <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
