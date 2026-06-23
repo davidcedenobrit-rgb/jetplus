@@ -54,6 +54,23 @@ interface Vehiculo {
   ac500_6m_cuota: number | null
   ac500_9m_cuota: number | null
   ac500_12m_cuota: number | null
+  // Gastos contado (línea a línea)
+  placa_c: number | null
+  poliza_vehiculo_c: number | null
+  poliza_vida_c: number | null
+  gastos_vhm_c: number | null
+  honorarios_c: number | null
+  gastos_int_c: number | null
+  alfombras_c: number | null
+  // Gastos crédito (línea a línea)
+  placa_cr: number | null
+  poliza_vehiculo_cr: number | null
+  poliza_vida_cr: number | null
+  gastos_vhm_cr: number | null
+  honorarios_cr: number | null
+  gastos_int_cr: number | null
+  alfombras_cr: number | null
+  // Plan 100% banco
   placa_monto: number | null
   poliza_vehiculo_banco: number | null
   poliza_vida_banco: number | null
@@ -136,6 +153,10 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   tasa_credito: null, stock: 0, ano: 2026, transmision: 'Automático',
   colores: '', orden: 99, disponible: true,
   ac500_visible: false, ac500_6m_cuota: null, ac500_9m_cuota: null, ac500_12m_cuota: null,
+  placa_c: null, poliza_vehiculo_c: null, poliza_vida_c: null,
+  gastos_vhm_c: null, honorarios_c: null, gastos_int_c: null, alfombras_c: null,
+  placa_cr: null, poliza_vehiculo_cr: null, poliza_vida_cr: null,
+  gastos_vhm_cr: null, honorarios_cr: null, gastos_int_cr: null, alfombras_cr: null,
   placa_monto: 400,
   poliza_vehiculo_banco: null, poliza_vida_banco: null, honorarios_banco: null,
   gastos_internos_banco: null, alfombras_banco: null,
@@ -245,13 +266,25 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     const v = vehiculos.find(x => x.id === id)
     if (!v) return
     setSaving(prev => ({ ...prev, [id]: true }))
+    const gcCalc = (v.placa_c ?? 0) + (v.poliza_vehiculo_c ?? 0) + (v.poliza_vida_c ?? 0) +
+      (v.gastos_vhm_c ?? 0) + (v.honorarios_c ?? 0) + (v.gastos_int_c ?? 0) + (v.alfombras_c ?? 0)
+    const gcrCalc = (v.placa_cr ?? 0) + (v.poliza_vehiculo_cr ?? 0) + (v.poliza_vida_cr ?? 0) +
+      (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0)
     const { error } = await supabase.from('catalogo_ventas').update({
       brand: v.brand, model: v.model, img_url: v.img_url,
-      cash: v.cash, gc: v.gc, gcr: v.gcr, tasa_credito: v.tasa_credito,
+      cash: v.cash,
+      gc: gcCalc || v.gc, gcr: gcrCalc || v.gcr,
+      tasa_credito: v.tasa_credito,
       stock: v.stock, ano: v.ano, transmision: v.transmision, colores: v.colores,
       orden: v.orden, disponible: v.disponible,
       ac500_visible: v.ac500_visible, ac500_6m_cuota: v.ac500_6m_cuota,
       ac500_9m_cuota: v.ac500_9m_cuota, ac500_12m_cuota: v.ac500_12m_cuota,
+      placa_c: v.placa_c, poliza_vehiculo_c: v.poliza_vehiculo_c, poliza_vida_c: v.poliza_vida_c,
+      gastos_vhm_c: v.gastos_vhm_c, honorarios_c: v.honorarios_c,
+      gastos_int_c: v.gastos_int_c, alfombras_c: v.alfombras_c,
+      placa_cr: v.placa_cr, poliza_vehiculo_cr: v.poliza_vehiculo_cr, poliza_vida_cr: v.poliza_vida_cr,
+      gastos_vhm_cr: v.gastos_vhm_cr, honorarios_cr: v.honorarios_cr,
+      gastos_int_cr: v.gastos_int_cr, alfombras_cr: v.alfombras_cr,
       placa_monto: v.placa_monto,
       poliza_vehiculo_banco: v.poliza_vehiculo_banco, poliza_vida_banco: v.poliza_vida_banco,
       honorarios_banco: v.honorarios_banco, gastos_internos_banco: v.gastos_internos_banco,
@@ -498,58 +531,140 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                   {/* Precios */}
                   <div>
                     <SectionLabel>Precios y financiamiento</SectionLabel>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Field label="Precio base ($)">
                         <NumField className={inputCls} value={v.cash} placeholder="30000" onCommit={n => update(v.id, 'cash', n)} />
-                      </Field>
-                      <Field label="Gastos de contado ($)">
-                        <NumField className={inputCls} value={v.gc} placeholder="3500" onCommit={n => update(v.id, 'gc', n)} />
-                      </Field>
-                      <Field label="Gastos de crédito ($)">
-                        <NumField className={inputCls} value={v.gcr} placeholder="5000" onCommit={n => update(v.id, 'gcr', n)} />
                       </Field>
                       <Field label="Cuota Vehimotors 24m ($/mes)">
                         <NumField className={inputCls} value={v.tasa_credito} placeholder="500" onCommit={n => update(v.id, 'tasa_credito', n)} />
                       </Field>
                     </div>
 
+                    {/* Gastos contado + crédito en paralelo */}
                     {(() => {
-                      const precio = v.cash ?? 0
-                      if (precio <= 0) return null
-                      const iva = precio * 0.16
-                      const gc = v.gc ?? 0
-                      const gcr = v.gcr ?? 0
-                      const cuota = v.tasa_credito ?? 0
-                      const totalContado = precio + iva + gc
-                      const inicialLaOriental = precio * 0.40 + iva + gcr
-                      const financiamientoVhm = precio * 0.60
-                      const fmtN = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      const precio  = v.cash ?? 0
+                      const iva     = precio * 0.16
+                      const gcC = (v.placa_c ?? 0) + (v.poliza_vehiculo_c ?? 0) + (v.poliza_vida_c ?? 0) +
+                        (v.gastos_vhm_c ?? 0) + (v.honorarios_c ?? 0) + (v.gastos_int_c ?? 0) + (v.alfombras_c ?? 0)
+                      const gcCr = (v.placa_cr ?? 0) + (v.poliza_vehiculo_cr ?? 0) + (v.poliza_vida_cr ?? 0) +
+                        (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0)
+                      const cuota   = v.tasa_credito ?? 0
+                      const fmtN    = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+                      const itemsCls  = `${inputCls} text-right`
+                      const rowLbl    = 'text-xs text-gray-500 font-medium pt-2'
+
                       return (
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {/* Contado */}
-                          <div className="bg-gray-800 rounded-xl p-4">
-                            <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-3">Modalidad Contado</p>
-                            <div className="space-y-1.5 text-xs">
-                              <div className="flex justify-between text-gray-300"><span>Precio base</span><span className="font-mono">${fmtN(precio)}</span></div>
-                              <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmtN(iva)}</span></div>
-                              <div className="flex justify-between text-gray-300"><span>Gastos</span><span className="font-mono">${fmtN(gc)}</span></div>
-                              <div className="flex justify-between text-white font-bold border-t border-gray-600 pt-1.5 mt-1">
-                                <span>Total a pagar</span><span className="font-mono text-yellow-400">${fmtN(totalContado)}</span>
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                          {/* ── Contado ── */}
+                          <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <div className="bg-amber-800 px-4 py-2">
+                              <p className="text-[11px] font-bold text-amber-100 uppercase tracking-wider">Modalidad de Contado — Gastos</p>
+                            </div>
+                            <div className="p-3 space-y-2">
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Placa ($)</span>
+                                <NumField className={itemsCls} value={v.placa_c} placeholder="0" onCommit={n => update(v.id, 'placa_c', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Póliza vehículo ($)</span>
+                                <NumField className={itemsCls} value={v.poliza_vehiculo_c} placeholder="0" onCommit={n => update(v.id, 'poliza_vehiculo_c', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Póliza vida ($)</span>
+                                <NumField className={itemsCls} value={v.poliza_vida_c} placeholder="0" onCommit={n => update(v.id, 'poliza_vida_c', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Gastos Vehimotor ($)</span>
+                                <NumField className={itemsCls} value={v.gastos_vhm_c} placeholder="0" onCommit={n => update(v.id, 'gastos_vhm_c', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Hon. profesionales ($)</span>
+                                <NumField className={itemsCls} value={v.honorarios_c} placeholder="0" onCommit={n => update(v.id, 'honorarios_c', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Gastos internos ($)</span>
+                                <NumField className={itemsCls} value={v.gastos_int_c} placeholder="0" onCommit={n => update(v.id, 'gastos_int_c', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Alfombras ($)</span>
+                                <NumField className={itemsCls} value={v.alfombras_c} placeholder="0" onCommit={n => update(v.id, 'alfombras_c', n)} />
+                              </div>
+                              <div className="flex justify-between items-center bg-amber-50 rounded-lg px-3 py-2 mt-1">
+                                <span className="text-xs font-bold text-amber-800">Total gastos contado</span>
+                                <span className="font-mono text-sm font-bold text-amber-800">${fmtN(gcC)}</span>
                               </div>
                             </div>
-                          </div>
-                          {/* Crédito La Oriental + Vehimotors */}
-                          <div className="bg-gray-800 rounded-xl p-4">
-                            <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-3">Crédito 24m — La Oriental + Vehimotors</p>
-                            <div className="space-y-1.5 text-xs">
-                              <div className="flex justify-between text-purple-300"><span>Inicial La Oriental (40% + IVA + gastos)</span><span className="font-mono">${fmtN(inicialLaOriental)}</span></div>
-                              <div className="flex justify-between text-indigo-300"><span>Financiamiento Vehimotors (60%)</span><span className="font-mono">${fmtN(financiamientoVhm)}</span></div>
-                              {cuota > 0 && (
-                                <div className="flex justify-between text-oriental-red font-bold border-t border-gray-600 pt-1.5 mt-1">
-                                  <span>Cuota mensual × 24</span><span className="font-mono">${fmtN(cuota)}/mes</span>
+
+                            {precio > 0 && (
+                              <div className="bg-gray-800 mx-3 mb-3 rounded-xl p-3 space-y-1.5 text-xs">
+                                <div className="flex justify-between text-gray-300"><span>100% Precio base</span><span className="font-mono">${fmtN(precio)}</span></div>
+                                <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmtN(iva)}</span></div>
+                                <div className="flex justify-between text-gray-400 text-[11px]"><span>Gastos (suma)</span><span className="font-mono">${fmtN(gcC)}</span></div>
+                                <div className="flex justify-between text-yellow-400 font-bold border-t border-gray-600 pt-1.5">
+                                  <span>TOTAL A PAGAR</span><span className="font-mono">${fmtN(precio + iva + gcC)}</span>
                                 </div>
-                              )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ── Crédito 24m ── */}
+                          <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <div className="bg-emerald-900 px-4 py-2">
+                              <p className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">Crédito 24m (40% Inicial) — Gastos</p>
                             </div>
+                            <div className="p-3 space-y-2">
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Placa ($)</span>
+                                <NumField className={itemsCls} value={v.placa_cr} placeholder="0" onCommit={n => update(v.id, 'placa_cr', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Póliza vehículo ($)</span>
+                                <NumField className={itemsCls} value={v.poliza_vehiculo_cr} placeholder="0" onCommit={n => update(v.id, 'poliza_vehiculo_cr', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Póliza vida ($)</span>
+                                <NumField className={itemsCls} value={v.poliza_vida_cr} placeholder="0" onCommit={n => update(v.id, 'poliza_vida_cr', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Gastos Vehimotor ($)</span>
+                                <NumField className={itemsCls} value={v.gastos_vhm_cr} placeholder="0" onCommit={n => update(v.id, 'gastos_vhm_cr', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Hon. profesionales ($)</span>
+                                <NumField className={itemsCls} value={v.honorarios_cr} placeholder="0" onCommit={n => update(v.id, 'honorarios_cr', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Gastos internos ($)</span>
+                                <NumField className={itemsCls} value={v.gastos_int_cr} placeholder="0" onCommit={n => update(v.id, 'gastos_int_cr', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Alfombras ($)</span>
+                                <NumField className={itemsCls} value={v.alfombras_cr} placeholder="0" onCommit={n => update(v.id, 'alfombras_cr', n)} />
+                              </div>
+                              <div className="flex justify-between items-center bg-emerald-50 rounded-lg px-3 py-2 mt-1">
+                                <span className="text-xs font-bold text-emerald-800">Total gastos crédito</span>
+                                <span className="font-mono text-sm font-bold text-emerald-800">${fmtN(gcCr)}</span>
+                              </div>
+                            </div>
+
+                            {precio > 0 && (
+                              <div className="bg-gray-800 mx-3 mb-3 rounded-xl p-3 space-y-1.5 text-xs">
+                                <div className="flex justify-between text-gray-300"><span>40% Precio base</span><span className="font-mono">${fmtN(precio * 0.4)}</span></div>
+                                <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmtN(iva)}</span></div>
+                                <div className="flex justify-between text-gray-400 text-[11px]"><span>Gastos (suma)</span><span className="font-mono">${fmtN(gcCr)}</span></div>
+                                <div className="flex justify-between text-emerald-400 font-bold border-t border-gray-600 pt-1.5">
+                                  <span>TOTAL INICIAL</span><span className="font-mono">${fmtN(precio * 0.4 + iva + gcCr)}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-400 text-[11px]"><span>Financiamiento 60%</span><span className="font-mono">${fmtN(precio * 0.6)}</span></div>
+                                {cuota > 0 && (
+                                  <div className="flex justify-between text-red-400 font-bold border-t border-gray-600 pt-1.5">
+                                    <span>Cuota mensual × 24</span><span className="font-mono">${fmtN(cuota)}/mes</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -704,18 +819,40 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       {quickV && (() => {
         const precio = quickV.cash ?? 0
         const iva    = precio * 0.16
-        const gc     = quickV.gc ?? 0
-        const gcr    = quickV.gcr ?? 0
         const cuota  = quickV.tasa_credito ?? 0
-        const totalC = precio + iva + gc
-        const ini40  = precio * 0.4
-        const totalI = ini40 + iva + gcr
-        const fin60  = precio * 0.6
+
+        // Gastos contado ítems
+        const placa_c       = quickV.placa_c ?? 0
+        const poliza_veh_c  = quickV.poliza_vehiculo_c ?? 0
+        const poliza_vida_c = quickV.poliza_vida_c ?? 0
+        const gvhm_c        = quickV.gastos_vhm_c ?? 0
+        const hon_c         = quickV.honorarios_c ?? 0
+        const gint_c        = quickV.gastos_int_c ?? 0
+        const alfom_c       = quickV.alfombras_c ?? 0
+        const gcC           = placa_c + poliza_veh_c + poliza_vida_c + gvhm_c + hon_c + gint_c + alfom_c
+        const gc            = gcC > 0 ? gcC : (quickV.gc ?? 0)
+        const totalC        = precio + iva + gc
+
+        // Gastos crédito ítems
+        const placa_cr       = quickV.placa_cr ?? 0
+        const poliza_veh_cr  = quickV.poliza_vehiculo_cr ?? 0
+        const poliza_vida_cr = quickV.poliza_vida_cr ?? 0
+        const gvhm_cr        = quickV.gastos_vhm_cr ?? 0
+        const hon_cr         = quickV.honorarios_cr ?? 0
+        const gint_cr        = quickV.gastos_int_cr ?? 0
+        const alfom_cr       = quickV.alfombras_cr ?? 0
+        const gcCr           = placa_cr + poliza_veh_cr + poliza_vida_cr + gvhm_cr + hon_cr + gint_cr + alfom_cr
+        const gcr            = gcCr > 0 ? gcCr : (quickV.gcr ?? 0)
+        const ini40          = precio * 0.4
+        const totalI         = ini40 + iva + gcr
+        const fin60          = precio * 0.6
+
         const fmtQ   = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-        const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 18px', borderBottom: '1px solid #f3f4f6' }
-        const lbl: React.CSSProperties = { fontSize: 13, color: '#374151' }
-        const val: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#111', fontFamily: 'monospace' }
+        const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 18px', borderBottom: '1px solid #f3f4f6' }
+        const lbl: React.CSSProperties = { fontSize: 12, color: '#374151' }
+        const val: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#111', fontFamily: 'monospace' }
+        const rowZero = (n: number): React.CSSProperties => n === 0 ? { ...row, opacity: 0.4 } : row
 
         return (
           <div className="fixed inset-0 bg-black/55 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && closeQuick()}>
@@ -738,10 +875,26 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                     <div style={{ background: '#7c2d12', padding: '7px 18px', fontSize: 11, fontWeight: 800, color: '#fde68a', textTransform: 'uppercase', letterSpacing: 1 }}>Modalidad de Contado</div>
                     <div style={row}><span style={lbl}>100% Precio Base:</span><span style={val}>${fmtQ(precio)}</span></div>
                     <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmtQ(iva)}</span></div>
-                    <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
-                      <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza Seguro Vehículo, Traslado,{'\n'}Gastos, INTT, Gastos Notaría</span>
-                      <span style={{ ...val, flexShrink: 0 }}>${fmtQ(gc)}</span>
-                    </div>
+                    {gcC > 0 ? (
+                      <>
+                        <div style={rowZero(placa_c)}><span style={lbl}>Placa:</span><span style={val}>${fmtQ(placa_c)}</span></div>
+                        <div style={rowZero(poliza_veh_c)}><span style={lbl}>Póliza Vehículo:</span><span style={val}>${fmtQ(poliza_veh_c)}</span></div>
+                        <div style={rowZero(poliza_vida_c)}><span style={lbl}>Póliza Vida:</span><span style={val}>${fmtQ(poliza_vida_c)}</span></div>
+                        <div style={rowZero(gvhm_c)}><span style={lbl}>Gastos Vehimotor:</span><span style={val}>${fmtQ(gvhm_c)}</span></div>
+                        <div style={rowZero(hon_c)}><span style={lbl}>Hon. Profesionales:</span><span style={val}>${fmtQ(hon_c)}</span></div>
+                        <div style={rowZero(gint_c)}><span style={lbl}>Gastos Internos:</span><span style={val}>${fmtQ(gint_c)}</span></div>
+                        <div style={rowZero(alfom_c)}><span style={lbl}>Alfombras:</span><span style={val}>${fmtQ(alfom_c)}</span></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 18px', background: '#fef3c7', borderBottom: '1px solid #f3f4f6' }}>
+                          <span style={{ fontSize: 11, color: '#92400e', fontStyle: 'italic' }}>Póliza Seg. Vehículo, Traslado, Gastos, INTT, Gastos Notaría</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#92400e', fontFamily: 'monospace', flexShrink: 0, marginLeft: 8 }}>${fmtQ(gc)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
+                        <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza Seguro Vehículo, Traslado,{'\n'}Gastos, INTT, Gastos Notaría</span>
+                        <span style={{ ...val, flexShrink: 0 }}>${fmtQ(gc)}</span>
+                      </div>
+                    )}
                     <div style={{ ...row, background: '#fef9c3', border: 'none' }}>
                       <span style={{ fontSize: 14, fontWeight: 800, color: '#92400e' }}>TOTAL A PAGAR:</span>
                       <span style={{ fontSize: 17, fontWeight: 900, color: '#92400e', fontFamily: 'monospace' }}>${fmtQ(totalC)}</span>
@@ -751,10 +904,26 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                     <div style={{ background: '#064e3b', padding: '7px 18px', fontSize: 11, fontWeight: 800, color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: 1, marginTop: 6 }}>Modalidad Crédito 24 Meses (40% Inicial)</div>
                     <div style={row}><span style={lbl}>40% Precio Base:</span><span style={val}>${fmtQ(ini40)}</span></div>
                     <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmtQ(iva)}</span></div>
-                    <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
-                      <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza Seguro Vehículo, Traslado,{'\n'}Gastos, INTT, Gastos Notaría</span>
-                      <span style={{ ...val, flexShrink: 0 }}>${fmtQ(gcr)}</span>
-                    </div>
+                    {gcCr > 0 ? (
+                      <>
+                        <div style={rowZero(placa_cr)}><span style={lbl}>Placa:</span><span style={val}>${fmtQ(placa_cr)}</span></div>
+                        <div style={rowZero(poliza_veh_cr)}><span style={lbl}>Póliza Vehículo:</span><span style={val}>${fmtQ(poliza_veh_cr)}</span></div>
+                        <div style={rowZero(poliza_vida_cr)}><span style={lbl}>Póliza Vida:</span><span style={val}>${fmtQ(poliza_vida_cr)}</span></div>
+                        <div style={rowZero(gvhm_cr)}><span style={lbl}>Gastos Vehimotor:</span><span style={val}>${fmtQ(gvhm_cr)}</span></div>
+                        <div style={rowZero(hon_cr)}><span style={lbl}>Hon. Profesionales:</span><span style={val}>${fmtQ(hon_cr)}</span></div>
+                        <div style={rowZero(gint_cr)}><span style={lbl}>Gastos Internos:</span><span style={val}>${fmtQ(gint_cr)}</span></div>
+                        <div style={rowZero(alfom_cr)}><span style={lbl}>Alfombras:</span><span style={val}>${fmtQ(alfom_cr)}</span></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 18px', background: '#f0fdf4', borderBottom: '1px solid #f3f4f6' }}>
+                          <span style={{ fontSize: 11, color: '#065f46', fontStyle: 'italic' }}>Póliza Seg. Vehículo, Traslado, Gastos, INTT, Gastos Notaría</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#065f46', fontFamily: 'monospace', flexShrink: 0, marginLeft: 8 }}>${fmtQ(gcr)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
+                        <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza Seguro Vehículo, Traslado,{'\n'}Gastos, INTT, Gastos Notaría</span>
+                        <span style={{ ...val, flexShrink: 0 }}>${fmtQ(gcr)}</span>
+                      </div>
+                    )}
                     <div style={{ ...row, background: '#dcfce7', border: 'none' }}>
                       <span style={{ fontSize: 14, fontWeight: 800, color: '#065f46' }}>TOTAL INICIAL A PAGAR:</span>
                       <span style={{ fontSize: 17, fontWeight: 900, color: '#065f46', fontFamily: 'monospace' }}>${fmtQ(totalI)}</span>
