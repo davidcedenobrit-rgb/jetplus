@@ -14,7 +14,7 @@ const s = StyleSheet.create({
 
   header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '16pt 28pt 12pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoWrap: { flexShrink: 0 },
-  logo: { width: 220, height: 64, objectFit: 'contain', objectPositionX: 0 },
+  logo: { width: 280, height: 82, objectFit: 'contain', objectPositionX: 0 },
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
   companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
@@ -59,9 +59,9 @@ const s = StyleSheet.create({
   noteText: { fontSize: 7.5, color: GRAY, lineHeight: 1.5, fontStyle: 'italic' },
 
   calcBox: { width: 240, border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' },
-  calcHeader: { backgroundColor: DARK, padding: '6pt 10pt', flexDirection: 'row', justifyContent: 'space-between' },
-  calcHeaderLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
-  calcHeaderVal: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fbbf24' },
+  calcHeader: { backgroundColor: DARK, padding: '6pt 10pt', flexDirection: 'column' },
+  calcHeaderLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  calcHeaderVal: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#fbbf24' },
   calcRow: { flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` },
   calcLabel: { fontSize: 7.5, color: GRAY },
   calcVal: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK },
