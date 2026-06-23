@@ -64,7 +64,10 @@ function computeVencidos(
   const hoyMs = new Date(hoyStr).getTime()
   const creds = planFiltro ? creditos.filter(c => c.plan_tipo === planFiltro) : creditos
   const credIds = new Set(creds.map((c: any) => c.id))
-  const vencidas = cuotas.filter((q: any) => q.estado === 'vencida' && credIds.has(q.credito_id))
+  const vencidas = cuotas.filter((q: any) =>
+    credIds.has(q.credito_id) &&
+    (q.estado === 'vencida' || ((q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento < hoyStr))
+  )
   const credMap: Record<string, any> = {}
   creds.forEach((c: any) => { credMap[c.id] = c })
 
@@ -747,8 +750,12 @@ export default function ReportesPage() {
     // ── Vehimotors
     const vhCuotas = cuotas.filter((c: any) => creditoPlanMap[c.credito_id] === 'financiamiento_vehimotors')
     const vhPag  = vhCuotas.filter((c: any) => c.estado === 'pagada')
-    const vhPend = vhCuotas.filter((c: any) => c.estado === 'pendiente' || c.estado === 'abono_parcial')
-    const vhVenc = vhCuotas.filter((c: any) => c.estado === 'vencida')
+    const vhVenc = vhCuotas.filter((c: any) =>
+      c.estado === 'vencida' || ((c.estado === 'pendiente' || c.estado === 'abono_parcial') && c.fecha_vencimiento < hoyStr)
+    )
+    const vhPend = vhCuotas.filter((c: any) =>
+      (c.estado === 'pendiente' || c.estado === 'abono_parcial') && c.fecha_vencimiento >= hoyStr
+    )
     setVhPagadas(vhPag.length)
     setVhPendientes(vhPend.length)
     setVhVencidas(vhVenc.length)
@@ -763,8 +770,12 @@ export default function ReportesPage() {
     const orCreditoIds = new Set(orCreditos.map((c: any) => c.id))
     const orCuotas = cuotas.filter((c: any) => orCreditoIds.has(c.credito_id))
     const orPag  = orCuotas.filter((c: any) => c.estado === 'pagada')
-    const orPend = orCuotas.filter((c: any) => c.estado === 'pendiente' || c.estado === 'abono_parcial')
-    const orVenc = orCuotas.filter((c: any) => c.estado === 'vencida')
+    const orVenc = orCuotas.filter((c: any) =>
+      c.estado === 'vencida' || ((c.estado === 'pendiente' || c.estado === 'abono_parcial') && c.fecha_vencimiento < hoyStr)
+    )
+    const orPend = orCuotas.filter((c: any) =>
+      (c.estado === 'pendiente' || c.estado === 'abono_parcial') && c.fecha_vencimiento >= hoyStr
+    )
     setOrPagadas(orPag.length)
     setOrPendientes(orPend.length)
     setOrVencidas(orVenc.length)
@@ -781,8 +792,12 @@ export default function ReportesPage() {
       if (!cl) return
       const cuotasCred = orCuotas.filter((q: any) => q.credito_id === c.id)
       const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
-      const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
-      const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      const cvenc = cuotasCred.filter((q: any) =>
+        q.estado === 'vencida' || ((q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento < hoyStr)
+      )
+      const cpend = cuotasCred.filter((q: any) =>
+        (q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento >= hoyStr
+      )
       const estadoGeneral = estadoCliente(cvenc, cpend)
       const cpendSorted = [...cpend].sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
       const proxima = cpendSorted[0]
@@ -811,8 +826,12 @@ export default function ReportesPage() {
       const cl = c.clientes; if (!cl) return
       const cuotasCred = vhCuotasAll.filter((q: any) => q.credito_id === c.id)
       const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
-      const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
-      const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      const cvenc = cuotasCred.filter((q: any) =>
+        q.estado === 'vencida' || ((q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento < hoyStr)
+      )
+      const cpend = cuotasCred.filter((q: any) =>
+        (q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento >= hoyStr
+      )
       const cpendSorted = [...cpend].sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
       const proxima = cpendSorted[0]
       vhList[c.id] = {
@@ -838,8 +857,12 @@ export default function ReportesPage() {
       const cl = c.clientes; if (!cl) return
       const cuotasCred = cuotas.filter((q: any) => q.credito_id === c.id)
       const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
-      const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
-      const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      const cvenc = cuotasCred.filter((q: any) =>
+        q.estado === 'vencida' || ((q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento < hoyStr)
+      )
+      const cpend = cuotasCred.filter((q: any) =>
+        (q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento >= hoyStr
+      )
       if (!genMap[cl.id]) {
         genMap[cl.id] = {
           clienteId: cl.id, nombre: cl.nombre, cedula: cl.cedula_rif, placa: c.placa ?? '—',
@@ -865,12 +888,12 @@ export default function ReportesPage() {
     })
     Object.values(genMap).forEach((g: any) => {
       // Recalcular estadoGeneral con regla de 7 días
-      const cuotasPendCliente = cuotas.filter((q: any) =>
-        (q.estado === 'pendiente' || q.estado === 'abono_parcial') &&
+      const cuotasVencCliente = cuotas.filter((q: any) =>
+        (q.estado === 'vencida' || ((q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento < hoyStr)) &&
         creditos.some((c: any) => c.id === q.credito_id && (c.clientes as any)?.id === g.clienteId)
       )
-      const cuotasVencCliente = cuotas.filter((q: any) =>
-        q.estado === 'vencida' &&
+      const cuotasPendCliente = cuotas.filter((q: any) =>
+        (q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento >= hoyStr &&
         creditos.some((c: any) => c.id === q.credito_id && (c.clientes as any)?.id === g.clienteId)
       )
       g.estadoGeneral = estadoCliente(cuotasVencCliente, cuotasPendCliente)
@@ -890,8 +913,12 @@ export default function ReportesPage() {
     const acCreditoIds = new Set(acCreditos.map((c: any) => c.id))
     const acCuotas = cuotas.filter((c: any) => acCreditoIds.has(c.credito_id))
     const acPag  = acCuotas.filter((c: any) => c.estado === 'pagada')
-    const acPend = acCuotas.filter((c: any) => c.estado === 'pendiente' || c.estado === 'abono_parcial')
-    const acVenc = acCuotas.filter((c: any) => c.estado === 'vencida')
+    const acVenc = acCuotas.filter((c: any) =>
+      c.estado === 'vencida' || ((c.estado === 'pendiente' || c.estado === 'abono_parcial') && c.fecha_vencimiento < hoyStr)
+    )
+    const acPend = acCuotas.filter((c: any) =>
+      (c.estado === 'pendiente' || c.estado === 'abono_parcial') && c.fecha_vencimiento >= hoyStr
+    )
     setAcPagadas(acPag.length)
     setAcPendientes(acPend.length)
     setAcVencidas(acVenc.length)
@@ -907,8 +934,12 @@ export default function ReportesPage() {
       const cl = c.clientes; if (!cl) return
       const cuotasCred = acCuotas.filter((q: any) => q.credito_id === c.id)
       const cpag  = cuotasCred.filter((q: any) => q.estado === 'pagada')
-      const cpend = cuotasCred.filter((q: any) => q.estado === 'pendiente' || q.estado === 'abono_parcial')
-      const cvenc = cuotasCred.filter((q: any) => q.estado === 'vencida')
+      const cvenc = cuotasCred.filter((q: any) =>
+        q.estado === 'vencida' || ((q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento < hoyStr)
+      )
+      const cpend = cuotasCred.filter((q: any) =>
+        (q.estado === 'pendiente' || q.estado === 'abono_parcial') && q.fecha_vencimiento >= hoyStr
+      )
       const cpendSorted = [...cpend].sort((a: any, b: any) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
       const proxima = cpendSorted[0]
       acList[c.id] = {
