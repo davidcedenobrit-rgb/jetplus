@@ -53,10 +53,11 @@ function ac500ToPlan(v: AC500Vehiculo, meses: 6 | 9): PlanAC500 {
 interface PagoInicial {
   id: string; monto: string; metodo: string; referencia: string
   bancoEmisor: string; bancoReceptor: string
-  montoBs: string; tasaCambio: string
+  montoBs: string; tasaCambio: string; observaciones: string
 }
 
-const METODOS_BS = ['Transferencia bancaria', 'Pago móvil', 'Depósito bancario', 'Efectivo VES', 'Cheque']
+const METODOS_BS = ['Transferencia bancaria', 'Pago móvil', 'Depósito bancario', 'Efectivo VES', 'Cheque',
+  'Transferencia bancaria a Vehimotor', 'Transferencia bancaria a Oriental']
 
 function formatUSD(n: number) {
   if (n == null || isNaN(n)) return '$0.00'
@@ -94,7 +95,7 @@ export default function NuevoVehiculoPage() {
   const [registrarIngresoInicial, setRegistrarIngresoInicial] = useState(false)
   const [ingresoInicialFecha, setIngresoInicialFecha] = useState(new Date().toISOString().split('T')[0])
   const [pagosIniciales, setPagosIniciales] = useState<PagoInicial[]>([
-    { id: '1', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '' }
+    { id: '1', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }
   ])
 
   const [showCrearCliente, setShowCrearCliente] = useState(false)
@@ -524,6 +525,7 @@ export default function NuevoVehiculoPage() {
         estado: 'registrado',
         monto_bs: montoBs,
         tasa_cambio: tasaCambio,
+        observaciones: pago.observaciones || null,
         acuerdo_inicial_id: acuerdoId ?? null,
       })
     }
@@ -550,7 +552,7 @@ export default function NuevoVehiculoPage() {
     }))
   }
   function addPago() {
-    setPagosIniciales(prev => [...prev, { id: String(Date.now()), monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '' }])
+    setPagosIniciales(prev => [...prev, { id: String(Date.now()), monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }])
   }
   function removePago(id: string) {
     if (pagosIniciales.length <= 1) return
@@ -1591,12 +1593,17 @@ export default function NuevoVehiculoPage() {
                                 {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
                               </select>
                             </div>
-                            <div className="md:col-span-2">
+                            <div>
                               <label className="label">Banco receptor</label>
                               <select className="select" value={pago.bancoReceptor} onChange={e => updatePago(pago.id, 'bancoReceptor', e.target.value)}>
                                 <option value="">—</option>
                                 {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
                               </select>
+                            </div>
+                            <div>
+                              <label className="label">Observaciones del pago</label>
+                              <input type="text" className="input" placeholder="Ej: Pago parcial acordado del lunes"
+                                value={pago.observaciones} onChange={e => updatePago(pago.id, 'observaciones', e.target.value)} />
                             </div>
                             {METODOS_BS.includes(pago.metodo) && (<>
                               <div className="md:col-span-2 pt-1 border-t border-orange-100">
