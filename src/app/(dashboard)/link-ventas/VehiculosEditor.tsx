@@ -79,6 +79,8 @@ interface Vehiculo {
   alfombras_banco: number | null
   diferencial_pct: number | null
   tasa_banco_pct: number | null
+  tasa_vhm_pct: number | null
+  cuotas_vhm: number | null
 }
 
 const CMAP: Record<string, string> = {
@@ -161,6 +163,7 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   poliza_vehiculo_banco: null, poliza_vida_banco: null, honorarios_banco: null,
   gastos_internos_banco: null, alfombras_banco: null,
   diferencial_pct: 30, tasa_banco_pct: 16,
+  tasa_vhm_pct: null, cuotas_vhm: 24,
 }
 
 export default function VehiculosEditor({ initialVehiculos, showroomStock }: { initialVehiculos: Vehiculo[]; showroomStock: ShowroomItem[] }) {
@@ -290,6 +293,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       honorarios_banco: v.honorarios_banco, gastos_internos_banco: v.gastos_internos_banco,
       alfombras_banco: v.alfombras_banco,
       diferencial_pct: v.diferencial_pct, tasa_banco_pct: v.tasa_banco_pct,
+      tasa_vhm_pct: v.tasa_vhm_pct, cuotas_vhm: v.cuotas_vhm ?? 24,
       updated_at: new Date().toISOString(),
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
@@ -535,8 +539,14 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                       <Field label="Precio base ($)">
                         <NumField className={inputCls} value={v.cash} placeholder="30000" onCommit={n => update(v.id, 'cash', n)} />
                       </Field>
-                      <Field label="Cuota Vehimotors 24m ($/mes)">
+                      <Field label={`Cuota Vehimotors ${v.cuotas_vhm ?? 24}m ($/mes)`}>
                         <NumField className={inputCls} value={v.tasa_credito} placeholder="500" onCommit={n => update(v.id, 'tasa_credito', n)} />
+                      </Field>
+                      <Field label="Tasa de interés Vehimotors (% anual)">
+                        <NumField className={inputCls} value={v.tasa_vhm_pct} placeholder="Ej: 12" onCommit={n => update(v.id, 'tasa_vhm_pct', n)} />
+                      </Field>
+                      <Field label="Cantidad de cuotas Vehimotors">
+                        <NumField className={inputCls} value={v.cuotas_vhm} placeholder="24" onCommit={n => update(v.id, 'cuotas_vhm', n != null ? Math.round(n) : 24)} />
                       </Field>
                     </div>
 
@@ -549,6 +559,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                       const gcCr = (v.placa_cr ?? 0) + (v.poliza_vehiculo_cr ?? 0) + (v.poliza_vida_cr ?? 0) +
                         (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0)
                       const cuota   = v.tasa_credito ?? 0
+                      const nCuotas = v.cuotas_vhm ?? 24
                       const fmtN    = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
                       const itemsCls  = `${inputCls} text-right`
@@ -658,9 +669,10 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                                   <span>TOTAL INICIAL</span><span className="font-mono">${fmtN(precio * 0.4 + iva + gcCr)}</span>
                                 </div>
                                 <div className="flex justify-between text-gray-400 text-[11px]"><span>Financiamiento 60%</span><span className="font-mono">${fmtN(precio * 0.6)}</span></div>
+                                {v.tasa_vhm_pct && <div className="flex justify-between text-gray-400 text-[11px]"><span>Tasa interés</span><span className="font-mono">{v.tasa_vhm_pct}% anual</span></div>}
                                 {cuota > 0 && (
                                   <div className="flex justify-between text-red-400 font-bold border-t border-gray-600 pt-1.5">
-                                    <span>Cuota mensual × 24</span><span className="font-mono">${fmtN(cuota)}/mes</span>
+                                    <span>Cuota mensual × {nCuotas}</span><span className="font-mono">${fmtN(cuota)}/mes</span>
                                   </div>
                                 )}
                               </div>
