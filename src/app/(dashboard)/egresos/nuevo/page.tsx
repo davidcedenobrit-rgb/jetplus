@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { METODOS_PAGO, BANCOS_VE, CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
+import { METODOS_PAGO, BANCOS_VE, CATEGORIAS_EGRESO_LABEL, CONCEPTOS_POR_CATEGORIA } from '@/lib/utils'
 import { EgresoSchema } from '@/lib/validations'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
@@ -17,6 +17,7 @@ export default function NuevoEgresoPage() {
 
   const [categoria, setCategoria] = useState('')
   const [concepto, setConcepto] = useState('')
+  const [conceptoPersonalizado, setConceptoPersonalizado] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [monto, setMonto] = useState('')
   const [moneda, setMoneda] = useState<'USD' | 'VES'>('USD')
@@ -33,9 +34,11 @@ export default function NuevoEgresoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
+    const conceptoFinal = concepto === '__otro__' ? conceptoPersonalizado.trim() : concepto
+
     const parsed = EgresoSchema.safeParse({
       categoria,
-      concepto,
+      concepto: conceptoFinal,
       descripcion: descripcion || null,
       monto: parseFloat(monto),
       moneda,
@@ -67,7 +70,7 @@ export default function NuevoEgresoPage() {
     const { data: inserted, error: insertError } = await supabase.from('egresos').insert({
       numero_egreso,
       categoria,
-      concepto,
+      concepto: conceptoFinal,
       descripcion: descripcion || null,
       monto: parsed.data.monto,
       moneda,
@@ -123,7 +126,7 @@ export default function NuevoEgresoPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Categoría *</label>
-              <select className="select" value={categoria} onChange={e => setCategoria(e.target.value)} required>
+              <select className="select" value={categoria} onChange={e => { setCategoria(e.target.value); setConcepto(''); setConceptoPersonalizado('') }} required>
                 <option value="">Seleccionar...</option>
                 {Object.entries(CATEGORIAS_EGRESO_LABEL).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -146,7 +149,41 @@ export default function NuevoEgresoPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="label">Concepto *</label>
-              <input type="text" className="input" placeholder="Descripción breve del gasto" value={concepto} onChange={e => setConcepto(e.target.value)} required />
+              {categoria && CONCEPTOS_POR_CATEGORIA[categoria] ? (
+                <>
+                  <select
+                    className="select"
+                    value={concepto}
+                    onChange={e => { setConcepto(e.target.value); setConceptoPersonalizado('') }}
+                    required
+                  >
+                    <option value="">Seleccionar concepto...</option>
+                    {CONCEPTOS_POR_CATEGORIA[categoria].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                    <option value="__otro__">Otro (escribir)</option>
+                  </select>
+                  {concepto === '__otro__' && (
+                    <input
+                      type="text"
+                      className="input mt-2"
+                      placeholder="Describe el concepto"
+                      value={conceptoPersonalizado}
+                      onChange={e => setConceptoPersonalizado(e.target.value)}
+                      required
+                    />
+                  )}
+                </>
+              ) : (
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Descripción breve del gasto"
+                  value={concepto}
+                  onChange={e => setConcepto(e.target.value)}
+                  required
+                />
+              )}
             </div>
             <div className="md:col-span-2">
               <label className="label">Descripción detallada</label>
