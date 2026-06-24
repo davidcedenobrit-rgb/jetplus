@@ -2,16 +2,14 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { METODOS_PAGO, BANCOS_VE, CATEGORIAS_EGRESO_LABEL, CONCEPTOS_POR_CATEGORIA } from '@/lib/utils'
-import { EgresoSchema } from '@/lib/validations'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
+import { crearEgreso } from '../actions'
 
 export default function NuevoEgresoPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -34,45 +32,21 @@ export default function NuevoEgresoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    const conceptoFinal = concepto === '__otro__' ? conceptoPersonalizado.trim() : concepto
+    const montoNum = parseFloat(monto)
+    if (!categoria) { setError('Selecciona una categoría'); return }
+    if (isNaN(montoNum) || montoNum <= 0) { setError('El monto debe ser mayor a 0'); return }
 
-    const parsed = EgresoSchema.safeParse({
-      categoria,
-      concepto: conceptoFinal,
-      descripcion: descripcion || null,
-      monto: parseFloat(monto),
-      moneda,
-      metodo_pago: metodoPago || null,
-      banco_origen: bancoOrigen || null,
-      beneficiario: beneficiario || null,
-      cedula_rif_benef: cedulaRifBenef || null,
-      referencia: referencia || null,
-      fecha_egreso: fechaEgreso,
-      area_responsable: areaResponsable || null,
-      observaciones: observaciones || null,
-    })
-    if (!parsed.success) {
-      setError(parsed.error.errors[0]?.message ?? 'Datos inválidos')
-      return
-    }
+    const conceptoFinal = concepto === '__otro__' ? conceptoPersonalizado.trim() : concepto
+    if (!conceptoFinal) { setError('El concepto es requerido'); return }
 
     setLoading(true)
     setError('')
 
-    const year = new Date().getFullYear()
-    const buf = new Uint32Array(1)
-    crypto.getRandomValues(buf)
-    const seq = String(buf[0] % 1_000_000).padStart(6, '0')
-    const numero_egreso = `LOA-EGR-${year}-${seq}`
-
-    const { data: { user } } = await supabase.auth.getUser()
-
-    const { data: inserted, error: insertError } = await supabase.from('egresos').insert({
-      numero_egreso,
+    const result = await crearEgreso({
       categoria,
       concepto: conceptoFinal,
       descripcion: descripcion || null,
-      monto: parsed.data.monto,
+      monto: montoNum,
       moneda,
       metodo_pago: metodoPago || null,
       banco_origen: bancoOrigen || null,
@@ -82,23 +56,10 @@ export default function NuevoEgresoPage() {
       fecha_egreso: fechaEgreso,
       area_responsable: areaResponsable || null,
       observaciones: observaciones || null,
-      estado: 'pendiente_aprobacion',
-      registrado_por: user?.id ?? '',
-    }).select('id').single()
+      comprobantes,
+    })
 
-    if (insertError || !inserted) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
-
-    if (comprobantes.length > 0) {
-      await supabase.from('archivos').insert(
-        comprobantes.map(c => ({
-          tipo: 'comprobante',
-          url: c.url,
-          nombre: c.nombre,
-          egreso_id: inserted.id,
-          subido_por: user?.id ?? '',
-        }))
-      )
-    }
+    if (result.error) { setError(result.error); setLoading(false); return }
 
     router.push('/egresos')
     router.refresh()

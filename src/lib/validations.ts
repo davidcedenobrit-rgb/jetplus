@@ -1,8 +1,14 @@
 import { z } from 'zod'
 
 const CATEGORIAS_EGRESO = [
+  // Nuevas categorías del plan contable
+  'costos_ventas', 'costos_servicios', 'sueldos_beneficios', 'comisiones',
+  'representacion_viaticos', 'servicios_profesionales', 'instalaciones_servicios',
+  'articulos_suministros', 'vehiculos_propios', 'seguros_impuestos',
+  'gastos_financieros', 'cuentas_cobrar', 'cuentas_pagar', 'resultados_reservas',
+  // Categorías heredadas
   'gastos_administrativos', 'proveedores', 'tramites_vehiculares',
-  'impuestos', 'seguro', 'logistica', 'mantenimiento', 'comisiones',
+  'impuestos', 'seguro', 'logistica', 'mantenimiento',
   'servicios', 'vehimotors', 'bancos_comisiones', 'alquiler', 'taller', 'repuestos', 'otros',
 ] as const
 
