@@ -8,7 +8,7 @@ import Link from 'next/link'
 import type { Cliente, VehiculoShowroom } from '@/types/database'
 import { VehiculoSchema, CreditoSchema } from '@/lib/validations'
 import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
-import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
+import { METODOS_PAGO, BANCOS_VE, sanitizeSearch } from '@/lib/utils'
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
@@ -256,7 +256,7 @@ export default function NuevoVehiculoPage() {
     const t = setTimeout(async () => {
       const { data } = await supabase
         .from('clientes').select('*')
-        .or(`nombre.ilike.%${clienteQuery}%,cedula_rif.ilike.%${clienteQuery}%`)
+        .or(`nombre.ilike.%${sanitizeSearch(clienteQuery)}%,cedula_rif.ilike.%${sanitizeSearch(clienteQuery)}%`)
         .eq('activo', true).limit(8)
       setClientes(data ?? [])
       setShowDropdown(true)

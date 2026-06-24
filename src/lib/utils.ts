@@ -17,6 +17,12 @@ export function formatCurrency(amount: number, currency = 'USD'): string {
   }).format(amount)
 }
 
+// Sanitiza input antes de usarlo en filtros .or()/.ilike() de PostgREST.
+// Elimina caracteres especiales que podrían alterar la sintaxis del filtro.
+export function sanitizeSearch(q: string): string {
+  return q.replace(/[%_*(),[\]]/g, '').trim().slice(0, 100)
+}
+
 export function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-VE', {
     day: '2-digit', month: '2-digit', year: 'numeric'

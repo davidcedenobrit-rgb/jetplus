@@ -7,7 +7,7 @@ export default async function AcuerdosPagoPage() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  const rol = user?.user_metadata?.rol as string ?? ''
+  const rol = user?.app_metadata?.rol as string ?? ''
 
   const { data: acuerdos } = await supabase
     .from('acuerdos_inicial')

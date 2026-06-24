@@ -27,7 +27,7 @@ function timeAgo(fecha: string) {
 export default async function CarlaPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const rol = (user?.user_metadata?.rol as string) ?? 'editor'
+  const rol = (user?.app_metadata?.rol as string) ?? 'editor'
 
   if (!ROL_CARLA_VISIBLE.includes(rol)) redirect('/dashboard')
 

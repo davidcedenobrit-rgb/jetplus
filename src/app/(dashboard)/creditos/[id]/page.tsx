@@ -68,7 +68,7 @@ export default async function CreditoDetallePage({
     ? await supabase.from('usuarios').select('rol').eq('id', authUser.id).single()
     : { data: null }
   const esDirector = usuarioData ? ROL_DIRECTOR.includes(usuarioData.rol) : false
-  const remitente = getNombreRemitente(authUser?.email, authUser?.user_metadata?.rol)
+  const remitente = getNombreRemitente(authUser?.email, authUser?.app_metadata?.rol)
 
   // Cargar el crédito principal (para obtener vehiculo_id y cliente)
   const { data: credito } = await supabase

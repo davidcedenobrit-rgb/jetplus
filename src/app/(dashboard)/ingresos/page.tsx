@@ -14,7 +14,7 @@ export default async function IngresosPage({
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  const rol = (user?.user_metadata?.rol as string) ?? 'editor'
+  const rol = (user?.app_metadata?.rol as string) ?? 'editor'
   const esDirector = ROL_DIRECTOR.includes(rol)
 
   let query = supabase

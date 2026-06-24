@@ -34,7 +34,7 @@ export default async function AprobacionesPage() {
       historial={historial}
       userId={user.id}
       userEmail={user.email ?? ''}
-      rol={(user.user_metadata?.rol as string) ?? 'editor'}
+      rol={(user.app_metadata?.rol as string) ?? 'editor'}
     />
   )
 }

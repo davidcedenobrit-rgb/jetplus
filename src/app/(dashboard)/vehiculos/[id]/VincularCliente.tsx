@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { sanitizeSearch } from '@/lib/utils'
 import { UserPlus, Search, X, Loader2, CheckCircle2 } from 'lucide-react'
 
 export default function VincularCliente({ vehiculoId }: { vehiculoId: string }) {
@@ -20,7 +21,7 @@ export default function VincularCliente({ vehiculoId }: { vehiculoId: string }) 
     const t = setTimeout(async () => {
       const { data } = await supabase
         .from('clientes').select('id, nombre, cedula_rif')
-        .or(`nombre.ilike.%${query}%,cedula_rif.ilike.%${query}%`)
+        .or(`nombre.ilike.%${sanitizeSearch(query)}%,cedula_rif.ilike.%${sanitizeSearch(query)}%`)
         .eq('activo', true).limit(8)
       setClientes(data ?? [])
     }, 300)

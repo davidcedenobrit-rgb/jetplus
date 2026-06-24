@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 
@@ -10,6 +10,10 @@ function fmtDate(d: Date) {
 
 export async function POST(req: Request) {
   try {
+    const authClient = await createClient()
+    const { data: { user: authUser } } = await authClient.auth.getUser()
+    if (!authUser) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
     const body = await req.json()
     const {
       codigo,
@@ -268,11 +272,12 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  // Admin: list cotizaciones
+  const authClient = await createClient()
+  const { data: { user: authUser } } = await authClient.auth.getUser()
+  if (!authUser) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   const { searchParams } = new URL(req.url)
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100)
-
-  // Use admin client; auth check via cookie
   const supabase = await createAdminClient()
 
   const { data, error } = await supabase

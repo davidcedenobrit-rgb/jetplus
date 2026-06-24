@@ -8,7 +8,7 @@ export default async function EditarShowroomPage({ params }: { params: Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const rol = user.user_metadata?.rol as string
+  const rol = user.app_metadata?.rol as string
   if (!['jose', 'arianna', 'admin', 'director'].includes(rol)) redirect('/showroom')
 
   const { id } = await params

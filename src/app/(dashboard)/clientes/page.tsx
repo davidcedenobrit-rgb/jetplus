@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeSearch } from '@/lib/utils'
 import Link from 'next/link'
 import { Plus, User, Search, Phone, Mail } from 'lucide-react'
 
@@ -17,7 +18,8 @@ export default async function ClientesPage({
     .order('nombre')
 
   if (params.q) {
-    query = query.or(`nombre.ilike.%${params.q}%,cedula_rif.ilike.%${params.q}%`)
+    const q = sanitizeSearch(params.q)
+    if (q) query = query.or(`nombre.ilike.%${q}%,cedula_rif.ilike.%${q}%`)
   }
   if (params.tipo) {
     query = query.eq('tipo', params.tipo)

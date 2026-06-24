@@ -27,7 +27,7 @@ export default async function VehiculoDetallePage({
   if (!vehiculo) notFound()
 
   const { data: { user } } = await supabase.auth.getUser()
-  const rol = user?.user_metadata?.rol as string ?? ''
+  const rol = user?.app_metadata?.rol as string ?? ''
   const puedeEditar = ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol)
 
   const cliente = (vehiculo as any).clientes

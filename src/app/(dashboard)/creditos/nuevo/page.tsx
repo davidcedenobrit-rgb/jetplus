@@ -8,6 +8,7 @@ import Link from 'next/link'
 import type { Cliente, Vehiculo } from '@/types/database'
 import { CreditoSchema } from '@/lib/validations'
 import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
+import { sanitizeSearch } from '@/lib/utils'
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
@@ -147,7 +148,7 @@ export default function NuevoCreditoPage() {
     const t = setTimeout(async () => {
       const { data } = await supabase
         .from('clientes').select('*')
-        .or(`nombre.ilike.%${clienteQuery}%,cedula_rif.ilike.%${clienteQuery}%`)
+        .or(`nombre.ilike.%${sanitizeSearch(clienteQuery)}%,cedula_rif.ilike.%${sanitizeSearch(clienteQuery)}%`)
         .eq('activo', true).limit(8)
       setClientes(data ?? [])
       setShowClienteDropdown(true)

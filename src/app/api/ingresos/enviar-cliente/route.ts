@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-  const rol = (user.user_metadata?.rol as string) ?? ''
+  const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROL_PERMITIDO.includes(rol)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
 
   let body: { ingresoId?: string }

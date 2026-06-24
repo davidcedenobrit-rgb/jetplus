@@ -23,7 +23,7 @@ export default async function ShowroomPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const rol = user.user_metadata?.rol as string
+  const rol = user.app_metadata?.rol as string
   const puedeEditar = ['jose', 'arianna', 'admin', 'director'].includes(rol)
   const params = await searchParams
   const tab = params.tab ?? 'todos'

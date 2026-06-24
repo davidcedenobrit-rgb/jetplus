@@ -36,7 +36,7 @@ export default async function AuditoriaPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const rol = (user.user_metadata?.rol as string) ?? ''
+  const rol = (user.app_metadata?.rol as string) ?? ''
   if (!SOLO_JOSE.includes(rol)) redirect('/dashboard')
 
   const admin = await createAdminClient()

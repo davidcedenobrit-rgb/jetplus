@@ -9,7 +9,7 @@ export default async function LinkVentasPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const rol = (user?.user_metadata?.rol as string) ?? 'editor'
+  const rol = (user?.app_metadata?.rol as string) ?? 'editor'
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
   const [{ data: vehiculos }, { data: ac500 }, { data: showroomRaw }] = await Promise.all([

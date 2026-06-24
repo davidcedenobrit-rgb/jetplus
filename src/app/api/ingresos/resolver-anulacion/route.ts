@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-  const rol = (user.user_metadata?.rol as string) ?? 'editor'
+  const rol = (user.app_metadata?.rol as string) ?? 'editor'
   if (!ROLES_DIRECTOR.includes(rol)) {
     return NextResponse.json({ error: 'Solo el director puede resolver anulaciones' }, { status: 403 })
   }

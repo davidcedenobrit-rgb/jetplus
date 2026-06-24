@@ -24,7 +24,13 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Rutas protegidas — redirige al login si no hay sesión
-  const protectedPaths = ['/dashboard', '/clientes', '/vehiculos', '/ingresos', '/egresos', '/reportes', '/creditos']
+  const protectedPaths = [
+    '/dashboard', '/clientes', '/vehiculos', '/ingresos', '/egresos',
+    '/reportes', '/creditos', '/acuerdos', '/showroom', '/tasas',
+    '/aprobaciones', '/anulaciones', '/auditoria', '/logs', '/importar',
+    '/vehimotors', '/carla', '/repuestos', '/documentos-empresa',
+    '/link-ventas', '/api/',
+  ]
   const isProtected = request.nextUrl.pathname === '/' || protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
   if (isProtected && !user) {

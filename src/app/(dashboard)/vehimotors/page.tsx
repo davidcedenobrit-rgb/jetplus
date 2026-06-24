@@ -21,7 +21,7 @@ export default async function VehimotorsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const rol = (user.user_metadata?.rol as string) ?? ''
+  const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
   const { data: reportados } = await supabase

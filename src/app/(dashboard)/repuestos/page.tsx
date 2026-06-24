@@ -43,7 +43,7 @@ export default async function RepuestosPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const rol = (user.user_metadata?.rol as string) ?? ''
+  const rol = (user.app_metadata?.rol as string) ?? ''
   const puedeEliminar = ROL_ADMIN.includes(rol)
   const isAdmin = ROL_ADMIN.includes(rol)
 

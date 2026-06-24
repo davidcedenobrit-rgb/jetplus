@@ -58,7 +58,7 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const rol = user.user_metadata?.rol as string
+  const rol = user.app_metadata?.rol as string
   const { id } = await params
 
   const { data: vehiculo } = await supabase

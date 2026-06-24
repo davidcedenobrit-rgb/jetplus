@@ -1,8 +1,12 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(req: Request) {
+  const auth = await createClient()
+  const { data: { user } } = await auth.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   const { searchParams } = new URL(req.url)
   const meses = searchParams.get('meses')
   const supabase = await createAdminClient()

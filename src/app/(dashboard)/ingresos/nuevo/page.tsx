@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { METODOS_PAGO, BANCOS_VE, BANCOS_VEHIMOTORS } from '@/lib/utils'
+import { METODOS_PAGO, BANCOS_VE, BANCOS_VEHIMOTORS, sanitizeSearch } from '@/lib/utils'
 import { IngresoSchema } from '@/lib/validations'
 import { ArrowLeft, Save, Search, X, Car, Hash, Check, CreditCard, AlertCircle, Calendar } from 'lucide-react'
 import Link from 'next/link'
@@ -112,7 +112,7 @@ function NuevoIngresoPageInner() {
   // Cargar rol del usuario para mostrar advertencia si aplica
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      setRolUsuario((user?.user_metadata?.rol as string) ?? 'editor')
+      setRolUsuario((user?.app_metadata?.rol as string) ?? 'editor')
     })
   }, [])
 
@@ -352,7 +352,7 @@ function NuevoIngresoPageInner() {
     const t = setTimeout(async () => {
       const { data } = await supabase
         .from('clientes').select('*')
-        .or(`nombre.ilike.%${clienteQuery}%,cedula_rif.ilike.%${clienteQuery}%`)
+        .or(`nombre.ilike.%${sanitizeSearch(clienteQuery)}%,cedula_rif.ilike.%${sanitizeSearch(clienteQuery)}%`)
         .eq('activo', true).limit(8)
       setClientes(data ?? [])
       setShowClienteDropdown(true)

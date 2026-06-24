@@ -8,7 +8,7 @@ async function checkAuth() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-  const rol = (user.user_metadata?.rol as string) ?? ''
+  const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROLES_PERMITIDOS.includes(rol)) return null
   return user
 }

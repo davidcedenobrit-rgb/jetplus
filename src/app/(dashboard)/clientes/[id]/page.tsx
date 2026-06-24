@@ -17,7 +17,7 @@ export default async function ClienteDetallePage({
   const supabase = await createClient()
 
   const { data: { user: authUser } } = await supabase.auth.getUser()
-  const remitente = getNombreRemitente(authUser?.email, authUser?.user_metadata?.rol)
+  const remitente = getNombreRemitente(authUser?.email, authUser?.app_metadata?.rol)
 
   const { data: cliente } = await supabase
     .from('clientes')

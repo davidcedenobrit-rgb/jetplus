@@ -11,7 +11,7 @@ export default async function AnulacionesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const rol = (user.user_metadata?.rol as string) ?? 'editor'
+  const rol = (user.app_metadata?.rol as string) ?? 'editor'
   if (!ROLES_PERMITIDOS.includes(rol)) redirect('/dashboard')
 
   const { data: ingresos } = await supabase

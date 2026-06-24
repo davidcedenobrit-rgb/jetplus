@@ -27,11 +27,22 @@ export default async function IngresoDetallePage({
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  const rol = (user?.user_metadata?.rol as string) ?? 'editor'
+  const rol = (user?.app_metadata?.rol as string) ?? 'editor'
 
   const { data: ingreso } = await supabase
     .from('ingresos')
-    .select('*, clientes(nombre, cedula_rif, telefono, correo, direccion, ciudad)')
+    .select(`
+      id, numero_recibo, concepto, monto, moneda, monto_bs, tasa_cambio,
+      metodo_pago, banco_emisor, banco_receptor, referencia, fecha_pago,
+      estado, observaciones, placa, registrado_por, aprobado_por,
+      fecha_registro, fecha_aprobacion, enviado_carla_at, deposito_at,
+      vehimotors_at, entregado_carla_at, confirmado_vehimotors_at,
+      anulacion_motivo, anulacion_observaciones, anulacion_estado_previo,
+      anulacion_solicitada_por, anulacion_solicitada_at, anulacion_rechazada_motivo,
+      anulacion_resuelta_por, anulacion_resuelta_at,
+      cliente_id, vehiculo_id, cuota_id, acuerdo_inicial_id,
+      clientes(nombre, cedula_rif, telefono, correo, direccion, ciudad)
+    `)
     .eq('id', id)
     .single()
 

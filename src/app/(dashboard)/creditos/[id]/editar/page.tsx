@@ -119,7 +119,7 @@ export default function EditarCreditoPage() {
       if (user) {
         setUserId(user.id)
         setUserEmail(user.email ?? '')
-        setEsDirector(ROL_DIRECTOR.includes(user.user_metadata?.rol ?? ''))
+        setEsDirector(ROL_DIRECTOR.includes(user.app_metadata?.rol ?? ''))
       }
 
       // Crédito inicial (por URL)
