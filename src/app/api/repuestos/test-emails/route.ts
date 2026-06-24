@@ -11,6 +11,7 @@ const DESTINATARIOS_PRUEBA = [
 ]
 
 export async function GET(req: NextRequest) {
+  if (process.env.NODE_ENV === 'production') return new Response(null, { status: 404 })
   const secret = req.nextUrl.searchParams.get('s')
   if (secret !== TEST_SECRET) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

@@ -26,6 +26,7 @@ function formatPhoneWA(telefono: string): string {
 }
 
 export async function GET(req: Request) {
+  if (process.env.NODE_ENV === 'production') return new Response(null, { status: 404 })
   const { searchParams } = new URL(req.url)
   const ingresoId = searchParams.get('id')
   const telOverride = searchParams.get('tel')

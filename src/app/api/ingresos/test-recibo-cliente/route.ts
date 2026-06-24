@@ -4,10 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { enviarReciboCliente } from '@/lib/email-ingresos'
 import { fetchECData } from '@/lib/ingreso-ec-data'
 
+
 const TEST_INGRESO_ID = '810f4ec7-ab58-4f36-9844-3b9dbfd4097a'
 const TEST_CORREO = 'davidcedenobrit@gmail.com'
 
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') return new Response(null, { status: 404 })
   const supabase = await createClient()
 
   const { data: ingreso } = await supabase

@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarAvisoCobro } from '@/lib/email-cobros'
 
+async function requireAuth() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}
+
 export async function POST(req: Request) {
+  const user = await requireAuth()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   try {
     const body = await req.json()
     const {
@@ -34,12 +43,14 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    console.error('[avisos-cobro] error:', e)
-    return NextResponse.json({ error: e.message ?? 'Error interno' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
 
 export async function GET(req: Request) {
+  const user = await requireAuth()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   const { searchParams } = new URL(req.url)
   const clienteId = searchParams.get('clienteId')
   if (!clienteId) return NextResponse.json({ error: 'clienteId requerido' }, { status: 400 })
@@ -52,6 +63,6 @@ export async function GET(req: Request) {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Error al consultar' }, { status: 500 })
   return NextResponse.json({ data })
 }

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { enviarReporteVehimotors } from '@/lib/email-ingresos'
 
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') return new Response(null, { status: 404 })
   try {
     console.log('[test-vehimotors] Iniciando envío de correo de prueba...')
     await enviarReporteVehimotors({

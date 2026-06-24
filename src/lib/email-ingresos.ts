@@ -130,8 +130,7 @@ export async function enviarReporteVehimotors(opts: ReportarVehimotorsOpts) {
     subject: `Reporte de pago — ${numeroRecibo} · ${clienteNombre}`,
     html: wrap(body),
   })
-  console.log('[email-ingresos] Resend response:', JSON.stringify({ data, error }))
-  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`)
+  if (error) throw new Error(`Resend error: ${error.name ?? 'unknown'}`);
 }
 
 // ─── Recibo al cliente ────────────────────────────────────────────────────────
@@ -250,6 +249,5 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
       content: pdfBuffer,
     }],
   })
-  console.log('[email-ingresos] enviarReciboCliente:', JSON.stringify({ data, error }))
-  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`)
+  if (error) throw new Error(`Resend error: ${error.name ?? 'unknown'}`);
 }

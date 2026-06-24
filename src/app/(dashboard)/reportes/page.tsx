@@ -178,9 +178,9 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
       const b = BUCKETS[c.bucket - 1]
       return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
         <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
-        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;font-weight:600">${c.nombre}</td>
-        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;color:#6b7280">${c.cedula}</td>
-        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${c.placa}</span></td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;font-weight:600">${escapeHtml(c.nombre)}</td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;color:#6b7280">${escapeHtml(c.cedula)}</td>
+        <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${escapeHtml(c.placa)}</span></td>
         <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:700;color:#b91c1c">${c.cuotasVencidas}</td>
         <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:700">${c.diasMaxVencido} días</td>
         <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#b91c1c">${fmtUSD(c.montoVencido)}</td>
@@ -420,6 +420,13 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
 
 // ── Helpers de impresión ──────────────────────────────────────────────────────
 
+function escapeHtml(s: string | number | null | undefined): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function fmtFechaCuota(fecha: string): string {
   if (!fecha) return ''
   const [y, m, d] = fecha.split('-')
@@ -450,9 +457,9 @@ function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitul
     return `
     <tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
-      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;font-weight:600">${c.nombre}${mostrarTipos && c.tiposCredito ? '<br><span style="display:flex;gap:3px;margin-top:3px">' + c.tiposCredito.map(tipoBadge).join('') + '</span>' : ''}</td>
-      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;color:#6b7280">${c.cedula}</td>
-      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${c.placa}</span></td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;font-weight:600">${escapeHtml(c.nombre)}${mostrarTipos && c.tiposCredito ? '<br><span style="display:flex;gap:3px;margin-top:3px">' + c.tiposCredito.map(tipoBadge).join('') + '</span>' : ''}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;color:#6b7280">${escapeHtml(c.cedula)}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb"><span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-weight:700">${escapeHtml(c.placa)}</span></td>
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:center">${cuotasDisplay}</td>
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right;color:#166534;font-weight:700">${fmt(c.montoPagado)}</td>
       <td style="padding:9px 11px;border-bottom:1px solid #e5e7eb;text-align:right">${pendDisplay}</td>
