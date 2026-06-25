@@ -75,7 +75,9 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       area_responsable: parsed.data.area_responsable ?? null,
       observaciones:    parsed.data.observaciones ?? null,
       tasa_cambio:      parsed.data.tasa_cambio ?? null,
-      monto_bs:         parsed.data.tasa_cambio ? Math.round(parsed.data.monto * parsed.data.tasa_cambio * 100) / 100 : null,
+      monto_bs:         (parsed.data.tasa_cambio && parsed.data.moneda !== 'VES')
+                          ? Math.round(parsed.data.monto * parsed.data.tasa_cambio * 100) / 100
+                          : null,
       estado:           'pendiente_aprobacion',
       registrado_por:   user.id,
     })
@@ -112,10 +114,8 @@ export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto
 
   if (tasa <= 0) return { error: 'La tasa debe ser mayor a 0' }
 
-  // VES: monto ya es en Bs, monto_bs = monto; USD: convertir a Bs
-  const monto_bs = moneda === 'VES'
-    ? Math.round(monto * 100) / 100
-    : Math.round(monto * tasa * 100) / 100
+  // VES: monto ya está en Bs, monto_bs no aplica; USD/USDT: convertir a Bs
+  const monto_bs = moneda === 'VES' ? null : Math.round(monto * tasa * 100) / 100
 
   const admin = await createAdminClient()
   const { error } = await admin
