@@ -475,7 +475,7 @@ function NuevoIngresoPageInner() {
     const cuotasPayload: { id: string; credito_id: string; monto_aplicar: number; nuevo_monto_pagado: number; es_pagada: boolean }[] = []
 
     if (cuotasParaAplicar.length > 0) {
-      const montoBase = moneda === 'USD'
+      const montoBase = moneda !== 'VES'
         ? montoNum
         : tasaCambio && parseFloat(tasaCambio) > 0
           ? montoNum / parseFloat(tasaCambio)
