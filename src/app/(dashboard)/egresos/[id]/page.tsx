@@ -4,7 +4,10 @@ import { formatCurrency, formatDate, ESTADOS_EGRESO_LABEL, CATEGORIAS_EGRESO_LAB
 import Link from 'next/link'
 import { ArrowLeft, Building2 } from 'lucide-react'
 import EgresoActionButtons from './EgresoActionButtons'
+import EgresoTasaEditor from './EgresoTasaEditor'
 import ComprobantesGallery from '@/components/ComprobantesGallery'
+
+const ROLES_EDITAR_TASA = ['jose', 'leysdem', 'mary', 'arianna']
 
 export default async function EgresoDetallePage({
   params,
@@ -13,6 +16,9 @@ export default async function EgresoDetallePage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const rol = (user?.app_metadata?.rol as string) ?? 'editor'
 
   const { data: egreso } = await supabase
     .from('egresos')
@@ -104,8 +110,37 @@ export default async function EgresoDetallePage({
                 <div>
                   <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold">Monto del egreso</p>
                   <p className="text-sm text-oriental-gray mt-0.5">{egreso.moneda}</p>
+                  {egreso.monto_bs && (
+                    <p className="text-sm font-bold text-gray-500 mt-1">
+                      Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  )}
                 </div>
                 <p className="text-3xl font-extrabold text-oriental-red">{formatCurrency(egreso.monto, egreso.moneda)}</p>
+              </div>
+
+              {/* Tasa de cambio */}
+              <div className="bg-gray-50 rounded-xl px-4 py-3">
+                {ROLES_EDITAR_TASA.includes(rol) ? (
+                  <EgresoTasaEditor
+                    egresoId={egreso.id}
+                    monto={Number(egreso.monto)}
+                    tasaActual={egreso.tasa_cambio ? Number(egreso.tasa_cambio) : null}
+                    montoBsActual={egreso.monto_bs ? Number(egreso.monto_bs) : null}
+                  />
+                ) : egreso.tasa_cambio ? (
+                  <div>
+                    <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-0.5">Tasa Bs/$</p>
+                    <p className="text-sm font-mono font-bold text-oriental-black">{Number(egreso.tasa_cambio).toFixed(4)}</p>
+                    {egreso.monto_bs && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic text-sm">Sin equivalencia en Bs registrada</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -9,6 +9,7 @@ export type CrearEgresoPayload = {
   descripcion: string | null
   monto: number
   moneda: string
+  tasa_cambio: number | null
   metodo_pago: string | null
   banco_origen: string | null
   beneficiario: string | null
@@ -33,6 +34,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
     descripcion:     payload.descripcion,
     monto:           payload.monto,
     moneda:          payload.moneda,
+    tasa_cambio:     payload.tasa_cambio,
     metodo_pago:     payload.metodo_pago,
     banco_origen:    payload.banco_origen,
     beneficiario:    payload.beneficiario,
@@ -72,6 +74,8 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       fecha_egreso:     parsed.data.fecha_egreso,
       area_responsable: parsed.data.area_responsable ?? null,
       observaciones:    parsed.data.observaciones ?? null,
+      tasa_cambio:      parsed.data.tasa_cambio ?? null,
+      monto_bs:         parsed.data.tasa_cambio ? Math.round(parsed.data.monto * parsed.data.tasa_cambio * 100) / 100 : null,
       estado:           'pendiente_aprobacion',
       registrado_por:   user.id,
     })
@@ -94,4 +98,27 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
   }
 
   return { ok: true, egresoId: inserted.id }
+}
+
+const ROLES_EDITAR_TASA = ['jose', 'leysdem', 'mary', 'arianna']
+
+export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autorizado' }
+
+  const rol = (user.app_metadata?.rol as string) ?? ''
+  if (!ROLES_EDITAR_TASA.includes(rol)) return { error: 'Sin permiso para editar la tasa' }
+
+  if (tasa <= 0) return { error: 'La tasa debe ser mayor a 0' }
+
+  const monto_bs = Math.round(monto * tasa * 100) / 100
+  const admin = await createAdminClient()
+  const { error } = await admin
+    .from('egresos')
+    .update({ tasa_cambio: tasa, monto_bs })
+    .eq('id', egresoId)
+
+  if (error) return { error: 'Error al actualizar la tasa' }
+  return { ok: true, monto_bs }
 }

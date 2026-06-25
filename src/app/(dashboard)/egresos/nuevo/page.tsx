@@ -19,6 +19,7 @@ export default function NuevoEgresoPage() {
   const [descripcion, setDescripcion] = useState('')
   const [monto, setMonto] = useState('')
   const [moneda, setMoneda] = useState<'USD' | 'VES'>('USD')
+  const [tasaCambio, setTasaCambio] = useState('')
   const [metodoPago, setMetodoPago] = useState('')
   const [bancoOrigen, setBancoOrigen] = useState('')
   const [beneficiario, setBeneficiario] = useState('')
@@ -42,12 +43,14 @@ export default function NuevoEgresoPage() {
     setLoading(true)
     setError('')
 
+    const tasaNum = parseFloat(tasaCambio)
     const result = await crearEgreso({
       categoria,
       concepto: conceptoFinal,
       descripcion: descripcion || null,
       monto: montoNum,
       moneda,
+      tasa_cambio: !isNaN(tasaNum) && tasaNum > 0 ? tasaNum : null,
       metodo_pago: metodoPago || null,
       banco_origen: bancoOrigen || null,
       beneficiario: beneficiario || null,
@@ -170,6 +173,21 @@ export default function NuevoEgresoPage() {
             <div>
               <label className="label">Fecha del egreso *</label>
               <input type="date" className="input" value={fechaEgreso} onChange={e => setFechaEgreso(e.target.value)} required />
+            </div>
+            <div>
+              <label className="label">Tasa Bs/$ al momento del pago</label>
+              <input
+                type="number" step="0.0001" min="0"
+                className="input font-mono"
+                placeholder="Ej: 98.50"
+                value={tasaCambio}
+                onChange={e => setTasaCambio(e.target.value)}
+              />
+              {tasaCambio && parseFloat(monto) > 0 && !isNaN(parseFloat(tasaCambio)) && (
+                <p className="text-[11px] text-gray-500 mt-1">
+                  = Bs {(parseFloat(monto) * parseFloat(tasaCambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              )}
             </div>
             <div>
               <label className="label">Método de pago</label>
