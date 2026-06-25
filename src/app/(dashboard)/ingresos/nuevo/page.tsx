@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { METODOS_PAGO, BANCOS_VE, BANCOS_VEHIMOTORS, sanitizeSearch } from '@/lib/utils'
-import { IngresoSchema } from '@/lib/validations'
+import { crearIngreso } from '../actions'
 import { ArrowLeft, Save, Search, X, Car, Hash, Check, CreditCard, AlertCircle, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
@@ -461,24 +461,8 @@ function NuevoIngresoPageInner() {
     if (!clienteSeleccionado) { setError('Busca y selecciona un cliente o placa'); return }
 
     const montoNum = parseFloat(monto)
-    const parsed = IngresoSchema.safeParse({
-      concepto,
-      monto: montoNum,
-      moneda,
-      metodo_pago: metodoPago,
-      banco_emisor: bancoEmisor || null,
-      banco_receptor: bancoReceptor || null,
-      referencia: referencia || null,
-      fecha_pago: fechaPago,
-      observaciones: observaciones || null,
-      tasa_cambio: tasaCambio ? parseFloat(tasaCambio) : null,
-    })
-    if (!parsed.success) {
-      setError(parsed.error.errors[0]?.message ?? 'Datos inválidos')
-      return
-    }
+    if (isNaN(montoNum) || montoNum <= 0) { setError('El monto debe ser mayor a 0'); return }
 
-    // Bloquear si hay cuotas pendientes y el usuario no seleccionó ninguna ni lo confirmó
     if (gruposVehiculo.length > 0 && cuotasSeleccionadas.size === 0 && !sinCuotaConfirmado) {
       setError('⚠ Este cliente tiene cuotas pendientes. Selecciona al menos una cuota, o confirma que este ingreso no aplica al plan de crédito.')
       return
@@ -487,87 +471,16 @@ function NuevoIngresoPageInner() {
     setLoading(true)
     setError('')
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      setError('Sesión expirada. Recarga la página e inicia sesión nuevamente.')
-      setLoading(false)
-      return
-    }
+    // Calcular cuotas a enviar a la Server Action (misma lógica de cascada)
+    const cuotasPayload: { id: string; credito_id: string; monto_aplicar: number; nuevo_monto_pagado: number; es_pagada: boolean }[] = []
 
-    const year = new Date().getFullYear()
-    // Correlativo secuencial: busca el último recibo del año y suma 1
-    const { data: ultimoRecibo } = await supabase
-      .from('ingresos')
-      .select('numero_recibo')
-      .like('numero_recibo', `LOA-REC-${year}-%`)
-      .order('numero_recibo', { ascending: false })
-      .limit(1)
-      .single()
-    let nextNum = 1
-    if (ultimoRecibo?.numero_recibo) {
-      const partes = ultimoRecibo.numero_recibo.split('-')
-      const ultimo = parseInt(partes[partes.length - 1]) || 0
-      nextNum = ultimo + 1
-    }
-    const numero_recibo = `LOA-REC-${year}-${String(nextNum).padStart(5, '0')}`
-
-    const { data: inserted, error: insertError } = await supabase.from('ingresos').insert({
-      numero_recibo,
-      cliente_id: clienteSeleccionado.id,
-      vehiculo_id: vehiculoIdParaIngreso,
-      placa: placaParaIngreso,
-      concepto,
-      monto: parsed.data.monto,
-      moneda,
-      metodo_pago: metodoPago,
-      banco_emisor: bancoEmisor || null,
-      banco_receptor: bancoReceptor || null,
-      referencia: referencia || null,
-      fecha_pago: fechaPago,
-      observaciones: observaciones || null,
-      tasa_cambio: tasaCambio ? parseFloat(tasaCambio) : null,
-      monto_bs: moneda === 'VES' ? (parseFloat(monto) || null) : (montoBs ? parseFloat(montoBs) || null : null),
-      estado: 'pendiente_aprobacion',
-      registrado_por: user.id,
-      acuerdo_inicial_id: acuerdoInicialId ?? null,
-    }).select('id').single()
-
-    if (insertError || !inserted) { setError(insertError?.message ?? 'Error al guardar'); setLoading(false); return }
-
-    // Actualizar monto_pagado en el acuerdo
-    if (acuerdoInicialId && parsed.data.monto > 0) {
-      const nuevoMontoPagado = (acuerdoInfo?.monto_pagado ?? 0) + parsed.data.monto
-      const acordado = acuerdoInfo?.monto_acordado ?? 0
-      await supabase.from('acuerdos_inicial').update({
-        monto_pagado: nuevoMontoPagado,
-        estado: nuevoMontoPagado >= acordado ? 'completado' : 'pendiente',
-        updated_at: new Date().toISOString(),
-      }).eq('id', acuerdoInicialId)
-    }
-
-    if (comprobantes.length > 0) {
-      await supabase.from('archivos').insert(
-        comprobantes.map(c => ({
-          tipo: 'comprobante',
-          url: c.url,
-          nombre: c.nombre,
-          ingreso_id: inserted.id,
-          subido_por: user.id,
-        }))
-      )
-    }
-
-    // ── Aplicar cuotas con soporte para abono parcial, cascade y cuota_ingresos ──
     if (cuotasParaAplicar.length > 0) {
-      // Convertir monto a la moneda base de las cuotas (USD)
       const montoBase = moneda === 'USD'
-        ? parsed.data.monto
-        : parsed.data.tasa_cambio && parsed.data.tasa_cambio > 0
-          ? parsed.data.monto / parsed.data.tasa_cambio
-          : parsed.data.monto
+        ? montoNum
+        : tasaCambio && parseFloat(tasaCambio) > 0
+          ? montoNum / parseFloat(tasaCambio)
+          : montoNum
 
-      // Cuotas seleccionadas primero (en orden de vencimiento), luego el resto de pendientes/vencidas
-      // para auto-cascade si el monto excede las cuotas elegidas
       const cuotasSeleccionadasOrdenadas = [...cuotasParaAplicar].sort((a: any, b: any) =>
         a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)
       )
@@ -577,63 +490,53 @@ function NuevoIngresoPageInner() {
       const cuotasEnOrden = [...cuotasSeleccionadasOrdenadas, ...cuotasRestantesOrdenadas]
 
       let restante = montoBase
-      // Acumular cuánto se aplicó por crédito para actualizar el saldo
-      const deltasPorCredito: Record<string, number> = {}
-
       for (const cuota of cuotasEnOrden) {
         if (restante <= 0.005) break
-
         const montoCuota = Number(cuota.monto)
         const montoPagadoPrev = Number(cuota.monto_pagado ?? 0)
         const faltaPorPagar = Math.max(0, montoCuota - montoPagadoPrev)
-        if (faltaPorPagar <= 0.005) continue // ya completamente pagada
-
+        if (faltaPorPagar <= 0.005) continue
         const montoAplicar = Math.min(restante, faltaPorPagar)
         const nuevoMontoPagado = montoPagadoPrev + montoAplicar
-        const esPagadaCompleta = (montoCuota - nuevoMontoPagado) < 0.005
-
-        // Actualizar cuota — cuotas NO tiene columna updated_at
-        const { error: cuotaUpdateErr } = await supabase.from('cuotas').update({
-          monto_pagado: nuevoMontoPagado,
-          estado: esPagadaCompleta ? 'pagada' : 'abono_parcial',
-          fecha_pago: esPagadaCompleta ? fechaPago : null,
-        }).eq('id', cuota.id)
-
-        if (cuotaUpdateErr) {
-          console.error('Error al actualizar cuota', cuota.id, cuotaUpdateErr)
-          setError(`Error actualizando cuota N°${cuota.numero_cuota}: ${cuotaUpdateErr.message}`)
-          setLoading(false)
-          return
-        }
-
-        // Vincular recibo ↔ cuota con el monto aplicado
-        const { error: ciErr } = await supabase.from('cuota_ingresos').insert({
-          cuota_id: cuota.id,
-          ingreso_id: inserted.id,
-          monto_aplicado: montoAplicar,
+        const esPagada = (montoCuota - nuevoMontoPagado) < 0.005
+        cuotasPayload.push({
+          id: cuota.id,
+          credito_id: cuota.credito_id,
+          monto_aplicar: montoAplicar,
+          nuevo_monto_pagado: nuevoMontoPagado,
+          es_pagada: esPagada,
         })
-
-        if (ciErr) {
-          console.error('Error al insertar cuota_ingresos', ciErr)
-        }
-
-        deltasPorCredito[cuota.credito_id] = (deltasPorCredito[cuota.credito_id] ?? 0) + montoAplicar
         restante -= montoAplicar
       }
+    }
 
-      // Actualizar saldo de cada crédito afectado
-      for (const [creditoId, delta] of Object.entries(deltasPorCredito)) {
-        const { data: cred } = await supabase
-          .from('creditos').select('saldo').eq('id', creditoId).single()
-        if (cred) {
-          const nuevoSaldo = Math.max(0, Number(cred.saldo) - delta)
-          await supabase.from('creditos').update({
-            saldo: nuevoSaldo,
-            estado: nuevoSaldo <= 0.01 ? 'pagado' : 'activo',
-            updated_at: new Date().toISOString(),
-          }).eq('id', creditoId)
-        }
-      }
+    // Llamar a la Server Action (validación + DB atómica en el servidor)
+    const result = await crearIngreso({
+      cliente_id:        clienteSeleccionado.id,
+      vehiculo_id:       vehiculoIdParaIngreso ?? null,
+      placa:             placaParaIngreso ?? null,
+      concepto,
+      monto:             montoNum,
+      moneda,
+      metodo_pago:       metodoPago,
+      banco_emisor:      bancoEmisor || null,
+      banco_receptor:    bancoReceptor || null,
+      referencia:        referencia || null,
+      fecha_pago:        fechaPago,
+      observaciones:     observaciones || null,
+      tasa_cambio:       tasaCambio ? parseFloat(tasaCambio) : null,
+      monto_bs:          moneda === 'VES' ? (parseFloat(monto) || null) : (montoBs ? parseFloat(montoBs) || null : null),
+      acuerdo_id:        acuerdoInicialId ?? null,
+      acuerdo_pagado:    acuerdoInfo?.monto_pagado ?? 0,
+      acuerdo_acordado:  acuerdoInfo?.monto_acordado ?? 0,
+      cuotas:            cuotasPayload,
+      comprobantes,
+    })
+
+    if (result.error) {
+      setError(result.error)
+      setLoading(false)
+      return
     }
 
     router.push('/ingresos')
