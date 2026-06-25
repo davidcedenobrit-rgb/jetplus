@@ -7,7 +7,7 @@ import EgresoActionButtons from './EgresoActionButtons'
 import EgresoTasaEditor from './EgresoTasaEditor'
 import ComprobantesGallery from '@/components/ComprobantesGallery'
 
-const ROLES_EDITAR_TASA = ['jose', 'leysdem', 'mary', 'arianna']
+const ROLES_EDITAR_TASA = ['jose', 'admin', 'director', 'leysdem', 'mary', 'arianna']
 
 export default async function EgresoDetallePage({
   params,

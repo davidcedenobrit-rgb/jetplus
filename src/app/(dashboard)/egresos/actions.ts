@@ -102,7 +102,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
   return { ok: true, egresoId: inserted.id }
 }
 
-const ROLES_EDITAR_TASA = ['jose', 'leysdem', 'mary', 'arianna']
+const ROLES_EDITAR_TASA = ['jose', 'admin', 'director', 'leysdem', 'mary', 'arianna']
 
 export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto: number, moneda: string) {
   const supabase = await createClient()
