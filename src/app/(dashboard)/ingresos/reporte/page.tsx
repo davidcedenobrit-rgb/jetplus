@@ -95,7 +95,7 @@ export default function ReporteIngresosPage() {
     if (moneda) q = q.eq('moneda', moneda)
 
     const { data } = await q
-    setIngresos((data ?? []) as Ingreso[])
+    setIngresos((data ?? []) as unknown as Ingreso[])
     setLoading(false)
   }, [fechaDesde, fechaHasta, estado, moneda])
 
