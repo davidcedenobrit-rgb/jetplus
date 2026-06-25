@@ -17,7 +17,7 @@ export type EstadoEgreso =
 export type TipoCliente = 'natural' | 'juridico'
 export type TipoCompra = 'contado' | 'financiado'
 export type MarcaVehiculo = 'MG' | 'MAXUS'
-export type Moneda = 'USD' | 'VES'
+export type Moneda = 'USD' | 'VES' | 'USDT'
 export type CategoriaEgreso =
   | 'gastos_administrativos' | 'proveedores' | 'tramites_vehiculares'
   | 'impuestos' | 'seguro' | 'logistica' | 'mantenimiento' | 'comisiones'

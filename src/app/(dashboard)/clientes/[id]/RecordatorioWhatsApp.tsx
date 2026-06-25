@@ -25,7 +25,7 @@ interface Props {
 }
 
 function fmtMonto(monto: number, moneda: string) {
-  return `${moneda === 'USD' ? '$' : 'Bs.'}${monto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `${moneda !== 'VES' ? '$' : 'Bs.'}${monto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function fmtFecha(iso: string) {
