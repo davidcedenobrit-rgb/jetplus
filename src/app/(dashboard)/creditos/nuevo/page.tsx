@@ -370,7 +370,9 @@ export default function NuevoCreditoPage() {
 
       // Distribución histórica: completas primero, última con abono parcial
       function buildCuotas(creditoId: string, n: number, montoCuota: number, frecuencia: string, fechaBase: string, concepto: string, montoHistorico = 0) {
-        let restante = montoHistorico
+        // Redondear a centavos para evitar residuos de punto flotante (ej: 0.0000001 > 0)
+        let restante = Math.round(montoHistorico * 100) / 100
+        const mc = Math.round(montoCuota * 100) / 100
         return Array.from({ length: n }, (_, i) => {
           const fecha = new Date(fechaBase)
           if (frecuencia === 'semanal') fecha.setDate(fecha.getDate() + (i + 1) * 7)
@@ -378,9 +380,13 @@ export default function NuevoCreditoPage() {
           else if (frecuencia === 'trimestral') fecha.setMonth(fecha.getMonth() + 3 * (i + 1))
           else fecha.setMonth(fecha.getMonth() + (i + 1))
           let estado = 'pendiente', monto_pagado = 0
-          if (restante >= montoCuota) { estado = 'pagada'; monto_pagado = montoCuota; restante -= montoCuota }
-          else if (restante > 0) { estado = 'abono_parcial'; monto_pagado = restante; restante = 0 }
-          return { credito_id: creditoId, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: montoCuota, estado, monto_pagado, mora: 0, concepto }
+          if (restante >= mc) {
+            estado = 'pagada'; monto_pagado = mc
+            restante = Math.round((restante - mc) * 100) / 100
+          } else if (restante >= 0.01) {
+            estado = 'abono_parcial'; monto_pagado = restante; restante = 0
+          }
+          return { credito_id: creditoId, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: mc, estado, monto_pagado, mora: 0, concepto }
         })
       }
 
