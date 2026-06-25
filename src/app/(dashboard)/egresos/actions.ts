@@ -102,7 +102,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
 
 const ROLES_EDITAR_TASA = ['jose', 'leysdem', 'mary', 'arianna']
 
-export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto: number) {
+export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto: number, moneda: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autorizado' }
@@ -112,7 +112,11 @@ export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto
 
   if (tasa <= 0) return { error: 'La tasa debe ser mayor a 0' }
 
-  const monto_bs = Math.round(monto * tasa * 100) / 100
+  // VES: monto ya es en Bs, monto_bs = monto; USD: convertir a Bs
+  const monto_bs = moneda === 'VES'
+    ? Math.round(monto * 100) / 100
+    : Math.round(monto * tasa * 100) / 100
+
   const admin = await createAdminClient()
   const { error } = await admin
     .from('egresos')
@@ -120,5 +124,5 @@ export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto
     .eq('id', egresoId)
 
   if (error) return { error: 'Error al actualizar la tasa' }
-  return { ok: true, monto_bs }
+  return { ok: true }
 }

@@ -110,7 +110,12 @@ export default async function EgresoDetallePage({
                 <div>
                   <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold">Monto del egreso</p>
                   <p className="text-sm text-oriental-gray mt-0.5">{egreso.moneda}</p>
-                  {egreso.monto_bs && (
+                  {egreso.tasa_cambio && egreso.moneda === 'VES' && (
+                    <p className="text-sm font-bold text-green-700 mt-1">
+                      ≈ USD {(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  )}
+                  {egreso.monto_bs && egreso.moneda === 'USD' && (
                     <p className="text-sm font-bold text-gray-500 mt-1">
                       Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
@@ -125,21 +130,22 @@ export default async function EgresoDetallePage({
                   <EgresoTasaEditor
                     egresoId={egreso.id}
                     monto={Number(egreso.monto)}
+                    moneda={egreso.moneda}
                     tasaActual={egreso.tasa_cambio ? Number(egreso.tasa_cambio) : null}
-                    montoBsActual={egreso.monto_bs ? Number(egreso.monto_bs) : null}
                   />
                 ) : egreso.tasa_cambio ? (
                   <div>
                     <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-0.5">Tasa Bs/$</p>
                     <p className="text-sm font-mono font-bold text-oriental-black">{Number(egreso.tasa_cambio).toFixed(4)}</p>
-                    {egreso.monto_bs && (
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {egreso.moneda === 'VES'
+                        ? `≈ USD ${(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `Bs ${(Number(egreso.monto) * Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      }
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 italic text-sm">Sin equivalencia en Bs registrada</p>
+                  <p className="text-sm text-gray-400 italic">Sin equivalencia registrada — sin tasa</p>
                 )}
               </div>
 

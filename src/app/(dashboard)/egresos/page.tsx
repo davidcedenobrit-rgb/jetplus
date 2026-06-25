@@ -95,7 +95,12 @@ export default async function EgresosPage({
                   <td className="px-4 py-3 text-oriental-gray">{egreso.beneficiario ?? '—'}</td>
                   <td className="px-4 py-3 text-right">
                     <p className="font-bold text-oriental-black">{formatCurrency(egreso.monto, egreso.moneda)}</p>
-                    {egreso.monto_bs && (
+                    {egreso.tasa_cambio && egreso.moneda === 'VES' && (
+                      <p className="text-[11px] text-gray-400 font-mono">
+                        ≈ USD {(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    )}
+                    {egreso.monto_bs && egreso.moneda === 'USD' && (
                       <p className="text-[11px] text-gray-400 font-mono">
                         Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
