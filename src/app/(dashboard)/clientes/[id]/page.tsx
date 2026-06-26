@@ -45,14 +45,16 @@ export default async function ClienteDetallePage({
     .eq('estado', 'activo')
 
   let cuotasVencidasPorCredito: { creditoId: string; vehiculoLabel: string; moneda: string; monto: number; cantidad: number }[] = []
+  let cuotasVencidasDetalle: { vehiculoLabel: string; numeroCuota: number; fechaVencimiento: string; saldo: number; mora: number; moneda: string; esParcial: boolean }[] = []
 
   if (creditos && creditos.length > 0) {
     const creditoIds = creditos.map(c => c.id)
     const { data: cuotasVencidas } = await supabase
       .from('cuotas')
-      .select('credito_id, monto, monto_pagado, mora')
+      .select('credito_id, numero_cuota, fecha_vencimiento, monto, monto_pagado, mora, estado')
       .in('credito_id', creditoIds)
       .or(`estado.eq.vencida,estado.eq.abono_parcial,and(estado.eq.pendiente,fecha_vencimiento.lt.${hoy})`)
+      .order('fecha_vencimiento', { ascending: true })
 
     if (cuotasVencidas) {
       const grouped: Record<string, { monto: number; cantidad: number }> = {}
@@ -62,6 +64,22 @@ export default async function ClienteDetallePage({
         if (!grouped[c.credito_id]) grouped[c.credito_id] = { monto: 0, cantidad: 0 }
         grouped[c.credito_id].monto += saldo
         grouped[c.credito_id].cantidad++
+
+        const credito = creditos.find(cr => cr.id === c.credito_id)
+        if (!credito) return
+        const v = (credito as any).vehiculos
+        const planLabel = credito.plan_tipo === 'inicial_la_oriental' ? ' (Inicial Oriental)'
+          : credito.plan_tipo === 'financiamiento_vehimotors' ? ' (Vehimotors)'
+          : ''
+        cuotasVencidasDetalle.push({
+          vehiculoLabel: v ? `${v.marca} ${v.modelo}${v.placa ? ` · ${v.placa}` : ''}${planLabel}` : `Crédito${planLabel}`,
+          numeroCuota: c.numero_cuota,
+          fechaVencimiento: c.fecha_vencimiento,
+          saldo: Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0)),
+          mora: Number(c.mora ?? 0),
+          moneda: credito.moneda,
+          esParcial: c.estado === 'abono_parcial',
+        })
       })
 
       cuotasVencidasPorCredito = Object.entries(grouped).map(([cid, data]) => {
@@ -86,13 +104,13 @@ export default async function ClienteDetallePage({
   en7dias.setDate(en7dias.getDate() + 7)
   const en7diasStr = en7dias.toISOString().split('T')[0]
 
-  let cuotasProximasList: { vehiculoLabel: string; monto: number; moneda: string; fecha: string }[] = []
+  let cuotasProximasDetalle: { vehiculoLabel: string; numeroCuota: number; fechaVencimiento: string; saldo: number; moneda: string }[] = []
 
   if (creditos && creditos.length > 0) {
     const creditoIds = creditos.map(c => c.id)
     const { data: proximas } = await supabase
       .from('cuotas')
-      .select('credito_id, monto, monto_pagado, fecha_vencimiento')
+      .select('credito_id, numero_cuota, monto, monto_pagado, fecha_vencimiento')
       .in('credito_id', creditoIds)
       .eq('estado', 'pendiente')
       .gte('fecha_vencimiento', hoy)
@@ -100,16 +118,17 @@ export default async function ClienteDetallePage({
       .order('fecha_vencimiento', { ascending: true })
 
     if (proximas) {
-      cuotasProximasList = proximas.map(q => {
+      cuotasProximasDetalle = proximas.map(q => {
         const credito = creditos.find(c => c.id === q.credito_id)!
         const v = (credito as any).vehiculos
         const planLabel = credito.plan_tipo === 'inicial_la_oriental' ? ' (Oriental)'
           : credito.plan_tipo === 'financiamiento_vehimotors' ? ' (Vehimotors)' : ''
         return {
           vehiculoLabel: v ? `${v.marca} ${v.modelo}${v.placa ? ` · ${v.placa}` : ''}${planLabel}` : `Crédito${planLabel}`,
-          monto: Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0)),
+          numeroCuota: q.numero_cuota,
+          fechaVencimiento: q.fecha_vencimiento,
+          saldo: Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0)),
           moneda: credito.moneda,
-          fecha: q.fecha_vencimiento,
         }
       })
     }
@@ -203,18 +222,13 @@ export default async function ClienteDetallePage({
           )}
 
           {/* Botón recordatorio WhatsApp */}
-          {cliente.whatsapp && (cuotasVencidasPorCredito.length > 0 || cuotasProximasList.length > 0) && (
+          {cliente.whatsapp && (cuotasVencidasDetalle.length > 0 || cuotasProximasDetalle.length > 0) && (
             <RecordatorioWhatsApp
               clienteId={id}
               clienteNombre={cliente.nombre}
               whatsapp={cliente.whatsapp}
-              cuotasVencidas={cuotasVencidasPorCredito.map(c => ({
-                vehiculoLabel: c.vehiculoLabel,
-                cantidad: c.cantidad,
-                monto: c.monto,
-                moneda: c.moneda,
-              }))}
-              cuotasProximas={cuotasProximasList}
+              cuotasVencidas={cuotasVencidasDetalle}
+              cuotasProximas={cuotasProximasDetalle}
               origen="panel_cliente"
             />
           )}

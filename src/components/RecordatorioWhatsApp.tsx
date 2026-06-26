@@ -6,16 +6,20 @@ import { registrarAvisoCobro } from '@/app/actions/cobranza'
 
 interface CuotaVencida {
   vehiculoLabel: string
-  cantidad: number
-  monto: number
+  numeroCuota: number
+  fechaVencimiento: string
+  saldo: number
+  mora: number
   moneda: string
+  esParcial: boolean
 }
 
 interface CuotaProxima {
   vehiculoLabel: string
-  monto: number
+  numeroCuota: number
+  fechaVencimiento: string
+  saldo: number
   moneda: string
-  fecha: string
 }
 
 interface Props {
@@ -33,6 +37,10 @@ function fmtMonto(monto: number, moneda: string) {
 
 function fmtFecha(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+function fmtFechaCorta(iso: string) {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function limpiarNumero(num: string) {
@@ -62,10 +70,17 @@ export default function RecordatorioWhatsApp({
   lineas.push(`Te escribe el *Departamento de Cobranza y Jurídico* de *La Oriental Automotors*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
   lineas.push('')
 
+  const monedaTotal = cuotasVencidas[0]?.moneda ?? cuotasProximas[0]?.moneda ?? 'USD'
+  const totalVencido = cuotasVencidas.reduce((s, c) => s + c.saldo + c.mora, 0)
+  const totalProximo = cuotasProximas.reduce((s, c) => s + c.saldo, 0)
+  const totalGeneral = totalVencido + totalProximo
+
   if (cuotasVencidas.length > 0) {
     lineas.push(`🔴 *Cuotas vencidas:*`)
     cuotasVencidas.forEach(c => {
-      lineas.push(`• ${c.vehiculoLabel} — *${fmtMonto(c.monto, c.moneda)}* (${c.cantidad} cuota${c.cantidad > 1 ? 's' : ''})`)
+      const etiqueta = c.esParcial ? '(saldo parcial)' : ''
+      const moraStr = c.mora > 0 ? ` + mora ${fmtMonto(c.mora, c.moneda)}` : ''
+      lineas.push(`• ${c.vehiculoLabel} — Cuota N° ${c.numeroCuota}${etiqueta ? ` ${etiqueta}` : ''}: *${fmtMonto(c.saldo + c.mora, c.moneda)}*${moraStr ? ` _${moraStr.trim()}_` : ''} (venció ${fmtFechaCorta(c.fechaVencimiento)})`)
     })
     lineas.push('')
   }
@@ -73,11 +88,13 @@ export default function RecordatorioWhatsApp({
   if (cuotasProximas.length > 0) {
     lineas.push(`🟡 *Por vencer:*`)
     cuotasProximas.forEach(c => {
-      lineas.push(`• ${c.vehiculoLabel} — *${fmtMonto(c.monto, c.moneda)}* el ${fmtFecha(c.fecha)}`)
+      lineas.push(`• ${c.vehiculoLabel} — Cuota N° ${c.numeroCuota}: *${fmtMonto(c.saldo, c.moneda)}* (vence ${fmtFecha(c.fechaVencimiento)})`)
     })
     lineas.push('')
   }
 
+  lineas.push(`*Total pendiente: ${fmtMonto(totalGeneral, monedaTotal)}*`)
+  lineas.push('')
   lineas.push(`Por favor coordina tu pago a la brevedad posible. Estamos a tu disposición para cualquier consulta. 🙏`)
   lineas.push('')
   lineas.push(`_Departamento de Cobranza y Jurídico · La Oriental Automotors · MG & Maxus · Maturín_`)
@@ -86,10 +103,9 @@ export default function RecordatorioWhatsApp({
   const numero  = limpiarNumero(whatsapp)
   const waUrl   = `https://web.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(mensaje)}`
 
-  const totalVencidas = cuotasVencidas.reduce((s, c) => s + c.cantidad, 0)
-  const totalUsdAprox = [...cuotasVencidas, ...cuotasProximas]
-    .filter(c => c.moneda !== 'VES')
-    .reduce((s, c) => s + c.monto, 0)
+  const totalUsdAprox =
+    cuotasVencidas.filter(c => c.moneda !== 'VES').reduce((s, c) => s + c.saldo + c.mora, 0) +
+    cuotasProximas.filter(c => c.moneda !== 'VES').reduce((s, c) => s + c.saldo, 0)
 
   async function registrarEnBitacora() {
     if (registrado) return
@@ -97,7 +113,7 @@ export default function RecordatorioWhatsApp({
       clienteId,
       origen,
       whatsappDestino: whatsapp,
-      cuotasVencidasCant: totalVencidas,
+      cuotasVencidasCant: cuotasVencidas.length,
       cuotasProximasCant: cuotasProximas.length,
       montoTotalUsd: totalUsdAprox > 0 ? totalUsdAprox : null,
       resumen: mensaje.slice(0, 1000),

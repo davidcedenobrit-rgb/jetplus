@@ -157,6 +157,8 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
   const fmtUSD = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2 })
 
   const cntBucket = (id: number) => lista.filter(c => c.bucket === id).length
+  const sumaBucket = (id: number) => lista.filter(c => c.bucket === id).reduce((s, c) => s + c.montoVencido, 0)
+  const totalGeneralVencido = lista.reduce((s, c) => s + c.montoVencido, 0)
   const haySome = lista.length > 0
   const listaFiltrada = selectedBucket !== null ? lista.filter(c => c.bucket === selectedBucket) : lista
   const bucketInfo = selectedBucket !== null ? BUCKETS[selectedBucket - 1] : null
@@ -189,11 +191,18 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
     }).join('')
 
     const bucketSummary = BUCKETS.map(b => `
-      <div style="background:${b.printBg};border:${selectedBucket === b.id ? '2px solid #111' : '1px solid #e5e7eb'};border-radius:8px;padding:10px 14px;text-align:center;min-width:110px">
+      <div style="background:${b.printBg};border:${selectedBucket === b.id ? '2px solid #111' : '1px solid #e5e7eb'};border-radius:8px;padding:10px 14px;text-align:center;min-width:130px">
         <div style="font-size:22px;font-weight:800;color:${b.printColor}">${cntBucket(b.id)}</div>
         <div style="font-size:10px;font-weight:700;color:${b.printColor};margin-top:1px">${b.label}</div>
         <div style="font-size:10px;color:#6b7280;margin-top:1px">${b.rango}</div>
+        <div style="font-size:12px;font-weight:800;color:${b.printColor};margin-top:6px;padding-top:5px;border-top:1px solid ${b.printColor}33">${cntBucket(b.id) > 0 ? fmtUSD(sumaBucket(b.id)) : '—'}</div>
       </div>`).join('')
+
+    const totalGeneralBox = `
+      <div style="background:#111;color:#fff;padding:12px 18px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Total vencido</span>
+        <span style="font-size:18px;font-weight:800">${fmtUSD(totalGeneralVencido)}</span>
+      </div>`
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
       <title>${subtituloImprimir} — Antigüedad de Cartera</title>
@@ -231,6 +240,7 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
         <button class="no-print" onclick="window.print()" style="background:#E8001D;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨 Imprimir</button>
       </div>
       <div class="buckets">${bucketSummary}</div>
+      ${totalGeneralBox}
       ${listaImprimir.length === 0
         ? '<p style="text-align:center;color:#6b7280;padding:32px 0;font-size:14px">✓ Sin clientes en este tramo</p>'
         : `<table>
@@ -292,6 +302,7 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
       <div className="grid grid-cols-5 gap-2 mb-3">
         {BUCKETS.map(b => {
           const cnt = cntBucket(b.id)
+          const monto = sumaBucket(b.id)
           const isSelected = selectedBucket === b.id
           const hasClients = cnt > 0
           return (
@@ -308,6 +319,9 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
               <p className={`text-2xl font-extrabold ${b.text}`}>{cnt}</p>
               <p className={`text-[10px] font-bold ${b.text} mt-0.5`}>{b.label}</p>
               <p className="text-[10px] text-oriental-gray mt-0.5">{b.rango}</p>
+              <p className={`text-[11px] font-extrabold ${b.text} mt-1.5 border-t ${b.border} pt-1`}>
+                {hasClients ? fmtUSD(monto) : '—'}
+              </p>
               {isSelected && (
                 <p className={`text-[9px] font-bold mt-1 ${b.text}`}>▲ seleccionado</p>
               )}
@@ -315,6 +329,14 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
           )
         })}
       </div>
+
+      {/* Total general vencido */}
+      {haySome && (
+        <div className="flex items-center justify-between mb-3 px-4 py-2.5 bg-oriental-black text-white rounded-lg">
+          <span className="text-xs font-bold uppercase tracking-wider">Total vencido</span>
+          <span className="text-lg font-extrabold">{fmtUSD(totalGeneralVencido)}</span>
+        </div>
+      )}
 
       {/* Sin mora */}
       {!haySome ? (

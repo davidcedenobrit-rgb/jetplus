@@ -336,16 +336,19 @@ export default async function CreditoDetallePage({
                     c.estado === 'abono_parcial' ||
                     (c.estado === 'pendiente' && c.fecha_vencimiento < hoyStr)
                   )
-                  .reduce((acc: any[], c: any) => {
-                    const monto = Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0))
-                    if (monto <= 0) return acc
+                  .map((c: any) => {
                     const cred = creditos.find((cr: any) => cr.id === c.credito_id)
-                    const label = `${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''}${vehiculo?.placa ? ` · ${vehiculo.placa}` : ''} (${planLabel(cred?.plan_tipo)})`
-                    const existing = acc.find(a => a.vehiculoLabel === label)
-                    if (existing) { existing.monto += monto; existing.cantidad++ }
-                    else acc.push({ vehiculoLabel: label, cantidad: 1, monto, moneda: cred?.moneda ?? 'USD' })
-                    return acc
-                  }, [])
+                    return {
+                      vehiculoLabel: `${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''}${vehiculo?.placa ? ` · ${vehiculo.placa}` : ''} (${planLabel(cred?.plan_tipo)})`,
+                      numeroCuota: c.numero_cuota,
+                      fechaVencimiento: c.fecha_vencimiento,
+                      saldo: Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0)),
+                      mora: Number(c.mora ?? 0),
+                      moneda: cred?.moneda ?? 'USD',
+                      esParcial: c.estado === 'abono_parcial',
+                    }
+                  })
+                  .filter((c: any) => c.saldo + c.mora > 0)
 
                 const proximas = cuotasEnriquecidas
                   .filter((c: any) => c.estado === 'pendiente' && c.fecha_vencimiento >= hoyStr && c.fecha_vencimiento <= en7Str)
@@ -353,9 +356,10 @@ export default async function CreditoDetallePage({
                     const cred = creditos.find((cr: any) => cr.id === c.credito_id)
                     return {
                       vehiculoLabel: `${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''}${vehiculo?.placa ? ` · ${vehiculo.placa}` : ''} (${planLabel(cred?.plan_tipo)})`,
-                      monto: Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0)),
+                      numeroCuota: c.numero_cuota,
+                      fechaVencimiento: c.fecha_vencimiento,
+                      saldo: Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0)),
                       moneda: cred?.moneda ?? 'USD',
-                      fecha: c.fecha_vencimiento,
                     }
                   })
 
