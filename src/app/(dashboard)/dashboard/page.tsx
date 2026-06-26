@@ -17,15 +17,23 @@ export default async function DashboardPage() {
     { data: pendientesEgresos },
     { data: showroomTodos },
   ] = await Promise.all([
-    supabase.from('ingresos').select('monto').gte('fecha_pago', inicioMes).eq('estado', 'aprobado'),
-    supabase.from('egresos').select('monto').gte('fecha_egreso', inicioMes).eq('estado', 'aprobado'),
+    supabase.from('ingresos').select('monto, moneda, tasa_cambio').gte('fecha_pago', inicioMes).eq('estado', 'aprobado'),
+    supabase.from('egresos').select('monto, moneda, tasa_cambio').gte('fecha_egreso', inicioMes).eq('estado', 'aprobado'),
     supabase.from('ingresos').select('id').eq('estado', 'pendiente_aprobacion'),
     supabase.from('egresos').select('id').eq('estado', 'pendiente_aprobacion'),
     supabase.from('vehiculos_showroom').select('estado, reserva_vence, marca, modelo, placa').neq('estado', 'vendido'),
   ])
 
-  const totalIngresos = ingresosMes?.reduce((s, i) => s + Number(i.monto), 0) ?? 0
-  const totalEgresos  = egresosMes?.reduce((s, e) => s + Number(e.monto), 0) ?? 0
+  const toUSD = (m: any): number => {
+    const monto = Number(m.monto ?? 0)
+    if (m.moneda === 'VES') {
+      const tasa = Number(m.tasa_cambio ?? 0)
+      return tasa > 0 ? monto / tasa : 0
+    }
+    return monto
+  }
+  const totalIngresos = ingresosMes?.reduce((s, i) => s + toUSD(i), 0) ?? 0
+  const totalEgresos  = egresosMes?.reduce((s, e) => s + toUSD(e), 0) ?? 0
   const balance       = totalIngresos - totalEgresos
 
   // Showroom stats

@@ -784,9 +784,9 @@ export default function ReportesPage() {
       supabase.from('vehiculos').select('id, marca, modelo, tipo_compra'),
       supabase.from('creditos').select('id, plan_tipo, saldo, monto_financiado, placa, cliente_id, clientes(id, nombre, cedula_rif, telefono, whatsapp, correo)'),
       supabase.from('cuotas').select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id'),
-      supabase.from('ingresos').select('id, monto, metodo_pago, estado, fecha_pago')
+      supabase.from('ingresos').select('id, monto, moneda, tasa_cambio, metodo_pago, estado, fecha_pago')
         .gte('fecha_pago', fechaDesde).lte('fecha_pago', fechaHasta),
-      supabase.from('egresos').select('id, monto, categoria, estado, fecha_egreso')
+      supabase.from('egresos').select('id, monto, moneda, tasa_cambio, categoria, estado, fecha_egreso')
         .gte('fecha_egreso', fechaDesde).lte('fecha_egreso', fechaHasta),
     ])
 
@@ -1082,12 +1082,20 @@ export default function ReportesPage() {
     setMarcaDist(marcaCnt)
     setTipoDist(tipoCnt)
 
-    // ── Flujo de caja (filtrado por fecha)
+    // ── Flujo de caja (filtrado por fecha) — todo convertido a USD
+    const toUSD = (m: any): number => {
+      const monto = Number(m.monto ?? 0)
+      if (m.moneda === 'VES') {
+        const tasa = Number(m.tasa_cambio ?? 0)
+        return tasa > 0 ? monto / tasa : 0
+      }
+      return monto
+    }
     const ingAprobados = ingData?.filter(i => i.estado === 'aprobado') ?? []
     const egrAprobados = egrData?.filter(e => e.estado === 'aprobado') ?? []
 
-    setTotalIngresos(ingAprobados.reduce((s, i) => s + Number(i.monto), 0))
-    setTotalEgresos(egrAprobados.reduce((s, e) => s + Number(e.monto), 0))
+    setTotalIngresos(ingAprobados.reduce((s, i) => s + toUSD(i), 0))
+    setTotalEgresos(egrAprobados.reduce((s, e) => s + toUSD(e), 0))
     setCntIngAprobados(ingAprobados.length)
     setCntEgrAprobados(egrAprobados.length)
     setCntIngPendientes(ingData?.filter(i => i.estado === 'pendiente_aprobacion').length ?? 0)
@@ -1096,23 +1104,23 @@ export default function ReportesPage() {
     const metodos: Record<string, number> = {}
     ingAprobados.forEach(i => {
       const m = i.metodo_pago ?? 'otro'
-      metodos[m] = (metodos[m] ?? 0) + Number(i.monto)
+      metodos[m] = (metodos[m] ?? 0) + toUSD(i)
     })
     setMetodoPagoMap(Object.entries(metodos).sort((a, b) => b[1] - a[1]))
 
     const cats: Record<string, number> = {}
-    egrAprobados.forEach(e => { cats[e.categoria] = (cats[e.categoria] ?? 0) + Number(e.monto) })
+    egrAprobados.forEach(e => { cats[e.categoria] = (cats[e.categoria] ?? 0) + toUSD(e) })
     setCatMap(Object.entries(cats).sort((a, b) => b[1] - a[1]))
 
     const mi: Record<string, number> = {}
     const me: Record<string, number> = {}
     ingAprobados.forEach(i => {
       const mes = new Date(i.fecha_pago + 'T12:00:00').toLocaleDateString('es-VE', { month: 'short', year: '2-digit' })
-      mi[mes] = (mi[mes] ?? 0) + Number(i.monto)
+      mi[mes] = (mi[mes] ?? 0) + toUSD(i)
     })
     egrAprobados.forEach(e => {
       const mes = new Date(e.fecha_egreso + 'T12:00:00').toLocaleDateString('es-VE', { month: 'short', year: '2-digit' })
-      me[mes] = (me[mes] ?? 0) + Number(e.monto)
+      me[mes] = (me[mes] ?? 0) + toUSD(e)
     })
     setMesesIngresos(mi)
     setMesesEgresos(me)
