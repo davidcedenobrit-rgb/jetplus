@@ -90,6 +90,7 @@ export const CATEGORIAS_EGRESO_LABEL: Record<string, string> = {
   repuestos:                  'Repuestos',
   cr_avanza_motors:           'CR Avanza Motors',
   cr_plaza:                   'CR Plaza',
+  costos_repuestos:           'Costos de Repuestos',
   otros:                      'Otros',
 }
 

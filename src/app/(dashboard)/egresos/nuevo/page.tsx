@@ -227,7 +227,7 @@ export default function NuevoEgresoPage() {
               <label className="label">Referencia</label>
               <input type="text" className="input font-mono" placeholder="N° referencia" value={referencia} onChange={e => setReferencia(e.target.value)} />
             </div>
-            {(categoria === 'repuestos' || categoria === 'cr_avanza_motors') && (
+            {(categoria === 'repuestos' || categoria === 'cr_avanza_motors' || categoria === 'costos_repuestos') && (
               <div>
                 <label className="label">N° SA — Cotización Vehimotors</label>
                 <input

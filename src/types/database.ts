@@ -22,7 +22,7 @@ export type CategoriaEgreso =
   | 'gastos_administrativos' | 'proveedores' | 'tramites_vehiculares'
   | 'impuestos' | 'seguro' | 'logistica' | 'mantenimiento' | 'comisiones'
   | 'servicios' | 'vehimotors' | 'bancos_comisiones' | 'alquiler' | 'taller' | 'repuestos' | 'otros'
-  | 'cr_avanza_motors' | 'cr_plaza'
+  | 'cr_avanza_motors' | 'cr_plaza' | 'costos_repuestos'
 
 export interface Usuario {
   id: string

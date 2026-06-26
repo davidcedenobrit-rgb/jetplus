@@ -10,7 +10,7 @@ const CATEGORIAS_EGRESO = [
   'gastos_administrativos', 'proveedores', 'tramites_vehiculares',
   'impuestos', 'seguro', 'logistica', 'mantenimiento',
   'servicios', 'vehimotors', 'bancos_comisiones', 'alquiler', 'taller', 'repuestos',
-  'cr_avanza_motors', 'cr_plaza', 'otros',
+  'cr_avanza_motors', 'cr_plaza', 'costos_repuestos', 'otros',
 ] as const
 
 const MONEDA = ['USD', 'VES', 'USDT'] as const
