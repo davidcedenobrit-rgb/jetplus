@@ -361,10 +361,12 @@ export default async function CreditoDetallePage({
 
                 return (
                   <RecordatorioWhatsApp
+                    clienteId={cliente.id}
                     clienteNombre={cliente.nombre}
                     whatsapp={cliente.whatsapp}
                     cuotasVencidas={vencidas}
                     cuotasProximas={proximas}
+                    origen="panel_credito"
                   />
                 )
               })()}

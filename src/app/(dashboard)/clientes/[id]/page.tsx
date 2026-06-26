@@ -205,6 +205,7 @@ export default async function ClienteDetallePage({
           {/* Botón recordatorio WhatsApp */}
           {cliente.whatsapp && (cuotasVencidasPorCredito.length > 0 || cuotasProximasList.length > 0) && (
             <RecordatorioWhatsApp
+              clienteId={id}
               clienteNombre={cliente.nombre}
               whatsapp={cliente.whatsapp}
               cuotasVencidas={cuotasVencidasPorCredito.map(c => ({
@@ -214,6 +215,7 @@ export default async function ClienteDetallePage({
                 moneda: c.moneda,
               }))}
               cuotasProximas={cuotasProximasList}
+              origen="panel_cliente"
             />
           )}
 

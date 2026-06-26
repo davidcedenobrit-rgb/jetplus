@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { MessageCircle, Copy, ExternalLink, X, Check } from 'lucide-react'
+import { registrarAvisoCobro } from '@/app/actions/cobranza'
 
 interface CuotaVencida {
   vehiculoLabel: string
@@ -18,10 +19,12 @@ interface CuotaProxima {
 }
 
 interface Props {
+  clienteId: string
   clienteNombre: string
   whatsapp: string
   cuotasVencidas: CuotaVencida[]
   cuotasProximas: CuotaProxima[]
+  origen: 'panel_cliente' | 'panel_credito' | 'reporte_cobranza'
 }
 
 function fmtMonto(monto: number, moneda: string) {
@@ -39,9 +42,17 @@ function limpiarNumero(num: string) {
   return '58' + solo
 }
 
-export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVencidas, cuotasProximas }: Props) {
+export default function RecordatorioWhatsApp({
+  clienteId,
+  clienteNombre,
+  whatsapp,
+  cuotasVencidas,
+  cuotasProximas,
+  origen,
+}: Props) {
   const [open, setOpen] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [registrado, setRegistrado] = useState(false)
 
   const nombre = clienteNombre.split(' ')[0]
 
@@ -75,10 +86,30 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
   const numero  = limpiarNumero(whatsapp)
   const waUrl   = `https://web.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(mensaje)}`
 
+  const totalVencidas = cuotasVencidas.reduce((s, c) => s + c.cantidad, 0)
+  const totalUsdAprox = [...cuotasVencidas, ...cuotasProximas]
+    .filter(c => c.moneda !== 'VES')
+    .reduce((s, c) => s + c.monto, 0)
+
+  async function registrarEnBitacora() {
+    if (registrado) return
+    await registrarAvisoCobro({
+      clienteId,
+      origen,
+      whatsappDestino: whatsapp,
+      cuotasVencidasCant: totalVencidas,
+      cuotasProximasCant: cuotasProximas.length,
+      montoTotalUsd: totalUsdAprox > 0 ? totalUsdAprox : null,
+      resumen: mensaje.slice(0, 1000),
+    })
+    setRegistrado(true)
+  }
+
   async function copiar() {
     await navigator.clipboard.writeText(mensaje)
     setCopiado(true)
     setTimeout(() => setCopiado(false), 2500)
+    registrarEnBitacora()
   }
 
   return (
@@ -121,6 +152,11 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
                 <span className="w-2 h-2 bg-green-500 rounded-full inline-block" />
                 Se enviará al número: <span className="font-mono font-bold">{whatsapp}</span>
               </p>
+              {registrado && (
+                <p className="text-[11px] text-green-700 mt-2 flex items-center gap-1.5">
+                  <Check size={12} /> Registrado en bitácora
+                </p>
+              )}
             </div>
 
             <div className="px-5 py-4 border-t border-gray-100 space-y-2">
@@ -128,6 +164,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={registrarEnBitacora}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors"
               >
                 <ExternalLink size={16} />
