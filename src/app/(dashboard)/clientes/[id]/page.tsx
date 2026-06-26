@@ -6,7 +6,6 @@ import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, AlertCircle, Fil
 import DeleteButton from '@/components/DeleteButton'
 import DocumentosCliente from './DocumentosCliente'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
-import { getNombreRemitente } from '@/lib/remitente'
 
 export default async function ClienteDetallePage({
   params,
@@ -15,9 +14,6 @@ export default async function ClienteDetallePage({
 }) {
   const { id } = await params
   const supabase = await createClient()
-
-  const { data: { user: authUser } } = await supabase.auth.getUser()
-  const remitente = getNombreRemitente(authUser?.email, authUser?.app_metadata?.rol)
 
   const { data: cliente } = await supabase
     .from('clientes')
@@ -54,15 +50,17 @@ export default async function ClienteDetallePage({
     const creditoIds = creditos.map(c => c.id)
     const { data: cuotasVencidas } = await supabase
       .from('cuotas')
-      .select('credito_id, monto, mora')
+      .select('credito_id, monto, monto_pagado, mora')
       .in('credito_id', creditoIds)
-      .or(`estado.eq.vencida,and(estado.eq.pendiente,fecha_vencimiento.lt.${hoy})`)
+      .or(`estado.eq.vencida,estado.eq.abono_parcial,and(estado.eq.pendiente,fecha_vencimiento.lt.${hoy})`)
 
     if (cuotasVencidas) {
       const grouped: Record<string, { monto: number; cantidad: number }> = {}
       cuotasVencidas.forEach(c => {
+        const saldo = Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0)) + Number(c.mora ?? 0)
+        if (saldo <= 0) return
         if (!grouped[c.credito_id]) grouped[c.credito_id] = { monto: 0, cantidad: 0 }
-        grouped[c.credito_id].monto += Number(c.monto) + Number(c.mora ?? 0)
+        grouped[c.credito_id].monto += saldo
         grouped[c.credito_id].cantidad++
       })
 
@@ -216,7 +214,6 @@ export default async function ClienteDetallePage({
                 moneda: c.moneda,
               }))}
               cuotasProximas={cuotasProximasList}
-              remitente={remitente}
             />
           )}
 

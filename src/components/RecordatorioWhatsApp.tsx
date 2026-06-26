@@ -22,7 +22,6 @@ interface Props {
   whatsapp: string
   cuotasVencidas: CuotaVencida[]
   cuotasProximas: CuotaProxima[]
-  remitente: string
 }
 
 function fmtMonto(monto: number, moneda: string) {
@@ -40,7 +39,7 @@ function limpiarNumero(num: string) {
   return '58' + solo
 }
 
-export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVencidas, cuotasProximas, remitente }: Props) {
+export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVencidas, cuotasProximas }: Props) {
   const [open, setOpen] = useState(false)
   const [copiado, setCopiado] = useState(false)
 
@@ -49,7 +48,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
   const lineas: string[] = []
   lineas.push(`Hola ${nombre} 👋`)
   lineas.push('')
-  lineas.push(`Te saluda *${remitente}* de *La Oriental Automotors*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
+  lineas.push(`Te escribe el *Departamento de Cobranza y Jurídico* de *La Oriental Automotors*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
   lineas.push('')
 
   if (cuotasVencidas.length > 0) {
@@ -70,7 +69,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
 
   lineas.push(`Por favor coordina tu pago a la brevedad posible. Estamos a tu disposición para cualquier consulta. 🙏`)
   lineas.push('')
-  lineas.push(`_${remitente} · La Oriental Automotors · MG & Maxus · Maturín_`)
+  lineas.push(`_Departamento de Cobranza y Jurídico · La Oriental Automotors · MG & Maxus · Maturín_`)
 
   const mensaje = lineas.join('\n')
   const numero  = limpiarNumero(whatsapp)
@@ -101,7 +100,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
                 <MessageCircle size={18} className="text-green-600" />
                 <div>
                   <p className="font-bold text-oriental-black">Aviso de cobro</p>
-                  <p className="text-[11px] text-oriental-gray">Enviando como: <span className="font-semibold text-oriental-black">{remitente}</span></p>
+                  <p className="text-[11px] text-oriental-gray">Dpto. Cobranza y Jurídico · La Oriental</p>
                 </div>
               </div>
               <button onClick={() => setOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">

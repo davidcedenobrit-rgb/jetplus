@@ -8,7 +8,6 @@ import RevertirCuotaButton from './RevertirCuotaButton'
 import PrintButton from './PrintButton'
 import BitacoraButton from './BitacoraButton'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
-import { getNombreRemitente } from '@/lib/remitente'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
@@ -68,7 +67,6 @@ export default async function CreditoDetallePage({
     ? await supabase.from('usuarios').select('rol').eq('id', authUser.id).single()
     : { data: null }
   const esDirector = usuarioData ? ROL_DIRECTOR.includes(usuarioData.rol) : false
-  const remitente = getNombreRemitente(authUser?.email, authUser?.app_metadata?.rol)
 
   // Cargar el crédito principal (para obtener vehiculo_id y cliente)
   const { data: credito } = await supabase
@@ -333,12 +331,17 @@ export default async function CreditoDetallePage({
               {/* Botón recordatorio WhatsApp */}
               {cliente.whatsapp && (cuotasVencidas + cuotasVencidasVisual > 0 || cuotasPorCobrar > 0) && (() => {
                 const vencidas = cuotasEnriquecidas
-                  .filter((c: any) => c.estado === 'vencida' || (c.estado === 'pendiente' && c.fecha_vencimiento < hoyStr))
+                  .filter((c: any) =>
+                    c.estado === 'vencida' ||
+                    c.estado === 'abono_parcial' ||
+                    (c.estado === 'pendiente' && c.fecha_vencimiento < hoyStr)
+                  )
                   .reduce((acc: any[], c: any) => {
+                    const monto = Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0))
+                    if (monto <= 0) return acc
                     const cred = creditos.find((cr: any) => cr.id === c.credito_id)
                     const label = `${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''}${vehiculo?.placa ? ` · ${vehiculo.placa}` : ''} (${planLabel(cred?.plan_tipo)})`
                     const existing = acc.find(a => a.vehiculoLabel === label)
-                    const monto = Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0))
                     if (existing) { existing.monto += monto; existing.cantidad++ }
                     else acc.push({ vehiculoLabel: label, cantidad: 1, monto, moneda: cred?.moneda ?? 'USD' })
                     return acc
@@ -362,7 +365,6 @@ export default async function CreditoDetallePage({
                     whatsapp={cliente.whatsapp}
                     cuotasVencidas={vencidas}
                     cuotasProximas={proximas}
-                    remitente={remitente}
                   />
                 )
               })()}
