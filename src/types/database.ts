@@ -22,6 +22,7 @@ export type CategoriaEgreso =
   | 'gastos_administrativos' | 'proveedores' | 'tramites_vehiculares'
   | 'impuestos' | 'seguro' | 'logistica' | 'mantenimiento' | 'comisiones'
   | 'servicios' | 'vehimotors' | 'bancos_comisiones' | 'alquiler' | 'taller' | 'repuestos' | 'otros'
+  | 'cr_avanza_motors' | 'cr_plaza'
 
 export interface Usuario {
   id: string
@@ -152,6 +153,7 @@ export interface Egreso {
   referencia: string | null
   estado: EstadoEgreso
   observaciones: string | null
+  numero_sa: string | null
   cliente_id: string | null
   vehiculo_id: string | null
   placa: string | null

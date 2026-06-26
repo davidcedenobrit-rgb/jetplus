@@ -9,7 +9,8 @@ const CATEGORIAS_EGRESO = [
   // Categorías heredadas
   'gastos_administrativos', 'proveedores', 'tramites_vehiculares',
   'impuestos', 'seguro', 'logistica', 'mantenimiento',
-  'servicios', 'vehimotors', 'bancos_comisiones', 'alquiler', 'taller', 'repuestos', 'otros',
+  'servicios', 'vehimotors', 'bancos_comisiones', 'alquiler', 'taller', 'repuestos',
+  'cr_avanza_motors', 'cr_plaza', 'otros',
 ] as const
 
 const MONEDA = ['USD', 'VES', 'USDT'] as const
@@ -57,6 +58,7 @@ export const EgresoSchema = z.object({
   area_responsable: z.string().max(100).optional().nullable(),
   observaciones: z.string().max(500).optional().nullable(),
   tasa_cambio: z.number().positive().optional().nullable(),
+  numero_sa: z.string().max(50).optional().nullable(),
 })
 
 export const ClienteSchema = z.object({

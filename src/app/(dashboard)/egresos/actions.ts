@@ -18,6 +18,7 @@ export type CrearEgresoPayload = {
   fecha_egreso: string
   area_responsable: string | null
   observaciones: string | null
+  numero_sa: string | null
   comprobantes: { url: string; nombre: string }[]
 }
 
@@ -43,6 +44,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
     fecha_egreso:    payload.fecha_egreso,
     area_responsable: payload.area_responsable,
     observaciones:   payload.observaciones,
+    numero_sa:       payload.numero_sa,
   })
   if (!parsed.success) {
     return { error: parsed.error.errors[0]?.message ?? 'Datos inválidos' }
@@ -74,6 +76,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       fecha_egreso:     parsed.data.fecha_egreso,
       area_responsable: parsed.data.area_responsable ?? null,
       observaciones:    parsed.data.observaciones ?? null,
+      numero_sa:        parsed.data.numero_sa ?? null,
       tasa_cambio:      parsed.data.tasa_cambio ?? null,
       monto_bs:         (parsed.data.tasa_cambio && parsed.data.moneda !== 'VES')
                           ? Math.round(parsed.data.monto * parsed.data.tasa_cambio * 100) / 100

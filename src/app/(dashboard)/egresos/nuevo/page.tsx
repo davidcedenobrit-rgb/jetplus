@@ -28,6 +28,7 @@ export default function NuevoEgresoPage() {
   const [fechaEgreso, setFechaEgreso] = useState(new Date().toISOString().split('T')[0])
   const [areaResponsable, setAreaResponsable] = useState('')
   const [observaciones, setObservaciones] = useState('')
+  const [numeroSa, setNumeroSa] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,6 +60,7 @@ export default function NuevoEgresoPage() {
       fecha_egreso: fechaEgreso,
       area_responsable: areaResponsable || null,
       observaciones: observaciones || null,
+      numero_sa: numeroSa || null,
       comprobantes,
     })
 
@@ -225,6 +227,19 @@ export default function NuevoEgresoPage() {
               <label className="label">Referencia</label>
               <input type="text" className="input font-mono" placeholder="N° referencia" value={referencia} onChange={e => setReferencia(e.target.value)} />
             </div>
+            {(categoria === 'repuestos' || categoria === 'cr_avanza_motors') && (
+              <div>
+                <label className="label">N° SA — Cotización Vehimotors</label>
+                <input
+                  type="text"
+                  className="input font-mono"
+                  placeholder="Ej: SA-2024-001234"
+                  value={numeroSa}
+                  onChange={e => setNumeroSa(e.target.value)}
+                />
+                <p className="text-[11px] text-oriental-gray mt-1">Número de SA de la cotización emitida por Vehimotors</p>
+              </div>
+            )}
             <div className="md:col-span-2">
               <label className="label">Observaciones</label>
               <textarea className="textarea" rows={3} placeholder="Notas adicionales..." value={observaciones} onChange={e => setObservaciones(e.target.value)} />

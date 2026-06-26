@@ -169,6 +169,15 @@ export default async function EgresoDetallePage({
                 </div>
               </div>
 
+              {(egreso as any).numero_sa && (
+                <>
+                  <div className="border-t border-gray-100" />
+                  <div>
+                    <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-1">N° SA — Cotización Vehimotors</p>
+                    <p className="font-mono text-sm font-bold text-oriental-black">{(egreso as any).numero_sa}</p>
+                  </div>
+                </>
+              )}
               {egreso.observaciones && (
                 <>
                   <div className="border-t border-gray-100" />
