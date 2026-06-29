@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Plus, CheckCircle2, Clock } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
+import RepuestosActivasGrid from './RepuestosActivasGrid'
 import CatalogoRepuestos from './CatalogoRepuestos'
 
 const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem', 'almacen']
@@ -105,35 +106,7 @@ export default async function RepuestosPage({
               <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Clock size={14} className="text-oriental-red" /> En proceso
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {activas.map(s => {
-                  const est = ESTADOS[s.estado]
-                  const itemCount = (s.repuestos_items ?? []).length
-                  return (
-                    <div key={s.id} className="relative card hover:shadow-md transition-shadow">
-                      {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
-                      <Link href={`/repuestos/${s.id}`} className="block p-5">
-                        <div className="flex items-start justify-between mb-2 pr-6">
-                          <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">{s.numero}</span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est?.bg} ${est?.color}`}>{est?.label}</span>
-                        </div>
-                        <p className="text-sm font-semibold text-oriental-black mt-2">{itemCount} repuesto{itemCount !== 1 ? 's' : ''}</p>
-                        <p className="text-xs text-oriental-gray mt-0.5">
-                          {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </p>
-                        {s.respuesta_vehimotors && (
-                          <div className={`mt-2 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
-                            ${s.respuesta_vehimotors === 'hay_todo' ? 'bg-green-50 text-green-700' :
-                              s.respuesta_vehimotors === 'no_hay' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                            {s.respuesta_vehimotors === 'hay_todo' ? '✅ Hay todo' : s.respuesta_vehimotors === 'no_hay' ? '❌ Sin stock' : '⚠️ Parcial'}
-                          </div>
-                        )}
-                        <ProgressBar estado={s.estado} />
-                      </Link>
-                    </div>
-                  )
-                })}
-              </div>
+              <RepuestosActivasGrid solicitudes={activas as any} puedeEliminar={puedeEliminar} />
             </div>
           )}
 
