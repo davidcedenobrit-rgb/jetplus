@@ -21,6 +21,20 @@ const EQUIPO_INTERNO = [CORREO_MARY, CORREO_ROJAS, CORREO_OPS]
 
 const FROM = 'Repuestos La Oriental <repuestos@laoriental.co>'
 
+// Helper: si VEHIMOTORS_TEST_OVERRIDE está seteada, redirige el correo a esa dirección
+// y agrega "[PRUEBA]" al subject. Útil para probar el flujo sin molestar a Vehimotors real.
+function applyVMOverride<T extends { to: string[] | string; cc?: string[]; replyTo?: string[]; subject: string }>(opts: T): T {
+  const override = process.env.VEHIMOTORS_TEST_OVERRIDE
+  if (!override) return opts
+  return {
+    ...opts,
+    to: [override],
+    cc: undefined,
+    replyTo: [override],
+    subject: '[PRUEBA] ' + opts.subject,
+  }
+}
+
 export interface Item { descripcion: string; referencia?: string | null; cantidad: number }
 
 function headerHTML() {
@@ -89,7 +103,7 @@ export async function enviarSolicitudCotizacion(opts: {
   const cc       = destinatariosOverride ? undefined : EQUIPO_INTERNO
   const replyTo  = destinatariosOverride ?? EQUIPO_INTERNO
 
-  return getResend().emails.send({ from: FROM, to, cc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, ...applyVMOverride({ to, cc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors` }), html: wrap(body) })
 }
 
 // ── 2. Notificación interna cuando Vehimotors responde ─────────────
@@ -143,7 +157,7 @@ export async function enviarAprobacionCotizacion(opts: {
     ? `Cotización ${numeroCotizacion} aprobada de ${numero}`
     : `✅ Cotización aprobada ${numero} — La Oriental Automotors`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asuntoAprobacion, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, ...applyVMOverride({ to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asuntoAprobacion }), html: wrap(body) })
 }
 
 // ── 4. Notificación interna: factura recibida ──────────────────────
@@ -191,7 +205,7 @@ export async function enviarReporteRecepcion(opts: {
     ? `⚠️ Novedad en pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} — La Oriental Automotors`
     : `✅ Pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} recibido sin novedad`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asunto, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, ...applyVMOverride({ to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asunto }), html: wrap(body) })
 }
 export async function enviarConfirmacionPago(opts: {
   numero: string; solicitudId: string; tokenPago: string
@@ -225,7 +239,7 @@ export async function enviarConfirmacionPago(opts: {
     ? `PAGO DE COTIZACIÓN ${numeroCotizacion} DEL PEDIDO ${numero}`
     : `💰 Pago realizado — Repuestos ${numero}`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asuntoPago, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, ...applyVMOverride({ to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asuntoPago }), html: wrap(body) })
 }
 
 // ── 8. Email a almacén para cargar guía ──────────────────────────
@@ -252,10 +266,12 @@ export async function enviarEmailAlmacen(opts: {
 
   return getResend().emails.send({
     from: FROM,
-    to: correosAlmacen,
-    cc: EQUIPO_INTERNO,
-    replyTo: EQUIPO_INTERNO,
-    subject: `📦 Registrar datos de envío de Cotización ${numeroCotizacion} del pedido ${numero}`,
+    ...applyVMOverride({
+      to: correosAlmacen,
+      cc: EQUIPO_INTERNO,
+      replyTo: EQUIPO_INTERNO,
+      subject: `📦 Registrar datos de envío de Cotización ${numeroCotizacion} del pedido ${numero}`,
+    }),
     html: wrap(body),
   })
 }
