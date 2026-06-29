@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -202,13 +202,21 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
           {/* Vehimotors */}
           {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/vehimotors' || pathname.startsWith('/vehimotors/')
+            const activeReportados = pathname === '/vehimotors'
+            const activeReportar = pathname === '/vehimotors/reportar' || pathname.startsWith('/vehimotors/reportar/')
             return (
-              <Link href="/vehimotors" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Building2 size={18} />
-                <span className="flex-1">Vehimotors</span>
-              </Link>
+              <>
+                <Link href="/vehimotors" onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeReportados ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <Building2 size={18} />
+                  <span className="flex-1">Vehimotors</span>
+                </Link>
+                <Link href="/vehimotors/reportar" onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${activeReportar ? 'bg-indigo-600/30 text-white font-semibold border-l-2 border-indigo-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <Zap size={13} />
+                  <span className="flex-1">Reportar pagos</span>
+                </Link>
+              </>
             )
           })()}
 
