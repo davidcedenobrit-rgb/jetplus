@@ -169,16 +169,16 @@ export async function enviarReporteLoteVehimotors(opts: {
 
   const filas = items.map((it, i) => `
     <tr style="background:${i % 2 === 0 ? '#ffffff' : '#f9fafb'}">
-      <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:11px;color:#374151">${fmtFechaCorta(it.fechaPago)}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:'Courier New',monospace;font-size:11px;color:#111;font-weight:700">${it.proforma ?? '—'}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:'Courier New',monospace;font-size:11px;color:#111;font-weight:700">${it.placa ?? '—'}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:11px;color:#374151">${it.vehiculoLabel ?? '—'}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:11px;color:#111;font-weight:600">${it.clienteNombre}${it.cedulaRif ? `<br><span style="color:#9ca3af;font-size:10px">${it.cedulaRif}</span>` : ''}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:11px;color:#374151">${it.concepto}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:11px;color:#374151">${it.consesionario}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-family:sans-serif;font-size:12px;color:#16a34a;font-weight:800">$${fmtN(it.montoUSD)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-family:sans-serif;font-size:12px;color:#16a34a;font-weight:800;white-space:nowrap">$${fmtN(it.montoUSD)}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:11px;color:#374151">${it.bancoVehimotors ?? '—'}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:'Courier New',monospace;font-size:10px;color:#6b7280">${it.referencia ?? '—'}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:11px;color:#374151;white-space:nowrap">${fmtFechaCorta(it.fechaPago)}</td>
     </tr>
   `).join('')
 
@@ -208,25 +208,25 @@ export async function enviarReporteLoteVehimotors(opts: {
       <div style="margin-top:24px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
           <thead>
-            <tr style="background:#111">
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Fecha</th>
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Proforma</th>
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Placa</th>
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Vehículo</th>
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Cliente</th>
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Concepto</th>
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Concesionario</th>
-              <th style="padding:9px 10px;text-align:right;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Depósito $</th>
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Banco</th>
-              <th style="padding:9px 10px;text-align:left;font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em">Referencia</th>
+            <tr style="background:#fde047">
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">PROFORMA</th>
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">PLACA</th>
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">VEHICULO</th>
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">CLIENTE</th>
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">CONCEPTO</th>
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">CONSESIONARIO</th>
+              <th style="padding:10px 10px;text-align:right;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">DEPOSITO ($)</th>
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">BANCO VEHIMOTORS</th>
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">REFERENCIA</th>
+              <th style="padding:10px 10px;text-align:left;font-family:sans-serif;font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #ca8a04">FECHA</th>
             </tr>
           </thead>
           <tbody>
             ${filas}
             <tr style="background:#111">
-              <td colspan="7" style="padding:12px 10px;font-family:sans-serif;font-size:12px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.05em">TOTAL ${items.length} pago${items.length > 1 ? 's' : ''}</td>
-              <td style="padding:12px 10px;text-align:right;font-family:sans-serif;font-size:14px;font-weight:800;color:#22c55e">$${fmtN(totalUSD)}</td>
-              <td colspan="2" style="padding:12px 10px"></td>
+              <td colspan="6" style="padding:12px 10px;font-family:sans-serif;font-size:12px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.05em">TOTAL ${items.length} pago${items.length > 1 ? 's' : ''}</td>
+              <td style="padding:12px 10px;text-align:right;font-family:sans-serif;font-size:14px;font-weight:800;color:#22c55e;white-space:nowrap">$${fmtN(totalUSD)}</td>
+              <td colspan="3" style="padding:12px 10px"></td>
             </tr>
           </tbody>
         </table>
