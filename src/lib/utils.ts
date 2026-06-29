@@ -23,6 +23,25 @@ export function sanitizeSearch(q: string): string {
   return q.replace(/[%_*(),[\]]/g, '').trim().slice(0, 100)
 }
 
+// Suma N meses a una fecha conservando el mismo día del mes.
+// Si el mes destino no tiene ese día (ej: 31 enero + 1 mes), usa el último día disponible.
+// Acepta string 'YYYY-MM-DD' o Date. Devuelve Date.
+export function addMonthsSafe(date: string | Date, months: number): Date {
+  let base: Date
+  if (typeof date === 'string') {
+    base = new Date(date + (date.length === 10 ? 'T12:00:00' : ''))
+  } else {
+    base = new Date(date)
+  }
+  const targetDay = base.getDate()
+  const result = new Date(base)
+  result.setDate(1)
+  result.setMonth(result.getMonth() + months)
+  const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate()
+  result.setDate(Math.min(targetDay, lastDay))
+  return result
+}
+
 export function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-VE', {
     day: '2-digit', month: '2-digit', year: 'numeric'

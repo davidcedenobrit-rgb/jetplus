@@ -5,21 +5,21 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Save, AlertCircle, CheckCircle2, Clock, Edit3, Shield, RefreshCw, Car, CreditCard } from 'lucide-react'
 import Link from 'next/link'
+import { addMonthsSafe } from '@/lib/utils'
 
 type EstadoCuota = 'pendiente' | 'pagada' | 'vencida'
 
 // Calcula la fecha de vencimiento de la cuota N (1-based) desde fecha_inicio
+// Para frecuencia mensual/único pago: usa addMonthsSafe (mismo día del mes)
 function calcularFechaVencimiento(fechaInicio: string, numeroCuota: number, frecuencia: string): string {
+  if (frecuencia === 'mensual' || frecuencia === 'único pago') {
+    return addMonthsSafe(fechaInicio, numeroCuota).toISOString().split('T')[0]
+  }
   const base = new Date(fechaInicio + 'T12:00:00')
-  if (frecuencia === 'mensual') {
-    base.setMonth(base.getMonth() + numeroCuota)
-  } else if (frecuencia === 'quincenal') {
+  if (frecuencia === 'quincenal') {
     base.setDate(base.getDate() + numeroCuota * 15)
   } else if (frecuencia === 'semanal') {
     base.setDate(base.getDate() + numeroCuota * 7)
-  } else {
-    // único pago — misma fecha para todas
-    base.setMonth(base.getMonth() + numeroCuota)
   }
   return base.toISOString().split('T')[0]
 }

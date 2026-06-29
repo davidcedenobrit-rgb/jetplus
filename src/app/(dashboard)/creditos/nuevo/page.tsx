@@ -8,7 +8,7 @@ import Link from 'next/link'
 import type { Cliente, Vehiculo } from '@/types/database'
 import { CreditoSchema } from '@/lib/validations'
 import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
-import { sanitizeSearch } from '@/lib/utils'
+import { sanitizeSearch, addMonthsSafe } from '@/lib/utils'
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
@@ -374,11 +374,16 @@ export default function NuevoCreditoPage() {
         let restante = Math.round(montoHistorico * 100) / 100
         const mc = Math.round(montoCuota * 100) / 100
         return Array.from({ length: n }, (_, i) => {
-          const fecha = new Date(fechaBase)
-          if (frecuencia === 'semanal') fecha.setDate(fecha.getDate() + (i + 1) * 7)
-          else if (frecuencia === 'quincenal') fecha.setDate(fecha.getDate() + (i + 1) * 15)
-          else if (frecuencia === 'trimestral') fecha.setMonth(fecha.getMonth() + 3 * (i + 1))
-          else fecha.setMonth(fecha.getMonth() + (i + 1))
+          let fecha: Date
+          if (frecuencia === 'semanal') {
+            fecha = new Date(fechaBase); fecha.setDate(fecha.getDate() + (i + 1) * 7)
+          } else if (frecuencia === 'quincenal') {
+            fecha = new Date(fechaBase); fecha.setDate(fecha.getDate() + (i + 1) * 15)
+          } else if (frecuencia === 'trimestral') {
+            fecha = addMonthsSafe(fechaBase, 3 * (i + 1))
+          } else {
+            fecha = addMonthsSafe(fechaBase, i + 1)
+          }
           let estado = 'pendiente', monto_pagado = 0
           if (restante >= mc) {
             estado = 'pagada'; monto_pagado = mc
@@ -504,14 +509,12 @@ export default function NuevoCreditoPage() {
         concepto: 'Reserva inicial — Asegúrate con $500',
       }
       cuotasData = [cuota0, ...cuotasAC500.map((c, i) => {
-        const fecha = new Date(fechaInicio)
-        fecha.setDate(fecha.getDate() + (i * 30))
+        const fecha = addMonthsSafe(fechaInicio, i)
         return { credito_id: creditoCreado.id, numero_cuota: c.numero, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: c.monto, estado: 'pendiente', mora: 0 }
       })]
     } else if (plan === 'credito_40_60' && calc4060) {
       cuotasData = Array.from({ length: 24 }, (_, i) => {
-        const fecha = new Date(fechaInicio)
-        fecha.setMonth(fecha.getMonth() + (i + 1))
+        const fecha = addMonthsSafe(fechaInicio, i + 1)
         return { credito_id: creditoCreado.id, numero_cuota: i + 1, fecha_vencimiento: fecha.toISOString().split('T')[0], monto: calc4060.cuota, estado: 'pendiente', mora: 0 }
       })
     }
