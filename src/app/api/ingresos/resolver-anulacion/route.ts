@@ -77,19 +77,22 @@ export async function POST(req: Request) {
 
         const nuevoEstado = totalPagado <= 0
           ? (vencida ? 'vencida' : 'pendiente')
-          : totalPagado >= Number(cuota.monto) ? 'pagada' : 'parcial'
+          : totalPagado >= Number(cuota.monto) ? 'pagada' : 'abono_parcial'
 
         await admin.from('cuotas').update({ estado: nuevoEstado }).eq('id', ci.cuota_id)
 
-        // Recalcular saldo del crédito
+        // Recalcular saldo del crédito (descontando montos ya pagados de cuotas parciales)
         const { data: todasCuotas } = await admin
           .from('cuotas')
-          .select('id, monto')
+          .select('id, monto, monto_pagado')
           .eq('credito_id', cuota.credito_id)
           .neq('estado', 'pagada')
 
         if (todasCuotas) {
-          const saldoPendiente = todasCuotas.reduce((s: number, c: any) => s + Number(c.monto), 0)
+          const saldoPendiente = todasCuotas.reduce(
+            (s: number, c: any) => s + Math.max(0, Number(c.monto) - Number(c.monto_pagado ?? 0)),
+            0,
+          )
           await admin.from('creditos').update({ saldo: saldoPendiente }).eq('id', cuota.credito_id)
         }
       }
