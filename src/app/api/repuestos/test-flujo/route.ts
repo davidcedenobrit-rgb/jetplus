@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       numero,
       estado: 'cotizacion_enviada',
       token_respuesta: token,
-      notas: '🧪 SOLICITUD DE PRUEBA — Se puede borrar al terminar',
+      solicitado_por_email: '🧪 SOLICITUD DE PRUEBA',
     })
     .select('id, numero, token_respuesta')
     .single()
