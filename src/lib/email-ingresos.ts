@@ -159,8 +159,9 @@ function fmtFechaCorta(iso: string) {
 export async function enviarReporteLoteVehimotors(opts: {
   items: ReporteLoteItem[]
   resumenTexto?: string
+  destinatariosOverride?: string[]   // si se pasa, ignora TO_VEHIMOTORS (útil para tests)
 }) {
-  const { items, resumenTexto } = opts
+  const { items, resumenTexto, destinatariosOverride } = opts
   if (items.length === 0) return
 
   const resend = getResend()
@@ -246,10 +247,13 @@ export async function enviarReporteLoteVehimotors(opts: {
     ? `Reporte de pago a VM — ${items[0].clienteNombre} · $${fmtN(totalUSD)}`
     : `Reporte consolidado VM — ${items.length} pagos · $${fmtN(totalUSD)}`
 
+  const destinatariosFinal = destinatariosOverride ?? TO_VEHIMOTORS
+  const asuntoFinal = destinatariosOverride ? `[PRUEBA] ${asunto}` : asunto
+
   const { error } = await resend.emails.send({
     from: FROM,
-    to: TO_VEHIMOTORS,
-    subject: asunto,
+    to: destinatariosFinal,
+    subject: asuntoFinal,
     html,
   })
   if (error) throw new Error(`Resend error: ${error.name ?? 'unknown'}`)
