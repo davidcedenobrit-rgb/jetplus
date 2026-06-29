@@ -154,7 +154,9 @@ export default async function CreditoDetallePage({
   const cuotasPagadas    = cuotasEnriquecidas.filter(c => c.estado === 'pagada').length
   const cuotasPendientes = cuotasEnriquecidas.filter(c => c.estado === 'pendiente').length
   const cuotasVencidas   = cuotasEnriquecidas.filter(c => c.estado === 'vencida').length
-  const cuotasAbono      = cuotasEnriquecidas.filter(c => c.estado === 'abono_parcial').length
+  // Abono parcial: separa los que ya vencieron de los que aún no
+  const cuotasAbonoVencido = cuotasEnriquecidas.filter(c => c.estado === 'abono_parcial' && c.fecha_vencimiento < hoyStr).length
+  const cuotasAbono        = cuotasEnriquecidas.filter(c => c.estado === 'abono_parcial' && c.fecha_vencimiento >= hoyStr).length
   // Desglose de pendientes: vencida visual (pasada), por cobrar (hoy…+7d), al día (>7d)
   const cuotasVencidasVisual = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento < hoyStr).length
   const cuotasPorCobrar  = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento >= hoyStr && c.fecha_vencimiento <= en7Str).length
@@ -260,7 +262,7 @@ export default async function CreditoDetallePage({
                 <p className="text-[10px] text-green-600">Pagadas</p>
               </div>
               <div className="bg-red-50 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-red-700">{cuotasVencidas + cuotasVencidasVisual}</p>
+                <p className="text-lg font-bold text-red-700">{cuotasVencidas + cuotasVencidasVisual + cuotasAbonoVencido}</p>
                 <p className="text-[10px] text-red-600">Vencidas</p>
               </div>
               <div className="bg-yellow-50 rounded-lg p-2 text-center">
@@ -271,10 +273,13 @@ export default async function CreditoDetallePage({
                 <p className="text-lg font-bold text-gray-500">{cuotasAlDia}</p>
                 <p className="text-[10px] text-gray-400">Al día</p>
               </div>
-              {cuotasAbono > 0 && (
+              {(cuotasAbono + cuotasAbonoVencido) > 0 && (
                 <div className="bg-orange-50 rounded-lg p-2 text-center col-span-2">
-                  <p className="text-lg font-bold text-orange-700">{cuotasAbono}</p>
-                  <p className="text-[10px] text-orange-600">Abono parcial</p>
+                  <p className="text-lg font-bold text-orange-700">{cuotasAbono + cuotasAbonoVencido}</p>
+                  <p className="text-[10px] text-orange-600">
+                    Abono parcial
+                    {cuotasAbonoVencido > 0 && <span className="text-red-600 font-bold"> · {cuotasAbonoVencido} vencido{cuotasAbonoVencido > 1 ? 's' : ''}</span>}
+                  </p>
                 </div>
               )}
             </div>
@@ -530,10 +535,12 @@ export default async function CreditoDetallePage({
                       const esVencida       = cuota.estado === 'vencida'
                       const esPendiente     = cuota.estado === 'pendiente'
                       const esVencidaVisual = esPendiente && cuota.fecha_vencimiento < hoyStr
+                      const esAbonoVencido  = esAbono && cuota.fecha_vencimiento < hoyStr
                       const esPorCobrar     = esPendiente && !esVencidaVisual && cuota.fecha_vencimiento <= en7Str
                       const esAlDia         = esPendiente && cuota.fecha_vencimiento >  en7Str
 
                       const rowBg = esPagada        ? 'bg-green-50/50'
+                                  : esAbonoVencido  ? 'bg-red-50/40'
                                   : esAbono         ? 'bg-amber-50/60'
                                   : esVencida || esVencidaVisual ? 'bg-red-50/40'
                                   : esPorCobrar     ? 'bg-yellow-50/40'
@@ -552,7 +559,7 @@ export default async function CreditoDetallePage({
                         </td>
 
                         {/* Vencimiento */}
-                        <td className={`px-3 py-3 text-sm ${esVencida || esVencidaVisual ? 'text-red-600 font-semibold' : 'text-oriental-gray'}`}>
+                        <td className={`px-3 py-3 text-sm ${esVencida || esVencidaVisual || esAbonoVencido ? 'text-red-600 font-semibold' : 'text-oriental-gray'}`}>
                           {formatDate(cuota.fecha_vencimiento)}
                         </td>
 
@@ -604,9 +611,13 @@ export default async function CreditoDetallePage({
                             </div>
                           ) : esAbono ? (
                             <div className="space-y-1.5">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                                <CircleDot size={12} className="text-amber-600" />
-                                Abono parcial
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                esAbonoVencido
+                                  ? 'bg-red-100 text-red-800 border-red-300'
+                                  : 'bg-amber-100 text-amber-800 border-amber-200'
+                              }`}>
+                                <CircleDot size={12} className={esAbonoVencido ? 'text-red-600' : 'text-amber-600'} />
+                                {esAbonoVencido ? 'Abono parcial vencido' : 'Abono parcial'}
                               </span>
                               <Link href={pagoUrl} className="flex items-center gap-1 text-[11px] text-oriental-red hover:text-oriental-black font-medium transition-colors">
                                 <PlusCircle size={11} />
@@ -760,11 +771,11 @@ export default async function CreditoDetallePage({
         {/* Contadores cuotas */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
           {[
-            { count: cuotasPagadas,   label: 'Pagadas',       bg: '#f0fdf4', color: '#15803d', border: '#d1fae5' },
-            { count: cuotasVencidas,  label: 'Vencidas',      bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
-            { count: cuotasPorCobrar, label: 'Por cobrar',    bg: '#fefce8', color: '#a16207', border: '#fef08a' },
-            { count: cuotasAlDia,     label: 'Al día',        bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb' },
-            { count: cuotasAbono,     label: 'Abono parcial', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+            { count: cuotasPagadas,                                          label: 'Pagadas',       bg: '#f0fdf4', color: '#15803d', border: '#d1fae5' },
+            { count: cuotasVencidas + cuotasVencidasVisual + cuotasAbonoVencido, label: 'Vencidas',  bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
+            { count: cuotasPorCobrar,                                        label: 'Por cobrar',    bg: '#fefce8', color: '#a16207', border: '#fef08a' },
+            { count: cuotasAlDia,                                            label: 'Al día',        bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb' },
+            { count: cuotasAbono + cuotasAbonoVencido,                       label: 'Abono parcial', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
           ].filter(item => item.count > 0 || item.label === 'Pagadas' || item.label === 'Vencidas').map(item => (
             <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.border}`, borderRadius: '8px', padding: '8px 14px', minWidth: '90px', textAlign: 'center' }}>
               <p style={{ fontSize: '18px', fontWeight: '800', color: item.color }}>{item.count}</p>
@@ -793,19 +804,24 @@ export default async function CreditoDetallePage({
               const esPagada       = cuota.estado === 'pagada'
               const esAbono        = cuota.estado === 'abono_parcial'
               const esVencida      = cuota.estado === 'vencida'
-              const esPorCobrarPr  = cuota.estado === 'pendiente' && cuota.fecha_vencimiento <= en7Str
+              const esVencidoFecha = cuota.fecha_vencimiento < hoyStr
+              const esAbonoVencido = esAbono && esVencidoFecha
+              const esVencidaVisualPr = cuota.estado === 'pendiente' && esVencidoFecha
+              const esPorCobrarPr  = cuota.estado === 'pendiente' && !esVencidaVisualPr && cuota.fecha_vencimiento <= en7Str
               const esAlDiaPr      = cuota.estado === 'pendiente' && cuota.fecha_vencimiento >  en7Str
 
-              const rowBg = esPagada      ? '#f0fdf4'
-                          : esAbono       ? '#fff7ed'
-                          : esVencida     ? '#fff1f2'
-                          : esPorCobrarPr ? '#fefce8'
+              const rowBg = esPagada                      ? '#f0fdf4'
+                          : esAbonoVencido                ? '#fff1f2'
+                          : esAbono                       ? '#fff7ed'
+                          : esVencida || esVencidaVisualPr ? '#fff1f2'
+                          : esPorCobrarPr                 ? '#fefce8'
                           : idx % 2 === 0 ? '#ffffff' : '#f9fafb'
 
-              const estadoStyle = esPagada      ? { background: '#dcfce7', color: '#15803d' }
-                                : esAbono       ? { background: '#ffedd5', color: '#c2410c' }
-                                : esVencida     ? { background: '#fee2e2', color: '#b91c1c' }
-                                : esPorCobrarPr ? { background: '#fef9c3', color: '#a16207' }
+              const estadoStyle = esPagada                       ? { background: '#dcfce7', color: '#15803d' }
+                                : esAbonoVencido                 ? { background: '#fee2e2', color: '#b91c1c' }
+                                : esAbono                        ? { background: '#ffedd5', color: '#c2410c' }
+                                : esVencida || esVencidaVisualPr ? { background: '#fee2e2', color: '#b91c1c' }
+                                : esPorCobrarPr                  ? { background: '#fef9c3', color: '#a16207' }
                                 : { background: '#f3f4f6', color: '#6b7280' }
 
               const planTipo = cuota._plan_tipo
@@ -828,7 +844,7 @@ export default async function CreditoDetallePage({
                       {cuota.concepto ?? planLabel(planTipo)}
                     </span>
                   </td>
-                  <td style={{ padding: '6px 8px', color: esVencida ? '#b91c1c' : '#555', fontWeight: esVencida ? '700' : '400', borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '6px 8px', color: esVencida || esVencidaVisualPr || esAbonoVencido ? '#b91c1c' : '#555', fontWeight: esVencida || esVencidaVisualPr || esAbonoVencido ? '700' : '400', borderBottom: '1px solid #f3f4f6' }}>
                     {formatDate(cuota.fecha_vencimiento)}
                   </td>
                   <td style={{ padding: '6px 8px', fontWeight: '700', color: '#111', borderBottom: '1px solid #f3f4f6' }}>
@@ -845,10 +861,11 @@ export default async function CreditoDetallePage({
                   </td>
                   <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>
                     <span style={{ ...estadoStyle, padding: '2px 8px', borderRadius: '99px', fontSize: '9px', fontWeight: '700' }}>
-                      {cuota.estado === 'pagada' ? 'Pagada'
-                       : cuota.estado === 'abono_parcial' ? 'Abono parcial'
-                       : cuota.estado === 'vencida' ? 'Vencida'
-                       : cuota.fecha_vencimiento <= en7Str ? 'Por cobrar'
+                      {esPagada ? 'Pagada'
+                       : esAbonoVencido ? 'Abono parcial vencido'
+                       : esAbono ? 'Abono parcial'
+                       : esVencida || esVencidaVisualPr ? 'Vencida'
+                       : esPorCobrarPr ? 'Por cobrar'
                        : 'Al día'}
                     </span>
                   </td>
