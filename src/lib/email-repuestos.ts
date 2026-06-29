@@ -84,7 +84,7 @@ export async function enviarSolicitudCotizacion(opts: {
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic, podrán agregar observaciones y adjuntar su cotización.</p>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
 }
 
 // ── 2. Notificación interna cuando Vehimotors responde ─────────────
@@ -138,7 +138,7 @@ export async function enviarAprobacionCotizacion(opts: {
     ? `Cotización ${numeroCotizacion} aprobada de ${numero}`
     : `✅ Cotización aprobada ${numero} — La Oriental Automotors`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: asuntoAprobacion, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asuntoAprobacion, html: wrap(body) })
 }
 
 // ── 4. Notificación interna: factura recibida ──────────────────────
@@ -186,7 +186,7 @@ export async function enviarReporteRecepcion(opts: {
     ? `⚠️ Novedad en pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} — La Oriental Automotors`
     : `✅ Pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} recibido sin novedad`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: asunto, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asunto, html: wrap(body) })
 }
 export async function enviarConfirmacionPago(opts: {
   numero: string; solicitudId: string; tokenPago: string
@@ -220,7 +220,7 @@ export async function enviarConfirmacionPago(opts: {
     ? `PAGO DE COTIZACIÓN ${numeroCotizacion} DEL PEDIDO ${numero}`
     : `💰 Pago realizado — Repuestos ${numero}`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, subject: asuntoPago, html: wrap(body) })
+  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asuntoPago, html: wrap(body) })
 }
 
 // ── 8. Email a almacén para cargar guía ──────────────────────────
@@ -249,6 +249,7 @@ export async function enviarEmailAlmacen(opts: {
     from: FROM,
     to: correosAlmacen,
     cc: EQUIPO_INTERNO,
+    replyTo: EQUIPO_INTERNO,
     subject: `📦 Registrar datos de envío de Cotización ${numeroCotizacion} del pedido ${numero}`,
     html: wrap(body),
   })
