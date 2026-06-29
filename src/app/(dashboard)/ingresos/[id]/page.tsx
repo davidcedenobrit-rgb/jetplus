@@ -54,6 +54,15 @@ export default async function IngresoDetallePage({
     .eq('ingreso_id', id)
     .order('created_at', { ascending: true })
 
+  // Reportes a Vehimotors ya hechos de este ingreso
+  const { data: reportesVM } = await supabase
+    .from('reportes_vehimotors')
+    .select('id, monto_reportado, moneda, estado, enviado_at, confirmado_at, observaciones, placa, proforma_vehimotors, clientes(nombre, cedula_rif)')
+    .eq('ingreso_id', id)
+    .order('enviado_at', { ascending: true })
+
+  const totalReportadoVM = (reportesVM ?? []).reduce((s, r) => s + Number(r.monto_reportado), 0)
+
   // Cuotas aplicadas en este ingreso (para el recibo)
   const { data: cuotasAplicadas } = await supabase
     .from('cuota_ingresos')
@@ -517,6 +526,9 @@ export default async function IngresoDetallePage({
             moneda={ingreso.moneda}
             numeroRecibo={ingreso.numero_recibo}
             rol={rol}
+            metodoPago={ingreso.metodo_pago}
+            clienteOriginal={cliente ? { id: ingreso.cliente_id, nombre: cliente.nombre, cedula_rif: cliente.cedula_rif ?? null } : null}
+            totalYaReportadoVM={totalReportadoVM}
           />
 
           {/* ── Enviar al cliente ────────────────────────────────── */}
@@ -534,6 +546,65 @@ export default async function IngresoDetallePage({
             referencia={ingreso.referencia ?? null}
             rol={rol}
           />
+
+          {/* ── Historial de reportes a Vehimotors ────────────────── */}
+          {(reportesVM ?? []).length > 0 && (
+            <div className="card p-5 border border-indigo-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                  <Building2 size={14} className="text-indigo-600" />
+                  Reportes a Vehimotors ({(reportesVM ?? []).length})
+                </h3>
+                <div className="text-right">
+                  <p className="text-[10px] text-indigo-600 uppercase tracking-wider">Total reportado</p>
+                  <p className="text-sm font-extrabold text-indigo-900">
+                    ${totalReportadoVM.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {(reportesVM ?? []).map((r: any) => (
+                  <div key={r.id} className="bg-indigo-50/50 rounded-lg px-3 py-2.5 border border-indigo-100">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-oriental-black truncate">{r.clientes?.nombre ?? '—'}</p>
+                        <p className="text-[11px] text-oriental-gray font-mono">
+                          {r.placa ? `${r.placa} · ` : ''}{r.proforma_vehimotors ?? '—'}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-bold text-indigo-900">
+                          ${Number(r.monto_reportado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${
+                          r.estado === 'confirmado' ? 'text-green-700' :
+                          r.estado === 'rechazado' ? 'text-red-700' : 'text-amber-700'
+                        }`}>
+                          {r.estado === 'confirmado' ? '✓ Confirmado' :
+                           r.estado === 'rechazado' ? '✗ Rechazado' : '⏱ En espera'}
+                        </p>
+                      </div>
+                    </div>
+                    {r.observaciones && (
+                      <p className="text-[11px] text-oriental-gray mt-1.5 italic">{r.observaciones}</p>
+                    )}
+                    <p className="text-[10px] text-oriental-gray mt-1">
+                      {new Date(r.enviado_at).toLocaleString('es-VE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {totalReportadoVM < Number(ingreso.monto) && (
+                <div className="mt-3 pt-3 border-t border-indigo-100 flex justify-between items-center">
+                  <span className="text-xs font-semibold text-amber-700">Saldo por reportar</span>
+                  <span className="text-sm font-bold text-amber-700">
+                    ${(Number(ingreso.monto) - totalReportadoVM).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Enviado a Carla: comprobante y observaciones ─────── */}
           {ingreso.estado === 'enviado_carla' && (
             <div className="card p-5 space-y-4 border border-purple-200">

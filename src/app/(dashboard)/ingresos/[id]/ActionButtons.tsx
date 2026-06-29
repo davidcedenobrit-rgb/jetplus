@@ -8,6 +8,7 @@ import {
   Send, Landmark, Building2, Printer, BadgeCheck,
   User, Clock, X, Upload, Hash, CreditCard, Ban, ShieldAlert, MessageSquare
 } from 'lucide-react'
+import ReporteVehimotorsModal from './ReporteVehimotorsModal'
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const ROL_PUEDE_SOLICITAR = ['mary', 'leysdem', 'jose', 'admin', 'director']
 const ROL_PUEDE_RESOLVER = ['jose', 'admin', 'director']
@@ -19,6 +20,9 @@ interface Props {
   moneda: string
   numeroRecibo: string
   rol?: string
+  metodoPago?: string | null
+  clienteOriginal?: { id: string; nombre: string; cedula_rif: string | null } | null
+  totalYaReportadoVM?: number
 }
 
 // ─── Modal: Solicitar anulación (mary/leysdem) ────────────────────────────────
@@ -444,7 +448,10 @@ function ModalConfirmarDeposito({
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export default function ActionButtons({ ingresoId, estado, monto, moneda, numeroRecibo, rol = 'editor' }: Props) {
+export default function ActionButtons({
+  ingresoId, estado, monto, moneda, numeroRecibo, rol = 'editor',
+  metodoPago = null, clienteOriginal = null, totalYaReportadoVM = 0,
+}: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState('')
@@ -452,6 +459,7 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
   const [showModalConfirmar, setShowModalConfirmar] = useState(false)
   const [showModalSolicitarAnulacion, setShowModalSolicitarAnulacion] = useState(false)
   const [showModalRechazarAnulacion, setShowModalRechazarAnulacion] = useState(false)
+  const [showModalReporteVM, setShowModalReporteVM] = useState(false)
   const [anulacionError, setAnulacionError] = useState('')
 
   const esDirector = ROL_DIRECTOR.includes(rol)
@@ -709,18 +717,32 @@ export default function ActionButtons({ ingresoId, estado, monto, moneda, numero
               </button>
             )}
 
-            {/* Reportar a Vehimotors — llama API y envía email */}
-            {showReportarVehimotors && (
+            {/* Reportar a Vehimotors — abre modal nuevo */}
+            {showReportarVehimotors && clienteOriginal && (
               <button
-                onClick={handleReportarVehimotors}
+                onClick={() => setShowModalReporteVM(true)}
                 disabled={loading !== ''}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50"
               >
                 <Building2 size={16} />
-                {loading === 'reportando_vehimotors' ? 'Enviando...' : 'Reportar a Vehimotors'}
+                Reportar a Vehimotors
               </button>
             )}
           </div>
+        )}
+
+        {/* Modal de reporte a Vehimotors */}
+        {showModalReporteVM && clienteOriginal && (
+          <ReporteVehimotorsModal
+            ingresoId={ingresoId}
+            ingresoMonto={monto}
+            ingresoMoneda={moneda}
+            metodoPago={metodoPago}
+            clienteOriginal={clienteOriginal}
+            totalYaReportado={totalYaReportadoVM}
+            rol={rol}
+            onClose={() => setShowModalReporteVM(false)}
+          />
         )}
 
         <div className="border-t border-gray-100 mt-4 pt-4 space-y-2">
