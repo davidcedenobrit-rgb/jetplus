@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { formatDate } from '@/lib/utils'
+import { formatDate, METODOS_PAGO } from '@/lib/utils'
 import { ArrowLeft, Printer, Search } from 'lucide-react'
 import Link from 'next/link'
 
@@ -77,6 +77,7 @@ export default function ReporteIngresosPage() {
   const [fechaHasta, setFechaHasta] = useState(hoy)
   const [estado, setEstado] = useState('')
   const [moneda, setMoneda] = useState('')
+  const [metodoPago, setMetodoPago] = useState('')
   const [ingresos, setIngresos] = useState<Ingreso[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -93,11 +94,12 @@ export default function ReporteIngresosPage() {
 
     if (estado) q = q.eq('estado', estado)
     if (moneda) q = q.eq('moneda', moneda)
+    if (metodoPago) q = q.eq('metodo_pago', metodoPago)
 
     const { data } = await q
     setIngresos((data ?? []) as unknown as Ingreso[])
     setLoading(false)
-  }, [fechaDesde, fechaHasta, estado, moneda])
+  }, [fechaDesde, fechaHasta, estado, moneda, metodoPago])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -118,6 +120,7 @@ export default function ReporteIngresosPage() {
     const etiquetaHasta = fmtDate(fechaHasta)
     const etiquetaEst = estado ? (ESTADOS_LABEL[estado] ?? estado) : 'Todos los estados'
     const etiquetaMon = moneda || 'Todas las monedas'
+    const etiquetaMet = metodoPago || 'Todos los métodos'
 
     const filas = Object.entries(grupos).map(([concepto, items]) => {
       const subUSD = items.reduce((s, i) => s + montoUSD(i), 0)
@@ -193,6 +196,7 @@ export default function ReporteIngresosPage() {
     <div class="report-title">REPORTE DE INGRESOS</div>
     <div class="meta">Período: <span>${escapeHtml(etiquetaDesde)}</span> al <span>${escapeHtml(etiquetaHasta)}</span></div>
     <div class="meta">Estado: <span>${escapeHtml(etiquetaEst)}</span> &nbsp;·&nbsp; Moneda: <span>${escapeHtml(etiquetaMon)}</span></div>
+    <div class="meta">Método: <span>${escapeHtml(etiquetaMet)}</span></div>
     <div class="meta" style="margin-top:4px">Generado: ${new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
   </div>
 </div>
@@ -274,7 +278,7 @@ export default function ReporteIngresosPage() {
 
       {/* Filtros */}
       <div className="card p-4 mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div>
             <label className="label">Desde</label>
             <input type="date" className="input" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
@@ -304,6 +308,15 @@ export default function ReporteIngresosPage() {
               <option value="USD">USD</option>
               <option value="USDT">USDT</option>
               <option value="VES">VES (Bs.)</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Método de pago</label>
+            <select className="select" value={metodoPago} onChange={e => setMetodoPago(e.target.value)}>
+              <option value="">Todos los métodos</option>
+              {METODOS_PAGO.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
             </select>
           </div>
         </div>

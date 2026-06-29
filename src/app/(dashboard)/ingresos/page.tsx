@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL } from '@/lib/utils'
+import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL, METODOS_PAGO } from '@/lib/utils'
 import { Plus, Search, FileBarChart2 } from 'lucide-react'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
@@ -8,7 +8,7 @@ const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 export default async function IngresosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; placa?: string }>
+  searchParams: Promise<{ estado?: string; placa?: string; metodo?: string }>
 }) {
   const params = await searchParams
   const supabase = await createClient()
@@ -25,6 +25,7 @@ export default async function IngresosPage({
 
   if (params.estado) query = query.eq('estado', params.estado)
   if (params.placa) query = query.ilike('placa', `%${params.placa}%`)
+  if (params.metodo) query = query.eq('metodo_pago', params.metodo)
 
   const { data: ingresos } = await query
 
@@ -87,21 +88,59 @@ export default async function IngresosPage({
       </div>
 
       {/* Filtros rápidos */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {filtros.map(({ estado, label }) => (
-          <Link
-            key={estado || 'todos'}
-            href={estado ? `/ingresos?estado=${estado}` : '/ingresos'}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              params.estado === estado || (!params.estado && !estado)
-                ? 'bg-oriental-black text-white border-oriental-black'
-                : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
+      <div className="flex gap-2 mb-3 flex-wrap">
+        {filtros.map(({ estado, label }) => {
+          const qs = new URLSearchParams()
+          if (estado) qs.set('estado', estado)
+          if (params.metodo) qs.set('metodo', params.metodo)
+          if (params.placa) qs.set('placa', params.placa)
+          const href = qs.toString() ? `/ingresos?${qs.toString()}` : '/ingresos'
+          return (
+            <Link
+              key={estado || 'todos'}
+              href={href}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                params.estado === estado || (!params.estado && !estado)
+                  ? 'bg-oriental-black text-white border-oriental-black'
+                  : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              {label}
+            </Link>
+          )
+        })}
       </div>
+
+      {/* Filtro método de pago */}
+      <form method="GET" action="/ingresos" className="flex items-center gap-2 mb-6 flex-wrap">
+        {params.estado && <input type="hidden" name="estado" value={params.estado} />}
+        {params.placa && <input type="hidden" name="placa" value={params.placa} />}
+        <label className="text-xs font-semibold text-oriental-gray uppercase tracking-wider">Método:</label>
+        <select
+          name="metodo"
+          defaultValue={params.metodo ?? ''}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-oriental-black focus:outline-none focus:border-oriental-red"
+        >
+          <option value="">Todos los métodos</option>
+          {METODOS_PAGO.map(m => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+        <button type="submit" className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-oriental-black text-white hover:bg-gray-800 transition-colors">
+          Filtrar
+        </button>
+        {params.metodo && (() => {
+          const qs = new URLSearchParams()
+          if (params.estado) qs.set('estado', params.estado)
+          if (params.placa) qs.set('placa', params.placa)
+          const href = qs.toString() ? `/ingresos?${qs.toString()}` : '/ingresos'
+          return (
+            <Link href={href} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-oriental-gray border border-gray-200 hover:bg-gray-50 transition-colors">
+              Limpiar método
+            </Link>
+          )
+        })()}
+      </form>
 
       {/* Tabla */}
       <div className="card overflow-hidden">
