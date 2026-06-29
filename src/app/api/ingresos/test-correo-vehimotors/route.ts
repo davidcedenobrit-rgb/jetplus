@@ -10,9 +10,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  const to = req.nextUrl.searchParams.get('to')
-  if (!to || !to.includes('@')) {
-    return NextResponse.json({ error: 'Falta parámetro "to" con un correo válido' }, { status: 400 })
+  const toRaw = req.nextUrl.searchParams.get('to')
+  if (!toRaw || !toRaw.includes('@')) {
+    return NextResponse.json({ error: 'Falta parámetro "to" con un correo válido (o varios separados por coma)' }, { status: 400 })
+  }
+  const destinatarios = toRaw
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s.includes('@'))
+  if (destinatarios.length === 0) {
+    return NextResponse.json({ error: 'No se encontraron correos válidos en "to"' }, { status: 400 })
   }
 
   // Tipo de prueba: ?tipo=individual o ?tipo=lote (default: lote)
@@ -91,13 +98,13 @@ export async function GET(req: NextRequest) {
     await enviarReporteLoteVehimotors({
       items,
       resumenTexto: '🧪 CORREO DE PRUEBA — Estos datos NO corresponden a reportes reales. No requieren acción.',
-      destinatariosOverride: [to],
+      destinatariosOverride: destinatarios,
     })
 
     return NextResponse.json({
       ok: true,
-      mensaje: `Correo de prueba enviado a ${to}`,
-      destinatario: to,
+      mensaje: `Correo de prueba enviado a ${destinatarios.length} destinatario(s)`,
+      destinatarios,
       tipo,
       cantidad_items: items.length,
       total_usd: items.reduce((s, i) => s + i.montoUSD, 0).toFixed(2),
