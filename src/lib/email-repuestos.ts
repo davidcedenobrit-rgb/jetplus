@@ -64,8 +64,9 @@ function wrap(body: string) {
 // ── 1. Solicitud de cotización a Vehimotors ───────────────────────
 export async function enviarSolicitudCotizacion(opts: {
   solicitudId: string; numero: string; token: string; items: Item[]; notasAdicionales?: string
+  destinatariosOverride?: string[]   // si se pasa, ignora TO_VEHIMOTORS y EQUIPO_INTERNO
 }) {
-  const { solicitudId, numero, token, items, notasAdicionales } = opts
+  const { solicitudId, numero, token, items, notasAdicionales, destinatariosOverride } = opts
   const urlHay     = `${APP_URL}/api/repuestos/respuesta?id=${solicitudId}&token=${token}&tipo=hay_todo`
   const urlNoHay   = `${APP_URL}/api/repuestos/respuesta?id=${solicitudId}&token=${token}&tipo=no_hay`
   const urlParcial = `${APP_URL}/api/repuestos/respuesta?id=${solicitudId}&token=${token}&tipo=parcial`
@@ -84,7 +85,11 @@ export async function enviarSolicitudCotizacion(opts: {
     </div>
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic, podrán agregar observaciones y adjuntar su cotización.</p>`
 
-  return getResend().emails.send({ from: FROM, to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
+  const to       = destinatariosOverride ?? TO_VEHIMOTORS
+  const cc       = destinatariosOverride ? undefined : EQUIPO_INTERNO
+  const replyTo  = destinatariosOverride ?? EQUIPO_INTERNO
+
+  return getResend().emails.send({ from: FROM, to, cc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors`, html: wrap(body) })
 }
 
 // ── 2. Notificación interna cuando Vehimotors responde ─────────────
