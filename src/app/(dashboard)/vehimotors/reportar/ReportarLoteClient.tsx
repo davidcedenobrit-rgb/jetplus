@@ -115,6 +115,12 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
     return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
 
+  // Formato que respeta la moneda real: Bs. para VES, $ para USD/USDT
+  function fmtConMoneda(n: number, moneda: string) {
+    if (moneda === 'VES') return `Bs. ${fmt(n)}`
+    return `$${fmt(n)}`
+  }
+
   async function confirmarLote() {
     setEnviandoLote(true)
     setResultadoLote(null)
@@ -260,18 +266,23 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="font-bold text-oriental-black text-sm">${fmt(i.monto)}</span>
-                      <span className="block text-[10px] text-oriental-gray">{i.moneda}</span>
+                      <span className="font-bold text-oriental-black text-sm">{fmtConMoneda(i.monto, i.moneda)}</span>
+                      {i.moneda === 'VES' && i.tasaCambio && i.tasaCambio > 0 && (
+                        <span className="block text-[10px] text-oriental-gray">≈ ${fmt(i.monto / i.tasaCambio)}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {i.yaReportado > 0 ? (
-                        <span className="text-xs text-indigo-700 font-semibold">${fmt(i.yaReportado)}</span>
+                        <span className="text-xs text-indigo-700 font-semibold">{fmtConMoneda(i.yaReportado, i.moneda)}</span>
                       ) : (
                         <span className="text-xs text-gray-300">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="font-extrabold text-amber-700 text-sm">${fmt(i.saldo)}</span>
+                      <span className="font-extrabold text-amber-700 text-sm">{fmtConMoneda(i.saldo, i.moneda)}</span>
+                      {i.moneda === 'VES' && i.tasaCambio && i.tasaCambio > 0 && (
+                        <span className="block text-[10px] text-amber-600 font-normal">≈ ${fmt(i.saldo / i.tasaCambio)}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[11px] text-oriental-gray whitespace-nowrap">
                       {new Date(i.fechaPago + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })}
@@ -392,6 +403,8 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
 
               <p className="text-xs text-oriental-gray mb-3">
                 Cada reporte se asigna al cliente que pagó (mismo cliente). Para cambiar el cliente destino, usa el botón "Reportar" individual en cada fila.
+                <br />
+                <span className="text-amber-700 font-semibold">El monto se ingresa en la moneda original del ingreso</span> (Bs. para VES, $ para USD/USDT). El total se calcula en USD.
               </p>
 
               <table className="w-full text-sm">
@@ -400,34 +413,52 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
                     <th className="text-left px-2 py-2 text-[11px] font-semibold text-oriental-gray uppercase">Recibo</th>
                     <th className="text-left px-2 py-2 text-[11px] font-semibold text-oriental-gray uppercase">Cliente</th>
                     <th className="text-left px-2 py-2 text-[11px] font-semibold text-oriental-gray uppercase">Placa</th>
+                    <th className="text-center px-2 py-2 text-[11px] font-semibold text-oriental-gray uppercase">Mon.</th>
                     <th className="text-right px-2 py-2 text-[11px] font-semibold text-oriental-gray uppercase">Saldo</th>
                     <th className="text-right px-2 py-2 text-[11px] font-semibold text-indigo-700 uppercase">A reportar</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {ingresosSeleccionados.map(i => (
-                    <tr key={i.id}>
-                      <td className="px-2 py-2 font-mono text-[11px] text-oriental-gray">{i.numeroRecibo}</td>
-                      <td className="px-2 py-2 text-xs truncate max-w-[180px]" title={i.cliente?.nombre}>{i.cliente?.nombre ?? '—'}</td>
-                      <td className="px-2 py-2 text-[11px] font-mono">{i.placa ?? '—'}</td>
-                      <td className="px-2 py-2 text-right text-xs text-amber-700 font-bold">${fmt(i.saldo)}</td>
-                      <td className="px-2 py-2 text-right">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={montosLote[i.id] ?? i.saldo.toString()}
-                          onChange={e => setMontosLote(prev => ({ ...prev, [i.id]: e.target.value }))}
-                          className="w-28 px-2 py-1 border border-gray-200 rounded text-right text-sm font-bold focus:outline-none focus:border-indigo-500"
-                          disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0}
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                  {ingresosSeleccionados.map(i => {
+                    const montoActual = parseFloat(montosLote[i.id] ?? i.saldo.toString()) || 0
+                    const usdEquiv = i.moneda === 'VES' && i.tasaCambio && i.tasaCambio > 0 ? montoActual / i.tasaCambio : null
+                    return (
+                      <tr key={i.id}>
+                        <td className="px-2 py-2 font-mono text-[11px] text-oriental-gray">{i.numeroRecibo}</td>
+                        <td className="px-2 py-2 text-xs truncate max-w-[180px]" title={i.cliente?.nombre}>{i.cliente?.nombre ?? '—'}</td>
+                        <td className="px-2 py-2 text-[11px] font-mono">{i.placa ?? '—'}</td>
+                        <td className="px-2 py-2 text-center">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${i.moneda === 'VES' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
+                            {i.moneda}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 text-right text-xs text-amber-700 font-bold whitespace-nowrap">{fmtConMoneda(i.saldo, i.moneda)}</td>
+                        <td className="px-2 py-2 text-right">
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-oriental-gray font-bold">{i.moneda === 'VES' ? 'Bs.' : '$'}</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={montosLote[i.id] ?? i.saldo.toString()}
+                                onChange={e => setMontosLote(prev => ({ ...prev, [i.id]: e.target.value }))}
+                                className="w-28 px-2 py-1 border border-gray-200 rounded text-right text-sm font-bold focus:outline-none focus:border-indigo-500"
+                                disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0}
+                              />
+                            </div>
+                            {usdEquiv !== null && (
+                              <span className="text-[10px] text-oriental-gray mt-0.5">≈ ${fmt(usdEquiv)}</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-gray-200 bg-indigo-50">
-                    <td colSpan={4} className="px-2 py-3 text-right text-xs font-bold uppercase tracking-wider text-indigo-900">Total a reportar</td>
+                    <td colSpan={5} className="px-2 py-3 text-right text-xs font-bold uppercase tracking-wider text-indigo-900">Total consolidado en USD</td>
                     <td className="px-2 py-3 text-right text-lg font-extrabold text-indigo-900">${fmt(totalLoteUSD)}</td>
                   </tr>
                 </tfoot>

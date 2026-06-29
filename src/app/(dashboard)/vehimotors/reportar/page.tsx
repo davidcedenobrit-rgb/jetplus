@@ -96,10 +96,11 @@ export default async function ReportarPagosVMPage() {
           <p className="text-2xl font-extrabold text-oriental-black">{ingresosPendientes.length}</p>
         </div>
         <div className="card p-4 text-center">
-          <p className="text-[11px] text-amber-600 uppercase tracking-wider mb-1">Total a reportar</p>
+          <p className="text-[11px] text-amber-600 uppercase tracking-wider mb-1">Total a reportar (USD equiv.)</p>
           <p className="text-2xl font-extrabold text-amber-600">
             ${totalSaldo.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
+          <p className="text-[10px] text-oriental-gray mt-1">Bolívares convertidos con su tasa</p>
         </div>
         <div className="card p-4 text-center">
           <p className="text-[11px] text-red-600 uppercase tracking-wider mb-1">Directos a VM</p>
