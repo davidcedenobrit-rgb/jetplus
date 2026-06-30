@@ -160,8 +160,16 @@ export async function enviarReporteLoteVehimotors(opts: {
   items: ReporteLoteItem[]
   resumenTexto?: string
   destinatariosOverride?: string[]   // si se pasa, ignora TO_VEHIMOTORS (útil para tests)
+  asuntoCustom?: string              // asunto editable, si no se pasa se arma uno
+  deposito?: {
+    bancoOrigen: string | null
+    bancoDestino: string | null
+    referencia: string | null
+    fecha: string | null
+    comprobanteUrl: string | null
+  }
 }) {
-  const { items, resumenTexto, destinatariosOverride } = opts
+  const { items, resumenTexto, destinatariosOverride, asuntoCustom, deposito } = opts
   if (items.length === 0) return
 
   const resend = getResend()
@@ -198,6 +206,25 @@ export async function enviarReporteLoteVehimotors(opts: {
 
   const fechaHoy = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
 
+  // Bloque de depósito (solo si vienen datos)
+  const depositoBlock = deposito ? `
+    <div style="margin-top:20px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:16px 18px">
+      <p style="font-family:sans-serif;font-size:11px;font-weight:800;color:#15803d;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px">💵 Depósito bancario que cubre este lote</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-family:sans-serif;font-size:12px">
+        ${deposito.bancoOrigen ? `<tr><td style="color:#166534;padding:3px 0;width:40%">Banco origen:</td><td style="color:#111;font-weight:700">${deposito.bancoOrigen}</td></tr>` : ''}
+        ${deposito.bancoDestino ? `<tr><td style="color:#166534;padding:3px 0">Banco destino:</td><td style="color:#111;font-weight:700">${deposito.bancoDestino}</td></tr>` : ''}
+        ${deposito.referencia ? `<tr><td style="color:#166534;padding:3px 0">N° Referencia:</td><td style="color:#111;font-weight:700;font-family:'Courier New',monospace">${deposito.referencia}</td></tr>` : ''}
+        ${deposito.fecha ? `<tr><td style="color:#166534;padding:3px 0">Fecha:</td><td style="color:#111;font-weight:700">${fmtFechaCorta(deposito.fecha)}</td></tr>` : ''}
+      </table>
+      ${deposito.comprobanteUrl ? `
+      <div style="margin-top:12px">
+        <a href="${deposito.comprobanteUrl}" target="_blank" style="display:inline-block;padding:10px 18px;background:#16a34a;color:#fff;font-family:sans-serif;font-size:12px;font-weight:700;text-decoration:none;border-radius:8px">
+          📎 Ver comprobante del depósito
+        </a>
+      </div>` : ''}
+    </div>
+  ` : ''
+
   const html = `<div style="background:#fff;max-width:900px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;font-family:sans-serif">
     ${headerHTML()}
     <div style="padding:28px">
@@ -205,6 +232,7 @@ export async function enviarReporteLoteVehimotors(opts: {
       <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 6px">${titulo}</h1>
       <p style="font-family:sans-serif;font-size:13px;color:#6b7280;margin:0 0 4px">Fecha del reporte: ${fechaHoy}</p>
       ${resumenTexto ? `<p style="font-family:sans-serif;font-size:13px;color:#374151;margin:8px 0 0">${resumenTexto}</p>` : ''}
+      ${depositoBlock}
 
       <div style="margin-top:24px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
@@ -243,9 +271,10 @@ export async function enviarReporteLoteVehimotors(opts: {
     ${footerHTML()}
   </div>`
 
-  const asunto = items.length === 1
+  const asuntoDefault = items.length === 1
     ? `Reporte de pago a VM — ${items[0].clienteNombre} · $${fmtN(totalUSD)}`
     : `Reporte consolidado VM — ${items.length} pagos · $${fmtN(totalUSD)}`
+  const asunto = asuntoCustom?.trim() || asuntoDefault
 
   const destinatariosFinal = destinatariosOverride ?? TO_VEHIMOTORS
   const asuntoFinal = destinatariosOverride ? `[PRUEBA] ${asunto}` : asunto

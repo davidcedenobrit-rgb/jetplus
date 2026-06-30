@@ -171,7 +171,21 @@ export type ReporteLotePayload = {
   observaciones: string | null
 }
 
-export async function crearLoteReportesVehimotors(items: ReporteLotePayload[]) {
+export type DatosDeposito = {
+  bancoOrigen: string | null
+  bancoDestino: string | null
+  referencia: string | null
+  fecha: string | null
+  comprobanteUrl: string | null
+}
+
+const METODOS_EFECTIVO = ['Efectivo USD', 'Efectivo VES']
+
+export async function crearLoteReportesVehimotors(
+  items: ReporteLotePayload[],
+  deposito?: DatosDeposito,
+  asuntoCorreo?: string | null,
+) {
   if (items.length === 0) return { error: 'Lote vacío' }
 
   const supabase = await createClient()
@@ -182,6 +196,24 @@ export async function crearLoteReportesVehimotors(items: ReporteLotePayload[]) {
   const esJose = ROL_DIRECTOR.includes(rol)
 
   const admin = await createAdminClient()
+
+  // Pre-validación: si hay pagos en efectivo en el lote, exigir datos de depósito + comprobante
+  const ingresosLote = await admin
+    .from('ingresos')
+    .select('id, numero_recibo, metodo_pago')
+    .in('id', items.map(i => i.ingresoId))
+  const tieneEfectivo = (ingresosLote.data ?? []).some(i => METODOS_EFECTIVO.includes(i.metodo_pago ?? ''))
+  if (tieneEfectivo) {
+    const faltantes: string[] = []
+    if (!deposito?.bancoDestino) faltantes.push('banco destino')
+    if (!deposito?.referencia) faltantes.push('referencia')
+    if (!deposito?.fecha) faltantes.push('fecha del depósito')
+    if (!deposito?.comprobanteUrl) faltantes.push('comprobante')
+    if (faltantes.length > 0) {
+      return { error: `El lote contiene pagos en efectivo. Faltan datos del depósito bancario: ${faltantes.join(', ')}.` }
+    }
+  }
+
   const itemsCorreo: ReporteLoteItem[] = []
   const errores: string[] = []
   let guardados = 0
@@ -255,7 +287,7 @@ export async function crearLoteReportesVehimotors(items: ReporteLotePayload[]) {
       if (veh) vehiculoLabel = `${veh.marca} ${veh.modelo}${veh.placa ? ' · ' + veh.placa : ''}`
     }
 
-    // Insertar reporte
+    // Insertar reporte (incluye datos del depósito si vienen)
     const { error: errInsert } = await admin
       .from('reportes_vehimotors')
       .insert({
@@ -270,6 +302,12 @@ export async function crearLoteReportesVehimotors(items: ReporteLotePayload[]) {
         monto_bs: ingreso.monto_bs,
         registrado_por: user.id,
         observaciones: payload.observaciones,
+        deposito_banco_origen: deposito?.bancoOrigen ?? null,
+        deposito_banco_destino: deposito?.bancoDestino ?? null,
+        deposito_referencia: deposito?.referencia ?? null,
+        deposito_fecha: deposito?.fecha ?? null,
+        deposito_comprobante_url: deposito?.comprobanteUrl ?? null,
+        asunto_correo: asuntoCorreo ?? null,
       })
 
     if (errInsert) {
@@ -312,7 +350,17 @@ export async function crearLoteReportesVehimotors(items: ReporteLotePayload[]) {
   // Enviar correo consolidado solo si hay items
   if (itemsCorreo.length > 0) {
     try {
-      await enviarReporteLoteVehimotors({ items: itemsCorreo })
+      await enviarReporteLoteVehimotors({
+        items: itemsCorreo,
+        asuntoCustom: asuntoCorreo ?? undefined,
+        deposito: deposito && (deposito.bancoOrigen || deposito.bancoDestino || deposito.referencia || deposito.fecha || deposito.comprobanteUrl) ? {
+          bancoOrigen: deposito.bancoOrigen,
+          bancoDestino: deposito.bancoDestino,
+          referencia: deposito.referencia,
+          fecha: deposito.fecha,
+          comprobanteUrl: deposito.comprobanteUrl,
+        } : undefined,
+      })
     } catch (e) {
       console.error('[lote-vm] error enviando correo:', e)
       return { ok: true, guardados, errores: [...errores, 'Reportes guardados pero hubo un problema al enviar el correo'] }

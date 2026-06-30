@@ -3,11 +3,13 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Building2, Zap, X, Send, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Search, Building2, Zap, X, Send, AlertCircle, CheckCircle2, Landmark } from 'lucide-react'
 import ReporteVehimotorsModal from '../../ingresos/[id]/ReporteVehimotorsModal'
 import { crearLoteReportesVehimotors } from '../../ingresos/[id]/reportes-vehimotors-actions'
+import FileUpload from '@/components/FileUpload'
 
 const METODOS_DIRECTOS = ['Transferencia bancaria a Vehimotor', 'USDT VE']
+const METODOS_EFECTIVO = ['Efectivo USD', 'Efectivo VES']
 
 type Cliente = {
   id: string
@@ -58,6 +60,14 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
   const [mostrarModalLote, setMostrarModalLote] = useState(false)
   const [enviandoLote, setEnviandoLote] = useState(false)
   const [resultadoLote, setResultadoLote] = useState<{ guardados: number; errores: string[] } | null>(null)
+
+  // Datos del depósito (opcional; obligatorio si hay efectivo en el lote)
+  const [depBancoOrigen, setDepBancoOrigen] = useState('')
+  const [depBancoDestino, setDepBancoDestino] = useState('')
+  const [depReferencia, setDepReferencia] = useState('')
+  const [depFecha, setDepFecha] = useState('')
+  const [depComprobante, setDepComprobante] = useState<{ url: string; nombre: string }[]>([])
+  const [asuntoCorreo, setAsuntoCorreo] = useState('')
 
   const metodosUnicos = useMemo(
     () => Array.from(new Set(ingresos.map(i => i.metodoPago).filter((m): m is string => !!m))).sort(),
@@ -138,8 +148,21 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
       }
     })
 
-    const res = await crearLoteReportesVehimotors(items)
+    const deposito = {
+      bancoOrigen: depBancoOrigen.trim() || null,
+      bancoDestino: depBancoDestino.trim() || null,
+      referencia: depReferencia.trim() || null,
+      fecha: depFecha || null,
+      comprobanteUrl: depComprobante[0]?.url ?? null,
+    }
+
+    const res = await crearLoteReportesVehimotors(items, deposito, asuntoCorreo.trim() || null)
     setEnviandoLote(false)
+
+    if ('error' in res && res.error) {
+      setResultadoLote({ guardados: 0, errores: [res.error] })
+      return
+    }
     const guardados = ('guardados' in res && typeof res.guardados === 'number') ? res.guardados : 0
     const errores = ('errores' in res && Array.isArray(res.errores)) ? res.errores : []
     setResultadoLote({ guardados, errores })
@@ -148,11 +171,24 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
       setTimeout(() => {
         setMostrarModalLote(false)
         setResultadoLote(null)
+        setDepBancoOrigen(''); setDepBancoDestino(''); setDepReferencia(''); setDepFecha('')
+        setDepComprobante([]); setAsuntoCorreo('')
         deseleccionarTodos()
         router.refresh()
       }, 2500)
     }
   }
+
+  // Detectar si en la selección actual hay pagos en efectivo
+  const tieneEfectivo = useMemo(
+    () => ingresosSeleccionados.some(i => METODOS_EFECTIVO.includes(i.metodoPago ?? '')),
+    [ingresosSeleccionados]
+  )
+
+  // Validación de campos requeridos cuando hay efectivo
+  const camposEfectivoFaltantes = tieneEfectivo && (
+    !depBancoDestino.trim() || !depReferencia.trim() || !depFecha || depComprobante.length === 0
+  )
 
   return (
     <>
@@ -407,6 +443,81 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
                 <span className="text-amber-700 font-semibold">El monto se ingresa en la moneda original del ingreso</span> (Bs. para VES, $ para USD/USDT). El total se calcula en USD.
               </p>
 
+              {/* Asunto del correo */}
+              <div className="mb-4">
+                <label className="text-[11px] font-semibold text-oriental-gray uppercase tracking-wider block mb-1">Asunto del correo (opcional)</label>
+                <input
+                  type="text"
+                  value={asuntoCorreo}
+                  onChange={e => setAsuntoCorreo(e.target.value)}
+                  placeholder="Ej: Reporte de pago cuotas — semana 26"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                  disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0}
+                />
+                <p className="text-[10px] text-oriental-gray mt-1">Si lo dejas vacío se genera automático: "Reporte consolidado VM — N pagos · $XXXX"</p>
+              </div>
+
+              {/* Datos del depósito bancario */}
+              <div className={`mb-4 rounded-xl p-4 border ${tieneEfectivo ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Landmark size={14} className={tieneEfectivo ? 'text-amber-700' : 'text-gray-500'} />
+                  <p className={`text-xs font-bold uppercase tracking-wider ${tieneEfectivo ? 'text-amber-800' : 'text-oriental-gray'}`}>
+                    Datos del depósito bancario {tieneEfectivo ? '(obligatorio — hay efectivo)' : '(opcional)'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-semibold text-oriental-gray uppercase block mb-1">Banco origen</label>
+                    <input type="text" value={depBancoOrigen} onChange={e => setDepBancoOrigen(e.target.value)}
+                      placeholder="Cuenta La Oriental"
+                      className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                      disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-oriental-gray uppercase block mb-1">
+                      Banco destino {tieneEfectivo && <span className="text-red-600">*</span>}
+                    </label>
+                    <input type="text" value={depBancoDestino} onChange={e => setDepBancoDestino(e.target.value)}
+                      placeholder="Cuenta Vehimotors"
+                      className={`w-full px-2.5 py-1.5 border rounded-lg text-sm focus:outline-none focus:border-indigo-500 ${tieneEfectivo && !depBancoDestino.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                      disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-oriental-gray uppercase block mb-1">
+                      N° Referencia {tieneEfectivo && <span className="text-red-600">*</span>}
+                    </label>
+                    <input type="text" value={depReferencia} onChange={e => setDepReferencia(e.target.value)}
+                      placeholder="123456789"
+                      className={`w-full px-2.5 py-1.5 border rounded-lg text-sm font-mono focus:outline-none focus:border-indigo-500 ${tieneEfectivo && !depReferencia.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                      disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-oriental-gray uppercase block mb-1">
+                      Fecha del depósito {tieneEfectivo && <span className="text-red-600">*</span>}
+                    </label>
+                    <input type="date" value={depFecha} onChange={e => setDepFecha(e.target.value)}
+                      className={`w-full px-2.5 py-1.5 border rounded-lg text-sm focus:outline-none focus:border-indigo-500 ${tieneEfectivo && !depFecha ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                      disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0} />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="text-[10px] font-semibold text-oriental-gray uppercase block mb-1">
+                    Comprobante del depósito {tieneEfectivo && <span className="text-red-600">*</span>}
+                  </label>
+                  <FileUpload
+                    files={depComprobante}
+                    onFilesChange={setDepComprobante}
+                    maxFiles={1}
+                    disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0}
+                  />
+                </div>
+                {camposEfectivoFaltantes && (
+                  <p className="text-[11px] text-red-700 mt-2 font-semibold">
+                    ⛔ Completa todos los campos marcados con * porque el lote contiene pagos en efectivo.
+                  </p>
+                )}
+              </div>
+
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -482,14 +593,22 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
                   const m = parseFloat(montosLote[i.id] ?? i.saldo.toString()) || 0
                   return m > i.saldo + 0.01
                 })
+                const bloqueado = hayExcedidos || camposEfectivoFaltantes
+                let etiqueta: React.ReactNode = <><Send size={14} /> Confirmar y enviar correo</>
+                if (enviandoLote) etiqueta = 'Enviando...'
+                else if (hayExcedidos) etiqueta = '⛔ Ajustar montos'
+                else if (camposEfectivoFaltantes) etiqueta = '⛔ Completar depósito'
                 return (
                   <button
                     onClick={confirmarLote}
-                    disabled={enviandoLote || hayExcedidos}
-                    title={hayExcedidos ? 'Hay montos que exceden el saldo del ingreso. Ajústalos.' : ''}
+                    disabled={enviandoLote || bloqueado}
+                    title={
+                      hayExcedidos ? 'Hay montos que exceden el saldo del ingreso. Ajústalos.' :
+                      camposEfectivoFaltantes ? 'Hay pagos en efectivo. Completa los datos del depósito y el comprobante.' : ''
+                    }
                     className="flex-1 py-2.5 rounded-xl bg-indigo-700 text-white text-sm font-bold hover:bg-indigo-800 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {enviandoLote ? 'Enviando...' : hayExcedidos ? '⛔ Ajustar montos' : <><Send size={14} /> Confirmar y enviar correo</>}
+                    {etiqueta}
                   </button>
                 )
               })()}
