@@ -29,6 +29,35 @@ export default async function IngresosPage({
 
   const { data: ingresos } = await query
 
+  // Cargar total reportado a Vehimotors por cada ingreso
+  const ingresoIds = (ingresos ?? []).map(i => i.id)
+  const { data: reportesVMRaw } = ingresoIds.length > 0
+    ? await supabase
+        .from('reportes_vehimotors')
+        .select('ingreso_id, monto_reportado')
+        .in('ingreso_id', ingresoIds)
+    : { data: [] }
+  const totalReportadoVM: Record<string, number> = {}
+  for (const r of reportesVMRaw ?? []) {
+    totalReportadoVM[r.ingreso_id] = (totalReportadoVM[r.ingreso_id] ?? 0) + Number(r.monto_reportado)
+  }
+
+  // Estados de ingreso donde tiene sentido mostrar el badge VM (ya aprobados, no rechazados/anulados)
+  const ESTADOS_REPORTABLES = new Set(['aprobado', 'enviado_carla', 'enviado_deposito', 'depositado', 'entregado_carla', 'reportado_vehimotors'])
+
+  function getBadgeVM(ingreso: any): { label: string; cls: string } | null {
+    if (!ESTADOS_REPORTABLES.has(ingreso.estado)) return null
+    const reportado = totalReportadoVM[ingreso.id] ?? 0
+    const total = Number(ingreso.monto)
+    if (reportado <= 0) {
+      return { label: 'Por reportar VM', cls: 'bg-amber-100 text-amber-800 border border-amber-200' }
+    }
+    if (reportado + 0.01 >= total) {
+      return { label: 'Reportado VM', cls: 'bg-green-100 text-green-800 border border-green-200' }
+    }
+    return { label: `Parcial VM`, cls: 'bg-orange-100 text-orange-800 border border-orange-200' }
+  }
+
   const estadoColors: Record<string, string> = {
     registrado: 'bg-gray-100 text-gray-700',
     pendiente_aprobacion: 'bg-yellow-100 text-yellow-800',
@@ -181,9 +210,20 @@ export default async function IngresosPage({
                   </td>
                   <td className="px-4 py-3 text-oriental-gray">{formatDate(ingreso.fecha_pago)}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoColors[ingreso.estado] ?? 'bg-gray-100 text-gray-700'}`}>
-                      {ESTADOS_RECIBO_LABEL[ingreso.estado]}
-                    </span>
+                    <div className="flex flex-col gap-1 items-start">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoColors[ingreso.estado] ?? 'bg-gray-100 text-gray-700'}`}>
+                        {ESTADOS_RECIBO_LABEL[ingreso.estado]}
+                      </span>
+                      {(() => {
+                        const badge = getBadgeVM(ingreso)
+                        if (!badge) return null
+                        return (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badge.cls}`}>
+                            {badge.label}
+                          </span>
+                        )
+                      })()}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/ingresos/${ingreso.id}`} className="text-oriental-red hover:text-oriental-red-dark font-medium text-xs">
