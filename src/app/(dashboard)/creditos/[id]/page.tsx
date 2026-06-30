@@ -129,6 +129,39 @@ export default async function CreditoDetallePage({
     })
   }
 
+  // Cargar reportes a Vehimotors de los ingresos asociados a estas cuotas
+  const ingresosIds = Array.from(new Set(
+    Object.values(recibosMap).flat().map(r => r.ingreso_id)
+  ))
+  const { data: reportesVMRaw } = ingresosIds.length > 0
+    ? await supabase
+        .from('reportes_vehimotors')
+        .select('ingreso_id, monto_reportado, estado')
+        .in('ingreso_id', ingresosIds)
+    : { data: [] }
+
+  // Total reportado VM por ingreso_id
+  const reportadoVMPorIngreso: Record<string, number> = {}
+  for (const r of reportesVMRaw ?? []) {
+    reportadoVMPorIngreso[r.ingreso_id] = (reportadoVMPorIngreso[r.ingreso_id] ?? 0) + Number(r.monto_reportado)
+  }
+
+  // Para cada cuota: el monto reportado a VM es la suma de (monto_aplicado de ese recibo × % reportado del recibo)
+  // Cobertura simple: si el ingreso del recibo está total o parcialmente reportado, marcar la cuota como reportada
+  const reportadoVMPorCuota: Record<string, { reportado: boolean; parcial: boolean }> = {}
+  for (const cuotaId of Object.keys(recibosMap)) {
+    const recibos = recibosMap[cuotaId]
+    let algunoReportado = false
+    let todosReportados = recibos.length > 0
+    for (const r of recibos) {
+      const totalReportadoIng = reportadoVMPorIngreso[r.ingreso_id] ?? 0
+      if (totalReportadoIng > 0) algunoReportado = true
+      // Si el ingreso fue reportado al menos parcialmente cubriendo este monto aplicado, lo damos por OK
+      if (totalReportadoIng < r.monto_aplicado - 0.01) todosReportados = false
+    }
+    reportadoVMPorCuota[cuotaId] = { reportado: todosReportados && recibos.length > 0, parcial: algunoReportado && !todosReportados }
+  }
+
   // Acuerdo de pago de inicial (si existe para este crédito)
   const { data: acuerdoData } = await supabase
     .from('acuerdos_inicial')
@@ -516,6 +549,7 @@ export default async function CreditoDetallePage({
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Fecha pago</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Estado</th>
                       <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Recibos</th>
+                      <th className="text-center px-3 py-2 font-semibold text-indigo-700 text-xs uppercase tracking-wider">Rep. VM</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -686,6 +720,22 @@ export default async function CreditoDetallePage({
                               ))}
                             </div>
                           )}
+                        </td>
+
+                        {/* Reportado a Vehimotors */}
+                        <td className="px-3 py-3 text-center">
+                          {recibos.length === 0 ? (
+                            <span className="text-gray-300 text-xs">—</span>
+                          ) : (() => {
+                            const rep = reportadoVMPorCuota[cuota.id]
+                            if (rep?.reportado) {
+                              return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">SI</span>
+                            }
+                            if (rep?.parcial) {
+                              return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">PARCIAL</span>
+                            }
+                            return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">NO</span>
+                          })()}
                         </td>
                       </tr>
                       )
