@@ -331,9 +331,9 @@ export default function ReporteVehimotorsModal({
                 </button>
               )}
             </div>
-            {parseFloat(monto) > saldoRestante && saldoRestante > 0 && (
-              <p className="text-[11px] text-blue-700 mt-1.5 bg-blue-50 px-2 py-1.5 rounded">
-                ℹ️ Estás reportando más del saldo del ingreso. Esto se permite (cobertura desde bancos).
+            {parseFloat(monto) > saldoRestante + 0.01 && saldoRestante > 0 && (
+              <p className="text-[11px] text-red-700 mt-1.5 bg-red-50 px-2 py-1.5 rounded border border-red-200">
+                ⛔ El monto supera el saldo disponible del ingreso ({fmtUSD(saldoRestante)} {ingresoMoneda}). Ajústalo para poder reportar.
               </p>
             )}
           </div>
@@ -368,7 +368,7 @@ export default function ReporteVehimotorsModal({
           </button>
           <button
             onClick={reportar}
-            disabled={loading || bloqueadoPorPermiso || !monto || parseFloat(monto) <= 0}
+            disabled={loading || bloqueadoPorPermiso || !monto || parseFloat(monto) <= 0 || parseFloat(monto) > saldoRestante + 0.01}
             className="flex-1 py-2.5 rounded-xl bg-indigo-700 text-white text-sm font-bold hover:bg-indigo-800 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Reportando...' : <><Send size={14} /> Reportar a VM</>}

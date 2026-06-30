@@ -57,12 +57,22 @@ export async function crearReporteVehimotors(payload: CrearReportePayload) {
     return { error: 'Solo el director puede reportar a un cliente diferente al que pagó' }
   }
 
-  // 3. Validar monto
+  // 3. Validar monto: positivo y dentro del saldo restante del ingreso
   if (!Number.isFinite(payload.montoReportado) || payload.montoReportado <= 0) {
     return { error: 'El monto reportado debe ser mayor a 0' }
   }
   if (payload.montoReportado > 10_000_000) {
     return { error: 'Monto fuera de rango' }
+  }
+  // Calcular saldo restante del ingreso antes de aceptar el reporte
+  const { data: reportesPrev } = await admin
+    .from('reportes_vehimotors')
+    .select('monto_reportado')
+    .eq('ingreso_id', payload.ingresoId)
+  const yaReportado = (reportesPrev ?? []).reduce((s, r) => s + Number(r.monto_reportado), 0)
+  const saldoDisponible = Math.max(0, Number(ingreso.monto) - yaReportado)
+  if (payload.montoReportado > saldoDisponible + 0.01) {
+    return { error: `El monto excede el saldo disponible del ingreso. Saldo restante: ${saldoDisponible.toFixed(2)} ${ingreso.moneda}` }
   }
 
   // 4. Validar cliente destino existe
@@ -208,6 +218,18 @@ export async function crearLoteReportesVehimotors(items: ReporteLotePayload[]) {
     }
     if (!Number.isFinite(payload.montoReportado) || payload.montoReportado <= 0) {
       errores.push(`${ingreso.numero_recibo}: monto inválido`)
+      continue
+    }
+
+    // Validar saldo disponible
+    const { data: reportesPrev } = await admin
+      .from('reportes_vehimotors')
+      .select('monto_reportado')
+      .eq('ingreso_id', payload.ingresoId)
+    const yaReportado = (reportesPrev ?? []).reduce((s, r) => s + Number(r.monto_reportado), 0)
+    const saldoDisponible = Math.max(0, Number(ingreso.monto) - yaReportado)
+    if (payload.montoReportado > saldoDisponible + 0.01) {
+      errores.push(`${ingreso.numero_recibo}: monto excede saldo (${saldoDisponible.toFixed(2)} ${ingreso.moneda})`)
       continue
     }
 

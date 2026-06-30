@@ -421,9 +421,10 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
                 <tbody className="divide-y divide-gray-100">
                   {ingresosSeleccionados.map(i => {
                     const montoActual = parseFloat(montosLote[i.id] ?? i.saldo.toString()) || 0
+                    const excede = montoActual > i.saldo + 0.01
                     const usdEquiv = i.moneda === 'VES' && i.tasaCambio && i.tasaCambio > 0 ? montoActual / i.tasaCambio : null
                     return (
-                      <tr key={i.id}>
+                      <tr key={i.id} className={excede ? 'bg-red-50' : ''}>
                         <td className="px-2 py-2 font-mono text-[11px] text-oriental-gray">{i.numeroRecibo}</td>
                         <td className="px-2 py-2 text-xs truncate max-w-[180px]" title={i.cliente?.nombre}>{i.cliente?.nombre ?? '—'}</td>
                         <td className="px-2 py-2 text-[11px] font-mono">{i.placa ?? '—'}</td>
@@ -443,12 +444,15 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
                                 min="0"
                                 value={montosLote[i.id] ?? i.saldo.toString()}
                                 onChange={e => setMontosLote(prev => ({ ...prev, [i.id]: e.target.value }))}
-                                className="w-28 px-2 py-1 border border-gray-200 rounded text-right text-sm font-bold focus:outline-none focus:border-indigo-500"
+                                className={`w-28 px-2 py-1 border rounded text-right text-sm font-bold focus:outline-none ${excede ? 'border-red-400 bg-red-50 focus:border-red-500 text-red-700' : 'border-gray-200 focus:border-indigo-500'}`}
                                 disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0}
                               />
                             </div>
                             {usdEquiv !== null && (
                               <span className="text-[10px] text-oriental-gray mt-0.5">≈ ${fmt(usdEquiv)}</span>
+                            )}
+                            {excede && (
+                              <span className="text-[10px] text-red-700 font-bold mt-0.5">⛔ Excede saldo</span>
                             )}
                           </div>
                         </td>
@@ -473,15 +477,22 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
               >
                 {(resultadoLote?.guardados ?? 0) > 0 ? 'Cerrar' : 'Cancelar'}
               </button>
-              {(resultadoLote?.guardados ?? 0) === 0 && (
-                <button
-                  onClick={confirmarLote}
-                  disabled={enviandoLote}
-                  className="flex-1 py-2.5 rounded-xl bg-indigo-700 text-white text-sm font-bold hover:bg-indigo-800 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {enviandoLote ? 'Enviando...' : <><Send size={14} /> Confirmar y enviar correo</>}
-                </button>
-              )}
+              {(resultadoLote?.guardados ?? 0) === 0 && (() => {
+                const hayExcedidos = ingresosSeleccionados.some(i => {
+                  const m = parseFloat(montosLote[i.id] ?? i.saldo.toString()) || 0
+                  return m > i.saldo + 0.01
+                })
+                return (
+                  <button
+                    onClick={confirmarLote}
+                    disabled={enviandoLote || hayExcedidos}
+                    title={hayExcedidos ? 'Hay montos que exceden el saldo del ingreso. Ajústalos.' : ''}
+                    className="flex-1 py-2.5 rounded-xl bg-indigo-700 text-white text-sm font-bold hover:bg-indigo-800 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {enviandoLote ? 'Enviando...' : hayExcedidos ? '⛔ Ajustar montos' : <><Send size={14} /> Confirmar y enviar correo</>}
+                  </button>
+                )
+              })()}
             </div>
           </div>
         </div>
