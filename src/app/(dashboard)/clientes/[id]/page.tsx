@@ -252,15 +252,24 @@ export default async function ClienteDetallePage({
               <div className="space-y-3">
                 {vehiculos.map(v => (
                   <Link key={v.id} href={`/vehiculos/${v.id}`} className="block">
-                    <div className="flex items-center gap-4 p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-oriental-bg/50 transition-all">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <div className="flex items-start gap-4 p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-oriental-bg/50 transition-all">
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <Car size={18} className="text-oriental-gray" />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="font-semibold text-oriental-black text-sm">{v.marca} {v.modelo}</p>
                         <p className="text-xs text-oriental-gray">{v.version} · {v.anio} · {v.color}</p>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 font-mono text-[11px] bg-gray-100 text-oriental-black px-2 py-0.5 rounded font-bold">
+                            🚘 {v.placa ?? '—'}
+                          </span>
+                          {(v as any).proforma_vehimotors && (
+                            <span className="inline-flex items-center gap-1 font-mono text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-bold">
+                              📄 {(v as any).proforma_vehimotors}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded font-bold">{v.placa ?? '—'}</span>
                     </div>
                   </Link>
                 ))}
