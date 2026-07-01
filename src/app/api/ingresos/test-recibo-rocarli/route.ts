@@ -58,14 +58,19 @@ export async function GET(req: NextRequest) {
   const fechaHoy = new Date().toISOString().split('T')[0]
 
   // Buscar un usuario para "registrado_por" (primer admin/director)
-  const { data: adminUser } = await supabase
+  const { data: adminUsers } = await supabase
     .from('usuarios')
     .select('id')
     .in('rol', ['admin', 'jose', 'director'])
     .limit(1)
-    .maybeSingle()
 
-  const registradoPor = adminUser?.id ?? null
+  const registradoPor = adminUsers?.[0]?.id ?? null
+
+  if (!registradoPor) {
+    return NextResponse.json({
+      error: 'No se encontró un usuario admin/director para asignar como registrado_por',
+    }, { status: 500 })
+  }
 
   // 2. Insertar ingreso — el trigger trg_numero_recibo genera el numero_recibo automáticamente
   const { data: ingreso, error: errIng } = await supabase
