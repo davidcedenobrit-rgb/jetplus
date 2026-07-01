@@ -290,9 +290,11 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     }
     const cuotaRounded = Math.round(cuota * 100) / 100
 
-    // Actualiza ambos campos en el estado local
+    // Actualiza los campos calculados en el estado local
+    // Gastos Vehimotors se aplica igual en contado y crédito (7% del financiamiento)
     setVehiculos(prev => prev.map(x => x.id === v.id ? {
       ...x,
+      gastos_vhm_c: gastosVhmCr,
       gastos_vhm_cr: gastosVhmCr,
       tasa_credito: cuotaRounded,
     } : x))
