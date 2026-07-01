@@ -71,7 +71,7 @@ export default async function CreditoDetallePage({
   // Cargar el crédito principal (para obtener vehiculo_id y cliente)
   const { data: credito } = await supabase
     .from('creditos')
-    .select('*, clientes(id, nombre, cedula_rif, telefono, whatsapp), vehiculos(id, marca, modelo, placa, color, anio)')
+    .select('*, clientes(id, nombre, cedula_rif, telefono, whatsapp), vehiculos(id, marca, modelo, placa, color, anio, proforma_vehimotors)')
     .eq('id', id)
     .single()
 
@@ -423,7 +423,19 @@ export default async function CreditoDetallePage({
               </h2>
               <Link href={`/vehiculos/${vehiculo.id}`} className="block p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-all">
                 <p className="font-semibold text-oriental-black">{vehiculo.marca} {vehiculo.modelo}</p>
-                <p className="text-xs text-oriental-gray">{vehiculo.anio} · {vehiculo.color} · <span className="font-mono font-bold">{vehiculo.placa ?? '—'}</span></p>
+                <p className="text-xs text-oriental-gray mt-0.5">
+                  {vehiculo.anio}{vehiculo.color ? ` · ${vehiculo.color}` : ''}
+                </p>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] bg-gray-100 text-oriental-black px-2 py-0.5 rounded font-bold">
+                    🚘 {vehiculo.placa ?? 'Sin placa'}
+                  </span>
+                  {vehiculo.proforma_vehimotors && (
+                    <span className="inline-flex items-center gap-1 font-mono text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-bold">
+                      📄 {vehiculo.proforma_vehimotors}
+                    </span>
+                  )}
+                </div>
               </Link>
             </div>
           )}
