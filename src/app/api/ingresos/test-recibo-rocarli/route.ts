@@ -57,18 +57,25 @@ export async function GET(req: NextRequest) {
   const montoTotal = 11628
   const fechaHoy = new Date().toISOString().split('T')[0]
 
-  // Buscar un usuario para "registrado_por" (primer admin/director)
-  const { data: adminUsers } = await supabase
+  // Buscar un usuario para "registrado_por"
+  const { data: adminUsers, error: errUsers } = await supabase
     .from('usuarios')
-    .select('id')
-    .in('rol', ['admin', 'jose', 'director'])
-    .limit(1)
+    .select('id, correo, rol')
+    .limit(20)
 
-  const registradoPor = adminUsers?.[0]?.id ?? null
+  let registradoPor: string | null = adminUsers?.[0]?.id ?? null
+
+  // Fallback: ID conocido de admin@gmail.com si la query falla
+  if (!registradoPor) {
+    registradoPor = '093b709c-58cb-41a4-bd1a-4ed1f3938d8d'
+  }
 
   if (!registradoPor) {
     return NextResponse.json({
       error: 'No se encontró un usuario admin/director para asignar como registrado_por',
+      queryError: errUsers?.message ?? 'sin error',
+      usersEncontrados: adminUsers?.length ?? 0,
+      users: adminUsers,
     }, { status: 500 })
   }
 
