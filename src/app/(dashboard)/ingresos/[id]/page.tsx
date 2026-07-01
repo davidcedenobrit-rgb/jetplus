@@ -64,10 +64,38 @@ export default async function IngresoDetallePage({
   const totalReportadoVM = (reportesVM ?? []).reduce((s, r) => s + Number(r.monto_reportado), 0)
 
   // Cuotas aplicadas en este ingreso (para el recibo), con vehículo del crédito
+  // Incluimos cuota_id para poder calcular el saldo AL MOMENTO del recibo (snapshot histórico)
   const { data: cuotasAplicadas } = await supabase
     .from('cuota_ingresos')
-    .select('monto_aplicado, cuotas(numero_cuota, monto, monto_pagado, estado, fecha_vencimiento, concepto, credito_id, creditos(plan_tipo, vehiculo_id, placa, vehiculos(marca, modelo, placa, proforma_vehimotors)))')
+    .select('cuotas!inner(id, numero_cuota, monto, monto_pagado, estado, fecha_vencimiento, concepto, credito_id, creditos(plan_tipo, vehiculo_id, placa, vehiculos(marca, modelo, placa, proforma_vehimotors))), monto_aplicado')
     .eq('ingreso_id', id)
+
+  // Para calcular el saldo AL MOMENTO del recibo, necesitamos saber cuánto se aplicó a cada cuota
+  // antes de este ingreso (por otros recibos anteriores).
+  const cuotaIdsAplicadas = (cuotasAplicadas ?? [])
+    .map((ci: any) => ci.cuotas?.id)
+    .filter(Boolean)
+  const pagosPreviosPorCuota: Record<string, number> = {}
+  if (cuotaIdsAplicadas.length > 0) {
+    // Traer todos los cuota_ingresos de estas cuotas, con la fecha de registro del ingreso asociado
+    const { data: pagosHist } = await supabase
+      .from('cuota_ingresos')
+      .select('cuota_id, monto_aplicado, ingresos!inner(id, fecha_registro, estado)')
+      .in('cuota_id', cuotaIdsAplicadas)
+
+    // Fecha del ingreso actual para comparar
+    const fechaActual = ingreso.fecha_registro
+    for (const p of (pagosHist ?? []) as any[]) {
+      // Ignorar ingresos anulados/rechazados
+      const estIng = p.ingresos?.estado
+      if (estIng === 'anulado' || estIng === 'rechazado') continue
+      // Solo sumar pagos APLICADOS EN INGRESOS ANTERIORES a este recibo
+      if (p.ingresos?.id === id) continue // no cuentes este mismo
+      if (p.ingresos?.fecha_registro && p.ingresos.fecha_registro < fechaActual) {
+        pagosPreviosPorCuota[p.cuota_id] = (pagosPreviosPorCuota[p.cuota_id] ?? 0) + Number(p.monto_aplicado)
+      }
+    }
+  }
 
   // Vehículos únicos afectados por las cuotas aplicadas (para el resumen del recibo)
   const vehiculosCuotas: { id?: string; marca: string; modelo: string; placa: string | null; proforma: string | null }[] = []
@@ -342,8 +370,9 @@ export default async function IngresoDetallePage({
                             const placaCuota = vehCuota?.placa ?? cuota?.creditos?.placa ?? null
                             const montoTotal = Number(cuota?.monto ?? 0)
                             const aplicado = Number(ci.monto_aplicado)
-                            const montoPagado = Number(cuota?.monto_pagado ?? 0)
-                            const saldoCuota = Math.max(0, montoTotal - montoPagado)
+                            // Saldo AL MOMENTO del recibo = monto - (pagado antes de este recibo + este abono)
+                            const pagadoPrevio = pagosPreviosPorCuota[cuota?.id] ?? 0
+                            const saldoCuota = Math.max(0, montoTotal - pagadoPrevio - aplicado)
                             return (
                               <tr key={idx} className="border-b border-gray-100 last:border-0">
                                 <td className="px-3 py-2 font-semibold text-oriental-black">#{cuota?.numero_cuota ?? '—'}</td>
