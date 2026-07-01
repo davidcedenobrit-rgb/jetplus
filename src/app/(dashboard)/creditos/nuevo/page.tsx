@@ -27,7 +27,59 @@ interface PlanAC500 {
   cuota_7: number
   cuota_8: number
   cuota_9: number
+  cuota_10: number
+  cuota_11: number
+  cuota_12: number
   total: number
+}
+
+// Tipo que refleja la tabla ac500_vehiculos (fuente de verdad del CDM)
+interface AC500Vehiculo {
+  id: string; brand: string; model: string; disponible: boolean | null; reserva: number | null
+  p6_activo: boolean | null; p6_c1: number | null; p6_c2: number | null; p6_c3: number | null
+  p6_c4: number | null; p6_c5: number | null; p6_c6: number | null; p6_total: number | null
+  p9_activo: boolean | null; p9_c1: number | null; p9_c2: number | null; p9_c3: number | null
+  p9_c4: number | null; p9_c5: number | null; p9_c6: number | null; p9_c7: number | null
+  p9_c8: number | null; p9_c9: number | null; p9_total: number | null
+  p12_activo: boolean | null
+  p12_c1: number | null; p12_c2: number | null; p12_c3: number | null
+  p12_c4: number | null; p12_c5: number | null; p12_c6: number | null
+  p12_c7: number | null; p12_c8: number | null; p12_c9: number | null
+  p12_c10: number | null; p12_c11: number | null; p12_c12: number | null
+  p12_total: number | null
+}
+
+function ac500ToPlan(v: AC500Vehiculo, meses: 6 | 9 | 12): PlanAC500 {
+  if (meses === 6) {
+    return {
+      id: v.id, marca: v.brand, modelo: v.model, meses: 6,
+      cuota_0: v.reserva ?? 0,
+      cuota_1: v.p6_c1 ?? 0, cuota_2: v.p6_c2 ?? 0, cuota_3: v.p6_c3 ?? 0,
+      cuota_4: v.p6_c4 ?? 0, cuota_5: v.p6_c5 ?? 0, cuota_6: v.p6_c6 ?? 0,
+      cuota_7: 0, cuota_8: 0, cuota_9: 0, cuota_10: 0, cuota_11: 0, cuota_12: 0,
+      total: v.p6_total ?? 0,
+    }
+  }
+  if (meses === 9) {
+    return {
+      id: v.id, marca: v.brand, modelo: v.model, meses: 9,
+      cuota_0: v.reserva ?? 0,
+      cuota_1: v.p9_c1 ?? 0, cuota_2: v.p9_c2 ?? 0, cuota_3: v.p9_c3 ?? 0,
+      cuota_4: v.p9_c4 ?? 0, cuota_5: v.p9_c5 ?? 0, cuota_6: v.p9_c6 ?? 0,
+      cuota_7: v.p9_c7 ?? 0, cuota_8: v.p9_c8 ?? 0, cuota_9: v.p9_c9 ?? 0,
+      cuota_10: 0, cuota_11: 0, cuota_12: 0,
+      total: v.p9_total ?? 0,
+    }
+  }
+  return {
+    id: v.id, marca: v.brand, modelo: v.model, meses: 12,
+    cuota_0: v.reserva ?? 0,
+    cuota_1: v.p12_c1 ?? 0, cuota_2: v.p12_c2 ?? 0, cuota_3: v.p12_c3 ?? 0,
+    cuota_4: v.p12_c4 ?? 0, cuota_5: v.p12_c5 ?? 0, cuota_6: v.p12_c6 ?? 0,
+    cuota_7: v.p12_c7 ?? 0, cuota_8: v.p12_c8 ?? 0, cuota_9: v.p12_c9 ?? 0,
+    cuota_10: v.p12_c10 ?? 0, cuota_11: v.p12_c11 ?? 0, cuota_12: v.p12_c12 ?? 0,
+    total: v.p12_total ?? 0,
+  }
 }
 
 function formatUSD(n: number) {
@@ -35,7 +87,10 @@ function formatUSD(n: number) {
 }
 
 function getCuotasFromPlan(p: PlanAC500): { numero: number; monto: number; dia: string }[] {
-  const all = [p.cuota_1, p.cuota_2, p.cuota_3, p.cuota_4, p.cuota_5, p.cuota_6, p.cuota_7, p.cuota_8, p.cuota_9]
+  const all = [
+    p.cuota_1, p.cuota_2, p.cuota_3, p.cuota_4, p.cuota_5, p.cuota_6,
+    p.cuota_7, p.cuota_8, p.cuota_9, p.cuota_10, p.cuota_11, p.cuota_12,
+  ]
   const cuotas = all.slice(0, p.meses)
   return cuotas.map((monto, i) => ({
     numero: i + 1,
@@ -60,7 +115,7 @@ export default function NuevoCreditoPage() {
   const [gastosAdmin, setGastosAdmin] = useState('')
 
   // AC500
-  const [cuotasAsegurate, setCuotasAsegurate] = useState<6 | 9>(6)
+  const [cuotasAsegurate, setCuotasAsegurate] = useState<6 | 9 | 12>(6)
   const [planesAC500, setPlanesAC500] = useState<PlanAC500[]>([])
   const [planAC500Sel, setPlanAC500Sel] = useState<PlanAC500 | null>(null)
   const [loadingPlanes, setLoadingPlanes] = useState(false)
@@ -197,14 +252,22 @@ export default function NuevoCreditoPage() {
       })
   }, [vehiculoSeleccionado])
 
-  // Cargar planes AC500 cuando cambia modalidad
+  // Cargar planes AC500 desde la fuente de verdad (ac500_vehiculos)
   useEffect(() => {
     if (plan !== 'asegurate_500') return
     setLoadingPlanes(true)
     setPlanAC500Sel(null)
-    supabase.from('planes_ac500').select('*').eq('meses', cuotasAsegurate).eq('activo', true)
-      .order('marca').order('modelo')
-      .then(({ data }) => { setPlanesAC500((data as PlanAC500[]) ?? []); setLoadingPlanes(false) })
+    const activoField = cuotasAsegurate === 6 ? 'p6_activo' : cuotasAsegurate === 9 ? 'p9_activo' : 'p12_activo'
+    supabase.from('ac500_vehiculos')
+      .select('id,brand,model,disponible,reserva,p6_activo,p6_c1,p6_c2,p6_c3,p6_c4,p6_c5,p6_c6,p6_total,p9_activo,p9_c1,p9_c2,p9_c3,p9_c4,p9_c5,p9_c6,p9_c7,p9_c8,p9_c9,p9_total,p12_activo,p12_c1,p12_c2,p12_c3,p12_c4,p12_c5,p12_c6,p12_c7,p12_c8,p12_c9,p12_c10,p12_c11,p12_c12,p12_total')
+      .eq('disponible', true)
+      .eq(activoField, true)
+      .order('brand').order('model')
+      .then(({ data }) => {
+        const planes = (data ?? []).map(v => ac500ToPlan(v as AC500Vehiculo, cuotasAsegurate))
+        setPlanesAC500(planes)
+        setLoadingPlanes(false)
+      })
   }, [plan, cuotasAsegurate])
 
   // Auto-seleccionar plan AC500 si hay vehículo seleccionado
@@ -713,7 +776,7 @@ export default function NuevoCreditoPage() {
               <div>
                 <label className="label">Cronograma</label>
                 <div className="flex gap-2">
-                  {([6, 9] as const).map(n => (
+                  {([6, 9, 12] as const).map(n => (
                     <button key={n} type="button" onClick={() => setCuotasAsegurate(n)}
                       className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
                         cuotasAsegurate === n
