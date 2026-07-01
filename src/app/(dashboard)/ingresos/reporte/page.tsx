@@ -16,6 +16,7 @@ type Ingreso = {
   metodo_pago: string | null
   referencia: string | null
   fecha_pago: string
+  fecha_registro: string | null
   estado: string
   tasa_cambio: number | null
   monto_bs: number | null
@@ -75,9 +76,11 @@ export default function ReporteIngresosPage() {
 
   const [fechaDesde, setFechaDesde] = useState(primerDiaMes)
   const [fechaHasta, setFechaHasta] = useState(hoy)
+  const [tipoFecha, setTipoFecha] = useState<'fecha_pago' | 'fecha_registro'>('fecha_pago')
   const [estado, setEstado] = useState('')
   const [moneda, setMoneda] = useState('')
   const [metodoPago, setMetodoPago] = useState('')
+  const [concepto, setConcepto] = useState('')
   const [ingresos, setIngresos] = useState<Ingreso[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -85,9 +88,9 @@ export default function ReporteIngresosPage() {
     setLoading(true)
     let q = supabase
       .from('ingresos')
-      .select('id, numero_recibo, placa, concepto, monto, moneda, metodo_pago, referencia, fecha_pago, estado, tasa_cambio, monto_bs, clientes(nombre, cedula_rif)')
-      .gte('fecha_pago', fechaDesde)
-      .lte('fecha_pago', fechaHasta)
+      .select('id, numero_recibo, placa, concepto, monto, moneda, metodo_pago, referencia, fecha_pago, fecha_registro, estado, tasa_cambio, monto_bs, clientes(nombre, cedula_rif)')
+      .gte(tipoFecha, tipoFecha === 'fecha_registro' ? fechaDesde + 'T00:00:00' : fechaDesde)
+      .lte(tipoFecha, tipoFecha === 'fecha_registro' ? fechaHasta + 'T23:59:59' : fechaHasta)
       .neq('estado', 'anulado')
       .order('concepto')
       .order('fecha_pago')
@@ -95,11 +98,12 @@ export default function ReporteIngresosPage() {
     if (estado) q = q.eq('estado', estado)
     if (moneda) q = q.eq('moneda', moneda)
     if (metodoPago) q = q.eq('metodo_pago', metodoPago)
+    if (concepto) q = q.eq('concepto', concepto)
 
     const { data } = await q
     setIngresos((data ?? []) as unknown as Ingreso[])
     setLoading(false)
-  }, [fechaDesde, fechaHasta, estado, moneda, metodoPago])
+  }, [fechaDesde, fechaHasta, tipoFecha, estado, moneda, metodoPago, concepto])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -278,7 +282,14 @@ export default function ReporteIngresosPage() {
 
       {/* Filtros */}
       <div className="card p-4 mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label className="label">Filtrar por</label>
+            <select className="select" value={tipoFecha} onChange={e => setTipoFecha(e.target.value as any)}>
+              <option value="fecha_pago">Fecha de pago (comprobante)</option>
+              <option value="fecha_registro">Fecha de emisión (recibo)</option>
+            </select>
+          </div>
           <div>
             <label className="label">Desde</label>
             <input type="date" className="input" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
@@ -317,6 +328,26 @@ export default function ReporteIngresosPage() {
               {METODOS_PAGO.map(m => (
                 <option key={m} value={m}>{m}</option>
               ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Concepto</label>
+            <select className="select" value={concepto} onChange={e => setConcepto(e.target.value)}>
+              <option value="">Todos los conceptos</option>
+              <option value="Cuota de vehículo">Cuota de vehículo</option>
+              <option value="Cuota de AC500">Cuota de AC500</option>
+              <option value="Cuota de inicial">Cuota de inicial</option>
+              <option value="Cuota de inicial + vehículo">Cuota de inicial + vehículo</option>
+              <option value="Inicial de vehículo">Inicial de vehículo</option>
+              <option value="Inicial acuerdo de pago">Inicial acuerdo de pago</option>
+              <option value="Saldo de vehículo">Saldo de vehículo</option>
+              <option value="Trámite vehicular">Trámite vehicular</option>
+              <option value="Seguro vehicular">Seguro vehicular</option>
+              <option value="Placa">Placa</option>
+              <option value="IVA">IVA</option>
+              <option value="Accesorios">Accesorios</option>
+              <option value="Servicio de taller">Servicio de taller</option>
+              <option value="Abono a crédito">Abono a crédito</option>
             </select>
           </div>
         </div>
