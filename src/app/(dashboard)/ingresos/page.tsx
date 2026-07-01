@@ -182,7 +182,8 @@ export default async function IngresosPage({
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Placa</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Concepto</th>
                 <th className="text-right px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Monto</th>
-                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Fecha</th>
+                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Fecha pago</th>
+                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Emisión</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Estado</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -208,7 +209,10 @@ export default async function IngresosPage({
                       : formatCurrency(ingreso.monto, ingreso.moneda === 'VES' ? 'VES' : 'USD')
                     }
                   </td>
-                  <td className="px-4 py-3 text-oriental-gray">{formatDate(ingreso.fecha_pago)}</td>
+                  <td className="px-4 py-3 text-oriental-gray text-xs">{formatDate(ingreso.fecha_pago)}</td>
+                  <td className="px-4 py-3 text-oriental-gray text-xs">
+                    {ingreso.fecha_registro ? new Date(ingreso.fecha_registro).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1 items-start">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoColors[ingreso.estado] ?? 'bg-gray-100 text-gray-700'}`}>
@@ -234,7 +238,7 @@ export default async function IngresosPage({
               ))}
               {(!ingresos || ingresos.length === 0) && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={9} className="px-4 py-16 text-center">
                     <Search size={32} className="mx-auto text-gray-300 mb-3" />
                     <p className="text-oriental-gray text-sm">No hay ingresos registrados</p>
                     <Link href="/ingresos/nuevo" className="text-oriental-red text-sm font-medium hover:underline mt-1 inline-block">

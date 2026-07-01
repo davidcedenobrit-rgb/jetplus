@@ -79,7 +79,8 @@ export default async function EgresosPage({
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Concepto</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Beneficiario</th>
                 <th className="text-right px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Monto</th>
-                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Fecha</th>
+                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Fecha pago</th>
+                <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Emisión</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Estado</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -106,7 +107,10 @@ export default async function EgresosPage({
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-oriental-gray">{formatDate(egreso.fecha_egreso)}</td>
+                  <td className="px-4 py-3 text-oriental-gray text-xs">{formatDate(egreso.fecha_egreso)}</td>
+                  <td className="px-4 py-3 text-oriental-gray text-xs">
+                    {egreso.fecha_registro ? new Date(egreso.fecha_registro).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoColors[egreso.estado] ?? 'bg-gray-100 text-gray-700'}`}>
                       {ESTADOS_EGRESO_LABEL[egreso.estado]}
@@ -121,7 +125,7 @@ export default async function EgresosPage({
               ))}
               {(!egresos || egresos.length === 0) && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={9} className="px-4 py-16 text-center">
                     <Search size={32} className="mx-auto text-gray-300 mb-3" />
                     <p className="text-oriental-gray text-sm">No hay egresos registrados</p>
                     <Link href="/egresos/nuevo" className="text-oriental-red text-sm font-medium hover:underline mt-1 inline-block">
