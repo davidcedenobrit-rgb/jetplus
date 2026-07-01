@@ -1,8 +1,40 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
+
+// Input numérico con estado local (evita perder foco al re-render y solo commitea al blur)
+function NumInput({ value, onCommit, className, placeholder }: {
+  value: number | null
+  onCommit: (v: number | null) => void
+  className: string
+  placeholder?: string
+}) {
+  const [raw, setRaw] = useState(value != null ? String(value) : '')
+  const focused = useRef(false)
+  useEffect(() => {
+    if (!focused.current) setRaw(value != null ? String(value) : '')
+  }, [value])
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className={className}
+      value={raw}
+      placeholder={placeholder ?? '—'}
+      onFocus={e => { focused.current = true; e.target.select() }}
+      onChange={e => setRaw(e.target.value)}
+      onBlur={() => {
+        focused.current = false
+        const parsed = parseFloat(raw.replace(',', '.'))
+        const final = isNaN(parsed) ? null : parsed
+        onCommit(final)
+        setRaw(final != null ? String(final) : '')
+      }}
+    />
+  )
+}
 
 interface AC500 {
   id: string
@@ -146,13 +178,18 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
   const inputCls = 'w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:border-oriental-red transition-colors'
   const modalInputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red'
 
-  const NumField = ({ v, field, label }: { v: AC500; field: keyof AC500; label: string }) => (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-      <input className={inputCls} type="number" step="0.01" value={(v[field] as number | null) ?? ''} placeholder="—"
-        onChange={e => update(v.id, field, e.target.value ? parseFloat(e.target.value) : null)} />
-    </div>
-  )
+  function NumField({ v, field, label }: { v: AC500; field: keyof AC500; label: string }) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+        <NumInput
+          value={v[field] as number | null}
+          onCommit={val => update(v.id, field, val)}
+          className={inputCls}
+        />
+      </div>
+    )
+  }
 
   return (
     <>
@@ -193,7 +230,7 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reserva ($)</span>
-                  <input className={inputCls} type="number" step="0.01" value={v.reserva ?? ''} onChange={e => update(v.id, 'reserva', e.target.value ? parseFloat(e.target.value) : null)} />
+                  <NumInput value={v.reserva} onCommit={val => update(v.id, 'reserva', val)} className={inputCls} placeholder="500" />
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Colores (coma)</span>
