@@ -33,6 +33,8 @@ export default async function ClienteDetallePage({
     .from('ingresos')
     .select('id, numero_recibo, concepto, monto, moneda, fecha_pago, estado')
     .eq('cliente_id', id)
+    .neq('estado', 'anulado')
+    .neq('estado', 'rechazado')
     .order('fecha_pago', { ascending: false })
     .limit(10)
 

@@ -36,6 +36,8 @@ export default async function VehiculoDetallePage({
     .from('ingresos')
     .select('id, numero_recibo, concepto, monto, moneda, fecha_pago, estado')
     .eq('vehiculo_id', id)
+    .neq('estado', 'anulado')
+    .neq('estado', 'rechazado')
     .order('fecha_pago', { ascending: false })
     .limit(20)
 
