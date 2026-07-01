@@ -42,15 +42,17 @@ const estadoColors: Record<string, string> = {
 function categorizarGrupo(grupo: any[]): FiltroPlan {
   const primero = grupo[0]
   const planes = grupo.map((c: any) => c.plan_tipo).filter(Boolean)
+  const tieneAC500       = planes.includes('asegurate_500')
   const tieneInicial     = planes.includes('inicial_la_oriental')
   const tieneVehimotors  = planes.includes('financiamiento_vehimotors')
   const tipoCarro        = (primero as any).vehiculos?.tipo_compra
 
-  // AC500 = sin placa cargada
-  if (!primero.placa || primero.placa.trim() === '') return 'ac500'
-  if (tipoCarro === 'contado') return 'contado'
+  // Prioridad: si tiene plan_tipo específico, se usa ese
+  if (tieneAC500) return 'ac500'
   if (tieneInicial) return 'f_lao_vehi'
   if (tieneVehimotors) return 'f_vehimotor'
+  // Sin plan específico + vehículo de contado → contado
+  if (tipoCarro === 'contado') return 'contado'
   return 'contado'
 }
 
