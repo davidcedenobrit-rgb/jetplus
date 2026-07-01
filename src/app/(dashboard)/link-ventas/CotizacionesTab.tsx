@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type Estado = 'aceptada' | 'rechazada' | 'sin_respuesta' | 'pospuesta'
+type Estado = 'aceptada' | 'rechazada' | 'sin_respuesta' | 'pospuesta' | 'vencida' | 'reactivada'
 
 interface Cotizacion {
   id: string
@@ -54,6 +54,8 @@ const ESTADO_CFG: Record<Estado, { label: string; cls: string; dot: string }> = 
   aceptada:      { label: 'Aceptada',         cls: 'bg-green-50 text-green-700',  dot: 'bg-green-500' },
   rechazada:     { label: 'No le interesó',   cls: 'bg-red-50 text-red-700',      dot: 'bg-red-500' },
   pospuesta:     { label: 'Por ahora no',     cls: 'bg-amber-50 text-amber-700',  dot: 'bg-amber-400' },
+  vencida:       { label: 'Vencida',          cls: 'bg-orange-50 text-orange-700', dot: 'bg-orange-500' },
+  reactivada:    { label: 'Reactivada',       cls: 'bg-indigo-50 text-indigo-700', dot: 'bg-indigo-500' },
 }
 
 function EstadoBadge({ estado }: { estado: Estado }) {
@@ -71,6 +73,118 @@ function ModalidadBadge({ modalidad, plan }: { modalidad: string; plan: string }
   if (modalidad === 'contado') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700">Contado</span>
   if (plan === 'banco_100') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700">100% Banco</span>
   return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-50 text-yellow-700">Crédito 24m</span>
+}
+
+function ReactivarCotizacionBox({ cot, onDone }: { cot: Cotizacion; onDone: (numeroNuevo: string) => void }) {
+  const [codigo, setCodigo] = useState('R000')
+  const [enviarCorreo, setEnviarCorreo] = useState(true)
+  const [confirmar, setConfirmar] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState('')
+  const [comparativa, setComparativa] = useState<any>(null)
+
+  async function reactivar() {
+    setEnviando(true); setError('')
+    try {
+      const res = await fetch('/api/cotizaciones/reactivar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cotizacionOriginalId: cot.id,
+          codigo: codigo.trim(),
+          enviarCorreo,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.error ?? 'Error al reactivar')
+        setEnviando(false)
+        return
+      }
+      setComparativa(json.comparativa)
+      if (!json.comparativa?.hubo_cambio) {
+        // No hay cambio, cerramos
+        onDone(json.numero)
+      }
+      setEnviando(false)
+    } catch {
+      setError('Error de conexión')
+      setEnviando(false)
+    }
+  }
+
+  if (comparativa && comparativa.hubo_cambio) {
+    return (
+      <div className="border-2 border-indigo-300 bg-indigo-50 rounded-xl p-4 space-y-3">
+        <p className="text-sm font-bold text-indigo-900">✓ Cotización reactivada — comparativa interna</p>
+        <p className="text-[11px] text-indigo-700">Estos cambios NO se muestran al cliente en la nueva cotización.</p>
+        <div className="bg-white rounded-lg p-3 space-y-1.5 text-xs">
+          {Math.abs(comparativa.precio_diff) > 0.01 && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Precio base:</span>
+              <span className="font-mono">${comparativa.precio_base_original.toFixed(2)} → <span className={comparativa.precio_diff > 0 ? 'text-red-700 font-bold' : 'text-green-700 font-bold'}>${comparativa.precio_base_actual.toFixed(2)}</span></span>
+            </div>
+          )}
+          {comparativa.cuota_diff != null && Math.abs(comparativa.cuota_diff) > 0.01 && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Cuota mensual:</span>
+              <span className="font-mono">${comparativa.cuota_mensual_original?.toFixed(2)} → <span className={comparativa.cuota_diff > 0 ? 'text-red-700 font-bold' : 'text-green-700 font-bold'}>${comparativa.cuota_mensual_actual?.toFixed(2)}</span></span>
+            </div>
+          )}
+          {Math.abs(comparativa.inicial_diff) > 0.01 && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Total inicial:</span>
+              <span className="font-mono">${comparativa.total_inicial_original.toFixed(2)} → <span className={comparativa.inicial_diff > 0 ? 'text-red-700 font-bold' : 'text-green-700 font-bold'}>${comparativa.total_inicial_actual.toFixed(2)}</span></span>
+            </div>
+          )}
+          {Math.abs(comparativa.total_diff) > 0.01 && (
+            <div className="flex justify-between pt-1.5 border-t border-gray-100">
+              <span className="text-gray-600 font-bold">Costo total:</span>
+              <span className="font-mono font-bold">${comparativa.costo_total_original.toFixed(2)} → <span className={comparativa.total_diff > 0 ? 'text-red-700' : 'text-green-700'}>${comparativa.costo_total_actual.toFixed(2)}</span></span>
+            </div>
+          )}
+        </div>
+        <button onClick={() => onDone('reactivada')} className="w-full py-2 bg-indigo-700 hover:bg-indigo-800 text-white text-sm font-bold rounded-lg">
+          Entendido, cerrar
+        </button>
+      </div>
+    )
+  }
+
+  if (!confirmar) {
+    return (
+      <button
+        onClick={() => setConfirmar(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors"
+      >
+        🔄 Reactivar esta cotización
+      </button>
+    )
+  }
+
+  return (
+    <div className="border-2 border-indigo-300 bg-indigo-50 rounded-xl p-4 space-y-3">
+      <p className="text-sm font-bold text-indigo-900">Reactivar cotización</p>
+      <p className="text-[11px] text-indigo-700">Se creará una nueva cotización con vencimiento a 3 días desde hoy, usando los precios actuales del catálogo.</p>
+      <div>
+        <label className="block text-[11px] font-semibold text-gray-500 mb-1">Código vendedora *</label>
+        <input value={codigo} onChange={e => setCodigo(e.target.value.toUpperCase())} placeholder="R000" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono uppercase" />
+      </div>
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" checked={enviarCorreo} onChange={e => setEnviarCorreo(e.target.checked)} className="w-4 h-4 text-indigo-600" />
+        <span className="text-gray-700">Enviar por correo al cliente</span>
+      </label>
+      {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">{error}</p>}
+      <div className="flex gap-2">
+        <button onClick={() => setConfirmar(false)} disabled={enviando} className="flex-1 py-2 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">
+          Cancelar
+        </button>
+        <button onClick={reactivar} disabled={enviando} className="flex-1 py-2 bg-indigo-700 hover:bg-indigo-800 text-white text-sm font-bold rounded-lg disabled:opacity-50">
+          {enviando ? 'Reactivando...' : 'Confirmar'}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
@@ -207,6 +321,11 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
           >
             🚗 Registrar venta desde esta cotización
           </button>
+
+          {/* Reactivar (solo si vencida) */}
+          {cot.estado === 'vencida' && (
+            <ReactivarCotizacionBox cot={cot} onDone={n => { onClose(); router.refresh(); setTimeout(() => alert(`✓ Cotización ${n} reactivada`), 200) }} />
+          )}
 
           {/* Estado actual */}
           <div className="flex items-center justify-between">

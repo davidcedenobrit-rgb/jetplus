@@ -169,7 +169,7 @@ export async function POST(req: Request) {
 
     const hoy = new Date()
     const venc = new Date(hoy)
-    venc.setDate(venc.getDate() + 2)
+    venc.setDate(venc.getDate() + 3)
 
     // Insertar cotización (trigger auto-genera numero y numero_seq)
     const { data: cot, error: insertError } = await supabase
