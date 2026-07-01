@@ -137,7 +137,11 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
       p12_activo: v.p12_activo, p12_c1: v.p12_c1, p12_c2: v.p12_c2, p12_c3: v.p12_c3, p12_c4: v.p12_c4, p12_c5: v.p12_c5, p12_c6: v.p12_c6, p12_c7: v.p12_c7, p12_c8: v.p12_c8, p12_c9: v.p12_c9, p12_c10: v.p12_c10, p12_c11: v.p12_c11, p12_c12: v.p12_c12, p12_total,
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
-    if (error) { showToast('Error al guardar', false); return }
+    if (error) {
+      console.error('[ac500_vehiculos] error al guardar:', error)
+      showToast(`Error: ${error.message}`, false)
+      return
+    }
     setDirty(prev => ({ ...prev, [id]: false }))
     setSaved(prev => ({ ...prev, [id]: true }))
     showToast(`✓ ${v.model} guardado`, true)

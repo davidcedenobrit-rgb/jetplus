@@ -297,7 +297,11 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       updated_at: new Date().toISOString(),
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
-    if (error) { showToast('Error al guardar', false); return }
+    if (error) {
+      console.error('[catalogo_ventas] error al guardar:', error)
+      showToast(`Error: ${error.message}`, false)
+      return
+    }
     setDirty(prev => ({ ...prev, [id]: false }))
     setSaved(prev => ({ ...prev, [id]: true }))
     showToast(`✓ ${v.model} guardado`, true)
