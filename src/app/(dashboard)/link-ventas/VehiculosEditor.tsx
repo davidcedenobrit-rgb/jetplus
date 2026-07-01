@@ -81,6 +81,7 @@ interface Vehiculo {
   tasa_banco_pct: number | null
   tasa_vhm_pct: number | null
   cuotas_vhm: number | null
+  inicial_pct: number | null
 }
 
 const CMAP: Record<string, string> = {
@@ -164,6 +165,7 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   gastos_internos_banco: null, alfombras_banco: null,
   diferencial_pct: 30, tasa_banco_pct: 16,
   tasa_vhm_pct: null, cuotas_vhm: 24,
+  inicial_pct: 40,
 }
 
 export default function VehiculosEditor({ initialVehiculos, showroomStock }: { initialVehiculos: Vehiculo[]; showroomStock: ShowroomItem[] }) {
@@ -294,6 +296,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       alfombras_banco: v.alfombras_banco,
       diferencial_pct: v.diferencial_pct, tasa_banco_pct: v.tasa_banco_pct,
       tasa_vhm_pct: v.tasa_vhm_pct, cuotas_vhm: v.cuotas_vhm ?? 24,
+      inicial_pct: v.inicial_pct ?? 40,
       updated_at: new Date().toISOString(),
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
@@ -544,13 +547,46 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                         <NumField className={inputCls} value={v.cash} placeholder="30000" onCommit={n => update(v.id, 'cash', n)} />
                       </Field>
                       <Field label={`Cuota Vehimotors ${v.cuotas_vhm ?? 24}m ($/mes)`}>
-                        <NumField className={inputCls} value={v.tasa_credito} placeholder="500" onCommit={n => update(v.id, 'tasa_credito', n)} />
+                        <div className="flex gap-2">
+                          <NumField className={inputCls} value={v.tasa_credito} placeholder="500" onCommit={n => update(v.id, 'tasa_credito', n)} />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const precio = v.cash ?? 0
+                              const iniPct = (v.inicial_pct ?? 40) / 100
+                              const nCuotas = v.cuotas_vhm ?? 24
+                              const tasaAnual = (v.tasa_vhm_pct ?? 0) / 100
+                              if (precio <= 0 || nCuotas <= 0) {
+                                showToast('Faltan datos: precio y cuotas', false)
+                                return
+                              }
+                              const financiado = precio * (1 - iniPct)
+                              let cuota: number
+                              if (tasaAnual > 0) {
+                                const i = tasaAnual / 12
+                                cuota = financiado * (i * Math.pow(1 + i, nCuotas)) / (Math.pow(1 + i, nCuotas) - 1)
+                              } else {
+                                cuota = financiado / nCuotas
+                              }
+                              const cuotaRounded = Math.round(cuota * 100) / 100
+                              update(v.id, 'tasa_credito', cuotaRounded)
+                              showToast(`✓ Cuota calculada: $${cuotaRounded.toFixed(2)}`, true)
+                            }}
+                            className="px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap"
+                            title="Calcula la cuota mensual con: precio × (1 - inicial%) / N cuotas + tasa anual"
+                          >
+                            Calcular
+                          </button>
+                        </div>
                       </Field>
                       <Field label="Tasa de interés Vehimotors (% anual)">
                         <NumField className={inputCls} value={v.tasa_vhm_pct} placeholder="Ej: 12" onCommit={n => update(v.id, 'tasa_vhm_pct', n)} />
                       </Field>
                       <Field label="Cantidad de cuotas Vehimotors">
                         <NumField className={inputCls} value={v.cuotas_vhm} placeholder="24" onCommit={n => update(v.id, 'cuotas_vhm', n != null ? Math.round(n) : 24)} />
+                      </Field>
+                      <Field label={`% Inicial Vehimotors (hoy ${v.inicial_pct ?? 40}%)`}>
+                        <NumField className={inputCls} value={v.inicial_pct} placeholder="40" onCommit={n => update(v.id, 'inicial_pct', n ?? 40)} />
                       </Field>
                     </div>
 
@@ -627,7 +663,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                           {/* ── Crédito 24m ── */}
                           <div className="border border-gray-200 rounded-xl overflow-hidden">
                             <div className="bg-emerald-900 px-4 py-2">
-                              <p className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">Crédito 24m (40% Inicial) — Gastos</p>
+                              <p className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">Crédito {v.cuotas_vhm ?? 24}m ({v.inicial_pct ?? 40}% Inicial) — Gastos</p>
                             </div>
                             <div className="p-3 space-y-2">
                               <div className="grid grid-cols-2 gap-2 items-center">
@@ -664,15 +700,18 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                               </div>
                             </div>
 
-                            {precio > 0 && (
+                            {precio > 0 && (() => {
+                              const iniPct = (v.inicial_pct ?? 40) / 100
+                              const finPct = 1 - iniPct
+                              return (
                               <div className="bg-gray-800 mx-3 mb-3 rounded-xl p-3 space-y-1.5 text-xs">
-                                <div className="flex justify-between text-gray-300"><span>40% Precio base</span><span className="font-mono">${fmtN(precio * 0.4)}</span></div>
+                                <div className="flex justify-between text-gray-300"><span>{(iniPct * 100).toFixed(0)}% Precio base</span><span className="font-mono">${fmtN(precio * iniPct)}</span></div>
                                 <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmtN(iva)}</span></div>
                                 <div className="flex justify-between text-gray-400 text-[11px]"><span>Gastos (suma)</span><span className="font-mono">${fmtN(gcCr)}</span></div>
                                 <div className="flex justify-between text-emerald-400 font-bold border-t border-gray-600 pt-1.5">
-                                  <span>TOTAL INICIAL</span><span className="font-mono">${fmtN(precio * 0.4 + iva + gcCr)}</span>
+                                  <span>TOTAL INICIAL</span><span className="font-mono">${fmtN(precio * iniPct + iva + gcCr)}</span>
                                 </div>
-                                <div className="flex justify-between text-gray-400 text-[11px]"><span>Financiamiento 60%</span><span className="font-mono">${fmtN(precio * 0.6)}</span></div>
+                                <div className="flex justify-between text-gray-400 text-[11px]"><span>Financiamiento {(finPct * 100).toFixed(0)}%</span><span className="font-mono">${fmtN(precio * finPct)}</span></div>
                                 {v.tasa_vhm_pct && <div className="flex justify-between text-gray-400 text-[11px]"><span>Tasa interés</span><span className="font-mono">{v.tasa_vhm_pct}% anual</span></div>}
                                 {cuota > 0 && (
                                   <div className="flex justify-between text-red-400 font-bold border-t border-gray-600 pt-1.5">
@@ -680,7 +719,8 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                                   </div>
                                 )}
                               </div>
-                            )}
+                              )
+                            })()}
                           </div>
                         </div>
                       )
