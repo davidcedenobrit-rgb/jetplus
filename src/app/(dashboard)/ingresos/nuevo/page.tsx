@@ -159,13 +159,25 @@ function NuevoIngresoPageInner() {
           }
         })
     }
-    // Pre-cargar vehiculo desde param (sin acuerdo)
-    if (vehiculoParam && !acuerdoParam && clienteParam) {
+    // Pre-cargar cliente + cargar sus cuotas (viene desde vehiculo o cliente)
+    if (!acuerdoParam && clienteParam) {
       supabase.from('clientes').select('*').eq('id', clienteParam).single()
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .then(({ data }: { data: any }) => {
-          if (data) { setClienteSeleccionado(data); setClienteQuery(data.nombre) }
+          if (data) {
+            setClienteSeleccionado(data)
+            setClienteQuery(data.nombre)
+            loadCuotasCliente(data)
+          }
         })
+      // Cargar contexto del vehículo específico si vino
+      if (vehiculoParam) {
+        supabase.from('vehiculos').select('*').eq('id', vehiculoParam).single()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then(({ data }: { data: any }) => {
+            if (data) setVehiculoContexto(data)
+          })
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
