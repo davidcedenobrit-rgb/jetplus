@@ -285,7 +285,7 @@ export default async function ClienteDetallePage({
               <h2 className="font-bold text-oriental-black flex items-center gap-2">
                 <TrendingUp size={18} className="text-oriental-gray" /> Últimos ingresos
               </h2>
-              <Link href={`/ingresos/nuevo?cliente_id=${id}`} className="text-oriental-red text-xs font-semibold hover:underline">
+              <Link href={`/ingresos/nuevo?cliente=${id}`} className="text-oriental-red text-xs font-semibold hover:underline">
                 + Registrar
               </Link>
             </div>

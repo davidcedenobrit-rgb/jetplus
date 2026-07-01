@@ -497,7 +497,12 @@ export default async function VehiculoDetallePage({
               <h2 className="font-bold text-oriental-black flex items-center gap-2">
                 <TrendingUp size={18} className="text-oriental-gray" /> Ingresos del vehículo
               </h2>
-              <Link href="/ingresos/nuevo" className="text-oriental-red text-xs font-semibold hover:underline">+ Registrar</Link>
+              <Link
+                href={`/ingresos/nuevo?cliente=${vehiculo.cliente_id ?? ''}&vehiculo=${id}${vehiculo.placa ? `&placa=${encodeURIComponent(vehiculo.placa)}` : ''}`}
+                className="text-oriental-red text-xs font-semibold hover:underline"
+              >
+                + Registrar
+              </Link>
             </div>
             {ingresos && ingresos.length > 0 ? (
               <div className="overflow-x-auto">

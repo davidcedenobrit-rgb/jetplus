@@ -236,7 +236,7 @@ export default async function CreditoDetallePage({
           )}
           {vehiculo?.placa && (
             <Link
-              href={`/ingresos/nuevo?placa=${encodeURIComponent(vehiculo.placa)}`}
+              href={`/ingresos/nuevo?cliente=${credito.cliente_id}&vehiculo=${credito.vehiculo_id}&placa=${encodeURIComponent(vehiculo.placa)}`}
               className="flex items-center gap-2 px-4 py-2 bg-oriental-red text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors"
             >
               <PlusCircle size={15} />
@@ -560,9 +560,10 @@ export default async function CreditoDetallePage({
                       const faltante    = Math.max(0, montoTotal - montoPagado)
                       const pct         = montoTotal > 0 ? Math.min(100, (montoPagado / montoTotal) * 100) : 0
                       const placaCuota  = vehiculo?.placa ?? ''
+                      const clienteVehiculoParams = `cliente=${credito.cliente_id}${credito.vehiculo_id ? `&vehiculo=${credito.vehiculo_id}` : ''}`
                       const pagoUrl     = placaCuota
-                        ? `/ingresos/nuevo?placa=${encodeURIComponent(placaCuota)}&cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
-                        : `/ingresos/nuevo?cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
+                        ? `/ingresos/nuevo?${clienteVehiculoParams}&placa=${encodeURIComponent(placaCuota)}&cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
+                        : `/ingresos/nuevo?${clienteVehiculoParams}&cuota_id=${cuota.id}&monto=${faltante.toFixed(2)}`
 
                       const esPagada        = cuota.estado === 'pagada'
                       const esAbono         = cuota.estado === 'abono_parcial'
