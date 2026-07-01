@@ -57,18 +57,7 @@ export async function GET(req: NextRequest) {
   const montoTotal = 11628
   const fechaHoy = new Date().toISOString().split('T')[0]
 
-  // 2. Generar número de recibo (siguiente de la secuencia)
-  const { data: seqRes } = await supabase.rpc('nextval', { sequence_name: 'seq_recibos' }).select().maybeSingle()
-  let numeroRecibo: string
-  if (seqRes && typeof seqRes === 'object' && 'nextval' in seqRes) {
-    const seq = Number((seqRes as any).nextval)
-    numeroRecibo = `LOA-REC-${new Date().getFullYear()}-${String(seq).padStart(6, '0')}`
-  } else {
-    // Fallback: usar timestamp si el RPC no está
-    numeroRecibo = `LOA-REC-TEST-${Date.now().toString().slice(-6)}`
-  }
-
-  // Buscar un usuario para "registrado_por" (usamos el primer admin/director)
+  // Buscar un usuario para "registrado_por" (primer admin/director)
   const { data: adminUser } = await supabase
     .from('usuarios')
     .select('id')
@@ -78,11 +67,10 @@ export async function GET(req: NextRequest) {
 
   const registradoPor = adminUser?.id ?? null
 
-  // 3. Insertar ingreso en estado aprobado
+  // 2. Insertar ingreso — el trigger trg_numero_recibo genera el numero_recibo automáticamente
   const { data: ingreso, error: errIng } = await supabase
     .from('ingresos')
     .insert({
-      numero_recibo: numeroRecibo,
       cliente_id: CLIENTE_ROCARLI,
       vehiculo_id: null,
       placa: null,
