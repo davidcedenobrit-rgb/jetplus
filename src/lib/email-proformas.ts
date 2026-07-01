@@ -1,0 +1,200 @@
+import { Resend } from 'resend'
+import { renderToBuffer } from '@react-pdf/renderer'
+import React from 'react'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { createAdminClient } from '@/lib/supabase/server'
+import { ProformaPDF, type ProformaPDFData, type CuotaCronogramaItem } from './proforma-pdf'
+
+function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+const FROM = 'La Oriental Automotors <administracion@laoriental.co>'
+
+function getLogoBase64(): string {
+  try {
+    const buf = readFileSync(join(process.cwd(), 'public', 'logo-la-oriental.png'))
+    return `data:image/png;base64,${buf.toString('base64')}`
+  } catch {
+    return 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
+  }
+}
+
+function fmt(n: number | null | undefined) {
+  if (n == null) return '0,00'
+  return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function logoUrl() {
+  return `${APP_URL}/logo-la-oriental-blanco.png`
+}
+
+function headerHTML() {
+  return `<div style="background:#C41E3A;padding:20px 32px;border-radius:12px 12px 0 0">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="vertical-align:middle"><img src="${logoUrl()}" alt="La Oriental" style="height:44px;width:auto;display:block" /></td>
+      <td style="padding-left:14px;vertical-align:middle">
+        <p style="margin:0;color:#fff;font-weight:800;font-size:15px;font-family:sans-serif">LA ORIENTAL AUTOMOTORS</p>
+        <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-family:sans-serif">MG &amp; MAXUS · Maturín, Venezuela</p>
+      </td>
+    </tr></table>
+  </div>`
+}
+
+function footerHTML() {
+  return `<div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;border-radius:0 0 12px 12px;text-align:center">
+    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">La Oriental Automotors · MG &amp; MAXUS · Maturín, Venezuela</p>
+  </div>`
+}
+
+function wrap(body: string) {
+  return `<div style="background:#f3f4f6;padding:24px 16px">
+    <div style="background:#fff;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+      ${headerHTML()}
+      <div style="padding:32px">${body}</div>
+      ${footerHTML()}
+    </div>
+  </div>`
+}
+
+function row(label: string, value: string) {
+  return `<tr>
+    <td style="padding:7px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600;width:52%;vertical-align:top;border-bottom:1px solid #f3f4f6">${label}</td>
+    <td style="padding:7px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700;vertical-align:top;border-bottom:1px solid #f3f4f6;text-align:right">${value}</td>
+  </tr>`
+}
+
+export interface EnviarProformaOpts {
+  proformaId: string
+  numero: string
+  fecha: string
+  correoDestino: string
+  clienteNombre: string
+  marca: string
+  modelo: string
+  placa: string | null
+  precioVehiculo: number
+  inicialPagada: number
+  saldoFinanciado: number
+  cuotaMensual: number
+  numeroCuotas: number
+  planLabel: string
+}
+
+async function fetchPdfBuffer(proformaId: string): Promise<Buffer> {
+  const supabase = await createAdminClient()
+  const { data: pro } = await supabase
+    .from('proformas')
+    .select('*')
+    .eq('id', proformaId)
+    .single()
+
+  if (!pro) throw new Error('Proforma no encontrada')
+
+  const cliente: any = pro.cliente_snapshot ?? {}
+  const vehiculo: any = pro.vehiculo_snapshot ?? {}
+  const credito: any = pro.credito_snapshot ?? {}
+  const cronograma: CuotaCronogramaItem[] = (pro.cronograma_snapshot ?? []) as CuotaCronogramaItem[]
+
+  const planLabelMap: Record<string, string> = {
+    inicial_la_oriental: 'La Oriental',
+    financiamiento_vehimotors: 'Financiamiento Vehimotors',
+    cuota_especial: 'Cuota Especial Vehimotors',
+    asegurate_500: 'Asegúrate $500',
+    credito_40_60: '40/60 Vehimotors',
+  }
+
+  const pdfData: ProformaPDFData = {
+    logoSrc: getLogoBase64(),
+    numero: pro.numero,
+    fecha: new Date(pro.fecha_emision + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    clienteNombre: cliente.nombre ?? '',
+    clienteCiRif: cliente.cedula_rif ?? '',
+    clienteDireccion: cliente.direccion ?? null,
+    clienteCorreo: cliente.correo ?? null,
+    clienteTelefono: cliente.telefono ?? null,
+    marca: vehiculo.marca ?? '',
+    modelo: vehiculo.modelo ?? '',
+    placa: vehiculo.placa ?? null,
+    anio: vehiculo.anio ?? null,
+    color: vehiculo.color ?? null,
+    precioBase: Number(vehiculo.precio_base ?? 0),
+    totalVehiculo: Number(pro.precio_vehiculo ?? 0),
+    inicialPagada: Number(pro.monto_inicial ?? 0),
+    saldoFinanciado: Number(pro.monto_financiado ?? 0),
+    cuotaMensual: cronograma.length > 0 ? Number(cronograma[0].monto) : 0,
+    numeroCuotas: Number(pro.num_cuotas ?? cronograma.length),
+    planTipo: credito.plan_tipo ?? '',
+    planLabel: planLabelMap[credito.plan_tipo] ?? 'Crédito',
+    cronograma,
+  }
+
+  const buffer = await renderToBuffer(
+    React.createElement(ProformaPDF, { data: pdfData }) as React.ReactElement<any>
+  )
+  return Buffer.from(buffer)
+}
+
+export async function enviarProformaCliente(opts: EnviarProformaOpts) {
+  const {
+    proformaId, numero, fecha, correoDestino,
+    clienteNombre, marca, modelo, placa,
+    precioVehiculo, inicialPagada, saldoFinanciado,
+    cuotaMensual, numeroCuotas, planLabel,
+  } = opts
+
+  const resend = getResend()
+  const pdfBuffer = await fetchPdfBuffer(proformaId)
+
+  const body = `
+    <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">Proforma de compra financiada</p>
+    <h1 style="font-family:sans-serif;font-size:20px;font-weight:800;color:#111;margin:0 0 4px">Estimado/a ${clienteNombre}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 22px">Adjunto encontrará su <b>Proforma N°&nbsp;${numero}</b> del vehículo entregado bajo compromiso de pago financiado. Este documento formaliza el acuerdo de crédito y detalla el cronograma completo de cuotas.</p>
+
+    <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:14px 18px;margin-bottom:18px">
+      <p style="font-family:sans-serif;font-size:12px;color:#92400e;margin:0;line-height:1.6">
+        <b>⚠ Aviso importante:</b> Este vehículo <b>no ha sido pagado en su totalidad</b>. Su cumplimiento con las cuotas del cronograma es requisito para conservar la propiedad del bien.
+      </p>
+    </div>
+
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;margin-bottom:18px">
+      <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px">Resumen de la proforma</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${row('Número de proforma', numero)}
+        ${row('Fecha de emisión', fecha)}
+        ${row('Vehículo', `${marca} ${modelo}${placa ? ` · ${placa}` : ''}`)}
+        ${row('Modalidad', planLabel)}
+        ${row('Precio del vehículo', `$${fmt(precioVehiculo)}`)}
+        ${row('Inicial pagada', `$${fmt(inicialPagada)}`)}
+        ${row('Saldo financiado', `$${fmt(saldoFinanciado)}`)}
+        ${row('Cuotas mensuales', `${numeroCuotas} × $${fmt(cuotaMensual)}`)}
+      </table>
+    </div>
+
+    <p style="font-family:sans-serif;font-size:13px;color:#374151;margin:0 0 8px;line-height:1.6">
+      Por favor conserve este documento para cualquier trámite futuro. Le recordamos que las cuotas deben pagarse entre el <b>1° y el 5° día</b> de cada mes.
+    </p>
+
+    <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;margin:24px 0 0;line-height:1.5">
+      Cualquier duda, contáctenos al <b>0414-9989010</b> o responda a este correo.
+    </p>
+  `
+
+  const html = wrap(body)
+
+  const result = await resend.emails.send({
+    from: FROM,
+    to: [correoDestino],
+    subject: `Proforma ${numero} — La Oriental Automotors`,
+    html,
+    attachments: [
+      { filename: `${numero}.pdf`, content: pdfBuffer },
+    ],
+  })
+
+  if ((result as any).error) {
+    throw new Error(`Error enviando proforma: ${(result as any).error.message ?? 'desconocido'}`)
+  }
+
+  return result
+}

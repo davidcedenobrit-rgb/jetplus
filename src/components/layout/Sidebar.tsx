@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -231,6 +231,18 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
               </Link>
             )
           })}
+
+          {/* Historial del cliente */}
+          {!['arianna', 'almacen'].includes(rol) && (() => {
+            const active = pathname === '/historial' || pathname.startsWith('/historial/')
+            return (
+              <Link href="/historial" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <ClipboardList size={18} />
+                Historial cliente
+              </Link>
+            )
+          })()}
 
           {/* Aprobaciones */}
           {!['arianna', 'almacen'].includes(rol) && (() => {

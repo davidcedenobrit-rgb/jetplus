@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import VehiculosEditor from './VehiculosEditor'
 import AC500Editor from './AC500Editor'
 import VendedorasEditor from './VendedorasEditor'
@@ -12,11 +13,16 @@ import PromocionesTab from './PromocionesTab'
 
 type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas' | 'clientes' | 'promociones'
 
+const TABS_VALIDOS: Tab[] = ['catalogo', 'ac500', 'vendedoras', 'cotizaciones', 'generar', 'tasas', 'clientes', 'promociones']
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
 
 export default function LinkVentasTabs({ catalogo, ac500, showroomStock }: { catalogo: any[]; ac500: any[]; showroomStock: ShowroomItem[] }) {
-  const [tab, setTab] = useState<Tab>('catalogo')
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab') as Tab | null
+  const initialTab: Tab = tabFromUrl && TABS_VALIDOS.includes(tabFromUrl) ? tabFromUrl : 'catalogo'
+  const [tab, setTab] = useState<Tab>(initialTab)
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'catalogo', label: 'Catálogo de vehículos' },

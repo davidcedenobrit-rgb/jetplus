@@ -7,6 +7,7 @@ import DeleteButton from '@/components/DeleteButton'
 import RevertirCuotaButton from './RevertirCuotaButton'
 import PrintButton from './PrintButton'
 import BitacoraButton from './BitacoraButton'
+import ProformaButton from './ProformaButton'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
@@ -71,7 +72,7 @@ export default async function CreditoDetallePage({
   // Cargar el crédito principal (para obtener vehiculo_id y cliente)
   const { data: credito } = await supabase
     .from('creditos')
-    .select('*, clientes(id, nombre, cedula_rif, telefono, whatsapp), vehiculos(id, marca, modelo, placa, color, anio, proforma_vehimotors)')
+    .select('*, clientes(id, nombre, cedula_rif, telefono, whatsapp, correo), vehiculos(id, marca, modelo, placa, color, anio, proforma_vehimotors)')
     .eq('id', id)
     .single()
 
@@ -170,6 +171,13 @@ export default async function CreditoDetallePage({
     .maybeSingle()
   const acuerdo = acuerdoData as any
 
+  // Proforma emitida para este crédito (si existe)
+  const { data: proformaExistente } = await supabase
+    .from('proformas')
+    .select('id, numero')
+    .eq('credito_id', id)
+    .maybeSingle()
+
   // Resumen consolidado
   const totalFinanciado = creditos.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
   const totalInicial = creditos.reduce((s: number, c: any) => s + Number(c.inicial), 0)
@@ -234,6 +242,11 @@ export default async function CreditoDetallePage({
           {cliente?.id && (
             <BitacoraButton clienteId={cliente.id} nombre={cliente.nombre ?? ''} />
           )}
+          <ProformaButton
+            creditoId={id}
+            correoClienteDefault={cliente?.correo ?? null}
+            proformaExistente={proformaExistente ?? null}
+          />
           {vehiculo?.placa && (
             <Link
               href={`/ingresos/nuevo?cliente=${credito.cliente_id}&vehiculo=${credito.vehiculo_id}&placa=${encodeURIComponent(vehiculo.placa)}`}
