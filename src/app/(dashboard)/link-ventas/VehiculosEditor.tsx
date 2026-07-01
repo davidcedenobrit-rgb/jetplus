@@ -263,6 +263,45 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     setSaved(prev => ({ ...prev, [id]: false }))
   }
 
+  // Recalcula gastos_vhm_cr (7% del financiamiento) y tasa_credito (cuota mensual)
+  // basándose en precio, inicial_pct, cuotas_vhm y tasa_vhm_pct.
+  function recalcularCreditoVhm(v: Partial<Vehiculo> & { id: string }, mostrarToast = false) {
+    const precio = Number(v.cash ?? 0)
+    const iniPct = Number(v.inicial_pct ?? 40) / 100
+    const nCuotas = Number(v.cuotas_vhm ?? 24)
+    const tasaAnual = Number(v.tasa_vhm_pct ?? 0) / 100
+
+    if (precio <= 0 || nCuotas <= 0) {
+      if (mostrarToast) showToast('Faltan datos: precio y cuotas', false)
+      return
+    }
+
+    const financiado = precio * (1 - iniPct)
+    // Gastos Vehimotors = 7% del financiamiento
+    const gastosVhmCr = Math.round(financiado * 0.07 * 100) / 100
+
+    // Cuota mensual
+    let cuota: number
+    if (tasaAnual > 0) {
+      const i = tasaAnual / 12
+      cuota = financiado * (i * Math.pow(1 + i, nCuotas)) / (Math.pow(1 + i, nCuotas) - 1)
+    } else {
+      cuota = financiado / nCuotas
+    }
+    const cuotaRounded = Math.round(cuota * 100) / 100
+
+    // Actualiza ambos campos en el estado local
+    setVehiculos(prev => prev.map(x => x.id === v.id ? {
+      ...x,
+      gastos_vhm_cr: gastosVhmCr,
+      tasa_credito: cuotaRounded,
+    } : x))
+    setDirty(prev => ({ ...prev, [v.id]: true }))
+    setSaved(prev => ({ ...prev, [v.id]: false }))
+
+    if (mostrarToast) showToast(`✓ Cuota $${cuotaRounded.toFixed(2)} · Gastos VM $${gastosVhmCr.toFixed(2)}`, true)
+  }
+
   function toggleExpand(id: string) {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
   }
@@ -542,53 +581,84 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                   {/* Precios */}
                   <div>
                     <SectionLabel>Precios y financiamiento</SectionLabel>
+                    {/* Función que auto-recalcula gastos_vhm_cr (7%) y tasa_credito (cuota mensual) */}
+                    {(() => null)()}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Field label="Precio base ($)">
-                        <NumField className={inputCls} value={v.cash} placeholder="30000" onCommit={n => update(v.id, 'cash', n)} />
+                        <NumField className={inputCls} value={v.cash} placeholder="30000" onCommit={n => {
+                          update(v.id, 'cash', n)
+                          recalcularCreditoVhm({ ...v, cash: n })
+                        }} />
                       </Field>
                       <Field label={`Cuota Vehimotors ${v.cuotas_vhm ?? 24}m ($/mes)`}>
                         <div className="flex gap-2">
                           <NumField className={inputCls} value={v.tasa_credito} placeholder="500" onCommit={n => update(v.id, 'tasa_credito', n)} />
                           <button
                             type="button"
-                            onClick={() => {
-                              const precio = v.cash ?? 0
-                              const iniPct = (v.inicial_pct ?? 40) / 100
-                              const nCuotas = v.cuotas_vhm ?? 24
-                              const tasaAnual = (v.tasa_vhm_pct ?? 0) / 100
-                              if (precio <= 0 || nCuotas <= 0) {
-                                showToast('Faltan datos: precio y cuotas', false)
-                                return
-                              }
-                              const financiado = precio * (1 - iniPct)
-                              let cuota: number
-                              if (tasaAnual > 0) {
-                                const i = tasaAnual / 12
-                                cuota = financiado * (i * Math.pow(1 + i, nCuotas)) / (Math.pow(1 + i, nCuotas) - 1)
-                              } else {
-                                cuota = financiado / nCuotas
-                              }
-                              const cuotaRounded = Math.round(cuota * 100) / 100
-                              update(v.id, 'tasa_credito', cuotaRounded)
-                              showToast(`✓ Cuota calculada: $${cuotaRounded.toFixed(2)}`, true)
-                            }}
+                            onClick={() => recalcularCreditoVhm(v, true)}
                             className="px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap"
-                            title="Calcula la cuota mensual con: precio × (1 - inicial%) / N cuotas + tasa anual"
+                            title="Calcula la cuota mensual con: financiamiento (precio × 1 - inicial%) / N cuotas + tasa anual"
                           >
                             Calcular
                           </button>
                         </div>
                       </Field>
                       <Field label="Tasa de interés Vehimotors (% anual)">
-                        <NumField className={inputCls} value={v.tasa_vhm_pct} placeholder="Ej: 12" onCommit={n => update(v.id, 'tasa_vhm_pct', n)} />
+                        <NumField className={inputCls} value={v.tasa_vhm_pct} placeholder="Ej: 12" onCommit={n => {
+                          update(v.id, 'tasa_vhm_pct', n)
+                          recalcularCreditoVhm({ ...v, tasa_vhm_pct: n })
+                        }} />
                       </Field>
                       <Field label="Cantidad de cuotas Vehimotors">
-                        <NumField className={inputCls} value={v.cuotas_vhm} placeholder="24" onCommit={n => update(v.id, 'cuotas_vhm', n != null ? Math.round(n) : 24)} />
+                        <NumField className={inputCls} value={v.cuotas_vhm} placeholder="24" onCommit={n => {
+                          const nInt = n != null ? Math.round(n) : 24
+                          update(v.id, 'cuotas_vhm', nInt)
+                          recalcularCreditoVhm({ ...v, cuotas_vhm: nInt })
+                        }} />
                       </Field>
                       <Field label={`% Inicial Vehimotors (hoy ${v.inicial_pct ?? 40}%)`}>
-                        <NumField className={inputCls} value={v.inicial_pct} placeholder="40" onCommit={n => update(v.id, 'inicial_pct', n ?? 40)} />
+                        <NumField className={inputCls} value={v.inicial_pct} placeholder="40" onCommit={n => {
+                          const iniN = n ?? 40
+                          update(v.id, 'inicial_pct', iniN)
+                          recalcularCreditoVhm({ ...v, inicial_pct: iniN })
+                        }} />
+                      </Field>
+                      <Field label={`% Financiamiento (calculado)`}>
+                        <input
+                          className={`${inputCls} bg-gray-100 cursor-not-allowed`}
+                          type="text"
+                          readOnly
+                          value={`${(100 - (v.inicial_pct ?? 40)).toFixed(0)}%`}
+                        />
                       </Field>
                     </div>
+
+                    {/* Resumen del financiamiento en vivo */}
+                    {(v.cash ?? 0) > 0 && (() => {
+                      const finPct = (100 - (v.inicial_pct ?? 40)) / 100
+                      const financiado = (v.cash ?? 0) * finPct
+                      const gastosVhmCalc = financiado * 0.07
+                      return (
+                        <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div>
+                            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Monto financiado</p>
+                            <p className="font-mono font-bold text-emerald-900">${financiado.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Inicial ({v.inicial_pct ?? 40}%)</p>
+                            <p className="font-mono font-bold text-emerald-900">${((v.cash ?? 0) * ((v.inicial_pct ?? 40) / 100)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Gastos VM (7% auto)</p>
+                            <p className="font-mono font-bold text-emerald-900">${gastosVhmCalc.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Cuota mensual</p>
+                            <p className="font-mono font-bold text-emerald-900">${(v.tasa_credito ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                        </div>
+                      )
+                    })()}
 
                     {/* Gastos contado + crédito en paralelo */}
                     {(() => {
