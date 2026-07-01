@@ -63,11 +63,29 @@ export default async function IngresoDetallePage({
 
   const totalReportadoVM = (reportesVM ?? []).reduce((s, r) => s + Number(r.monto_reportado), 0)
 
-  // Cuotas aplicadas en este ingreso (para el recibo)
+  // Cuotas aplicadas en este ingreso (para el recibo), con vehículo del crédito
   const { data: cuotasAplicadas } = await supabase
     .from('cuota_ingresos')
-    .select('monto_aplicado, cuotas(numero_cuota, monto, monto_pagado, estado, fecha_vencimiento, concepto, credito_id, creditos(plan_tipo))')
+    .select('monto_aplicado, cuotas(numero_cuota, monto, monto_pagado, estado, fecha_vencimiento, concepto, credito_id, creditos(plan_tipo, vehiculo_id, placa, vehiculos(marca, modelo, placa, proforma_vehimotors)))')
     .eq('ingreso_id', id)
+
+  // Vehículos únicos afectados por las cuotas aplicadas (para el resumen del recibo)
+  const vehiculosCuotas: { id?: string; marca: string; modelo: string; placa: string | null; proforma: string | null }[] = []
+  const vistos = new Set<string>()
+  for (const ci of (cuotasAplicadas ?? []) as any[]) {
+    const v = ci?.cuotas?.creditos?.vehiculos
+    const placa = v?.placa ?? ci?.cuotas?.creditos?.placa ?? null
+    if (!v) continue
+    const key = `${v.marca}|${v.modelo}|${placa ?? ''}|${v.proforma_vehimotors ?? ''}`
+    if (vistos.has(key)) continue
+    vistos.add(key)
+    vehiculosCuotas.push({
+      marca: v.marca,
+      modelo: v.modelo,
+      placa,
+      proforma: v.proforma_vehimotors ?? null,
+    })
+  }
 
   // Vehículo vinculado
   const { data: vehiculo } = ingreso.vehiculo_id
@@ -220,29 +238,61 @@ export default async function IngresoDetallePage({
 
               <div className="border-t border-gray-100" />
 
-              {/* Fila 2: Vehículo */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2">
-                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Vehículo</p>
-                  {vehiculo ? (
-                    <div>
-                      <p className="text-sm font-bold text-oriental-black">
-                        {vehiculo.marca} {vehiculo.modelo}
-                        {vehiculo.anio && <span className="font-normal text-oriental-gray ml-1">{vehiculo.anio}</span>}
-                      </p>
-                      {vehiculo.version && <p className="text-xs text-oriental-gray">{vehiculo.version}</p>}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-oriental-gray">—</p>
-                  )}
-                </div>
+              {/* Fila 2: Vehículo(s) */}
+              {vehiculosCuotas.length > 1 ? (
+                // Múltiples vehículos afectados por las cuotas aplicadas
                 <div>
-                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Placa</p>
-                  <p className="font-mono font-black text-oriental-black text-base tracking-widest">
-                    {ingreso.placa ?? vehiculo?.placa ?? '—'}
+                  <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-2">
+                    Vehículos ({vehiculosCuotas.length})
                   </p>
+                  <div className="space-y-2">
+                    {vehiculosCuotas.map((v, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-3 bg-oriental-bg/50 rounded-lg px-3 py-2">
+                        <div>
+                          <p className="text-sm font-bold text-oriental-black">{v.marca} {v.modelo}</p>
+                          {v.proforma && (
+                            <p className="text-[11px] text-indigo-700 font-mono font-semibold">📄 {v.proforma}</p>
+                          )}
+                        </div>
+                        <span className="font-mono font-black text-oriental-black text-sm tracking-widest">
+                          {v.placa ?? '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // Un solo vehículo (comportamiento clásico)
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Vehículo</p>
+                    {vehiculo ? (
+                      <div>
+                        <p className="text-sm font-bold text-oriental-black">
+                          {vehiculo.marca} {vehiculo.modelo}
+                          {vehiculo.anio && <span className="font-normal text-oriental-gray ml-1">{vehiculo.anio}</span>}
+                        </p>
+                        {vehiculo.version && <p className="text-xs text-oriental-gray">{vehiculo.version}</p>}
+                      </div>
+                    ) : vehiculosCuotas[0] ? (
+                      <div>
+                        <p className="text-sm font-bold text-oriental-black">{vehiculosCuotas[0].marca} {vehiculosCuotas[0].modelo}</p>
+                        {vehiculosCuotas[0].proforma && (
+                          <p className="text-[11px] text-indigo-700 font-mono font-semibold">📄 {vehiculosCuotas[0].proforma}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-oriental-gray">—</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-oriental-gray uppercase tracking-wider font-bold mb-1.5">Placa</p>
+                    <p className="font-mono font-black text-oriental-black text-base tracking-widest">
+                      {ingreso.placa ?? vehiculo?.placa ?? vehiculosCuotas[0]?.placa ?? '—'}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="border-t border-gray-100" />
 
@@ -271,6 +321,7 @@ export default async function IngresoDetallePage({
                           <tr className="print-bg-gray bg-gray-50 border-b border-gray-200">
                             <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Cuota</th>
                             <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Plan</th>
+                            <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Vehículo / Placa</th>
                             <th className="text-left px-3 py-2 font-semibold text-oriental-gray">Vencimiento</th>
                             <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Monto cuota</th>
                             <th className="text-right px-3 py-2 font-semibold text-oriental-gray">Abonado este recibo</th>
@@ -287,6 +338,8 @@ export default async function IngresoDetallePage({
                               planTipo === 'asegurate_500' ? 'Asegúrate $500' :
                               planTipo === 'credito_40_60' ? '40/60 Vehimotors' :
                               planTipo === 'cuota_especial' ? 'Cuota especial' : 'Crédito'
+                            const vehCuota = cuota?.creditos?.vehiculos
+                            const placaCuota = vehCuota?.placa ?? cuota?.creditos?.placa ?? null
                             const montoTotal = Number(cuota?.monto ?? 0)
                             const aplicado = Number(ci.monto_aplicado)
                             const montoPagado = Number(cuota?.monto_pagado ?? 0)
@@ -295,6 +348,19 @@ export default async function IngresoDetallePage({
                               <tr key={idx} className="border-b border-gray-100 last:border-0">
                                 <td className="px-3 py-2 font-semibold text-oriental-black">#{cuota?.numero_cuota ?? '—'}</td>
                                 <td className="px-3 py-2 text-oriental-gray">{planNombre}</td>
+                                <td className="px-3 py-2">
+                                  {vehCuota ? (
+                                    <>
+                                      <p className="text-oriental-black font-semibold text-[11px]">{vehCuota.marca} {vehCuota.modelo}</p>
+                                      <p className="font-mono text-oriental-gray text-[10px]">
+                                        {placaCuota ?? '—'}
+                                        {vehCuota.proforma_vehimotors && <span className="ml-1 text-indigo-600">· {vehCuota.proforma_vehimotors}</span>}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <span className="text-oriental-gray">—</span>
+                                  )}
+                                </td>
                                 <td className="px-3 py-2 text-oriental-gray">
                                   {cuota?.fecha_vencimiento
                                     ? new Date(cuota.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
