@@ -21,6 +21,8 @@ export const MODELOS_MAXUS = [
   'Maxus D60 LUX',
   'Maxus D90 AT',
   'Maxus D90 LUX 4x4',
+  'Maxus D90 Max 4x4',
+  'Maxus T60 1 Cabina Sincrónica',
   'Maxus T60 Comfort 4x4',
   'Maxus T60 Comfort 4x2',
   'Maxus T70 4x4 AT',
