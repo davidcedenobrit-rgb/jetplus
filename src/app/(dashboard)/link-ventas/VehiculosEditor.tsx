@@ -242,11 +242,29 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
   const router = useRouter()
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const vehiculosOrdenados = useMemo(() => {
-    const conStock = vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) > 0)
-    const sinStock = vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) === 0)
+  // Orden estable: se calcula solo cuando cambia la lista de IDs o el showroom.
+  // Si el orden dependiera de propiedades individuales (v.model, v.brand), al
+  // escribir en un input el vehiculo se reordenaria en cada tecla, la card
+  // cambiaria de posicion en el DOM y el input perderia el foco despues de
+  // una sola letra.
+  const stableIdsOrder = useMemo(() => {
+    const conStock: string[] = []
+    const sinStock: string[] = []
+    for (const v of vehiculos) {
+      if (tieneStock(v.brand, v.model, showroomStock) > 0) conStock.push(v.id)
+      else sinStock.push(v.id)
+    }
     return [...conStock, ...sinStock]
-  }, [vehiculos, showroomStock])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    vehiculos.map(v => v.id).join('|'),
+    showroomStock,
+  ])
+
+  const vehiculosOrdenados = useMemo(() => {
+    const map = new Map(vehiculos.map(v => [v.id, v]))
+    return stableIdsOrder.map(id => map.get(id)).filter(Boolean) as Vehiculo[]
+  }, [vehiculos, stableIdsOrder])
 
   const modelosEnShowroom = useMemo(
     () => vehiculos.filter(v => tieneStock(v.brand, v.model, showroomStock) > 0),
