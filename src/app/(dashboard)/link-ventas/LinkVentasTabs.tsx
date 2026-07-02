@@ -55,7 +55,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock }: { cat
       {tab === 'ac500' && <AC500Editor initial={ac500} />}
       {tab === 'vendedoras' && <VendedorasEditor />}
       {tab === 'cotizaciones' && <CotizacionesTab />}
-      {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} />}
+      {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} />}
       {tab === 'tasas' && <TasasEditor />}
       {tab === 'clientes' && <ClientesHistorialTab />}
       {tab === 'promociones' && <PromocionesTab catalogo={catalogo} />}

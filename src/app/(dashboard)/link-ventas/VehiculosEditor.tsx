@@ -372,20 +372,21 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
 
   async function sincronizarShowroom() {
     setSyncing(true)
-    let ok = 0, fail = 0
+    let activados = 0, fail = 0
     for (const v of vehiculos) {
       const stock = tieneStock(v.brand, v.model, showroomStock)
-      const nuevoDisp = stock > 0
-      if (!!v.disponible === nuevoDisp) continue
-      const { error } = await supabase.from('catalogo_ventas').update({ disponible: nuevoDisp }).eq('id', v.id)
+      if (stock <= 0) continue
+      if (v.disponible) continue
+      const { error } = await supabase.from('catalogo_ventas').update({ disponible: true }).eq('id', v.id)
       if (error) { fail++; continue }
-      ok++
-      setVehiculos(prev => prev.map(x => x.id === v.id ? { ...x, disponible: nuevoDisp } : x))
+      activados++
+      setVehiculos(prev => prev.map(x => x.id === v.id ? { ...x, disponible: true } : x))
     }
     setSyncing(false)
     if (fail > 0) showToast(`Sincronizado con ${fail} error(es)`, false)
-    else showToast(`✓ Catálogo sincronizado con showroom (${ok} cambio${ok !== 1 ? 's' : ''})`, true)
-    if (ok > 0) router.refresh()
+    else if (activados === 0) showToast('✓ Todos los vehículos con stock ya estaban activos', true)
+    else showToast(`✓ Activados ${activados} vehículo${activados !== 1 ? 's' : ''} con stock en showroom`, true)
+    if (activados > 0) router.refresh()
   }
 
   async function saveNew() {

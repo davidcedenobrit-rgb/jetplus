@@ -1,8 +1,34 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+type ShowroomItem = { marca: string; modelo: string; unidades: number }
+
+function extractKey(model: string): string {
+  const m = model.toUpperCase().replace(/[()]/g, '')
+  if (m.includes('ZS')) {
+    if (m.includes('CLASICO') || m.includes('CLÁSICO')) return 'ZS-CLASICO'
+    return 'ZS-NEW'
+  }
+  if (m.includes('MG3')) {
+    if (m.includes(' MT') || m.includes('SINCRONIC') || m.includes('SINCRÓNIC')) return 'MG3-MT'
+    return 'MG3-AT'
+  }
+  const codes = ['MG5','MG6','MG7','RX5','RX8','RX9','D60','D90','S80','T60','T90','T50','HS5','HS']
+  for (const c of codes) {
+    if (m.includes(c)) return c
+  }
+  return m.split(/\s+/).find(t => /^[A-Z][A-Z0-9]{1,4}$/.test(t)) ?? m.split(' ')[0]
+}
+
+function unidadesEnShowroom(brand: string, model: string, stock: ShowroomItem[]): number {
+  const key = extractKey(model)
+  return stock
+    .filter(s => s.marca.toUpperCase() === brand.toUpperCase() && extractKey(s.modelo) === key)
+    .reduce((sum, s) => sum + s.unidades, 0)
+}
+
 interface Vehiculo {
   id: string
   brand: string
@@ -95,8 +121,17 @@ function buildCuotasPreview(p: PlanAC500): { label: string; monto: number }[] {
 const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red bg-white'
 const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1'
 
-export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
-  const disponibles: Vehiculo[] = catalogo
+export default function CotizacionCDMTab({ catalogo, showroomStock = [] }: { catalogo: any[]; showroomStock?: ShowroomItem[] }) {
+  // Priorizar los que están en showroom (con stock) sobre los que son por encargo
+  const disponibles: Vehiculo[] = useMemo(() => {
+    const conStock: Vehiculo[] = []
+    const sinStock: Vehiculo[] = []
+    for (const v of catalogo as Vehiculo[]) {
+      if (unidadesEnShowroom(v.brand, v.model, showroomStock) > 0) conStock.push(v)
+      else sinStock.push(v)
+    }
+    return [...conStock, ...sinStock]
+  }, [catalogo, showroomStock])
 
   const [step, setStep] = useState<Step>('vehiculo')
   const [vehiculoSel, setVehiculoSel] = useState<Vehiculo | null>(null)
@@ -193,41 +228,58 @@ export default function CotizacionCDMTab({ catalogo }: { catalogo: any[] }) {
       <div>
         <div className="mb-5">
           <h2 className="text-base font-bold text-oriental-black">Generar cotización</h2>
-          <p className="text-sm text-oriental-gray mt-1">Todos los modelos del catálogo — los marcados como "No público" no aparecen en la web</p>
+          <p className="text-sm text-oriental-gray mt-1">
+            Todos los modelos del catálogo — los <span className="text-green-700 font-semibold">verdes están en showroom</span>, los <span className="text-amber-700 font-semibold">ámbar se cotizan por encargo</span>.
+          </p>
         </div>
 
         {disponibles.length === 0 ? (
           <div className="card p-12 text-center text-oriental-gray">
             <p className="text-2xl mb-3">🚗</p>
-            <p className="font-semibold">No hay vehículos disponibles en showroom.</p>
-            <p className="text-sm mt-1">Actívalos desde la pestaña Catálogo de vehículos.</p>
+            <p className="font-semibold">No hay vehículos en el catálogo.</p>
+            <p className="text-sm mt-1">Agrégalos desde la pestaña Catálogo de vehículos.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {disponibles.map(v => (
-              <button
-                key={v.id}
-                onClick={() => seleccionarVehiculo(v)}
-                className="card p-4 text-left hover:border-oriental-red hover:shadow-md transition-all group"
-              >
-                {v.img_url && (
-                  <div className="w-full h-36 rounded-lg overflow-hidden mb-3 bg-gray-50">
-                    <img src={v.img_url} alt={v.model} className="w-full h-full object-contain" />
-                  </div>
-                )}
-                <div className="flex items-start justify-between gap-2 mb-0.5">
-                  <p className="text-[10px] font-bold text-oriental-red uppercase tracking-widest">{v.brand}</p>
-                  {!v.disponible && (
-                    <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">No público</span>
+            {disponibles.map(v => {
+              const unidades = unidadesEnShowroom(v.brand, v.model, showroomStock)
+              const enShowroom = unidades > 0
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => seleccionarVehiculo(v)}
+                  className={`card p-4 text-left hover:border-oriental-red hover:shadow-md transition-all group relative ${enShowroom ? '' : 'opacity-90'}`}
+                >
+                  {v.img_url && (
+                    <div className="w-full h-36 rounded-lg overflow-hidden mb-3 bg-gray-50">
+                      <img src={v.img_url} alt={v.model} className="w-full h-full object-contain" />
+                    </div>
                   )}
-                </div>
-                <p className="font-bold text-oriental-black text-sm mb-2">{v.model}</p>
-                <p className="text-xs text-oriental-gray">Precio base: <span className="font-bold text-oriental-black">${fm(v.cash)}</span></p>
-                <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
-                  <span className="text-xs font-semibold text-oriental-red group-hover:underline">Seleccionar →</span>
-                </div>
-              </button>
-            ))}
+                  <div className="flex items-start justify-between gap-2 mb-0.5">
+                    <p className="text-[10px] font-bold text-oriental-red uppercase tracking-widest">{v.brand}</p>
+                    <div className="flex items-center gap-1 flex-wrap justify-end">
+                      {enShowroom ? (
+                        <span className="text-[9px] font-bold bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                          En showroom · {unidades} u
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                          Por encargo
+                        </span>
+                      )}
+                      {!v.disponible && (
+                        <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">No público</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="font-bold text-oriental-black text-sm mb-2">{v.model}</p>
+                  <p className="text-xs text-oriental-gray">Precio base: <span className="font-bold text-oriental-black">${fm(v.cash)}</span></p>
+                  <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
+                    <span className="text-xs font-semibold text-oriental-red group-hover:underline">Seleccionar →</span>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         )}
       </div>
