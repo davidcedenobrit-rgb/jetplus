@@ -114,6 +114,9 @@ export async function enviarSolicitudCotizacion(opts: {
 
   const overrideOpts = applyVMOverride({ to, cc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors` })
   const result = await getResend().emails.send({ from: FROM, ...overrideOpts, html: wrap(body) })
+  if ((result as any).error) {
+    throw new Error(`Resend error: ${(result as any).error.message ?? (result as any).error.name ?? 'desconocido'}`)
+  }
 
   const resendId = extraerResendId(result)
   if (resendId) {

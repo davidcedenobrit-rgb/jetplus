@@ -227,7 +227,6 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
               body: JSON.stringify({ solicitudId: solicitud.id }),
             })
             if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
-            await log('cotizacion_enviada', 'Email enviado a Vehimotors')
             router.refresh(); setLoading(false)
           }} disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 py-2.5">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

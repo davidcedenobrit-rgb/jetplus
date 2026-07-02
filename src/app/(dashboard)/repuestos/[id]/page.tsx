@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { ArrowLeft, Package, CheckCircle2, History, FileText, Truck, AlertCircle } from 'lucide-react'
 import RepuestosAcciones from './RepuestosAcciones'
 import EliminarSolicitud from './EliminarSolicitud'
+import ReenviarCotizacionButton from '../ReenviarCotizacionButton'
+import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 
 const PASOS = [
   { key: 'solicitado',              label: 'Solicitado',         desc: 'José Manuel registró la solicitud' },
@@ -342,6 +344,31 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
 
         {/* Panel de acciones */}
         <div className="space-y-4">
+          {(solicitud.estado === 'cotizacion_enviada' || solicitud.resend_email_id || solicitud.email_ultimo_estado) && (
+            <div className="card p-5">
+              <h3 className="text-sm font-bold text-oriental-black mb-3">Tracking del correo</h3>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <EmailTrackingBadge
+                    estado={solicitud.email_ultimo_estado as any}
+                    ultimoEventoAt={solicitud.email_ultimo_evento_at ?? null}
+                    resendEmailId={solicitud.resend_email_id ?? null}
+                    entidadTipo="solicitud_repuesto"
+                    entidadId={solicitud.id}
+                    size="sm"
+                  />
+                  <p className="text-[11px] text-oriental-gray mt-2">
+                    {solicitud.email_ultimo_evento_at
+                      ? `Ultimo evento: ${new Date(solicitud.email_ultimo_evento_at).toLocaleString('es-VE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                      : 'Sin eventos de entrega registrados todavia.'}
+                  </p>
+                </div>
+              </div>
+              {solicitud.estado === 'cotizacion_enviada' && (
+                <ReenviarCotizacionButton solicitudId={solicitud.id} userEmail={user.email ?? ''} className="mt-4" />
+              )}
+            </div>
+          )}
           <RepuestosAcciones
             solicitud={solicitud}
             items={(items ?? []).map((i: any) => ({ id: i.id, descripcion: i.descripcion, referencia: i.referencia, cantidad: i.cantidad }))}

@@ -11,7 +11,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { solicitudId } = await req.json()
+    const { solicitudId, reenviar, userEmail } = await req.json()
     if (!solicitudId) return NextResponse.json({ error: 'solicitudId requerido' }, { status: 400 })
 
     const { data: solicitud } = await supabase
@@ -41,6 +41,13 @@ export async function POST(req: NextRequest) {
       correo_enviado_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq('id', solicitudId)
+
+    await supabase.from('repuestos_historial').insert({
+      solicitud_id: solicitudId,
+      estado_nuevo: 'cotizacion_enviada',
+      usuario_email: userEmail ?? null,
+      notas: reenviar ? 'Email reenviado a Vehimotors' : 'Email enviado a Vehimotors',
+    })
 
     revalidatePath('/repuestos')
     revalidatePath(`/repuestos/${solicitudId}`)

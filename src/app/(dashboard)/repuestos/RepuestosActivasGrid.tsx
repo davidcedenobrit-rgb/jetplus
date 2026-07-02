@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Search, X } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
+import ReenviarCotizacionButton from './ReenviarCotizacionButton'
 import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
@@ -165,8 +166,15 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
                       {s.respuesta_vehimotors === 'hay_todo' ? '✅ Hay todo' : s.respuesta_vehimotors === 'no_hay' ? '❌ Sin stock' : '⚠️ Parcial'}
                     </div>
                   )}
-                  <ProgressBar estado={s.estado} />
                 </Link>
+                {s.estado === 'cotizacion_enviada' && (
+                  <div className="px-5 pb-4 -mt-1">
+                    <ReenviarCotizacionButton solicitudId={s.id} size="sm" />
+                  </div>
+                )}
+                <div className="px-5 pb-5">
+                  <ProgressBar estado={s.estado} />
+                </div>
               </div>
             )
           })}
