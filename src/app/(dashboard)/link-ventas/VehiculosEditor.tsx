@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Check, X, RefreshCw, Pencil, ChevronUp, Zap, Send } from 'lucide-react'
 
@@ -238,6 +239,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
   }
 
   const supabase = createClient()
+  const router = useRouter()
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const vehiculosOrdenados = useMemo(() => {
@@ -350,6 +352,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     setSaved(prev => ({ ...prev, [id]: true }))
     showToast(`✓ ${v.model} guardado`, true)
     setTimeout(() => setSaved(prev => ({ ...prev, [id]: false })), 2000)
+    router.refresh()
   }
 
   async function toggleDisp(id: string) {
@@ -363,6 +366,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
       showToast('Error al actualizar', false)
     } else {
       showToast(newVal ? '✓ Vehículo activado' : 'Vehículo desactivado', newVal)
+      router.refresh()
     }
   }
 
@@ -381,6 +385,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     setSyncing(false)
     if (fail > 0) showToast(`Sincronizado con ${fail} error(es)`, false)
     else showToast(`✓ Catálogo sincronizado con showroom (${ok} cambio${ok !== 1 ? 's' : ''})`, true)
+    if (ok > 0) router.refresh()
   }
 
   async function saveNew() {
@@ -401,6 +406,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
     setNewV({ id: '', ...EMPTY_VEHICULO })
     const { data } = await supabase.from('catalogo_ventas').select('*').order('orden')
     if (data) setVehiculos(data)
+    router.refresh()
   }
 
   const inputCls = 'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:border-oriental-red transition-colors'
