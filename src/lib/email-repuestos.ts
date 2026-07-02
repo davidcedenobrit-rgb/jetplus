@@ -26,6 +26,14 @@ const FROM = 'Repuestos La Oriental <repuestos@laoriental.co>'
 // y agrega "[PRUEBA]" al subject. Útil para probar el flujo sin molestar a Vehimotors real.
 function applyVMOverride<T extends { to: string[] | string; cc?: string[]; replyTo?: string[]; subject: string }>(opts: T): T {
   const override = process.env.VEHIMOTORS_TEST_OVERRIDE
+  const allowProductionOverride = process.env.VEHIMOTORS_TEST_OVERRIDE_ALLOW_PRODUCTION === 'true'
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
+
+  if (override && isProduction && !allowProductionOverride) {
+    console.warn('[email-repuestos] VEHIMOTORS_TEST_OVERRIDE ignorado en produccion')
+    return opts
+  }
+
   if (!override) return opts
   return {
     ...opts,

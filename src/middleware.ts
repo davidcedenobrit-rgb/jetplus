@@ -3,6 +3,19 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+  const pathname = request.nextUrl.pathname
+
+  const publicApiPaths = [
+    '/api/webhooks/resend',
+    '/api/repuestos/respuesta',
+    '/api/repuestos/subir-factura',
+    '/api/repuestos/confirmar-pago',
+    '/api/repuestos/almacen',
+  ]
+
+  if (publicApiPaths.some(path => pathname.startsWith(path))) {
+    return supabaseResponse
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,14 +44,14 @@ export async function middleware(request: NextRequest) {
     '/vehimotors', '/carla', '/repuestos', '/documentos-empresa',
     '/link-ventas', '/api/',
   ]
-  const isProtected = request.nextUrl.pathname === '/' || protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
+  const isProtected = pathname === '/' || protectedPaths.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // Si ya está autenticado y va al login, redirige al dashboard
-  if (request.nextUrl.pathname === '/login' && user) {
+  if (pathname === '/login' && user) {
     return NextResponse.redirect(new URL('/ingresos', request.url))
   }
 
