@@ -377,10 +377,6 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={s.finLabel}>Cuotas mensuales</Text>
                   <Text style={s.finVal}>24   ${fmt(data.cuotaMensual)}</Text>
                 </View>
-                <View style={s.finTotalRow}>
-                  <Text style={s.finTotalLabel}>COSTO TOTAL:</Text>
-                  <Text style={s.finTotalVal}>${fmt(data.costoTotal)}</Text>
-                </View>
               </View>
             </View>
           )}

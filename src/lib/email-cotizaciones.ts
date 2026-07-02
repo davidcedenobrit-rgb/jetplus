@@ -129,14 +129,6 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
         </tr>
         <tr>
           <td style="padding-bottom:10px">
-            <a href="${responderUrl}?r=descuento"
-              style="display:block;background:#fffbeb;color:#92400e;padding:12px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700;text-align:center;border:2px solid #fde68a">
-              💬 Solicitar revisión de precio
-            </a>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding-bottom:10px">
             <a href="${responderUrl}?r=posponer"
               style="display:block;background:#fff;color:#374151;padding:12px 16px;border-radius:10px;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:700;text-align:center;border:2px solid #d1d5db">
               ⏸ Por ahora no compraré

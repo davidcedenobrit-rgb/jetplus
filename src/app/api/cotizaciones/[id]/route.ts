@@ -1,13 +1,171 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { enviarCotizacionCliente } from '@/lib/email-cotizaciones'
+import type { CotizacionPDFData } from '@/lib/cotizacion-pdf'
+
+function fmtDate(d: Date | string) {
+  const date = typeof d === 'string' ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')) : d
+  return date.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authClient = await createClient()
+    const { data: { user: authUser } } = await authClient.auth.getUser()
+    if (!authUser) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
     const { id } = await params
     const body = await req.json()
 
-    // Editar montos de la cotización (precio, gastos, cuota, modalidad/plan)
+    const supabase = await createAdminClient()
+
+    // Editar cotización completa (todos los campos + reenvío opcional + auditoría)
+    if (body.accion === 'editar_completa') {
+      const { data: cotActual } = await supabase
+        .from('cotizaciones')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (!cotActual) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+
+      const {
+        precio_base, gastos_monto, cuota_mensual, modalidad, plan,
+        cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono,
+        cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal,
+        agente_retencion, marca, modelo,
+        motivo, reenviar_correo,
+      } = body
+
+      // Validaciones
+      if (typeof precio_base !== 'number' || precio_base <= 0)
+        return NextResponse.json({ error: 'Precio base inválido' }, { status: 400 })
+      if (typeof gastos_monto !== 'number' || gastos_monto < 0)
+        return NextResponse.json({ error: 'Gastos inválidos' }, { status: 400 })
+      if (!['contado', 'credito_24'].includes(modalidad))
+        return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
+      if (!['vehimotors', 'banco_100'].includes(plan))
+        return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
+      if (!cliente_nombre?.trim() || !cliente_ci_rif?.trim() || !cliente_correo?.trim())
+        return NextResponse.json({ error: 'Nombre, C.I./RIF y correo son obligatorios' }, { status: 400 })
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente_correo.trim()))
+        return NextResponse.json({ error: 'Correo del cliente inválido' }, { status: 400 })
+
+      // Recalcular
+      const iva_monto = precio_base * 0.16
+      let total_inicial: number
+      let financiamiento_monto: number | null = null
+      let cuota_mensual_final: number | null = null
+      let costo_total: number
+
+      if (modalidad === 'contado') {
+        total_inicial = precio_base + iva_monto + gastos_monto
+        costo_total = total_inicial
+      } else if (plan === 'banco_100') {
+        const totalVeh = precio_base + iva_monto
+        total_inicial = totalVeh * 0.30 + gastos_monto
+        financiamiento_monto = totalVeh * 0.70
+        cuota_mensual_final = typeof cuota_mensual === 'number' ? cuota_mensual : null
+        costo_total = total_inicial + (cuota_mensual_final ?? 0) * 24
+      } else {
+        total_inicial = precio_base * 0.4 + iva_monto + gastos_monto
+        financiamiento_monto = precio_base * 0.6
+        cuota_mensual_final = typeof cuota_mensual === 'number' ? cuota_mensual : null
+        costo_total = total_inicial + (cuota_mensual_final ?? 0) * 24
+      }
+
+      const nuevos = {
+        precio_base, iva_monto, gastos_monto, modalidad, plan,
+        total_inicial, financiamiento_monto,
+        cuota_mensual: cuota_mensual_final, costo_total,
+        cliente_nombre: cliente_nombre.trim(),
+        cliente_ci_rif: cliente_ci_rif.trim(),
+        cliente_correo: cliente_correo.trim().toLowerCase(),
+        cliente_telefono: cliente_telefono?.trim() || null,
+        cliente_direccion: cliente_direccion?.trim() || null,
+        cliente_ciudad_estado: cliente_ciudad_estado?.trim() || null,
+        cliente_codigo_postal: cliente_codigo_postal?.trim() || null,
+        agente_retencion: !!agente_retencion,
+        marca: marca?.trim() || cotActual.marca,
+        modelo: modelo?.trim() || cotActual.modelo,
+      }
+
+      // Calcular diff para auditoría
+      const cambios: Record<string, { antes: unknown; despues: unknown }> = {}
+      for (const [k, v] of Object.entries(nuevos)) {
+        const anterior = (cotActual as Record<string, unknown>)[k]
+        const antes = typeof anterior === 'number' ? Number(anterior) : anterior
+        const despues = typeof v === 'number' ? Number(v) : v
+        if (antes !== despues) cambios[k] = { antes, despues }
+      }
+
+      const { error: updErr } = await supabase
+        .from('cotizaciones')
+        .update(nuevos)
+        .eq('id', id)
+
+      if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
+
+      // Registrar auditoría (no bloqueante)
+      if (Object.keys(cambios).length > 0 || motivo) {
+        await supabase.from('cotizacion_ediciones').insert([{
+          cotizacion_id: id,
+          editado_por: authUser.id,
+          editado_por_email: authUser.email ?? null,
+          cambios,
+          motivo: motivo?.trim() || null,
+          reenvio_correo: !!reenviar_correo,
+        }])
+      }
+
+      // Reenvío opcional
+      let correoReenviado = false
+      let correoError: string | null = null
+      if (reenviar_correo) {
+        try {
+          const pdfData: CotizacionPDFData = {
+            numero: cotActual.numero,
+            fecha: fmtDate(cotActual.fecha),
+            vencimiento: fmtDate(cotActual.vencimiento),
+            clienteNombre: nuevos.cliente_nombre,
+            clienteCiRif: nuevos.cliente_ci_rif,
+            clienteDireccion: nuevos.cliente_direccion,
+            clienteCorreo: nuevos.cliente_correo,
+            clienteTelefono: nuevos.cliente_telefono,
+            clienteCiudadEstado: nuevos.cliente_ciudad_estado,
+            clienteCodigoPostal: nuevos.cliente_codigo_postal,
+            agenteRetencion: nuevos.agente_retencion,
+            marca: nuevos.marca,
+            modelo: nuevos.modelo,
+            precioBase: precio_base,
+            modalidad,
+            plan,
+            ivaMonto: iva_monto,
+            gastosMonto: gastos_monto,
+            totalVehiculo: plan === 'banco_100' ? precio_base + iva_monto : undefined,
+            totalInicial: total_inicial,
+            financiamientoMonto: financiamiento_monto,
+            cuotaMensual: cuota_mensual_final,
+            costoTotal: costo_total,
+          }
+          await enviarCotizacionCliente(pdfData, cotActual.token_respuesta)
+          correoReenviado = true
+        } catch (emailErr: any) {
+          console.error('[cotizaciones/patch] email reenvio error:', emailErr)
+          correoError = emailErr?.message ?? 'Error al reenviar el correo'
+        }
+      }
+
+      return NextResponse.json({
+        ok: true,
+        cambios_count: Object.keys(cambios).length,
+        correoReenviado,
+        correoError,
+      })
+    }
+
+    // Editar montos (compatibilidad con la acción anterior)
     if (body.accion === 'editar_montos') {
       const { precio_base, gastos_monto, cuota_mensual, modalidad, plan } = body
 
@@ -42,7 +200,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         costo_total = total_inicial + (cuota_mensual_final ?? 0) * 24
       }
 
-      const supabase = await createAdminClient()
       const { error } = await supabase
         .from('cotizaciones')
         .update({
@@ -69,7 +226,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Se requiere motivo de rechazo' }, { status: 400 })
     }
 
-    const supabase = await createAdminClient()
     const { error } = await supabase
       .from('cotizaciones')
       .update({
@@ -86,7 +242,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 }
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createAdminClient()
   const { data, error } = await supabase

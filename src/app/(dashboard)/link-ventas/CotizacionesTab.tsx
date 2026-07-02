@@ -221,7 +221,7 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
   const [motivo, setMotivo] = useState(cot.motivo_rechazo ?? '')
   const [motivoError, setMotivoError] = useState('')
 
-  // Editar montos
+  // Editar cotización (todos los campos)
   const [editando, setEditando] = useState(false)
   const [eForm, setEForm] = useState({
     precio_base: String(cot.precio_base),
@@ -229,9 +229,20 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
     cuota_mensual: String(cot.cuota_mensual ?? ''),
     modalidad: cot.modalidad as 'contado' | 'credito_24',
     plan: cot.plan as 'vehimotors' | 'banco_100',
+    cliente_nombre: cot.cliente_nombre,
+    cliente_ci_rif: cot.cliente_ci_rif,
+    cliente_correo: cot.cliente_correo,
+    cliente_telefono: cot.cliente_telefono ?? '',
+    cliente_direccion: cot.cliente_direccion ?? '',
+    cliente_ciudad_estado: cot.cliente_ciudad_estado ?? '',
+    cliente_codigo_postal: cot.cliente_codigo_postal ?? '',
+    agente_retencion: cot.agente_retencion,
+    motivo: '',
+    reenviar_correo: false,
   })
   const [eError, setEError] = useState('')
   const [eSaving, setESaving] = useState(false)
+  const [eSuccessMsg, setESuccessMsg] = useState('')
 
   // Reenviar
   const [reenviarMsg, setReenviarMsg] = useState('')
@@ -270,25 +281,58 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
   }
 
   async function guardarMontos() {
-    setEError('')
+    setEError(''); setESuccessMsg('')
     const precio_base = parseFloat(eForm.precio_base.replace(',', '.'))
     const gastos_monto = parseFloat(eForm.gastos_monto.replace(',', '.'))
     const cuota_mensual = eForm.cuota_mensual ? parseFloat(eForm.cuota_mensual.replace(',', '.')) : null
     if (isNaN(precio_base) || precio_base <= 0) { setEError('Precio base inválido'); return }
     if (isNaN(gastos_monto) || gastos_monto < 0) { setEError('Gastos inválidos'); return }
+    if (!eForm.cliente_nombre.trim() || !eForm.cliente_ci_rif.trim() || !eForm.cliente_correo.trim()) {
+      setEError('Nombre, C.I./RIF y correo son obligatorios')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eForm.cliente_correo.trim())) {
+      setEError('Correo inválido')
+      return
+    }
     setESaving(true)
     const res = await fetch(`/api/cotizaciones/${cot.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accion: 'editar_montos', precio_base, gastos_monto, cuota_mensual, modalidad: eForm.modalidad, plan: eForm.plan }),
+      body: JSON.stringify({
+        accion: 'editar_completa',
+        precio_base, gastos_monto, cuota_mensual,
+        modalidad: eForm.modalidad, plan: eForm.plan,
+        cliente_nombre: eForm.cliente_nombre,
+        cliente_ci_rif: eForm.cliente_ci_rif,
+        cliente_correo: eForm.cliente_correo,
+        cliente_telefono: eForm.cliente_telefono || null,
+        cliente_direccion: eForm.cliente_direccion || null,
+        cliente_ciudad_estado: eForm.cliente_ciudad_estado || null,
+        cliente_codigo_postal: eForm.cliente_codigo_postal || null,
+        agente_retencion: eForm.agente_retencion,
+        motivo: eForm.motivo || null,
+        reenviar_correo: eForm.reenviar_correo,
+      }),
     })
     setESaving(false)
     if (!res.ok) { const j = await res.json(); setEError(j.error ?? 'Error'); return }
-    const { data } = await res.json()
-    const updated = { ...cot, ...data }
-    setCot(updated)
-    onMontosChange(cot.id, data)
+    const resp = await res.json()
+
+    // Refrescar cotización desde el servidor
+    const refreshed = await fetch(`/api/cotizaciones/${cot.id}`).then(r => r.json()).catch(() => null)
+    if (refreshed && !refreshed.error) {
+      setCot(refreshed)
+      onMontosChange(cot.id, refreshed)
+    }
+
+    let msg = `✓ Cotización actualizada (${resp.cambios_count} cambio${resp.cambios_count !== 1 ? 's' : ''})`
+    if (eForm.reenviar_correo) {
+      msg += resp.correoReenviado ? ' · Correo reenviado' : ` · Correo NO enviado${resp.correoError ? `: ${resp.correoError}` : ''}`
+    }
+    setESuccessMsg(msg)
     setEditando(false)
+    setEForm(p => ({ ...p, motivo: '', reenviar_correo: false }))
   }
 
   const es24 = cot.modalidad === 'credito_24'
@@ -346,44 +390,109 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Desglose económico</p>
-              <button onClick={() => { setEditando(e => !e); setEError('') }}
+              <button onClick={() => { setEditando(e => !e); setEError(''); setESuccessMsg('') }}
                 className="text-[11px] font-bold text-oriental-red hover:underline">
-                {editando ? 'Cancelar edición' : 'Editar montos'}
+                {editando ? 'Cancelar edición' : 'Editar cotización'}
               </button>
             </div>
 
+            {eSuccessMsg && !editando && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-2 mb-2">
+                <p className="text-xs text-green-800">{eSuccessMsg}</p>
+              </div>
+            )}
+
             {editando ? (
-              <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Modalidad</label>
-                    <select className={inCls} value={eForm.modalidad} onChange={e => setEForm(p => ({ ...p, modalidad: e.target.value as 'contado'|'credito_24' }))}>
-                      <option value="contado">Contado</option>
-                      <option value="credito_24">Crédito 24m</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Plan</label>
-                    <select className={inCls} value={eForm.plan} onChange={e => setEForm(p => ({ ...p, plan: e.target.value as 'vehimotors'|'banco_100' }))}>
-                      <option value="vehimotors">Vehimotors</option>
-                      <option value="banco_100">100% Banco</option>
-                    </select>
-                  </div>
-                </div>
+              <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 space-y-4">
                 <div>
-                  <label className="block text-[11px] font-semibold text-gray-500 mb-1">Precio base ($)</label>
-                  <input className={inCls} value={eForm.precio_base} onChange={e => setEForm(p => ({ ...p, precio_base: e.target.value }))} placeholder="30000" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-500 mb-1">Gastos totales ($) — puede ajustar para aplicar descuento</label>
-                  <input className={inCls} value={eForm.gastos_monto} onChange={e => setEForm(p => ({ ...p, gastos_monto: e.target.value }))} placeholder="3500" />
-                </div>
-                {eForm.modalidad === 'credito_24' && (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Cuota mensual ($/mes)</label>
-                    <input className={inCls} value={eForm.cuota_mensual} onChange={e => setEForm(p => ({ ...p, cuota_mensual: e.target.value }))} placeholder="1200" />
+                  <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wider mb-2">Datos del cliente</p>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-1">Nombre</label>
+                        <input className={inCls} value={eForm.cliente_nombre} onChange={e => setEForm(p => ({ ...p, cliente_nombre: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-1">C.I. / RIF</label>
+                        <input className={inCls} value={eForm.cliente_ci_rif} onChange={e => setEForm(p => ({ ...p, cliente_ci_rif: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-1">Correo</label>
+                        <input className={inCls} type="email" value={eForm.cliente_correo} onChange={e => setEForm(p => ({ ...p, cliente_correo: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-1">Teléfono</label>
+                        <input className={inCls} value={eForm.cliente_telefono} onChange={e => setEForm(p => ({ ...p, cliente_telefono: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-500 mb-1">Dirección</label>
+                      <input className={inCls} value={eForm.cliente_direccion} onChange={e => setEForm(p => ({ ...p, cliente_direccion: e.target.value }))} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-1">Ciudad / Estado</label>
+                        <input className={inCls} value={eForm.cliente_ciudad_estado} onChange={e => setEForm(p => ({ ...p, cliente_ciudad_estado: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-1">Cód. postal</label>
+                        <input className={inCls} value={eForm.cliente_codigo_postal} onChange={e => setEForm(p => ({ ...p, cliente_codigo_postal: e.target.value }))} />
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={eForm.agente_retencion} onChange={e => setEForm(p => ({ ...p, agente_retencion: e.target.checked }))} className="w-4 h-4 rounded border-gray-300" />
+                      <span className="text-xs font-medium text-oriental-black">Agente de retención</span>
+                    </label>
                   </div>
-                )}
+                </div>
+
+                <div className="border-t border-orange-200 pt-3">
+                  <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wider mb-2">Modalidad y montos</p>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-500 mb-1">Modalidad</label>
+                      <select className={inCls} value={eForm.modalidad} onChange={e => setEForm(p => ({ ...p, modalidad: e.target.value as 'contado'|'credito_24' }))}>
+                        <option value="contado">Contado</option>
+                        <option value="credito_24">Crédito 24m</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-500 mb-1">Plan</label>
+                      <select className={inCls} value={eForm.plan} onChange={e => setEForm(p => ({ ...p, plan: e.target.value as 'vehimotors'|'banco_100' }))}>
+                        <option value="vehimotors">Vehimotors</option>
+                        <option value="banco_100">100% Banco</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mb-2">
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Precio base ($)</label>
+                    <input className={inCls} value={eForm.precio_base} onChange={e => setEForm(p => ({ ...p, precio_base: e.target.value }))} placeholder="30000" />
+                  </div>
+                  <div className="mb-2">
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Gastos totales ($) — puede ajustar para aplicar descuento</label>
+                    <input className={inCls} value={eForm.gastos_monto} onChange={e => setEForm(p => ({ ...p, gastos_monto: e.target.value }))} placeholder="3500" />
+                  </div>
+                  {eForm.modalidad === 'credito_24' && (
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-500 mb-1">Cuota mensual ($/mes)</label>
+                      <input className={inCls} value={eForm.cuota_mensual} onChange={e => setEForm(p => ({ ...p, cuota_mensual: e.target.value }))} placeholder="1200" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-orange-200 pt-3 space-y-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Motivo de la edición (interno)</label>
+                    <input className={inCls} value={eForm.motivo} onChange={e => setEForm(p => ({ ...p, motivo: e.target.value }))} placeholder="Ej: cliente pidió rebaja, ajuste de plan…" />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-orange-200 rounded-lg px-3 py-2">
+                    <input type="checkbox" checked={eForm.reenviar_correo} onChange={e => setEForm(p => ({ ...p, reenviar_correo: e.target.checked }))} className="w-4 h-4 rounded border-gray-300" />
+                    <span className="text-xs font-medium text-oriental-black">Reenviar cotización actualizada al cliente por correo</span>
+                  </label>
+                </div>
+
                 {eError && <p className="text-xs text-red-600">{eError}</p>}
                 <button onClick={guardarMontos} disabled={eSaving}
                   className="w-full py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50">
