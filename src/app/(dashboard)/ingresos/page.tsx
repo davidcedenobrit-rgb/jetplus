@@ -2,13 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL, METODOS_PAGO } from '@/lib/utils'
 import { Plus, Search, FileBarChart2 } from 'lucide-react'
+import BuscadorClienteURL from './BuscadorClienteURL'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 export default async function IngresosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; placa?: string; metodo?: string }>
+  searchParams: Promise<{ estado?: string; placa?: string; metodo?: string; cliente?: string }>
 }) {
   const params = await searchParams
   const supabase = await createClient()
@@ -16,6 +17,18 @@ export default async function IngresosPage({
   const { data: { user } } = await supabase.auth.getUser()
   const rol = (user?.app_metadata?.rol as string) ?? 'editor'
   const esDirector = ROL_DIRECTOR.includes(rol)
+
+  // Filtro por cliente: busca ids que coincidan con nombre o cedula, luego filtra ingresos
+  let clienteIdsFiltro: string[] | null = null
+  if (params.cliente?.trim()) {
+    const q = params.cliente.trim().replace(/[%_]/g, '')
+    const { data: clientesMatch } = await supabase
+      .from('clientes')
+      .select('id')
+      .or(`nombre.ilike.%${q}%,cedula_rif.ilike.%${q}%`)
+      .limit(200)
+    clienteIdsFiltro = (clientesMatch ?? []).map(c => c.id)
+  }
 
   let query = supabase
     .from('ingresos')
@@ -26,6 +39,14 @@ export default async function IngresosPage({
   if (params.estado) query = query.eq('estado', params.estado)
   if (params.placa) query = query.ilike('placa', `%${params.placa}%`)
   if (params.metodo) query = query.eq('metodo_pago', params.metodo)
+  if (clienteIdsFiltro !== null) {
+    if (clienteIdsFiltro.length === 0) {
+      // Ninguno coincide; forzamos filtro vacío
+      query = query.eq('cliente_id', '00000000-0000-0000-0000-000000000000')
+    } else {
+      query = query.in('cliente_id', clienteIdsFiltro)
+    }
+  }
 
   const { data: ingresos } = await query
 
@@ -116,6 +137,19 @@ export default async function IngresosPage({
         </div>
       </div>
 
+      {/* Buscador de cliente */}
+      <div className="mb-4 max-w-xl">
+        <BuscadorClienteURL />
+        {params.cliente && (
+          <p className="text-xs text-oriental-gray mt-1.5 ml-1">
+            Filtrando por <span className="font-semibold text-oriental-black">"{params.cliente}"</span>
+            {(ingresos?.length ?? 0) > 0
+              ? ` · ${ingresos?.length} resultado${(ingresos?.length ?? 0) !== 1 ? 's' : ''}`
+              : ' · sin coincidencias'}
+          </p>
+        )}
+      </div>
+
       {/* Filtros rápidos */}
       <div className="flex gap-2 mb-3 flex-wrap">
         {filtros.map(({ estado, label }) => {
@@ -123,6 +157,7 @@ export default async function IngresosPage({
           if (estado) qs.set('estado', estado)
           if (params.metodo) qs.set('metodo', params.metodo)
           if (params.placa) qs.set('placa', params.placa)
+          if (params.cliente) qs.set('cliente', params.cliente)
           const href = qs.toString() ? `/ingresos?${qs.toString()}` : '/ingresos'
           return (
             <Link
@@ -144,6 +179,7 @@ export default async function IngresosPage({
       <form method="GET" action="/ingresos" className="flex items-center gap-2 mb-6 flex-wrap">
         {params.estado && <input type="hidden" name="estado" value={params.estado} />}
         {params.placa && <input type="hidden" name="placa" value={params.placa} />}
+        {params.cliente && <input type="hidden" name="cliente" value={params.cliente} />}
         <label className="text-xs font-semibold text-oriental-gray uppercase tracking-wider">Método:</label>
         <select
           name="metodo"
@@ -162,6 +198,7 @@ export default async function IngresosPage({
           const qs = new URLSearchParams()
           if (params.estado) qs.set('estado', params.estado)
           if (params.placa) qs.set('placa', params.placa)
+          if (params.cliente) qs.set('cliente', params.cliente)
           const href = qs.toString() ? `/ingresos?${qs.toString()}` : '/ingresos'
           return (
             <Link href={href} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-oriental-gray border border-gray-200 hover:bg-gray-50 transition-colors">

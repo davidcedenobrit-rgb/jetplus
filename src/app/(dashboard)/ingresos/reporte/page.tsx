@@ -81,7 +81,8 @@ export default function ReporteIngresosPage() {
   const [moneda, setMoneda] = useState('')
   const [metodoPago, setMetodoPago] = useState('')
   const [concepto, setConcepto] = useState('')
-  const [ingresos, setIngresos] = useState<Ingreso[]>([])
+  const [busquedaCliente, setBusquedaCliente] = useState('')
+  const [ingresosRaw, setIngresosRaw] = useState<Ingreso[]>([])
   const [loading, setLoading] = useState(false)
 
   const cargar = useCallback(async () => {
@@ -101,11 +102,21 @@ export default function ReporteIngresosPage() {
     if (concepto) q = q.eq('concepto', concepto)
 
     const { data } = await q
-    setIngresos((data ?? []) as unknown as Ingreso[])
+    setIngresosRaw((data ?? []) as unknown as Ingreso[])
     setLoading(false)
   }, [fechaDesde, fechaHasta, tipoFecha, estado, moneda, metodoPago, concepto])
 
   useEffect(() => { cargar() }, [cargar])
+
+  // Filtro en vivo por cliente (nombre o cédula) sobre lo ya cargado
+  const ingresos = busquedaCliente.trim()
+    ? ingresosRaw.filter(i => {
+        const q = busquedaCliente.trim().toLowerCase()
+        const nom = (i.clientes?.nombre ?? '').toLowerCase()
+        const ced = (i.clientes?.cedula_rif ?? '').toLowerCase()
+        return nom.includes(q) || ced.includes(q)
+      })
+    : ingresosRaw
 
   // Agrupar por concepto
   const grupos: Record<string, Ingreso[]> = {}
@@ -350,6 +361,32 @@ export default function ReporteIngresosPage() {
               <option value="Abono a crédito">Abono a crédito</option>
             </select>
           </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <label className="label">Buscar cliente</label>
+          <div className="relative max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray pointer-events-none" />
+            <input
+              type="text"
+              value={busquedaCliente}
+              onChange={e => setBusquedaCliente(e.target.value)}
+              placeholder="Buscar por nombre o cédula/RIF…"
+              className="input pl-9 pr-9"
+            />
+            {busquedaCliente && (
+              <button
+                onClick={() => setBusquedaCliente('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-oriental-red text-lg leading-none"
+                title="Limpiar"
+              >×</button>
+            )}
+          </div>
+          {busquedaCliente.trim() && (
+            <p className="text-xs text-oriental-gray mt-1.5">
+              {ingresos.length} de {ingresosRaw.length} registro{ingresosRaw.length !== 1 ? 's' : ''} coinciden con "{busquedaCliente}"
+            </p>
+          )}
         </div>
       </div>
 
