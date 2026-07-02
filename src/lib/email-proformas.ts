@@ -127,6 +127,13 @@ async function fetchPdfBuffer(proformaId: string): Promise<Buffer> {
     planTipo: credito.plan_tipo ?? '',
     planLabel: planLabelMap[credito.plan_tipo] ?? 'Crédito',
     cronograma,
+    acuerdoInicial: credito.acuerdo_inicial ? {
+      monto_acordado: Number(credito.acuerdo_inicial.monto_acordado ?? 0),
+      monto_pagado: Number(credito.acuerdo_inicial.monto_pagado ?? 0),
+      saldo_por_pagar: Number(credito.acuerdo_inicial.saldo_por_pagar ?? 0),
+      fecha_limite: credito.acuerdo_inicial.fecha_limite ?? null,
+      observaciones: credito.acuerdo_inicial.observaciones ?? null,
+    } : null,
   }
 
   const buffer = await renderToBuffer(

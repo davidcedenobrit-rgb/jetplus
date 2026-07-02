@@ -98,6 +98,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'El crédito no tiene cuotas registradas' }, { status: 400 })
     }
 
+    // Acuerdo de pago del inicial (si existe)
+    const { data: acuerdo } = await supabase
+      .from('acuerdos_inicial')
+      .select('id, monto_acordado, monto_pagado, fecha_limite, estado, observaciones')
+      .eq('credito_id', creditoId)
+      .maybeSingle()
+
     const primeraCuota = cuotasArr[0]?.fecha_vencimiento ?? null
     const ultimaCuota = cuotasArr[cuotasArr.length - 1]?.fecha_vencimiento ?? null
 
@@ -145,6 +152,15 @@ export async function POST(req: Request) {
       fecha_inicio: credito.fecha_inicio,
       moneda: credito.moneda,
       estado: credito.estado,
+      acuerdo_inicial: acuerdo ? {
+        id: acuerdo.id,
+        monto_acordado: Number(acuerdo.monto_acordado),
+        monto_pagado: Number(acuerdo.monto_pagado ?? 0),
+        saldo_por_pagar: Math.max(0, Number(acuerdo.monto_acordado) - Number(acuerdo.monto_pagado ?? 0)),
+        fecha_limite: acuerdo.fecha_limite,
+        estado: acuerdo.estado,
+        observaciones: acuerdo.observaciones,
+      } : null,
     }
 
     const { data: proforma, error: insertErr } = await supabase

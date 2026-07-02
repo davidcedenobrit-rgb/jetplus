@@ -65,6 +65,11 @@ const s = StyleSheet.create({
   montosTotalLabel: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD },
   montosTotalVal: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: AMBER_DARK },
 
+  // Compromiso formal (texto entre montos y crédito)
+  compromisoBox: { marginTop: 12, backgroundColor: '#fef3c7', border: `1pt solid ${GOLD}`, borderRadius: 6, padding: '10pt 14pt' },
+  compromisoText: { fontSize: 8.5, color: '#78350f', lineHeight: 1.55 },
+  compromisoBold: { fontFamily: 'Helvetica-Bold', color: '#78350f' },
+
   // Bloque crédito
   creditoWrap: { marginTop: 14 },
   creditoBox: { border: `1pt solid ${GOLD}`, borderRadius: 6, overflow: 'hidden' },
@@ -152,6 +157,14 @@ export interface CuotaCronogramaItem {
   monto_pagado?: number
 }
 
+export interface AcuerdoInicialInfo {
+  monto_acordado: number
+  monto_pagado: number
+  saldo_por_pagar: number
+  fecha_limite: string | null
+  observaciones?: string | null
+}
+
 export interface ProformaPDFData {
   logoSrc?: string
   numero: string
@@ -176,6 +189,7 @@ export interface ProformaPDFData {
   planLabel: string
   cronograma: CuotaCronogramaItem[]
   vendedor?: string | null
+  acuerdoInicial?: AcuerdoInicialInfo | null
 }
 
 export function ProformaPDF({ data }: { data: ProformaPDFData }) {
@@ -283,6 +297,28 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                 <Text style={s.montosTotalVal}>${fmt(data.cuotaMensual)}</Text>
               </View>
             </View>
+          </View>
+
+          {/* Bloque de compromiso formal */}
+          <View style={s.compromisoBox}>
+            <Text style={s.compromisoText}>
+              <Text style={s.compromisoBold}>COMPROMISO DEL CLIENTE: </Text>
+              El cliente <Text style={s.compromisoBold}>{data.clienteNombre}</Text>, C.I./RIF: <Text style={s.compromisoBold}>{data.clienteCiRif}</Text>,{' '}
+              {data.acuerdoInicial && data.acuerdoInicial.saldo_por_pagar > 0.01 ? (
+                <>
+                  se compromete a completar el pago de la <Text style={s.compromisoBold}>inicial</Text> por un monto de{' '}
+                  <Text style={s.compromisoBold}>${fmt(data.acuerdoInicial.saldo_por_pagar)}</Text>
+                  {data.acuerdoInicial.fecha_limite ? <> antes del <Text style={s.compromisoBold}>{fmtDate(data.acuerdoInicial.fecha_limite)}</Text></> : null}
+                  {' '}(ya pagado ${fmt(data.acuerdoInicial.monto_pagado)} de ${fmt(data.acuerdoInicial.monto_acordado)}), y adicionalmente asume el <Text style={s.compromisoBold}>compromiso de financiamiento</Text> de{' '}
+                  <Text style={s.compromisoBold}>{data.numeroCuotas} cuotas mensuales de ${fmt(data.cuotaMensual)}</Text> por un total financiado de <Text style={s.compromisoBold}>${fmt(data.saldoFinanciado)}</Text>.
+                </>
+              ) : (
+                <>
+                  ha pagado la <Text style={s.compromisoBold}>inicial</Text> de <Text style={s.compromisoBold}>${fmt(data.inicialPagada)}</Text> y asume el <Text style={s.compromisoBold}>compromiso de financiamiento</Text> de{' '}
+                  <Text style={s.compromisoBold}>{data.numeroCuotas} cuotas mensuales de ${fmt(data.cuotaMensual)}</Text> por un total financiado de <Text style={s.compromisoBold}>${fmt(data.saldoFinanciado)}</Text>.
+                </>
+              )}
+            </Text>
           </View>
 
           {/* Bloque de crédito otorgado */}
