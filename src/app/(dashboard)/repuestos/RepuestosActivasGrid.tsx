@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Search, X, User, Building2 } from 'lucide-react'
+import { Search, X, User, Building2, Pencil } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import ReenviarCotizacionButton from './ReenviarCotizacionButton'
 import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
+import CambiarDestinatarioModal from './CambiarDestinatarioModal'
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
   solicitado:           { label: 'Solicitado',         color: 'text-blue-700',   bg: 'bg-blue-100',   step: 1 },
@@ -67,6 +68,7 @@ const FILTROS_ESTATUS: { value: string; label: string }[] = [
 export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Props) {
   const [busqueda, setBusqueda] = useState('')
   const [estatus, setEstatus] = useState('')
+  const [editarDestinatario, setEditarDestinatario] = useState<Solicitud | null>(null)
 
   const filtradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -155,21 +157,29 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
                   </p>
 
                   {/* Destinatario */}
-                  {s.para_la_oriental ? (
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg">
-                      <Building2 size={11} className="text-blue-700" />
-                      <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wide">La Oriental</span>
-                    </div>
-                  ) : s.clientes ? (
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-green-50 border border-green-200 rounded-lg max-w-full">
-                      <User size={11} className="text-green-700 flex-shrink-0" />
-                      <span className="text-[10px] font-bold text-green-800 truncate">{s.clientes.nombre}</span>
-                    </div>
-                  ) : (
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase">Sin destinatario</span>
-                    </div>
-                  )}
+                  <div
+                    className="mt-2 inline-flex items-center gap-1"
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setEditarDestinatario(s) }}
+                  >
+                    {s.para_la_oriental ? (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 cursor-pointer transition-colors">
+                        <Building2 size={11} className="text-blue-700" />
+                        <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wide">La Oriental</span>
+                        <Pencil size={9} className="text-blue-700 opacity-60" />
+                      </div>
+                    ) : s.clientes ? (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 cursor-pointer transition-colors max-w-full">
+                        <User size={11} className="text-green-700 flex-shrink-0" />
+                        <span className="text-[10px] font-bold text-green-800 truncate">{s.clientes.nombre}</span>
+                        <Pencil size={9} className="text-green-700 opacity-60 flex-shrink-0" />
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 cursor-pointer transition-colors">
+                        <span className="text-[10px] font-bold text-amber-700 uppercase">Asignar destinatario</span>
+                        <Pencil size={9} className="text-amber-700 opacity-70" />
+                      </div>
+                    )}
+                  </div>
 
                   <div className="mt-2">
                     <EmailTrackingBadge
@@ -200,6 +210,20 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
             )
           })}
         </div>
+      )}
+
+      {editarDestinatario && (
+        <CambiarDestinatarioModal
+          solicitudId={editarDestinatario.id}
+          numero={editarDestinatario.numero}
+          destinoActual={
+            editarDestinatario.para_la_oriental ? 'oriental' :
+            editarDestinatario.clientes ? 'cliente' : 'sin'
+          }
+          clienteActual={editarDestinatario.clientes ?? null}
+          onClose={() => setEditarDestinatario(null)}
+          onSaved={() => setEditarDestinatario(null)}
+        />
       )}
     </div>
   )
