@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Car, CreditCard, User } from 'lucide-react'
+import { Home, Car, CreditCard, User, FileText } from 'lucide-react'
 
 const items = [
   { href: '/portal/inicio', label: 'Inicio', icon: Home },
   { href: '/portal/vehiculos', label: 'Vehículos', icon: Car },
   { href: '/portal/credito', label: 'Crédito', icon: CreditCard },
+  { href: '/portal/cotizaciones', label: 'Cotiz.', icon: FileText },
   { href: '/portal/perfil', label: 'Perfil', icon: User },
 ]
 
@@ -16,7 +17,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] pb-safe">
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-5">
         {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (

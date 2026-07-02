@@ -214,6 +214,7 @@ export async function POST(req: Request) {
         fecha: hoy.toISOString().slice(0, 10),
         vencimiento: venc.toISOString().slice(0, 10),
         vendedora_nombre: vendedoraNombre,
+        cliente_id: original.cliente_id,
         cliente_nombre: original.cliente_nombre,
         cliente_ci_rif: original.cliente_ci_rif,
         cliente_correo: original.cliente_correo,

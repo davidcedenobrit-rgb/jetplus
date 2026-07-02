@@ -75,10 +75,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         costo_total = total_inicial + (cuota_mensual_final ?? 0) * 24
       }
 
+      // Re-vincular cliente_id si el CI/RIF ahora coincide con un cliente existente
+      const ciNorm = cliente_ci_rif.trim().toUpperCase()
+      const { data: clienteExistente } = await supabase
+        .from('clientes')
+        .select('id')
+        .ilike('cedula_rif', ciNorm)
+        .limit(1)
+        .maybeSingle()
+      const clienteIdVinculado = clienteExistente?.id ?? null
+
       const nuevos = {
         precio_base, iva_monto, gastos_monto, modalidad, plan,
         total_inicial, financiamiento_monto,
         cuota_mensual: cuota_mensual_final, costo_total,
+        cliente_id: clienteIdVinculado,
         cliente_nombre: cliente_nombre.trim(),
         cliente_ci_rif: cliente_ci_rif.trim(),
         cliente_correo: cliente_correo.trim().toLowerCase(),

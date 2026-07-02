@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Car, CreditCard, Wrench, Calendar, ChevronRight, DollarSign, AlertCircle } from 'lucide-react'
+import { Car, CreditCard, Wrench, Calendar, ChevronRight, DollarSign, AlertCircle, FileText } from 'lucide-react'
 import BottomNav from '../BottomNav'
 import PortalHeader from '../PortalHeader'
 
@@ -89,6 +89,13 @@ export default async function InicioPortalPage() {
     ultimoServicio = servicios?.[0] ?? null
   }
 
+  // Cotizaciones pendientes de respuesta
+  const { count: cotizacionesPendientes } = await admin
+    .from('cotizaciones')
+    .select('id', { count: 'exact', head: true })
+    .eq('cliente_id', cuenta.cliente_id)
+    .eq('estado', 'sin_respuesta')
+
   const cuotaVencida = proximaCuota && proximaCuota.fecha_vencimiento < hoyStr
 
   return (
@@ -117,6 +124,25 @@ export default async function InicioPortalPage() {
               {vehiculoPrincipal.placa}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Cotizaciones pendientes de respuesta */}
+      {cotizacionesPendientes && cotizacionesPendientes > 0 && (
+        <div className="mx-5 mb-4">
+          <Link
+            href="/portal/cotizaciones"
+            className="block bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 hover:bg-blue-100 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <FileText size={14} className="text-blue-700" />
+              <p className="text-[10px] font-black text-blue-800 uppercase tracking-widest">Cotización pendiente</p>
+            </div>
+            <p className="text-lg font-black text-blue-900">
+              {cotizacionesPendientes} cotización{cotizacionesPendientes !== 1 ? 'es' : ''} espera{cotizacionesPendientes === 1 ? '' : 'n'} su respuesta
+            </p>
+            <p className="text-xs text-blue-700 mt-0.5">Toque para ver el detalle y responder →</p>
+          </Link>
         </div>
       )}
 

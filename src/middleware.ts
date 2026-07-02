@@ -69,7 +69,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Cliente no autenticado en rutas protegidas del portal
-  const portalProtegido = ['/portal/inicio', '/portal/vehiculos', '/portal/credito', '/portal/perfil']
+  const portalProtegido = ['/portal/inicio', '/portal/vehiculos', '/portal/credito', '/portal/cotizaciones', '/portal/perfil']
   if (portalProtegido.some(p => pathname.startsWith(p)) && !user) {
     return NextResponse.redirect(new URL('/portal/login', request.url))
   }

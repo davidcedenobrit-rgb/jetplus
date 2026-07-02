@@ -171,6 +171,16 @@ export async function POST(req: Request) {
     const venc = new Date(hoy)
     venc.setDate(venc.getDate() + 3)
 
+    // Vincular cliente_id si ya existe un cliente con esta CI/RIF
+    const ciNorm = clienteCiRif.trim().toUpperCase()
+    const { data: clienteExistente } = await supabase
+      .from('clientes')
+      .select('id')
+      .ilike('cedula_rif', ciNorm)
+      .limit(1)
+      .maybeSingle()
+    const clienteIdVinculado = clienteExistente?.id ?? null
+
     // Insertar cotización (trigger auto-genera numero y numero_seq)
     const { data: cot, error: insertError } = await supabase
       .from('cotizaciones')
@@ -178,6 +188,7 @@ export async function POST(req: Request) {
         fecha: hoy.toISOString().slice(0, 10),
         vencimiento: venc.toISOString().slice(0, 10),
         vendedora_nombre: vendedora.nombre,
+        cliente_id: clienteIdVinculado,
         cliente_nombre: clienteNombre.trim(),
         cliente_ci_rif: clienteCiRif.trim(),
         cliente_correo: clienteCorreo.trim().toLowerCase(),
