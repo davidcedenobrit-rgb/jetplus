@@ -1,6 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+
+async function safeParseResponse(res: Response): Promise<{ ok: boolean; data: any; text: string }> {
+  const text = await res.text()
+  let data: any = null
+  if (text) {
+    try { data = JSON.parse(text) } catch { data = null }
+  }
+  return { ok: res.ok, data, text }
+}
 
 const LOGO = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
 
@@ -28,9 +37,12 @@ export default function RespuestaForm({
     : accionInicial === 'descuento_form' ? 'descuento_form'
     : 'idle'
   )
+  const autoEnviadoRef = useRef(false)
 
   useEffect(() => {
+    if (autoEnviadoRef.current) return
     if (accionInicial === 'aceptada' || accionInicial === 'pospuesta') {
+      autoEnviadoRef.current = true
       enviar(accionInicial)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,9 +61,12 @@ export default function RespuestaForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, estado, motivo: mot }),
       })
-      if (!res.ok) {
-        const d = await res.json()
-        throw new Error(d.error ?? 'Error')
+      const parsed = await safeParseResponse(res)
+      if (!parsed.ok) {
+        throw new Error(
+          parsed.data?.error
+          ?? (parsed.text ? parsed.text.slice(0, 120) : `El servidor no respondió correctamente (código ${res.status}). Vuelve a intentarlo en unos segundos.`)
+        )
       }
       setRespuestaLabel(
         estado === 'aceptada' ? 'Aceptada' :
@@ -60,7 +75,8 @@ export default function RespuestaForm({
       )
       setStep('done')
     } catch (e: any) {
-      setErrorMsg(e.message ?? 'Error al procesar')
+      autoEnviadoRef.current = false
+      setErrorMsg(e?.message || 'No pudimos registrar tu respuesta. Verifica tu conexión e intenta de nuevo.')
       setStep('error')
     }
   }
@@ -73,13 +89,16 @@ export default function RespuestaForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, motivo: motivoDescuento.trim() || null }),
       })
-      if (!res.ok) {
-        const d = await res.json()
-        throw new Error(d.error ?? 'Error')
+      const parsed = await safeParseResponse(res)
+      if (!parsed.ok) {
+        throw new Error(
+          parsed.data?.error
+          ?? (parsed.text ? parsed.text.slice(0, 120) : `El servidor no respondió correctamente (código ${res.status}). Vuelve a intentarlo en unos segundos.`)
+        )
       }
       setStep('descuento_ok')
     } catch (e: any) {
-      setErrorMsg(e.message ?? 'Error al procesar')
+      setErrorMsg(e?.message || 'No pudimos registrar tu solicitud. Verifica tu conexión e intenta de nuevo.')
       setStep('error')
     }
   }
