@@ -149,7 +149,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             cuotaMensual: cuota_mensual_final,
             costoTotal: costo_total,
           }
-          await enviarCotizacionCliente(pdfData, cotActual.token_respuesta)
+          await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id)
           correoReenviado = true
         } catch (emailErr: any) {
           console.error('[cotizaciones/patch] email reenvio error:', emailErr)

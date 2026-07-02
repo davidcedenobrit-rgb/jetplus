@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { registrarEnvioEmail, extraerResendId } from './email-tracking'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
@@ -103,7 +104,21 @@ export async function enviarSolicitudCotizacion(opts: {
   const cc       = destinatariosOverride ? undefined : EQUIPO_INTERNO
   const replyTo  = destinatariosOverride ?? EQUIPO_INTERNO
 
-  return getResend().emails.send({ from: FROM, ...applyVMOverride({ to, cc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors` }), html: wrap(body) })
+  const overrideOpts = applyVMOverride({ to, cc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors` })
+  const result = await getResend().emails.send({ from: FROM, ...overrideOpts, html: wrap(body) })
+
+  const resendId = extraerResendId(result)
+  if (resendId) {
+    await registrarEnvioEmail({
+      resendEmailId: resendId,
+      entidadTipo: 'solicitud_repuesto',
+      entidadId: solicitudId,
+      destinatarios: Array.isArray(overrideOpts.to) ? overrideOpts.to : [overrideOpts.to],
+      asunto: overrideOpts.subject,
+      metadata: { numero, cantidadItems: items.length },
+    })
+  }
+  return result
 }
 
 // ── 2. Notificación interna cuando Vehimotors responde ─────────────

@@ -5,6 +5,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { createAdminClient } from '@/lib/supabase/server'
 import { ProformaPDF, type ProformaPDFData, type CuotaCronogramaItem } from './proforma-pdf'
+import { registrarEnvioEmail, extraerResendId } from './email-tracking'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
@@ -189,10 +190,11 @@ export async function enviarProformaCliente(opts: EnviarProformaOpts) {
 
   const html = wrap(body)
 
+  const asunto = `Proforma ${numero} — La Oriental Automotors`
   const result = await resend.emails.send({
     from: FROM,
     to: [correoDestino],
-    subject: `Proforma ${numero} — La Oriental Automotors`,
+    subject: asunto,
     html,
     attachments: [
       { filename: `${numero}.pdf`, content: pdfBuffer },
@@ -201,6 +203,18 @@ export async function enviarProformaCliente(opts: EnviarProformaOpts) {
 
   if ((result as any).error) {
     throw new Error(`Error enviando proforma: ${(result as any).error.message ?? 'desconocido'}`)
+  }
+
+  const resendId = extraerResendId(result)
+  if (resendId) {
+    await registrarEnvioEmail({
+      resendEmailId: resendId,
+      entidadTipo: 'proforma',
+      entidadId: proformaId,
+      destinatarios: [correoDestino],
+      asunto,
+      metadata: { numero, marca, modelo, placa },
+    })
   }
 
   return result

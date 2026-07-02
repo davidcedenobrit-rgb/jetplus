@@ -284,7 +284,7 @@ export async function POST(req: Request) {
       }
 
       const emailResults = await Promise.allSettled([
-        enviarCotizacionCliente(pdfData, cot.token_respuesta),
+        enviarCotizacionCliente(pdfData, cot.token_respuesta, cot.id),
         enviarNotificacionRojas({
           numero: cot.numero,
           vendedoraNombre,

@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { CotizacionPDF, type CotizacionPDFData, type AC500ScheduleData } from './cotizacion-pdf'
+import { registrarEnvioEmail, extraerResendId } from './email-tracking'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
@@ -53,7 +54,7 @@ function row(label: string, value: string) {
   </tr>`
 }
 
-export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenRespuesta: string) {
+export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenRespuesta: string, cotizacionId?: string) {
   const resend = getResend()
 
   const pdfBuffer = await renderToBuffer(
@@ -157,10 +158,11 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;margin:0">* Precios referenciales sujetos a disponibilidad. Consulte con su asesor para confirmar.</p>
   `
 
-  const { error } = await resend.emails.send({
+  const asunto = `Cotización ${data.numero} — ${data.marca} ${data.modelo} · La Oriental Automotors`
+  const resendResult = await resend.emails.send({
     from: FROM,
     to: [data.clienteCorreo],
-    subject: `Cotización ${data.numero} — ${data.marca} ${data.modelo} · La Oriental Automotors`,
+    subject: asunto,
     html: wrap(body),
     attachments: [{
       filename: `${data.numero}.pdf`,
@@ -168,7 +170,19 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
     }],
   })
 
-  if (error) throw new Error(`Resend error (cliente): ${JSON.stringify(error)}`)
+  if ((resendResult as any).error) throw new Error(`Resend error (cliente): ${JSON.stringify((resendResult as any).error)}`)
+
+  const resendId = extraerResendId(resendResult)
+  if (resendId) {
+    await registrarEnvioEmail({
+      resendEmailId: resendId,
+      entidadTipo: 'cotizacion',
+      entidadId: cotizacionId ?? null,
+      destinatarios: [data.clienteCorreo],
+      asunto,
+      metadata: { numero: data.numero, marca: data.marca, modelo: data.modelo },
+    })
+  }
 }
 
 export async function enviarNotificacionRojas(opts: {

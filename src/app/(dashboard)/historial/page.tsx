@@ -17,6 +17,9 @@ type DocumentoTimeline = {
   clienteNombre: string
   clienteCiRif: string
   monto?: number | null
+  emailUltimoEstado?: string | null
+  emailUltimoEventoAt?: string | null
+  resendEmailId?: string | null
 }
 
 const estadoCotColors: Record<string, string> = {
@@ -78,7 +81,7 @@ export default async function HistorialPage({
       // Cotizaciones (match por cedula_rif)
       const { data: cots } = await supabase
         .from('cotizaciones')
-        .select('id, numero, fecha, estado, marca, modelo, modalidad, plan, cliente_nombre, cliente_ci_rif, costo_total, total_inicial')
+        .select('id, numero, fecha, estado, marca, modelo, modalidad, plan, cliente_nombre, cliente_ci_rif, costo_total, total_inicial, resend_email_id, email_ultimo_estado, email_ultimo_evento_at')
         .eq('cliente_ci_rif', cli.cedula_rif)
         .order('fecha', { ascending: false })
         .limit(200)
@@ -86,7 +89,7 @@ export default async function HistorialPage({
       // Proformas (match por cliente_id)
       const { data: pros } = await supabase
         .from('proformas')
-        .select('id, numero, fecha_emision, precio_vehiculo, monto_inicial, monto_financiado, num_cuotas, correo_enviado_at, vehiculo_snapshot, credito_snapshot')
+        .select('id, numero, fecha_emision, precio_vehiculo, monto_inicial, monto_financiado, num_cuotas, correo_enviado_at, vehiculo_snapshot, credito_snapshot, resend_email_id, email_ultimo_estado, email_ultimo_evento_at')
         .eq('cliente_id', cli.id)
         .order('fecha_emision', { ascending: false })
         .limit(200)
@@ -108,6 +111,9 @@ export default async function HistorialPage({
         clienteNombre: c.cliente_nombre,
         clienteCiRif: c.cliente_ci_rif,
         monto: c.costo_total ? Number(c.costo_total) : null,
+        emailUltimoEstado: c.email_ultimo_estado ?? null,
+        emailUltimoEventoAt: c.email_ultimo_evento_at ?? null,
+        resendEmailId: c.resend_email_id ?? null,
       }))
 
       const docsPro: DocumentoTimeline[] = (pros ?? []).map((p: any) => {
@@ -126,6 +132,9 @@ export default async function HistorialPage({
           clienteNombre: cli.nombre,
           clienteCiRif: cli.cedula_rif,
           monto: p.precio_vehiculo ? Number(p.precio_vehiculo) : null,
+          emailUltimoEstado: p.email_ultimo_estado ?? null,
+          emailUltimoEventoAt: p.email_ultimo_evento_at ?? null,
+          resendEmailId: p.resend_email_id ?? null,
         }
       })
 

@@ -150,7 +150,7 @@ export async function crearReporteVehimotors(payload: CrearReportePayload) {
       numeroRecibo: ingreso.numero_recibo,
       observaciones: payload.observaciones,
     }
-    await enviarReporteLoteVehimotors({ items: [item] })
+    await enviarReporteLoteVehimotors({ items: [item], reporteIds: [reporte.id] })
   } catch (e) {
     console.error('[reportes-vm] error enviando correo:', e)
     // No retornamos error — el reporte ya está guardado en BD
@@ -215,6 +215,7 @@ export async function crearLoteReportesVehimotors(
   }
 
   const itemsCorreo: ReporteLoteItem[] = []
+  const reporteIdsAcumulados: string[] = []
   const errores: string[] = []
   let guardados = 0
 
@@ -288,7 +289,7 @@ export async function crearLoteReportesVehimotors(
     }
 
     // Insertar reporte (incluye datos del depósito si vienen)
-    const { error: errInsert } = await admin
+    const { data: reporteInsertado, error: errInsert } = await admin
       .from('reportes_vehimotors')
       .insert({
         ingreso_id: payload.ingresoId,
@@ -309,13 +310,16 @@ export async function crearLoteReportesVehimotors(
         deposito_comprobante_url: deposito?.comprobanteUrl ?? null,
         asunto_correo: asuntoCorreo ?? null,
       })
+      .select('id')
+      .single()
 
-    if (errInsert) {
-      errores.push(`${ingreso.numero_recibo}: ${errInsert.message}`)
+    if (errInsert || !reporteInsertado) {
+      errores.push(`${ingreso.numero_recibo}: ${errInsert?.message ?? 'error insertando reporte'}`)
       continue
     }
 
     guardados++
+    reporteIdsAcumulados.push(reporteInsertado.id)
 
     // Recalcular estado del ingreso
     const { data: reportes } = await admin
@@ -352,6 +356,7 @@ export async function crearLoteReportesVehimotors(
     try {
       await enviarReporteLoteVehimotors({
         items: itemsCorreo,
+        reporteIds: reporteIdsAcumulados,
         asuntoCustom: asuntoCorreo ?? undefined,
         deposito: deposito && (deposito.bancoOrigen || deposito.bancoDestino || deposito.referencia || deposito.fecha || deposito.comprobanteUrl) ? {
           bancoOrigen: deposito.bancoOrigen,

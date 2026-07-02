@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { FileText, Calendar, Download, ExternalLink, Car, DollarSign } from 'lucide-react'
+import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 
 type DocumentoTimeline = {
   id: string
@@ -17,6 +18,9 @@ type DocumentoTimeline = {
   clienteNombre: string
   clienteCiRif: string
   monto?: number | null
+  emailUltimoEstado?: string | null
+  emailUltimoEventoAt?: string | null
+  resendEmailId?: string | null
 }
 
 interface Props {
@@ -141,7 +145,7 @@ export default function HistorialTimeline({ documentos, estadoCotColors, estadoC
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100 flex-wrap">
                     <a
                       href={d.pdfUrl}
                       target="_blank"
@@ -160,6 +164,16 @@ export default function HistorialTimeline({ documentos, estadoCotColors, estadoC
                         Ir al detalle
                       </Link>
                     )}
+                    <div className="ml-auto">
+                      <EmailTrackingBadge
+                        estado={d.emailUltimoEstado as any}
+                        ultimoEventoAt={d.emailUltimoEventoAt ?? null}
+                        resendEmailId={d.resendEmailId ?? null}
+                        entidadTipo={d.tipo}
+                        entidadId={d.id}
+                        size="sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

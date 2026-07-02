@@ -2,6 +2,8 @@ import { Resend } from 'resend'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { ReciboPDF } from './recibo-pdf'
+import { registrarEnvioEmail, extraerResendId } from './email-tracking'
+import { createAdminClient } from './supabase/server'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
@@ -161,6 +163,7 @@ export async function enviarReporteLoteVehimotors(opts: {
   resumenTexto?: string
   destinatariosOverride?: string[]   // si se pasa, ignora TO_VEHIMOTORS (útil para tests)
   asuntoCustom?: string              // asunto editable, si no se pasa se arma uno
+  reporteIds?: string[]              // ids en reportes_vehimotors para tracking
   deposito?: {
     bancoOrigen: string | null
     bancoDestino: string | null
@@ -169,7 +172,7 @@ export async function enviarReporteLoteVehimotors(opts: {
     comprobanteUrl: string | null
   }
 }) {
-  const { items, resumenTexto, destinatariosOverride, asuntoCustom, deposito } = opts
+  const { items, resumenTexto, destinatariosOverride, asuntoCustom, deposito, reporteIds } = opts
   if (items.length === 0) return
 
   const resend = getResend()
@@ -279,13 +282,38 @@ export async function enviarReporteLoteVehimotors(opts: {
   const destinatariosFinal = destinatariosOverride ?? TO_VEHIMOTORS
   const asuntoFinal = destinatariosOverride ? `[PRUEBA] ${asunto}` : asunto
 
-  const { error } = await resend.emails.send({
+  const resendResult = await resend.emails.send({
     from: FROM,
     to: destinatariosFinal,
     subject: asuntoFinal,
     html,
   })
-  if (error) throw new Error(`Resend error: ${error.name ?? 'unknown'}`)
+  if ((resendResult as any).error) throw new Error(`Resend error: ${(resendResult as any).error.name ?? 'unknown'}`)
+
+  const resendId = extraerResendId(resendResult)
+  if (resendId && reporteIds && reporteIds.length > 0) {
+    for (const rId of reporteIds) {
+      await registrarEnvioEmail({
+        resendEmailId: resendId,
+        entidadTipo: 'reporte_vehimotors',
+        entidadId: rId,
+        destinatarios: destinatariosFinal,
+        asunto: asuntoFinal,
+        metadata: { totalItems: items.length, totalUSD },
+      })
+    }
+    // Actualizar todos los reportes con el mismo email_id
+    try {
+      const supabase = await createAdminClient()
+      await supabase.from('reportes_vehimotors').update({
+        resend_email_id: resendId,
+        email_ultimo_estado: 'sent',
+        email_ultimo_evento_at: new Date().toISOString(),
+      }).in('id', reporteIds)
+    } catch (e) {
+      console.error('[email-ingresos] error update reportes:', e)
+    }
+  }
 }
 
 // ─── Recibo al cliente ────────────────────────────────────────────────────────

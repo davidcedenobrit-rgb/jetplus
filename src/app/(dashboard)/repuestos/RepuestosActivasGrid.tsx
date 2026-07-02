@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Search, X } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
+import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
   solicitado:           { label: 'Solicitado',         color: 'text-blue-700',   bg: 'bg-blue-100',   step: 1 },
@@ -38,6 +39,9 @@ type Solicitud = {
   created_at: string
   respuesta_vehimotors: string | null
   repuestos_items?: { id: string }[]
+  resend_email_id?: string | null
+  email_ultimo_estado?: string | null
+  email_ultimo_evento_at?: string | null
 }
 
 interface Props {
@@ -137,7 +141,7 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
               <div key={s.id} className="relative card hover:shadow-md transition-shadow">
                 {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
                 <Link href={`/repuestos/${s.id}`} className="block p-5">
-                  <div className="flex items-start justify-between mb-2 pr-6">
+                  <div className="flex items-start justify-between mb-2 pr-6 gap-2">
                     <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">{s.numero}</span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est?.bg} ${est?.color}`}>{est?.label}</span>
                   </div>
@@ -145,6 +149,15 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
                   <p className="text-xs text-oriental-gray mt-0.5">
                     {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </p>
+                  <div className="mt-2">
+                    <EmailTrackingBadge
+                      estado={s.email_ultimo_estado as any}
+                      ultimoEventoAt={s.email_ultimo_evento_at ?? null}
+                      resendEmailId={s.resend_email_id ?? null}
+                      entidadTipo="solicitud_repuesto"
+                      entidadId={s.id}
+                    />
+                  </div>
                   {s.respuesta_vehimotors && (
                     <div className={`mt-2 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
                       ${s.respuesta_vehimotors === 'hay_todo' ? 'bg-green-50 text-green-700' :

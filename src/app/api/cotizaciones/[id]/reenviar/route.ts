@@ -68,7 +68,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       ac500Schedule,
     }
 
-    await enviarCotizacionCliente(pdfData, cot.token_respuesta)
+    await enviarCotizacionCliente(pdfData, cot.token_respuesta, id)
 
     await supabase
       .from('cotizaciones')

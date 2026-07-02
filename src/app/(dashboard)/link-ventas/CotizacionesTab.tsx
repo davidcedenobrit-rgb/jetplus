@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -778,6 +779,15 @@ export default function CotizacionesTab() {
                     </td>
                     <td className="px-4 py-3">
                       <EstadoBadge estado={c.estado ?? 'sin_respuesta'} />
+                      <div className="mt-1">
+                        <EmailTrackingBadge
+                          estado={(c as any).email_ultimo_estado}
+                          ultimoEventoAt={(c as any).email_ultimo_evento_at}
+                          resendEmailId={(c as any).resend_email_id}
+                          entidadTipo="cotizacion"
+                          entidadId={c.id}
+                        />
+                      </div>
                       {c.descuento_solicitado && (
                         <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
                           💬 Pide descuento
