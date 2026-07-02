@@ -2,12 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Car, CreditCard, User, FileText } from 'lucide-react'
+import { Home, CreditCard, User, FileText, DollarSign } from 'lucide-react'
 
 const items = [
   { href: '/portal/inicio', label: 'Inicio', icon: Home },
-  { href: '/portal/vehiculos', label: 'Vehículos', icon: Car },
   { href: '/portal/credito', label: 'Crédito', icon: CreditCard },
+  { href: '/portal/pagos', label: 'Pagos', icon: DollarSign },
   { href: '/portal/cotizaciones', label: 'Cotiz.', icon: FileText },
   { href: '/portal/perfil', label: 'Perfil', icon: User },
 ]

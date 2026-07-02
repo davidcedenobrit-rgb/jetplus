@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { serviceRoleClient } from '@/lib/supabase/service-role'
 
 export async function POST(req: Request) {
   const body = await req.json()
@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
   }
 
-  const supabase = await createAdminClient()
+  // Cliente admin puro (sin cookies) para operaciones que requieren service_role
+  const supabase = serviceRoleClient()
 
   const { data: invitacion } = await supabase
     .from('invitaciones_cliente')
@@ -96,7 +97,7 @@ export async function GET(req: Request) {
   const token = searchParams.get('token')
   if (!token) return NextResponse.json({ error: 'Token requerido' }, { status: 400 })
 
-  const supabase = await createAdminClient()
+  const supabase = serviceRoleClient()
   const { data: invitacion } = await supabase
     .from('invitaciones_cliente')
     .select('estado, expira_at, clientes(nombre, correo)')

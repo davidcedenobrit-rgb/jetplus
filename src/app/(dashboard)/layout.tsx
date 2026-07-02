@@ -38,6 +38,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .eq('estado', 'pendiente_anulacion')
     : { count: 0 }
 
+  // Pagos reportados por clientes desde el portal pendientes de verificar
+  const ROL_VE_PAGOS_PORTAL = ['jose', 'admin', 'director', 'mary', 'leysdem']
+  const { count: pagosPortalPendientes } = ROL_VE_PAGOS_PORTAL.includes(rol)
+    ? await supabase
+        .from('ingresos')
+        .select('id', { count: 'exact', head: true })
+        .eq('origen', 'portal_cliente')
+        .eq('estado', 'pendiente_aprobacion')
+    : { count: 0 }
+
   return (
     <ClientLayout
       userEmail={user.email ?? ''}
@@ -45,6 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       aprobacionesPendientes={aprobacionesPendientes ?? 0}
       depositosPendientesCarla={depositosPendientesCarla ?? 0}
       anulacionesPendientes={anulacionesPendientes ?? 0}
+      pagosPortalPendientes={pagosPortalPendientes ?? 0}
     >
       {children}
     </ClientLayout>

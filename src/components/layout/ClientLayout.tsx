@@ -11,6 +11,7 @@ interface ClientLayoutProps {
   aprobacionesPendientes: number
   depositosPendientesCarla: number
   anulacionesPendientes: number
+  pagosPortalPendientes?: number
 }
 
 export default function ClientLayout({
@@ -20,6 +21,7 @@ export default function ClientLayout({
   aprobacionesPendientes,
   depositosPendientesCarla,
   anulacionesPendientes,
+  pagosPortalPendientes = 0,
 }: ClientLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -48,6 +50,7 @@ export default function ClientLayout({
           aprobacionesPendientes={aprobacionesPendientes}
           depositosPendientesCarla={depositosPendientesCarla}
           anulacionesPendientes={anulacionesPendientes}
+          pagosPortalPendientes={pagosPortalPendientes}
           onClose={() => setSidebarOpen(false)}
         />
       </div>

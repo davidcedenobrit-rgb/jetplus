@@ -173,12 +173,20 @@ export default async function InicioPortalPage() {
             <p className={`text-xs ${cuotaVencida ? 'text-red-700' : 'text-amber-700'} mt-0.5`}>
               Cuota N.° {proximaCuota.numero_cuota} · vence {fmtFecha(proximaCuota.fecha_vencimiento)}
             </p>
-            <Link
-              href="/portal/credito"
-              className={`inline-flex items-center gap-1 mt-3 text-xs font-bold ${cuotaVencida ? 'text-red-800' : 'text-amber-800'} hover:underline`}
-            >
-              Ver detalle <ChevronRight size={12} />
-            </Link>
+            <div className="flex gap-2 mt-3">
+              <Link
+                href="/portal/pagos/nuevo"
+                className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold ${cuotaVencida ? 'bg-red-700 text-white hover:bg-red-800' : 'bg-amber-700 text-white hover:bg-amber-800'}`}
+              >
+                Reportar pago
+              </Link>
+              <Link
+                href="/portal/credito"
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold border ${cuotaVencida ? 'border-red-300 text-red-800' : 'border-amber-300 text-amber-800'}`}
+              >
+                Detalle <ChevronRight size={12} />
+              </Link>
+            </div>
           </div>
         </div>
       )}

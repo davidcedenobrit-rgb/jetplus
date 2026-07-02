@@ -107,3 +107,117 @@ export async function enviarInvitacionPortal(opts: EnviarInvitacionOpts) {
 
   return result
 }
+
+// ─── Notificación al staff cuando un cliente reporta un pago ───────────────────
+
+const DESTINATARIOS_STAFF_PAGO = [
+  process.env.CORREO_ROJAS ?? 'rojasjgx@gmail.com',
+  process.env.CORREO_MARY ?? 'laorientalautomotorsc@gmail.com',
+  process.env.CORREO_LEYSDEM ?? 'leysdm@gmail.com',
+]
+
+interface EnviarNotificacionPagoOpts {
+  ingresoId: string
+  numeroRecibo: string
+  clienteNombre: string
+  clienteCiRif: string
+  clienteTelefono?: string | null
+  vehiculoLabel?: string | null
+  placa?: string | null
+  cuotaLabel?: string | null
+  concepto: string
+  monto: number
+  moneda: string
+  metodoPago: string
+  referencia?: string | null
+  bancoOrigen?: string | null
+  bancoDestino?: string | null
+  fechaPago: string
+  comprobanteUrl: string
+  observaciones?: string | null
+}
+
+function fmtMonto(n: number) {
+  return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+export async function enviarNotificacionPagoCliente(opts: EnviarNotificacionPagoOpts) {
+  const resend = getResend()
+  const linkIngreso = `${APP_URL}/ingresos/${opts.ingresoId}`
+  const monedaLabel = opts.moneda === 'VES' ? 'Bs.' : opts.moneda
+
+  const body = `
+    <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">🔔 Pago reportado desde el Portal del Cliente</p>
+    <h1 style="font-family:sans-serif;font-size:20px;font-weight:800;color:#111;margin:0 0 6px">${opts.clienteNombre}</h1>
+    <p style="font-family:sans-serif;font-size:13px;color:#6b7280;margin:0 0 22px">
+      Un cliente reportó un pago. Verifica los datos y aprueba o rechaza desde el Centro de Mando.
+    </p>
+
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;margin-bottom:18px">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600;width:42%">N° Recibo</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700"><span style="font-family:monospace;color:#C41E3A">${opts.numeroRecibo}</span></td></tr>
+        <tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Cliente</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.clienteNombre}</td></tr>
+        <tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">C.I. / RIF</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.clienteCiRif}</td></tr>
+        ${opts.clienteTelefono ? `<tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Teléfono</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.clienteTelefono}</td></tr>` : ''}
+        ${opts.vehiculoLabel ? `<tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Vehículo</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.vehiculoLabel}${opts.placa ? ` · ${opts.placa}` : ''}</td></tr>` : ''}
+        ${opts.cuotaLabel ? `<tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Aplicar a</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.cuotaLabel}</td></tr>` : ''}
+        <tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Concepto</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.concepto}</td></tr>
+        <tr><td style="padding:8px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Monto</td><td style="padding:8px 0;font-family:sans-serif;font-size:16px;color:#111;font-weight:800">${monedaLabel} ${fmtMonto(opts.monto)}</td></tr>
+        <tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Método</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.metodoPago}</td></tr>
+        ${opts.bancoOrigen ? `<tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Banco origen</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.bancoOrigen}</td></tr>` : ''}
+        ${opts.bancoDestino ? `<tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Banco destino</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${opts.bancoDestino}</td></tr>` : ''}
+        ${opts.referencia ? `<tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Referencia</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700"><span style="font-family:monospace">${opts.referencia}</span></td></tr>` : ''}
+        <tr><td style="padding:6px 0;font-family:sans-serif;font-size:12px;color:#6b7280;font-weight:600">Fecha del pago</td><td style="padding:6px 0;font-family:sans-serif;font-size:13px;color:#111;font-weight:700">${fmtFecha(opts.fechaPago)}</td></tr>
+      </table>
+    </div>
+
+    ${opts.observaciones ? `
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:18px">
+      <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 4px">Observaciones del cliente</p>
+      <p style="font-family:sans-serif;font-size:13px;color:#1e3a8a;margin:0;font-style:italic">"${opts.observaciones}"</p>
+    </div>
+    ` : ''}
+
+    <div style="text-align:center;margin:22px 0">
+      <a href="${opts.comprobanteUrl}" target="_blank"
+        style="display:inline-block;padding:12px 22px;background:#f3f4f6;color:#111;font-family:sans-serif;font-size:13px;font-weight:800;text-decoration:none;border-radius:10px;border:1px solid #d1d5db;margin-right:8px">
+        📎 Ver comprobante
+      </a>
+      <a href="${linkIngreso}"
+        style="display:inline-block;padding:12px 26px;background:#C41E3A;color:#fff;font-family:sans-serif;font-size:13px;font-weight:800;text-decoration:none;border-radius:10px">
+        Verificar en Centro de Mando →
+      </a>
+    </div>
+
+    <p style="font-family:sans-serif;font-size:11px;color:#9ca3af;margin:16px 0 0;text-align:center">
+      El pago está en estado <b>Pendiente de aprobación</b> hasta que uno de ustedes lo verifique.
+    </p>
+  `
+
+  const asunto = `🔔 ${opts.clienteNombre} reportó un pago de ${monedaLabel} ${fmtMonto(opts.monto)} (${opts.numeroRecibo})`
+
+  const result = await resend.emails.send({
+    from: FROM,
+    to: DESTINATARIOS_STAFF_PAGO,
+    subject: asunto,
+    html: wrap(body),
+  })
+
+  if ((result as any).error) {
+    throw new Error(`Resend error notificacion pago: ${(result as any).error.message ?? (result as any).error.name ?? 'desconocido'}`)
+  }
+
+  const resendId = extraerResendId(result)
+  if (resendId) {
+    await registrarEnvioEmail({
+      resendEmailId: resendId,
+      entidadTipo: 'ingreso',
+      entidadId: opts.ingresoId,
+      destinatarios: DESTINATARIOS_STAFF_PAGO,
+      asunto,
+      metadata: { tipo: 'notificacion_pago_portal', numeroRecibo: opts.numeroRecibo, monto: opts.monto },
+    })
+  }
+
+  return result
+}

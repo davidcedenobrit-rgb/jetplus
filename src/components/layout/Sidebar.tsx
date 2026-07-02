@@ -36,10 +36,11 @@ interface SidebarProps {
   aprobacionesPendientes?: number
   depositosPendientesCarla?: number
   anulacionesPendientes?: number
+  pagosPortalPendientes?: number
   onClose?: () => void
 }
 
-export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0, anulacionesPendientes = 0, onClose }: SidebarProps) {
+export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendientes = 0, depositosPendientesCarla = 0, anulacionesPendientes = 0, pagosPortalPendientes = 0, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -155,11 +156,17 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           {/* Clientes → Ingresos */}
           {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.slice(0, 3).map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
+            const showPortalBadge = href === '/ingresos' && pagosPortalPendientes > 0
             return (
               <Link key={href} href={href} onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
                 <Icon size={18} />
-                {label}
+                <span className="flex-1">{label}</span>
+                {showPortalBadge && (
+                  <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                    {pagosPortalPendientes > 99 ? '99+' : pagosPortalPendientes}
+                  </span>
+                )}
               </Link>
             )
           })}
