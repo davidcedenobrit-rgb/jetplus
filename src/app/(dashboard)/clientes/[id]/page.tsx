@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, User, Phone, Mail, MapPin, Car, TrendingUp, AlertCircle, FileText, Edit3, ClipboardList } from 'lucide-react'
+import InvitarPortalButton from './InvitarPortalButton'
 import DeleteButton from '@/components/DeleteButton'
 import DocumentosCliente from './DocumentosCliente'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
@@ -143,6 +144,17 @@ export default async function ClienteDetallePage({
     .eq('cliente_id', id)
     .order('created_at', { ascending: false })
 
+  const { data: cuentaPortal } = await supabase
+    .from('cliente_cuentas')
+    .select('id, activo')
+    .eq('cliente_id', id)
+    .maybeSingle()
+
+  const ROLES_INVITAR = ['jose', 'admin', 'director', 'mary', 'leysdem']
+  const { data: authUser } = await supabase.auth.getUser()
+  const rolActual = authUser?.user?.app_metadata?.rol as string | undefined
+  const puedeInvitarPortal = rolActual ? ROLES_INVITAR.includes(rolActual) : false
+
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
       {/* Header */}
@@ -158,6 +170,15 @@ export default async function ClienteDetallePage({
           className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-oriental-black text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors">
           <ClipboardList size={15} /> Historial
         </Link>
+        {puedeInvitarPortal && (
+          <InvitarPortalButton
+            clienteId={id}
+            clienteNombre={cliente.nombre}
+            correoDefault={cliente.correo ?? null}
+            telefonoDefault={cliente.whatsapp ?? cliente.telefono ?? null}
+            yaTieneCuenta={!!(cuentaPortal?.activo)}
+          />
+        )}
         <Link href={`/clientes/${id}/editar`}
           className="flex items-center gap-2 px-4 py-2 bg-oriental-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors">
           <Edit3 size={15} /> Editar

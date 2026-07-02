@@ -11,6 +11,7 @@ export async function middleware(request: NextRequest) {
     '/api/repuestos/subir-factura',
     '/api/repuestos/confirmar-pago',
     '/api/repuestos/almacen',
+    '/api/portal-clientes/aceptar',
   ]
 
   if (publicApiPaths.some(path => pathname.startsWith(path))) {
@@ -50,9 +51,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  const esCliente = user?.app_metadata?.rol === 'cliente'
+
   // Si ya está autenticado y va al login, redirige al dashboard
   if (pathname === '/login' && user) {
+    return NextResponse.redirect(new URL(esCliente ? '/portal/inicio' : '/ingresos', request.url))
+  }
+
+  // Usuario staff intentando entrar al portal del cliente -> redirigir a ingresos
+  if (pathname.startsWith('/portal') && user && !esCliente && !pathname.startsWith('/portal/registro')) {
     return NextResponse.redirect(new URL('/ingresos', request.url))
+  }
+
+  // Cliente intentando entrar al Centro de Mando -> redirigir a portal
+  if (isProtected && esCliente && !pathname.startsWith('/api/portal-clientes')) {
+    return NextResponse.redirect(new URL('/portal/inicio', request.url))
+  }
+
+  // Cliente no autenticado en rutas protegidas del portal
+  const portalProtegido = ['/portal/inicio', '/portal/vehiculos', '/portal/credito', '/portal/perfil']
+  if (portalProtegido.some(p => pathname.startsWith(p)) && !user) {
+    return NextResponse.redirect(new URL('/portal/login', request.url))
   }
 
   return supabaseResponse
