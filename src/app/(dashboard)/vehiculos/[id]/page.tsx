@@ -9,6 +9,7 @@ import DesvincularCliente from './DesvincularCliente'
 import VincularCliente from './VincularCliente'
 import EditarVehiculo from './EditarVehiculo'
 import ShowroomDocumentos from '../../showroom/[id]/ShowroomDocumentos'
+import ServiciosVehiculo from './ServiciosVehiculo'
 
 export default async function VehiculoDetallePage({
   params,
@@ -29,6 +30,7 @@ export default async function VehiculoDetallePage({
   const { data: { user } } = await supabase.auth.getUser()
   const rol = user?.app_metadata?.rol as string ?? ''
   const puedeEditar = ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol)
+  const puedeGestionarServicios = ['jose', 'admin', 'director', 'arianna'].includes(rol)
 
   const cliente = (vehiculo as any).clientes
 
@@ -535,6 +537,9 @@ export default async function VehiculoDetallePage({
               <p className="text-oriental-gray text-sm py-8 text-center">Sin ingresos asociados a este vehículo</p>
             )}
           </div>
+
+          {/* Servicios al vehículo */}
+          <ServiciosVehiculo vehiculoId={id} puedeGestionar={puedeGestionarServicios} />
         </div>
       </div>
     </div>
