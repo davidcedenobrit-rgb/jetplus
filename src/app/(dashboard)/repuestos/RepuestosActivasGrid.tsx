@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Search, X } from 'lucide-react'
+import { Search, X, User, Building2 } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import ReenviarCotizacionButton from './ReenviarCotizacionButton'
 import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
@@ -43,6 +43,9 @@ type Solicitud = {
   resend_email_id?: string | null
   email_ultimo_estado?: string | null
   email_ultimo_evento_at?: string | null
+  cliente_id?: string | null
+  para_la_oriental?: boolean | null
+  clientes?: { id: string; nombre: string } | null
 }
 
 interface Props {
@@ -150,6 +153,24 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
                   <p className="text-xs text-oriental-gray mt-0.5">
                     {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </p>
+
+                  {/* Destinatario */}
+                  {s.para_la_oriental ? (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                      <Building2 size={11} className="text-blue-700" />
+                      <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wide">La Oriental</span>
+                    </div>
+                  ) : s.clientes ? (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-green-50 border border-green-200 rounded-lg max-w-full">
+                      <User size={11} className="text-green-700 flex-shrink-0" />
+                      <span className="text-[10px] font-bold text-green-800 truncate">{s.clientes.nombre}</span>
+                    </div>
+                  ) : (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase">Sin destinatario</span>
+                    </div>
+                  )}
+
                   <div className="mt-2">
                     <EmailTrackingBadge
                       estado={s.email_ultimo_estado as any}

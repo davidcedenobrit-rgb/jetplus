@@ -54,14 +54,14 @@ export default async function RepuestosPage({
   // Activas: sin límite (suelen ser pocas)
   const { data: activasData } = await supabase
     .from('solicitudes_repuestos')
-    .select('*, repuestos_items(id)')
+    .select('*, repuestos_items(id), clientes(id, nombre)')
     .not('estado', 'in', '(completado,cancelado)')
     .order('created_at', { ascending: false })
 
   // Completadas: paginadas
   const completadasQuery = supabase
     .from('solicitudes_repuestos')
-    .select('*, repuestos_items(id)', { count: 'exact' })
+    .select('*, repuestos_items(id), clientes(id, nombre)', { count: 'exact' })
     .eq('estado', 'completado')
     .order('created_at', { ascending: false })
 

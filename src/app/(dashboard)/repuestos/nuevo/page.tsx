@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Plus, Trash2, Save, Search, X, ChevronDown, BookmarkPlus, Check } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, Search, X, ChevronDown, BookmarkPlus, Check, Building2, User } from 'lucide-react'
 import Link from 'next/link'
+
+interface ClienteLite { id: string; nombre: string; cedula_rif: string }
 
 interface CatalogoItem {
   id: string
@@ -207,6 +209,13 @@ export default function NuevaSolicitudPage() {
   const [catalogo, setCatalogo] = useState<CatalogoItem[]>([])
   const [modalAbierto, setModalAbierto] = useState<number | null>(null)
 
+  // Destinatario: cliente o La Oriental
+  const [destino, setDestino] = useState<'cliente' | 'oriental'>('cliente')
+  const [clienteSel, setClienteSel] = useState<ClienteLite | null>(null)
+  const [buscaCliente, setBuscaCliente] = useState('')
+  const [resultadosClientes, setResultadosClientes] = useState<ClienteLite[]>([])
+  const [buscandoClientes, setBuscandoClientes] = useState(false)
+
   const categoriasCatalogo = [...new Set(catalogo.map(c => c.categoria).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -214,6 +223,28 @@ export default function NuevaSolicitudPage() {
       .order('marca').order('categoria').order('nombre')
       .then(({ data }) => setCatalogo(data ?? []))
   }, [])
+
+  // Buscar clientes con debounce
+  useEffect(() => {
+    if (destino !== 'cliente' || clienteSel || !buscaCliente.trim() || buscaCliente.trim().length < 2) {
+      setResultadosClientes([])
+      return
+    }
+    const q = buscaCliente.trim().toLowerCase()
+    const timer = setTimeout(async () => {
+      setBuscandoClientes(true)
+      const { data } = await supabase
+        .from('clientes')
+        .select('id, nombre, cedula_rif')
+        .or(`nombre.ilike.%${q}%,cedula_rif.ilike.%${q}%`)
+        .eq('activo', true)
+        .order('nombre')
+        .limit(10)
+      setResultadosClientes(data ?? [])
+      setBuscandoClientes(false)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [buscaCliente, destino, clienteSel])
 
   function seleccionarDelCatalogo(cat: CatalogoItem, idx: number) {
     setItems(prev => prev.map((it, i) => i === idx ? {
@@ -265,6 +296,7 @@ export default function NuevaSolicitudPage() {
     e.preventDefault()
     const validos = items.filter(it => it.descripcion.trim() && it.descripcion !== 'manual')
     if (validos.length === 0) { setError('Agrega al menos un repuesto'); return }
+    if (destino === 'cliente' && !clienteSel) { setError('Selecciona el cliente destinatario o marca la solicitud como interna de La Oriental'); return }
 
     setLoading(true); setError('')
     const { data: { user } } = await supabase.auth.getUser()
@@ -286,7 +318,15 @@ export default function NuevaSolicitudPage() {
     const numero = `SORE-${año}-${String(seq).padStart(5, '0')}`
     const { data: solicitud, error: err } = await supabase
       .from('solicitudes_repuestos')
-      .insert({ numero, estado: 'solicitado', solicitado_por_id: user.id, solicitado_por_email: user.email, notas_almacenista: notas || null })
+      .insert({
+        numero,
+        estado: 'solicitado',
+        solicitado_por_id: user.id,
+        solicitado_por_email: user.email,
+        notas_almacenista: notas || null,
+        cliente_id: destino === 'cliente' ? clienteSel!.id : null,
+        para_la_oriental: destino === 'oriental',
+      })
       .select().single()
 
     if (err || !solicitud) { setError(err?.message ?? 'Error al crear'); setLoading(false); return }
@@ -331,6 +371,100 @@ export default function NuevaSolicitudPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Destinatario */}
+          <div className="card p-6">
+            <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
+              <div className="w-1 h-4 bg-oriental-red rounded-full" />
+              ¿Para quién es el repuesto?
+            </h2>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <button type="button"
+                onClick={() => { setDestino('cliente'); setClienteSel(null); setBuscaCliente('') }}
+                className={`flex flex-col items-center gap-2 px-4 py-4 border-2 rounded-xl transition-colors ${
+                  destino === 'cliente' ? 'border-oriental-red bg-red-50 text-oriental-red' : 'border-gray-200 text-oriental-gray hover:border-gray-300'
+                }`}>
+                <User size={18} />
+                <span className="text-xs font-bold uppercase tracking-wide">Cliente</span>
+              </button>
+              <button type="button"
+                onClick={() => { setDestino('oriental'); setClienteSel(null); setBuscaCliente('') }}
+                className={`flex flex-col items-center gap-2 px-4 py-4 border-2 rounded-xl transition-colors ${
+                  destino === 'oriental' ? 'border-oriental-red bg-red-50 text-oriental-red' : 'border-gray-200 text-oriental-gray hover:border-gray-300'
+                }`}>
+                <Building2 size={18} />
+                <span className="text-xs font-bold uppercase tracking-wide">La Oriental</span>
+              </button>
+            </div>
+
+            {destino === 'cliente' && (
+              <div className="space-y-2">
+                {clienteSel ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center">
+                        <User size={16} className="text-green-700" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-oriental-black">{clienteSel.nombre}</p>
+                        <p className="text-[11px] text-oriental-gray font-mono">{clienteSel.cedula_rif}</p>
+                      </div>
+                    </div>
+                    <button type="button"
+                      onClick={() => { setClienteSel(null); setBuscaCliente('') }}
+                      className="text-xs text-oriental-gray hover:text-oriental-red font-semibold flex items-center gap-1">
+                      <X size={12} /> Cambiar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray" />
+                      <input
+                        type="text"
+                        className="input pl-9"
+                        placeholder="Buscar por nombre o cédula/RIF…"
+                        value={buscaCliente}
+                        onChange={e => setBuscaCliente(e.target.value)}
+                      />
+                    </div>
+                    {buscaCliente.trim().length >= 2 && (
+                      <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                        {buscandoClientes ? (
+                          <p className="text-center text-xs text-oriental-gray py-3">Buscando…</p>
+                        ) : resultadosClientes.length === 0 ? (
+                          <p className="text-center text-xs text-oriental-gray py-3">Sin resultados</p>
+                        ) : resultadosClientes.map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setClienteSel(c)}
+                            className="w-full text-left px-4 py-2.5 hover:bg-oriental-bg transition-colors"
+                          >
+                            <p className="text-sm font-semibold text-oriental-black">{c.nombre}</p>
+                            <p className="text-[11px] text-oriental-gray font-mono">{c.cedula_rif}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {destino === 'oriental' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3">
+                <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Building2 size={16} className="text-blue-700" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-oriental-black">La Oriental Automotors</p>
+                  <p className="text-[11px] text-oriental-gray">Solicitud interna, no vinculada a un cliente específico.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="card p-6">
             <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
               <div className="w-1 h-4 bg-oriental-red rounded-full" />
