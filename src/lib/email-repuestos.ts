@@ -19,12 +19,14 @@ const CORREO_OPS     = process.env.CORREO_OPS     ?? 'repuestos.laoriental.mun@g
 
 // Reciben cuando llega guía, confirmación de pago o recepción
 const EQUIPO_INTERNO = [CORREO_MARY, CORREO_ROJAS, CORREO_OPS]
+const EQUIPO_INTERNO_VISIBLE = [CORREO_MARY, CORREO_OPS]
+const BCC_ROJAS = [CORREO_ROJAS]
 
 const FROM = 'Repuestos La Oriental <repuestos@laoriental.co>'
 
 // Helper: si VEHIMOTORS_TEST_OVERRIDE está seteada, redirige el correo a esa dirección
 // y agrega "[PRUEBA]" al subject. Útil para probar el flujo sin molestar a Vehimotors real.
-function applyVMOverride<T extends { to: string[] | string; cc?: string[]; replyTo?: string[]; subject: string }>(opts: T): T {
+function applyVMOverride<T extends { to: string[] | string; cc?: string[]; bcc?: string[]; replyTo?: string[]; subject: string }>(opts: T): T {
   const override = process.env.VEHIMOTORS_TEST_OVERRIDE
   const allowProductionOverride = process.env.VEHIMOTORS_TEST_OVERRIDE_ALLOW_PRODUCTION === 'true'
   const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
@@ -39,6 +41,7 @@ function applyVMOverride<T extends { to: string[] | string; cc?: string[]; reply
     ...opts,
     to: [override],
     cc: undefined,
+    bcc: undefined,
     replyTo: [override],
     subject: '[PRUEBA] ' + opts.subject,
   }
@@ -109,10 +112,11 @@ export async function enviarSolicitudCotizacion(opts: {
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center">Al hacer clic, podrán agregar observaciones y adjuntar su cotización.</p>`
 
   const to       = destinatariosOverride ?? TO_VEHIMOTORS
-  const cc       = destinatariosOverride ? undefined : EQUIPO_INTERNO
+  const cc       = destinatariosOverride ? undefined : EQUIPO_INTERNO_VISIBLE
+  const bcc      = destinatariosOverride ? undefined : BCC_ROJAS
   const replyTo  = destinatariosOverride ?? EQUIPO_INTERNO
 
-  const overrideOpts = applyVMOverride({ to, cc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors` })
+  const overrideOpts = applyVMOverride({ to, cc, bcc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors` })
   const result = await getResend().emails.send({ from: FROM, ...overrideOpts, html: wrap(body) })
   if ((result as any).error) {
     throw new Error(`Resend error: ${(result as any).error.message ?? (result as any).error.name ?? 'desconocido'}`)
