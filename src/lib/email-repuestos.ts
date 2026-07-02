@@ -122,6 +122,17 @@ export async function enviarSolicitudCotizacion(opts: {
     throw new Error(`Resend error: ${(result as any).error.message ?? (result as any).error.name ?? 'desconocido'}`)
   }
 
+  const resendError = (result as any).error
+  if (resendError) {
+    const errName = resendError.name ?? 'unknown'
+    const errMsg = resendError.message ?? JSON.stringify(resendError)
+    console.error('[email-repuestos] Resend rechazo el envio de solicitud:', numero, errName, errMsg, {
+      to: overrideOpts.to,
+      cc: overrideOpts.cc,
+    })
+    throw new Error(`Resend rechazo el envio: ${errName} — ${errMsg}`)
+  }
+
   const resendId = extraerResendId(result)
   if (resendId) {
     await registrarEnvioEmail({

@@ -242,6 +242,26 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
             <Loader2 size={14} className="animate-spin" /> Esperando respuesta de Vehimotors…
           </p>
           <p className="text-xs text-yellow-600 mt-1">El sistema actualizará cuando respondan.</p>
+          {esOperador && (
+            <button
+              onClick={async () => {
+                setLoading(true); setError('')
+                const res = await fetch('/api/repuestos/enviar-cotizacion', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ solicitudId: solicitud.id }),
+                })
+                if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
+                await log('cotizacion_enviada', 'Email reenviado a Vehimotors')
+                router.refresh(); setLoading(false)
+              }}
+              disabled={loading}
+              className="w-full mt-3 px-3 py-2 border border-yellow-300 bg-white text-yellow-800 text-xs font-semibold rounded-lg hover:bg-yellow-100 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Reenviar correo a Vehimotors
+            </button>
+          )}
+          {error && <p className="text-xs text-red-700 mt-2">{error}</p>}
         </div>
       )}
 
