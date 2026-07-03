@@ -89,6 +89,9 @@ export default async function InicioPortalPage() {
     ultimoServicio = servicios?.[0] ?? null
   }
 
+  // Sincroniza cotizaciones vencidas antes de contar pendientes
+  await admin.rpc('marcar_cotizaciones_vencidas')
+
   // Cotizaciones pendientes de respuesta
   const { count: cotizacionesPendientes } = await admin
     .from('cotizaciones')

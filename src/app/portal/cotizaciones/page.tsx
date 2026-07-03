@@ -44,6 +44,9 @@ export default async function CotizacionesPortalPage() {
   const { data: cuenta } = await admin.from('cliente_cuentas').select('cliente_id').eq('user_id', user.id).single()
   if (!cuenta) redirect('/portal/login')
 
+  // Sincroniza estados vencidos antes de leer (el cron corre 1x/dia)
+  await admin.rpc('marcar_cotizaciones_vencidas')
+
   const { data: cotizaciones } = await admin
     .from('cotizaciones')
     .select('id, numero, fecha, vencimiento, marca, modelo, modalidad, plan, total_inicial, cuota_mensual, estado, token_respuesta')
