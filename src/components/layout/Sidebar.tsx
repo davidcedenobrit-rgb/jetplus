@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -156,20 +156,31 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           {/* Clientes → Ingresos */}
           {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.slice(0, 3).map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
-            const showPortalBadge = href === '/ingresos' && pagosPortalPendientes > 0
             return (
               <Link key={href} href={href} onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
                 <Icon size={18} />
-                <span className="flex-1">{label}</span>
-                {showPortalBadge && (
+                {label}
+              </Link>
+            )
+          })}
+
+          {/* Pagos del portal — bandeja de verificación */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/pagos-portal' || pathname.startsWith('/pagos-portal/')
+            return (
+              <Link href="/pagos-portal" onClick={onClose}
+                className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${active ? 'bg-blue-600/30 text-white font-semibold border-l-2 border-blue-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Inbox size={13} />
+                <span className="flex-1">Pagos del portal</span>
+                {pagosPortalPendientes > 0 && (
                   <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
                     {pagosPortalPendientes > 99 ? '99+' : pagosPortalPendientes}
                   </span>
                 )}
               </Link>
             )
-          })}
+          })()}
 
           {/* Egresos — visible para todos excepto almacén */}
           {rol !== 'almacen' && (() => {
