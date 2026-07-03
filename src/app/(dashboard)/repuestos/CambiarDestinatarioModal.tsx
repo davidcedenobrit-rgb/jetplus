@@ -3,30 +3,34 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { X, Building2, User, Search, Loader2, Check, AlertCircle } from 'lucide-react'
+import { X, Building2, User, UserPlus, Search, Loader2, Check, AlertCircle } from 'lucide-react'
 
 interface ClienteLite { id: string; nombre: string; cedula_rif: string }
 
 interface Props {
   solicitudId: string
   numero: string
-  destinoActual: 'cliente' | 'oriental' | 'sin'
+  destinoActual: 'cliente' | 'oriental' | 'externo' | 'sin'
   clienteActual: { id: string; nombre: string } | null
+  clienteExternoActual?: string | null
   onClose: () => void
   onSaved: () => void
 }
 
 export default function CambiarDestinatarioModal({
-  solicitudId, numero, destinoActual, clienteActual, onClose, onSaved,
+  solicitudId, numero, destinoActual, clienteActual, clienteExternoActual, onClose, onSaved,
 }: Props) {
   const router = useRouter()
   const supabase = createClient()
-  const [destino, setDestino] = useState<'cliente' | 'oriental'>(
-    destinoActual === 'oriental' ? 'oriental' : 'cliente'
+  const [destino, setDestino] = useState<'cliente' | 'oriental' | 'externo'>(
+    destinoActual === 'oriental' ? 'oriental' :
+    destinoActual === 'externo' ? 'externo' :
+    'cliente'
   )
   const [clienteSel, setClienteSel] = useState<ClienteLite | null>(
     clienteActual ? { id: clienteActual.id, nombre: clienteActual.nombre, cedula_rif: '' } : null
   )
+  const [clienteExterno, setClienteExterno] = useState(clienteExternoActual ?? '')
   const [busca, setBusca] = useState('')
   const [resultados, setResultados] = useState<ClienteLite[]>([])
   const [buscando, setBuscando] = useState(false)
@@ -57,7 +61,11 @@ export default function CambiarDestinatarioModal({
   async function guardar() {
     setError(null)
     if (destino === 'cliente' && !clienteSel) {
-      setError('Selecciona un cliente o cambia a "La Oriental"')
+      setError('Selecciona un cliente registrado o cambia a otra opción')
+      return
+    }
+    if (destino === 'externo' && !clienteExterno.trim()) {
+      setError('Escribe el nombre del cliente externo')
       return
     }
     setSaving(true)
@@ -67,6 +75,7 @@ export default function CambiarDestinatarioModal({
       body: JSON.stringify({
         destino,
         clienteId: destino === 'cliente' ? clienteSel!.id : null,
+        clienteExterno: destino === 'externo' ? clienteExterno.trim() : null,
       }),
     })
     setSaving(false)
@@ -91,24 +100,33 @@ export default function CambiarDestinatarioModal({
         </div>
 
         <div className="p-5">
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-3 gap-2 mb-4">
             <button
               onClick={() => { setDestino('cliente'); }}
-              className={`flex flex-col items-center gap-2 px-4 py-4 border-2 rounded-xl transition-colors ${
+              className={`flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-xl transition-colors ${
                 destino === 'cliente' ? 'border-oriental-red bg-red-50 text-oriental-red' : 'border-gray-200 text-oriental-gray hover:border-gray-300'
               }`}
             >
-              <User size={18} />
-              <span className="text-xs font-bold uppercase tracking-wide">Cliente</span>
+              <User size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">Cliente<br/>registrado</span>
+            </button>
+            <button
+              onClick={() => { setDestino('externo'); setClienteSel(null); setBusca('') }}
+              className={`flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-xl transition-colors ${
+                destino === 'externo' ? 'border-oriental-red bg-red-50 text-oriental-red' : 'border-gray-200 text-oriental-gray hover:border-gray-300'
+              }`}
+            >
+              <UserPlus size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">Otro<br/>cliente</span>
             </button>
             <button
               onClick={() => { setDestino('oriental'); setClienteSel(null); setBusca('') }}
-              className={`flex flex-col items-center gap-2 px-4 py-4 border-2 rounded-xl transition-colors ${
+              className={`flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-xl transition-colors ${
                 destino === 'oriental' ? 'border-oriental-red bg-red-50 text-oriental-red' : 'border-gray-200 text-oriental-gray hover:border-gray-300'
               }`}
             >
-              <Building2 size={18} />
-              <span className="text-xs font-bold uppercase tracking-wide">La Oriental</span>
+              <Building2 size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">La<br/>Oriental</span>
             </button>
           </div>
 
@@ -169,6 +187,24 @@ export default function CambiarDestinatarioModal({
             </div>
           )}
 
+          {destino === 'externo' && (
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-oriental-gray uppercase tracking-wide">Nombre del cliente</label>
+              <input
+                type="text"
+                value={clienteExterno}
+                onChange={e => setClienteExterno(e.target.value)}
+                placeholder="Ej: Pedro Perez / Auto Repuestos Maturín…"
+                className="input"
+                autoFocus
+              />
+              <p className="text-[11px] text-oriental-gray flex items-start gap-1">
+                <AlertCircle size={11} className="mt-0.5 flex-shrink-0" />
+                <span>Cliente no registrado en el sistema. Se guardará solo el nombre como referencia para esta solicitud.</span>
+              </p>
+            </div>
+          )}
+
           {destino === 'oriental' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3">
               <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -199,7 +235,7 @@ export default function CambiarDestinatarioModal({
           </button>
           <button
             onClick={guardar}
-            disabled={saving || (destino === 'cliente' && !clienteSel)}
+            disabled={saving || (destino === 'cliente' && !clienteSel) || (destino === 'externo' && !clienteExterno.trim())}
             className="flex-1 px-4 py-2 bg-oriental-red text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}

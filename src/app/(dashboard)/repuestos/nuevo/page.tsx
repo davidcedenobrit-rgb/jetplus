@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Plus, Trash2, Save, Search, X, ChevronDown, BookmarkPlus, Check, Building2, User } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, Search, X, ChevronDown, BookmarkPlus, Check, Building2, User, UserPlus, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 interface ClienteLite { id: string; nombre: string; cedula_rif: string }
@@ -209,12 +209,13 @@ export default function NuevaSolicitudPage() {
   const [catalogo, setCatalogo] = useState<CatalogoItem[]>([])
   const [modalAbierto, setModalAbierto] = useState<number | null>(null)
 
-  // Destinatario: cliente o La Oriental
-  const [destino, setDestino] = useState<'cliente' | 'oriental'>('cliente')
+  // Destinatario: cliente registrado / cliente externo / La Oriental
+  const [destino, setDestino] = useState<'cliente' | 'externo' | 'oriental'>('cliente')
   const [clienteSel, setClienteSel] = useState<ClienteLite | null>(null)
   const [buscaCliente, setBuscaCliente] = useState('')
   const [resultadosClientes, setResultadosClientes] = useState<ClienteLite[]>([])
   const [buscandoClientes, setBuscandoClientes] = useState(false)
+  const [clienteExterno, setClienteExterno] = useState('')
 
   const categoriasCatalogo = [...new Set(catalogo.map(c => c.categoria).filter(Boolean))].sort()
 
@@ -296,7 +297,8 @@ export default function NuevaSolicitudPage() {
     e.preventDefault()
     const validos = items.filter(it => it.descripcion.trim() && it.descripcion !== 'manual')
     if (validos.length === 0) { setError('Agrega al menos un repuesto'); return }
-    if (destino === 'cliente' && !clienteSel) { setError('Selecciona el cliente destinatario o marca la solicitud como interna de La Oriental'); return }
+    if (destino === 'cliente' && !clienteSel) { setError('Selecciona el cliente registrado o cambia a otra opción'); return }
+    if (destino === 'externo' && !clienteExterno.trim()) { setError('Escribe el nombre del cliente externo'); return }
 
     setLoading(true); setError('')
     const { data: { user } } = await supabase.auth.getUser()
@@ -326,6 +328,7 @@ export default function NuevaSolicitudPage() {
         notas_almacenista: notas || null,
         cliente_id: destino === 'cliente' ? clienteSel!.id : null,
         para_la_oriental: destino === 'oriental',
+        cliente_externo: destino === 'externo' ? clienteExterno.trim() : null,
       })
       .select().single()
 
@@ -378,22 +381,30 @@ export default function NuevaSolicitudPage() {
               ¿Para quién es el repuesto?
             </h2>
 
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-3 gap-2 mb-4">
               <button type="button"
                 onClick={() => { setDestino('cliente'); setClienteSel(null); setBuscaCliente('') }}
-                className={`flex flex-col items-center gap-2 px-4 py-4 border-2 rounded-xl transition-colors ${
+                className={`flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-xl transition-colors ${
                   destino === 'cliente' ? 'border-oriental-red bg-red-50 text-oriental-red' : 'border-gray-200 text-oriental-gray hover:border-gray-300'
                 }`}>
-                <User size={18} />
-                <span className="text-xs font-bold uppercase tracking-wide">Cliente</span>
+                <User size={16} />
+                <span className="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">Cliente<br/>registrado</span>
               </button>
               <button type="button"
-                onClick={() => { setDestino('oriental'); setClienteSel(null); setBuscaCliente('') }}
-                className={`flex flex-col items-center gap-2 px-4 py-4 border-2 rounded-xl transition-colors ${
+                onClick={() => { setDestino('externo'); setClienteSel(null); setBuscaCliente('') }}
+                className={`flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-xl transition-colors ${
+                  destino === 'externo' ? 'border-oriental-red bg-red-50 text-oriental-red' : 'border-gray-200 text-oriental-gray hover:border-gray-300'
+                }`}>
+                <UserPlus size={16} />
+                <span className="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">Otro<br/>cliente</span>
+              </button>
+              <button type="button"
+                onClick={() => { setDestino('oriental'); setClienteSel(null); setBuscaCliente(''); setClienteExterno('') }}
+                className={`flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-xl transition-colors ${
                   destino === 'oriental' ? 'border-oriental-red bg-red-50 text-oriental-red' : 'border-gray-200 text-oriental-gray hover:border-gray-300'
                 }`}>
-                <Building2 size={18} />
-                <span className="text-xs font-bold uppercase tracking-wide">La Oriental</span>
+                <Building2 size={16} />
+                <span className="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">La<br/>Oriental</span>
               </button>
             </div>
 
@@ -449,6 +460,23 @@ export default function NuevaSolicitudPage() {
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {destino === 'externo' && (
+              <div className="space-y-2">
+                <label className="label">Nombre del cliente</label>
+                <input
+                  type="text"
+                  value={clienteExterno}
+                  onChange={e => setClienteExterno(e.target.value)}
+                  placeholder="Ej: Pedro Perez / Auto Repuestos Maturín…"
+                  className="input"
+                />
+                <p className="text-[11px] text-oriental-gray flex items-start gap-1">
+                  <AlertCircle size={11} className="mt-0.5 flex-shrink-0" />
+                  <span>Cliente no registrado en el sistema. Se guarda solo el nombre como referencia.</span>
+                </p>
               </div>
             )}
 

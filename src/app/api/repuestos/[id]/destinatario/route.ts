@@ -17,13 +17,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params
   const body = await req.json()
-  const { destino, clienteId } = body
+  const { destino, clienteId, clienteExterno } = body
 
-  if (!['cliente', 'oriental'].includes(destino)) {
+  if (!['cliente', 'oriental', 'externo'].includes(destino)) {
     return NextResponse.json({ error: 'Destino inválido' }, { status: 400 })
   }
   if (destino === 'cliente' && !clienteId) {
     return NextResponse.json({ error: 'clienteId requerido' }, { status: 400 })
+  }
+  if (destino === 'externo' && !clienteExterno?.trim()) {
+    return NextResponse.json({ error: 'Nombre del cliente requerido' }, { status: 400 })
   }
 
   const supabase = await createAdminClient()
@@ -31,6 +34,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const update: Record<string, unknown> = {
     cliente_id: destino === 'cliente' ? clienteId : null,
     para_la_oriental: destino === 'oriental',
+    cliente_externo: destino === 'externo' ? clienteExterno.trim() : null,
   }
 
   // Leer estado actual para reusarlo en la bitácora (estado_nuevo es NOT NULL)
@@ -52,13 +56,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // Bitácora (no cambia el estado)
   if (solicitudActual?.estado) {
+    const notaDestino =
+      destino === 'oriental' ? 'Destinatario actualizado: La Oriental' :
+      destino === 'externo' ? `Destinatario actualizado a cliente externo: ${clienteExterno.trim()}` :
+      `Destinatario actualizado a cliente ${clienteId}`
     await supabase.from('repuestos_historial').insert({
       solicitud_id: id,
       estado_nuevo: solicitudActual.estado,
       usuario_email: user.email ?? null,
-      notas: destino === 'oriental'
-        ? 'Destinatario actualizado: La Oriental'
-        : `Destinatario actualizado a cliente ${clienteId}`,
+      notas: notaDestino,
     })
   }
 

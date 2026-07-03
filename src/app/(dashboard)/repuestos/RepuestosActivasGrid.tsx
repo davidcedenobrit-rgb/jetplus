@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Search, X, User, Building2, Pencil } from 'lucide-react'
+import { Search, X, User, Building2, Pencil, UserPlus } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import ReenviarCotizacionButton from './ReenviarCotizacionButton'
 import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
@@ -46,6 +46,7 @@ type Solicitud = {
   email_ultimo_evento_at?: string | null
   cliente_id?: string | null
   para_la_oriental?: boolean | null
+  cliente_externo?: string | null
   clientes?: { id: string; nombre: string } | null
 }
 
@@ -173,6 +174,12 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
                         <span className="text-[10px] font-bold text-green-800 truncate">{s.clientes.nombre}</span>
                         <Pencil size={9} className="text-green-700 opacity-60 flex-shrink-0" />
                       </div>
+                    ) : s.cliente_externo ? (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 cursor-pointer transition-colors max-w-full">
+                        <UserPlus size={11} className="text-purple-700 flex-shrink-0" />
+                        <span className="text-[10px] font-bold text-purple-800 truncate">{s.cliente_externo}</span>
+                        <Pencil size={9} className="text-purple-700 opacity-60 flex-shrink-0" />
+                      </div>
                     ) : (
                       <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 cursor-pointer transition-colors">
                         <span className="text-[10px] font-bold text-amber-700 uppercase">Asignar destinatario</span>
@@ -218,9 +225,11 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
           numero={editarDestinatario.numero}
           destinoActual={
             editarDestinatario.para_la_oriental ? 'oriental' :
-            editarDestinatario.clientes ? 'cliente' : 'sin'
+            editarDestinatario.clientes ? 'cliente' :
+            editarDestinatario.cliente_externo ? 'externo' : 'sin'
           }
           clienteActual={editarDestinatario.clientes ?? null}
+          clienteExternoActual={editarDestinatario.cliente_externo ?? null}
           onClose={() => setEditarDestinatario(null)}
           onSaved={() => setEditarDestinatario(null)}
         />
