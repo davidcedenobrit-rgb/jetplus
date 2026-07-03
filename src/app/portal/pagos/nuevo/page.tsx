@@ -208,7 +208,34 @@ export default function NuevoPagoPortalPage() {
 
       <div className="p-5 space-y-4">
         {/* Vehiculo */}
-        {vehiculos.length > 1 && (
+        {vehiculos.length === 0 ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+            <AlertCircle size={16} className="text-amber-700 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-amber-800">No hay vehículos asignados a su cuenta</p>
+              <p className="text-[11px] text-amber-700 mt-0.5">
+                Contacte al equipo de La Oriental para vincular su vehículo antes de reportar un pago.
+              </p>
+            </div>
+          </div>
+        ) : vehiculos.length === 1 ? (
+          <div className="bg-white rounded-2xl p-4">
+            <label className="text-[11px] font-bold text-oriental-gray uppercase tracking-wide mb-2 block">Vehículo</label>
+            <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-3 py-3">
+              <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0">
+                <Car size={18} className="text-oriental-red" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-oriental-black truncate">
+                  {vehiculos[0].marca} {vehiculos[0].modelo}
+                </p>
+                {vehiculos[0].placa && (
+                  <p className="text-[11px] text-oriental-gray font-mono">Placa: {vehiculos[0].placa}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
           <div className="bg-white rounded-2xl p-4">
             <label className="text-[11px] font-bold text-oriental-gray uppercase tracking-wide mb-2 block">Vehículo</label>
             <select
