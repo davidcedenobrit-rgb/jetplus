@@ -259,7 +259,7 @@ function paginaCotizacion(
              <div class="avail-section" id="avail-${it.id}">
                <label class="lbl" for="cant-${it.id}">Cant. disponible:</label>
                <input type="number" id="cant-${it.id}" name="cantidad_disp_${it.id}"
-                 value="${it.cantidad}" min="1" style="width:80px;margin:0"/>
+                 value="${it.cantidad}" min="0" style="width:80px;margin:0"/>
              </div>
              <div class="imp-section" id="imp-${it.id}" style="display:none">
                <label class="lbl">Tiempo de importación (opcional)</label>
