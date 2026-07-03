@@ -58,8 +58,35 @@ export default function NuevoPagoPortalPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: veh } = await supabase.from('vehiculos').select('id, marca, modelo, placa')
-      const { data: cred } = await supabase.from('creditos').select('id, plan_tipo, vehiculo_id').eq('estado', 'activo')
+      // Obtener cliente_id del user autenticado
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+
+      const { data: cuenta } = await supabase
+        .from('cliente_cuentas')
+        .select('cliente_id')
+        .eq('user_id', user.id)
+        .eq('activo', true)
+        .maybeSingle()
+
+      if (!cuenta?.cliente_id) {
+        setError('No se pudo identificar su cuenta de cliente')
+        setLoading(false)
+        return
+      }
+
+      // Filtrar explicitamente por cliente_id (no depende solo de RLS)
+      const { data: veh } = await supabase
+        .from('vehiculos')
+        .select('id, marca, modelo, placa')
+        .eq('cliente_id', cuenta.cliente_id)
+
+      const { data: cred } = await supabase
+        .from('creditos')
+        .select('id, plan_tipo, vehiculo_id')
+        .eq('cliente_id', cuenta.cliente_id)
+        .eq('estado', 'activo')
+
       setVehiculos(veh ?? [])
       setCreditos(cred ?? [])
       const credIds = (cred ?? []).map(c => c.id)
