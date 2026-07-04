@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Handshake, User, Car, PlusCircle, CreditCard, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react'
 import EditarAcuerdo from './EditarAcuerdo'
 import EliminarAcuerdo from './EliminarAcuerdo'
+import LetrasCambioButton from '@/components/LetrasCambioButton'
 
 export default async function AcuerdoDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -85,6 +86,12 @@ export default async function AcuerdoDetallePage({ params }: { params: Promise<{
             fecha_limite: acuerdo.fecha_limite,
             observaciones: acuerdo.observaciones,
           }} />
+          <LetrasCambioButton
+            origen="acuerdo"
+            entidadId={id}
+            montoAcordado={acordado}
+            fechaLimite={acuerdo.fecha_limite ?? null}
+          />
           {!completado && (
             <Link href={pagoUrl}
               className="flex items-center gap-2 px-4 py-2 bg-oriental-red hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors">

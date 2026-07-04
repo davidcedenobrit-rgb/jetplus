@@ -9,6 +9,7 @@ import PrintButton from './PrintButton'
 import BitacoraButton from './BitacoraButton'
 import ProformaButton from './ProformaButton'
 import RecordatorioWhatsApp from '@/components/RecordatorioWhatsApp'
+import LetrasCambioButton from '@/components/LetrasCambioButton'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
@@ -247,6 +248,12 @@ export default async function CreditoDetallePage({
             correoClienteDefault={cliente?.correo ?? null}
             proformaExistente={proformaExistente ?? null}
           />
+          {creditos.some((c: any) => c.plan_tipo === 'inicial_la_oriental') && (
+            <LetrasCambioButton
+              origen="credito"
+              entidadId={creditos.find((c: any) => c.plan_tipo === 'inicial_la_oriental')?.id ?? id}
+            />
+          )}
           {vehiculo?.placa && (
             <Link
               href={`/ingresos/nuevo?cliente=${credito.cliente_id}&vehiculo=${credito.vehiculo_id}&placa=${encodeURIComponent(vehiculo.placa)}`}
