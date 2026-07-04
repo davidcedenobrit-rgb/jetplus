@@ -22,7 +22,7 @@ const ROL_LABELS: Record<string, string> = {
   leysdem: 'Leysdem',
 }
 
-const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
+const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla', 'mary', 'leysdem']
 
 const estadoBadge: Record<string, { label: string; cls: string }> = {
   enviado_carla:     { label: 'Enviado por José',  cls: 'bg-purple-100 text-purple-800' },

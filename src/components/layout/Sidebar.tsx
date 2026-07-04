@@ -328,14 +328,14 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
-          {/* RR · Recibido de Rojas */}
-          {['director', 'admin', 'jose'].includes(rol) && (() => {
+          {/* Efectivo / Depositos */}
+          {['director', 'admin', 'jose', 'mary', 'leysdem'].includes(rol) && (() => {
             const active = pathname === '/carla' || pathname.startsWith('/carla/')
             return (
               <Link href="/carla" onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
                 <PackageCheck size={18} />
-                <span className="flex-1">Carla</span>
+                <span className="flex-1">Efectivo / Depósitos</span>
                 {depositosPendientesCarla > 0 && (
                   <span className="bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
                     {depositosPendientesCarla > 99 ? '99+' : depositosPendientesCarla}
