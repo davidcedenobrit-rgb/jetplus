@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     vehiculo = v
   }
 
-  const ec = await fetchECData(ingresoId, ingreso.vehiculo_id ?? null)
+  const ec = await fetchECData(ingresoId, ingreso.vehiculo_id ?? null, (ingreso as any).acuerdo_inicial_id ?? null)
 
   const pdfBuffer = await renderToBuffer(
     React.createElement(ReciboPDF, {

@@ -118,6 +118,14 @@ export interface ReciboPDFData {
     totalCuotas: number
     cuotasPagadas: number
   }>
+  // Resumen del acuerdo de pago (si el ingreso viene de uno)
+  acuerdoResumen?: {
+    montoAcordado: number
+    montoPagado: number
+    montoPendiente: number
+    pct: number
+    fechaLimite: string | null
+  } | null
 }
 
 function fmtDate(d?: string | null) {
@@ -199,6 +207,45 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
         </View>
 
         <View style={s.divider} />
+
+        {/* ── Resumen del acuerdo de pago (si aplica) ── */}
+        {data.acuerdoResumen && (
+          <>
+            <View style={{ borderWidth: 1.5, borderColor: '#bfdbfe', borderStyle: 'solid', borderRadius: 8, padding: '10 12', backgroundColor: '#eff6ff', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ fontSize: 8, color: '#1e40af', textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Helvetica-Bold' }}>
+                  Resumen del acuerdo de pago
+                </Text>
+                {data.acuerdoResumen.fechaLimite && (
+                  <Text style={{ fontSize: 8, color: '#1e40af' }}>
+                    Fecha límite: <Text style={{ fontFamily: 'Helvetica-Bold' }}>{fmtDate(data.acuerdoResumen.fechaLimite)}</Text>
+                  </Text>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 7.5, color: GRAY, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Helvetica-Bold' }}>Acordado</Text>
+                  <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: BLACK }}>USD {fmtNum(data.acuerdoResumen.montoAcordado)}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 7.5, color: GRAY, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Helvetica-Bold' }}>Pagado</Text>
+                  <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#16a34a' }}>USD {fmtNum(data.acuerdoResumen.montoPagado)}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 7.5, color: GRAY, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Helvetica-Bold' }}>Pendiente</Text>
+                  <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: RED }}>USD {fmtNum(data.acuerdoResumen.montoPendiente)}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
+                <Text style={{ fontSize: 7.5, color: GRAY }}>Progreso</Text>
+                <Text style={{ fontSize: 7.5, color: '#1e40af', fontFamily: 'Helvetica-Bold' }}>{data.acuerdoResumen.pct}%</Text>
+              </View>
+              <View style={{ height: 4, backgroundColor: '#dbeafe', borderRadius: 2 }}>
+                <View style={{ height: 4, backgroundColor: '#2563eb', borderRadius: 2, width: `${Math.min(100, data.acuerdoResumen.pct)}%` }} />
+              </View>
+            </View>
+          </>
+        )}
 
         {/* ── Concepto + Fecha ── */}
         <View style={s.row2}>

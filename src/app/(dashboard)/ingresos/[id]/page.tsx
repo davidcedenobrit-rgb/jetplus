@@ -150,6 +150,43 @@ export default async function IngresoDetallePage({
   const ecPendientes      = cuotasVehiculo.filter((c: any) => c.estado === 'pendiente').length
   const ecVencidas        = cuotasVehiculo.filter((c: any) => c.estado === 'vencida').length
 
+  // Acuerdo de pago (si este ingreso vino de uno)
+  let acuerdoResumen: {
+    montoAcordado: number
+    montoPagado: number
+    montoPendiente: number
+    pct: number
+    fechaLimite: string | null
+    estado: string | null
+  } | null = null
+  if (ingreso.acuerdo_inicial_id) {
+    const { data: acuerdo } = await supabase
+      .from('acuerdos_inicial')
+      .select('monto_acordado, fecha_limite, estado')
+      .eq('id', ingreso.acuerdo_inicial_id)
+      .single()
+    if (acuerdo) {
+      const { data: pagosDelAcuerdo } = await supabase
+        .from('ingresos')
+        .select('monto, estado')
+        .eq('acuerdo_inicial_id', ingreso.acuerdo_inicial_id)
+      const montoPagado = (pagosDelAcuerdo ?? [])
+        .filter((p: any) => p.estado !== 'anulado' && p.estado !== 'rechazado')
+        .reduce((s: number, p: any) => s + Number(p.monto ?? 0), 0)
+      const montoAcordado = Number(acuerdo.monto_acordado ?? 0)
+      const montoPendiente = Math.max(0, montoAcordado - montoPagado)
+      const pct = montoAcordado > 0 ? Math.round((montoPagado / montoAcordado) * 100) : 0
+      acuerdoResumen = {
+        montoAcordado,
+        montoPagado,
+        montoPendiente,
+        pct,
+        fechaLimite: acuerdo.fecha_limite ?? null,
+        estado: acuerdo.estado ?? null,
+      }
+    }
+  }
+
   const cliente = (ingreso as any).clientes
 
   const estadoColors: Record<string, string> = {
@@ -320,6 +357,57 @@ export default async function IngresoDetallePage({
                     </p>
                   </div>
                 </div>
+              )}
+
+              {/* Resumen del acuerdo de pago (si aplica) */}
+              {acuerdoResumen && (
+                <>
+                  <div className="border-t border-gray-100" />
+                  <div className="rounded-xl border-2 border-blue-100 bg-blue-50/60 p-4">
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <p className="text-[10px] font-black text-blue-800 uppercase tracking-wider">
+                        Resumen del acuerdo de pago
+                      </p>
+                      {acuerdoResumen.fechaLimite && (
+                        <p className="text-[10px] text-blue-700">
+                          Fecha límite: <span className="font-semibold">{formatDate(acuerdoResumen.fechaLimite)}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-[9px] text-oriental-gray uppercase font-bold">Acordado</p>
+                        <p className="text-lg font-black text-oriental-black">
+                          USD {acuerdoResumen.montoAcordado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-oriental-gray uppercase font-bold">Pagado</p>
+                        <p className="text-lg font-black text-green-700">
+                          USD {acuerdoResumen.montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-oriental-gray uppercase font-bold">Pendiente</p>
+                        <p className="text-lg font-black text-oriental-red">
+                          USD {acuerdoResumen.montoPendiente.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="flex justify-between text-[10px] text-oriental-gray mb-1">
+                        <span>Progreso</span>
+                        <span className="font-bold text-blue-800">{acuerdoResumen.pct}%</span>
+                      </div>
+                      <div className="h-2 bg-white rounded-full overflow-hidden border border-blue-100">
+                        <div
+                          className="h-full bg-blue-600 rounded-full"
+                          style={{ width: `${Math.min(100, acuerdoResumen.pct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="border-t border-gray-100" />

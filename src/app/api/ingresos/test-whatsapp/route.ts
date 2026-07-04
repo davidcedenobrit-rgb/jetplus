@@ -64,7 +64,7 @@ export async function GET(req: Request) {
     vehiculo = v
   }
 
-  const ec = await fetchECData(ingresoId, ingreso.vehiculo_id ?? null)
+  const ec = await fetchECData(ingresoId, ingreso.vehiculo_id ?? null, (ingreso as any).acuerdo_inicial_id ?? null)
 
   // Generar PDF y subirlo
   const pdfBuffer = await renderToBuffer(

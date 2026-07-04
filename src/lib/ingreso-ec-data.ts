@@ -7,7 +7,7 @@ function getAdmin() {
   )
 }
 
-export async function fetchECData(ingresoId: string, vehiculoId: string | null) {
+export async function fetchECData(ingresoId: string, vehiculoId: string | null, acuerdoInicialId?: string | null) {
   const admin = getAdmin()
 
   // Cuotas aplicadas a este ingreso
@@ -102,5 +102,40 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null) 
     })
   }
 
-  return { cuotasAplicadas, ecTotalFinanciado, ecTotalSaldo, ecPct, ecPagadas, ecPendientes, ecVencidas, creditosDesglose }
+  // Resumen del acuerdo de pago (si el ingreso vino de uno)
+  let acuerdoResumen: {
+    montoAcordado: number
+    montoPagado: number
+    montoPendiente: number
+    pct: number
+    fechaLimite: string | null
+  } | null = null
+  if (acuerdoInicialId) {
+    const { data: acuerdo } = await admin
+      .from('acuerdos_inicial')
+      .select('monto_acordado, fecha_limite')
+      .eq('id', acuerdoInicialId)
+      .single()
+    if (acuerdo) {
+      const { data: pagosDelAcuerdo } = await admin
+        .from('ingresos')
+        .select('monto, estado')
+        .eq('acuerdo_inicial_id', acuerdoInicialId)
+      const montoPagado = (pagosDelAcuerdo ?? [])
+        .filter((p: any) => p.estado !== 'anulado' && p.estado !== 'rechazado')
+        .reduce((s: number, p: any) => s + Number(p.monto ?? 0), 0)
+      const montoAcordado = Number(acuerdo.monto_acordado ?? 0)
+      const montoPendiente = Math.max(0, montoAcordado - montoPagado)
+      const pct = montoAcordado > 0 ? Math.round((montoPagado / montoAcordado) * 100) : 0
+      acuerdoResumen = {
+        montoAcordado,
+        montoPagado,
+        montoPendiente,
+        pct,
+        fechaLimite: (acuerdo as any).fecha_limite ?? null,
+      }
+    }
+  }
+
+  return { cuotasAplicadas, ecTotalFinanciado, ecTotalSaldo, ecPct, ecPagadas, ecPendientes, ecVencidas, creditosDesglose, acuerdoResumen }
 }

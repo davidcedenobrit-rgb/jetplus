@@ -361,6 +361,13 @@ export interface EnviarReciboClienteOpts {
     totalCuotas: number
     cuotasPagadas: number
   }>
+  acuerdoResumen?: {
+    montoAcordado: number
+    montoPagado: number
+    montoPendiente: number
+    pct: number
+    fechaLimite: string | null
+  } | null
 }
 
 export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
@@ -370,6 +377,7 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
     bancoEmisor, bancoReceptor, fechaPago, fechaAprobacion, observaciones,
     vehiculoMarca, vehiculoModelo, vehiculoVersion, vehiculoAnio, placa,
     cuotasAplicadas, ecTotalFinanciado, ecTotalSaldo, ecPct, ecPagadas, ecPendientes, ecVencidas, creditosDesglose,
+    acuerdoResumen,
   } = opts
   const resend = getResend()
 
@@ -393,6 +401,7 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
         numeroRecibo, fechaPago, concepto, monto, moneda, tasaCambio,
         metodoPago, referencia, bancoEmisor, bancoReceptor, observaciones, fechaAprobacion,
         cuotasAplicadas, ecTotalFinanciado, ecTotalSaldo, ecPct, ecPagadas, ecPendientes, ecVencidas, creditosDesglose,
+        acuerdoResumen,
         clienteNombre, clienteCedula, clienteTelefono, clienteCorreo,
         clienteCiudad, vehiculoMarca, vehiculoModelo, vehiculoVersion,
         vehiculoAnio, placa,
