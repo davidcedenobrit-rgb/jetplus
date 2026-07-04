@@ -2,7 +2,25 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
-import { CheckCircle2, Clock, Send, Inbox, ArrowRight } from 'lucide-react'
+import { CheckCircle2, Clock, Send, Inbox, ArrowRight, Wallet, DollarSign } from 'lucide-react'
+
+const CANAL_LABELS: Record<string, string> = {
+  efectivo: 'Efectivo',
+  personal_jose: 'Cta. José',
+  personal_carla: 'Cta. Carla',
+  personal_mary: 'Cta. Mary',
+  personal_leysdem: 'Cta. Leysdem',
+  zelle: 'Zelle',
+  usdt: 'USDT',
+  otro: 'Otro',
+}
+
+const ROL_LABELS: Record<string, string> = {
+  jose: 'José Rojas',
+  carla: 'Carla',
+  mary: 'Mary',
+  leysdem: 'Leysdem',
+}
 
 const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
 
@@ -38,6 +56,35 @@ export default async function CarlaPage() {
     .in('estado', ['enviado_carla', 'enviado_deposito', 'depositado', 'entregado_carla', 'reportado_vehimotors'])
     .order('fecha_registro', { ascending: false })
 
+  // Efectivo en poder de cada custodio (canales con billete/cuenta personal)
+  const CANALES_CUSTODIA = ['efectivo', 'personal_jose', 'personal_carla', 'personal_mary', 'personal_leysdem', 'zelle', 'usdt', 'otro']
+  const { data: enCustodia } = await supabase
+    .from('ingresos')
+    .select('id, numero_recibo, monto, moneda, canal_destino, custodio_id, fecha_pago, clientes(nombre)')
+    .not('custodio_id', 'is', null)
+    .in('canal_destino', CANALES_CUSTODIA)
+    .in('estado', ['aprobado', 'enviado_carla', 'entregado_carla'])
+    .order('fecha_pago', { ascending: false })
+
+  const { data: custodiosData } = await supabase
+    .from('usuarios')
+    .select('id, nombre, rol')
+    .in('rol', ['jose', 'carla', 'mary', 'leysdem'])
+
+  const custodiosMap = new Map<string, { id: string; nombre: string; rol: string; total: number; ingresos: any[] }>()
+  for (const u of custodiosData ?? []) {
+    custodiosMap.set(u.id, { id: u.id, nombre: u.nombre, rol: u.rol, total: 0, ingresos: [] })
+  }
+  for (const ing of enCustodia ?? []) {
+    if (!ing.custodio_id) continue
+    const c = custodiosMap.get(ing.custodio_id)
+    if (!c) continue
+    c.total += Number(ing.monto)
+    c.ingresos.push(ing)
+  }
+  const custodios = Array.from(custodiosMap.values()).sort((a, b) => b.total - a.total)
+  const totalEfectivoConsolidado = custodios.reduce((s, c) => s + c.total, 0)
+
   // Los que Rojas envió y Carla aún no confirmó
   const pendientes = (deJose ?? []).filter(i => i.estado === 'enviado_carla')
 
@@ -60,6 +107,62 @@ export default async function CarlaPage() {
           <p className="text-oriental-gray text-xs">Control de recibos enviados por José Rojas</p>
         </div>
       </div>
+
+      {/* Efectivo en poder de cada persona */}
+      {custodios.length > 0 && (
+        <div className="card p-4 mb-5">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Wallet size={16} className="text-oriental-red" />
+              <h2 className="text-sm font-bold text-oriental-black">Efectivo / cuentas personales en piso</h2>
+            </div>
+            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+              <DollarSign size={12} className="text-oriental-gray" />
+              <span className="text-[10px] font-bold text-oriental-gray uppercase tracking-wide">Total en piso</span>
+              <span className="text-sm font-black text-oriental-black">
+                {formatCurrency(totalEfectivoConsolidado)}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {custodios.map(c => {
+              const canalesDelCustodio = new Map<string, number>()
+              for (const ing of c.ingresos) {
+                const k = ing.canal_destino as string
+                canalesDelCustodio.set(k, (canalesDelCustodio.get(k) ?? 0) + Number(ing.monto))
+              }
+              return (
+                <div
+                  key={c.id}
+                  className={`rounded-xl border p-3 ${c.total > 0 ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wide">
+                      {ROL_LABELS[c.rol] ?? c.nombre}
+                    </p>
+                    <span className="text-[9px] text-oriental-gray bg-gray-100 rounded px-1.5 py-0.5">
+                      {c.ingresos.length}
+                    </span>
+                  </div>
+                  <p className={`text-lg font-black mb-1 ${c.total > 0 ? 'text-oriental-black' : 'text-gray-400'}`}>
+                    {formatCurrency(c.total)}
+                  </p>
+                  {c.total > 0 && (
+                    <div className="space-y-0.5 mt-2 pt-2 border-t border-gray-100">
+                      {Array.from(canalesDelCustodio.entries()).map(([canal, monto]) => (
+                        <div key={canal} className="flex justify-between text-[10px]">
+                          <span className="text-oriental-gray">{CANAL_LABELS[canal] ?? canal}</span>
+                          <span className="font-semibold text-oriental-black">${monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Layout dos columnas */}
       <div className="flex flex-col lg:flex-row gap-5 min-h-0">

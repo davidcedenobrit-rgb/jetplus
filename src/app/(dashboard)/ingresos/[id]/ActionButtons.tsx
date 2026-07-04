@@ -1,14 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   CheckCircle2, XCircle, AlertTriangle,
   Send, Landmark, Building2, Printer, BadgeCheck,
-  User, Clock, X, Upload, Hash, CreditCard, Ban, ShieldAlert, MessageSquare
+  User, Clock, X, Upload, Hash, CreditCard, Ban, ShieldAlert, MessageSquare,
+  Wallet, Loader2
 } from 'lucide-react'
 import ReporteVehimotorsModal from './ReporteVehimotorsModal'
+
+const CANALES: Array<{ value: string; label: string; requiereCustodio: boolean }> = [
+  { value: 'efectivo',         label: 'Efectivo',                          requiereCustodio: true },
+  { value: 'cta_oriental',     label: 'Cuenta La Oriental (banco)',        requiereCustodio: false },
+  { value: 'cta_vehimotors',   label: 'Cuenta Vehimotors (directo)',       requiereCustodio: false },
+  { value: 'personal_jose',    label: 'Cuenta personal — José (Rojas)',    requiereCustodio: true },
+  { value: 'personal_carla',   label: 'Cuenta personal — Carla',           requiereCustodio: true },
+  { value: 'personal_mary',    label: 'Cuenta personal — Mary',            requiereCustodio: true },
+  { value: 'personal_leysdem', label: 'Cuenta personal — Leysdem',         requiereCustodio: true },
+  { value: 'zelle',            label: 'Zelle',                             requiereCustodio: true },
+  { value: 'usdt',             label: 'USDT / Binance',                    requiereCustodio: true },
+  { value: 'otro',             label: 'Otro',                              requiereCustodio: true },
+]
+
+const CANAL_A_CUSTODIO_DEFAULT: Record<string, string> = {
+  personal_jose: 'jose',
+  personal_carla: 'carla',
+  personal_mary: 'mary',
+  personal_leysdem: 'leysdem',
+}
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const ROL_PUEDE_SOLICITAR = ['mary', 'leysdem', 'jose', 'admin', 'director']
 const ROL_PUEDE_RESOLVER = ['jose', 'admin', 'director']
@@ -447,6 +468,129 @@ function ModalConfirmarDeposito({
   )
 }
 
+// ─── Modal: Aprobar ingreso (canal + custodio) ────────────────────────────────
+function ModalAprobarIngreso({
+  monto, moneda, custodios, onClose, onConfirm, loading,
+}: {
+  monto: number
+  moneda: string
+  custodios: Array<{ id: string; nombre: string; rol: string }>
+  onClose: () => void
+  onConfirm: (canal: string, custodioId: string | null) => Promise<void>
+  loading: boolean
+}) {
+  const [canal, setCanal] = useState('')
+  const [custodioId, setCustodioId] = useState('')
+  const canalCfg = CANALES.find(c => c.value === canal)
+
+  useEffect(() => {
+    if (!canal) return
+    const rolDefault = CANAL_A_CUSTODIO_DEFAULT[canal]
+    if (rolDefault) {
+      const match = custodios.find(c => c.rol === rolDefault)
+      if (match) setCustodioId(match.id)
+    }
+  }, [canal, custodios])
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!canal) return
+    if (canalCfg?.requiereCustodio && !custodioId) return
+    await onConfirm(canal, canalCfg?.requiereCustodio ? custodioId : null)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-green-600 flex items-center justify-center">
+              <BadgeCheck size={18} className="text-white" />
+            </div>
+            <div>
+              <h2 className="font-bold text-oriental-black text-base">Aprobar ingreso</h2>
+              <p className="text-xs text-oriental-gray">Confirma dónde cayó el dinero</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
+            <X size={16} className="text-oriental-gray" />
+          </button>
+        </div>
+
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-5 flex items-center justify-between">
+          <span className="text-xs font-semibold text-green-800">Monto del recibo</span>
+          <span className="text-lg font-black text-green-800">
+            {moneda === 'VES' ? 'Bs.' : moneda} {monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">
+              Canal de destino <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={canal}
+              onChange={e => { setCanal(e.target.value); setCustodioId('') }}
+              required
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white"
+            >
+              <option value="">Seleccionar…</option>
+              {CANALES.map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-oriental-gray mt-1">
+              A qué cuenta/persona cayó realmente el dinero. Independiente del método con que pagó el cliente.
+            </p>
+          </div>
+
+          {canalCfg?.requiereCustodio && (
+            <div>
+              <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">
+                Custodio (quién lo tiene ahora) <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={custodioId}
+                onChange={e => setCustodioId(e.target.value)}
+                required
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white"
+              >
+                <option value="">Seleccionar…</option>
+                {custodios.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre} ({c.rol})</option>
+                ))}
+              </select>
+              <p className="text-[11px] text-oriental-gray mt-1">
+                Después se puede traspasar. Aparece en su bandeja de efectivo.
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-oriental-gray hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !canal || (canalCfg?.requiereCustodio && !custodioId)}
+              className="flex-1 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 size={14} className="animate-spin" />}
+              {loading ? 'Aprobando…' : 'Aprobar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ActionButtons({
   ingresoId, estado, monto, moneda, numeroRecibo, rol = 'editor',
@@ -460,9 +604,35 @@ export default function ActionButtons({
   const [showModalSolicitarAnulacion, setShowModalSolicitarAnulacion] = useState(false)
   const [showModalRechazarAnulacion, setShowModalRechazarAnulacion] = useState(false)
   const [showModalReporteVM, setShowModalReporteVM] = useState(false)
+  const [showModalAprobar, setShowModalAprobar] = useState(false)
+  const [custodios, setCustodios] = useState<Array<{ id: string; nombre: string; rol: string }>>([])
   const [anulacionError, setAnulacionError] = useState('')
 
   const esDirector = ROL_DIRECTOR.includes(rol)
+
+  useEffect(() => {
+    supabase.from('usuarios')
+      .select('id, nombre, rol')
+      .in('rol', ['jose', 'carla', 'mary', 'leysdem'])
+      .then(({ data }) => setCustodios((data ?? []) as any))
+  }, [supabase])
+
+  async function handleAprobarConCanal(canal: string, custodioId: string | null) {
+    setLoading('aprobado')
+    const { data: { user } } = await supabase.auth.getUser()
+    const update: Record<string, any> = {
+      estado: 'aprobado',
+      aprobado_por: user?.id,
+      fecha_aprobacion: new Date().toISOString(),
+      canal_destino: canal,
+      custodio_id: custodioId,
+      custodio_desde: custodioId ? new Date().toISOString() : null,
+    }
+    await supabase.from('ingresos').update(update).eq('id', ingresoId)
+    setLoading('')
+    setShowModalAprobar(false)
+    router.refresh()
+  }
 
   // Acción simple (sin modal)
   async function updateEstado(nuevoEstado: string, timestampField?: string) {
@@ -681,17 +851,23 @@ export default function ActionButtons({
         ) : (
           <div className="space-y-2">
             {/* Acciones simples */}
-            {visibleActions.map(action => (
-              <button
-                key={action.estado}
-                onClick={() => updateEstado(action.estado, (action as any).timestamp)}
-                disabled={loading !== ''}
-                className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${action.style}`}
-              >
-                <action.icon size={16} />
-                {loading === action.estado ? 'Procesando...' : action.label}
-              </button>
-            ))}
+            {visibleActions.map(action => {
+              const isAprobar = action.estado === 'aprobado' && action.label === 'Aprobar'
+              return (
+                <button
+                  key={action.estado}
+                  onClick={() => isAprobar
+                    ? setShowModalAprobar(true)
+                    : updateEstado(action.estado, (action as any).timestamp)
+                  }
+                  disabled={loading !== ''}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${action.style}`}
+                >
+                  <action.icon size={16} />
+                  {loading === action.estado ? 'Procesando...' : action.label}
+                </button>
+              )
+            })}
 
             {/* Botón con modal: Mandar a depositar */}
             {showEnviarDeposito && (
@@ -842,6 +1018,17 @@ export default function ActionButtons({
           onClose={() => setShowModalRechazarAnulacion(false)}
           onConfirm={(motivo) => handleResolverAnulacion('rechazar', motivo)}
           loading={loading === 'resolver_rechazar'}
+        />
+      )}
+
+      {showModalAprobar && (
+        <ModalAprobarIngreso
+          monto={monto}
+          moneda={moneda}
+          custodios={custodios}
+          onClose={() => setShowModalAprobar(false)}
+          onConfirm={handleAprobarConCanal}
+          loading={loading === 'aprobado'}
         />
       )}
     </>
