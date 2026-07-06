@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, Package, CheckCircle2, History, FileText, Truck, AlertCircle } from 'lucide-react'
 import RepuestosAcciones from './RepuestosAcciones'
 import EliminarSolicitud from './EliminarSolicitud'
+import ComprarEnPlazaButton from './ComprarEnPlazaButton'
 import ReenviarCotizacionButton from '../ReenviarCotizacionButton'
 import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 
@@ -118,6 +119,60 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
             <div className={`card p-5 border ${solicitud.respuesta_vehimotors === 'hay_todo' ? 'border-green-200 bg-green-50' : solicitud.respuesta_vehimotors === 'no_hay' ? 'border-red-200 bg-red-50' : 'border-yellow-200 bg-yellow-50'}`}>
               <p className="font-bold text-oriental-black">{respuestaLabel}</p>
               <p className="text-xs text-oriental-gray mt-1">Respuesta confirmada por Vehimotors</p>
+              {(solicitud.respuesta_vehimotors === 'no_hay' || solicitud.respuesta_vehimotors === 'parcial')
+                && !['completado', 'comprado_plaza', 'cancelado'].includes(solicitud.estado) && (
+                <div className="mt-3 pt-3 border-t border-red-200">
+                  <p className="text-xs text-oriental-gray mb-2">
+                    ¿Vehimotors no tiene stock? Registra la compra local del repuesto.
+                  </p>
+                  <ComprarEnPlazaButton solicitudId={solicitud.id} numero={solicitud.numero} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Compra en plaza registrada */}
+          {solicitud.estado === 'comprado_plaza' && (
+            <div className="card p-5 border-2 border-purple-200 bg-purple-50">
+              <h2 className="text-sm font-bold text-purple-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Package size={14} /> Compra en plaza
+              </h2>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-[10px] font-bold text-oriental-gray uppercase">Proveedor</p>
+                  <p className="font-semibold text-oriental-black">{solicitud.proveedor_plaza ?? '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-oriental-gray uppercase">Monto</p>
+                  <p className="font-semibold text-oriental-black">
+                    USD {Number(solicitud.monto_plaza ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-oriental-gray uppercase">Fecha</p>
+                  <p className="font-semibold text-oriental-black">
+                    {solicitud.fecha_compra_plaza
+                      ? new Date(solicitud.fecha_compra_plaza + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : '—'}
+                  </p>
+                </div>
+                {solicitud.egreso_plaza_id && (
+                  <div>
+                    <p className="text-[10px] font-bold text-oriental-gray uppercase">Egreso vinculado</p>
+                    <Link
+                      href={`/egresos/${solicitud.egreso_plaza_id}`}
+                      className="text-sm font-semibold text-purple-800 hover:underline">
+                      Ver egreso →
+                    </Link>
+                  </div>
+                )}
+              </div>
+              {solicitud.notas_plaza && (
+                <div className="mt-3 pt-3 border-t border-purple-200">
+                  <p className="text-[10px] font-bold text-oriental-gray uppercase mb-1">Notas</p>
+                  <p className="text-xs text-oriental-black">{solicitud.notas_plaza}</p>
+                </div>
+              )}
             </div>
           )}
 

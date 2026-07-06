@@ -1,44 +1,51 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Package, Plus, CheckCircle2, Clock } from 'lucide-react'
+import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import RepuestosActivasGrid from './RepuestosActivasGrid'
 import CatalogoRepuestos from './CatalogoRepuestos'
 
 const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem', 'almacen']
-const COMPLETAS_LIMIT = 10
 
-const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
-  solicitado:           { label: 'Solicitado',         color: 'text-blue-700',   bg: 'bg-blue-100',   step: 1 },
-  verificado:           { label: 'Verificado',         color: 'text-purple-700', bg: 'bg-purple-100', step: 2 },
-  cotizacion_enviada:   { label: 'Cotización enviada', color: 'text-yellow-700', bg: 'bg-yellow-100', step: 3 },
-  cotizacion_recibida:  { label: 'Cotización recibida',color: 'text-orange-700', bg: 'bg-orange-100', step: 4 },
-  pago_enviado:         { label: 'Pago enviado',       color: 'text-indigo-700', bg: 'bg-indigo-100', step: 5 },
-  guia_recibida:        { label: 'Guía recibida',      color: 'text-teal-700',   bg: 'bg-teal-100',   step: 6 },
-  completado:           { label: 'Completado',         color: 'text-green-700',  bg: 'bg-green-100',  step: 7 },
-  cancelado:            { label: 'Cancelado',          color: 'text-gray-500',   bg: 'bg-gray-100',   step: 0 },
-  sin_stock:            { label: 'Sin stock',          color: 'text-red-700',    bg: 'bg-red-100',    step: 0 },
+// Mapeo de grupos pedidos por Rojas
+const GRUPO_KEYS = ['cotizacion_enviada', 'cotizacion_recibida', 'completadas', 'eliminadas', 'compra_plaza'] as const
+type GrupoKey = typeof GRUPO_KEYS[number]
+
+// Cada grupo agrupa uno o mas estados internos
+const GRUPO_ESTADOS: Record<GrupoKey, string[]> = {
+  // Todo lo activo antes de aprobacion + los intermedios en proceso
+  cotizacion_enviada: [
+    'solicitado', 'verificado', 'cotizacion_enviada',
+    'cotizacion_aprobada', 'factura_recibida', 'pago_enviado', 'enviado_almacen', 'guia_recibida',
+  ],
+  cotizacion_recibida: ['cotizacion_recibida'],
+  completadas:        ['completado'],
+  eliminadas:         ['cancelado', 'rechazado_verificacion'],
+  compra_plaza:       ['comprado_plaza'],
 }
 
-function ProgressBar({ estado }: { estado: string }) {
-  const step = ESTADOS[estado]?.step ?? 0
-  const pct = Math.round(((step - 1) / 6) * 100)
-  return (
-    <div className="mt-3">
-      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${estado === 'completado' ? 'bg-green-500' : (estado === 'cancelado' || estado === 'sin_stock') ? 'bg-gray-300' : 'bg-oriental-red'}`}
-          style={{ width: `${Math.max(pct, 3)}%`, transition: 'width 0.3s' }} />
-      </div>
-      <p className="text-[10px] text-oriental-gray mt-0.5">{pct}% completado</p>
-    </div>
-  )
-}
+const GRUPOS: Array<{
+  key: GrupoKey
+  label: string
+  icon: any
+  color: string
+  bg: string
+  descripcion: string
+}> = [
+  { key: 'cotizacion_enviada',  label: 'Cotización enviada',        icon: Send,        color: 'text-yellow-700', bg: 'bg-yellow-100', descripcion: 'Solicitudes activas' },
+  { key: 'cotizacion_recibida', label: 'Recibida × aprobación',     icon: Inbox,       color: 'text-orange-700', bg: 'bg-orange-100', descripcion: 'Esperando aprobación' },
+  { key: 'completadas',         label: 'Completadas',               icon: CheckCircle2,color: 'text-green-700',  bg: 'bg-green-100',  descripcion: 'Ciclo cerrado' },
+  { key: 'eliminadas',          label: 'Eliminadas',                icon: XCircle,     color: 'text-gray-600',   bg: 'bg-gray-100',   descripcion: 'Canceladas o rechazadas' },
+  { key: 'compra_plaza',        label: 'Compra en plaza',           icon: ShoppingBag, color: 'text-purple-700', bg: 'bg-purple-100', descripcion: 'Compradas localmente' },
+]
+
+const COMPLETAS_LIMIT = 12
 
 export default async function RepuestosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ todas?: string }>
+  searchParams: Promise<{ grupo?: string; todas?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -48,33 +55,51 @@ export default async function RepuestosPage({
   const puedeEliminar = ROL_ADMIN.includes(rol)
   const isAdmin = ROL_ADMIN.includes(rol)
 
-  const { todas } = await searchParams
+  const { grupo, todas } = await searchParams
+  const grupoActivo: GrupoKey = (GRUPO_KEYS as readonly string[]).includes(grupo ?? '')
+    ? (grupo as GrupoKey)
+    : 'cotizacion_enviada'
   const mostrarTodas = todas === '1'
 
-  // Activas: sin límite (suelen ser pocas)
-  const { data: activasData } = await supabase
+  // Contadores por grupo (una sola query trae todos)
+  const { data: conteos } = await supabase
     .from('solicitudes_repuestos')
-    .select('*, repuestos_items(id), clientes(id, nombre)')
-    .not('estado', 'in', '(completado,cancelado)')
-    .order('created_at', { ascending: false })
+    .select('estado')
 
-  // Completadas: paginadas
-  const completadasQuery = supabase
-    .from('solicitudes_repuestos')
-    .select('*, repuestos_items(id), clientes(id, nombre)', { count: 'exact' })
-    .eq('estado', 'completado')
-    .order('created_at', { ascending: false })
-
-  if (!mostrarTodas) {
-    completadasQuery.limit(COMPLETAS_LIMIT)
+  const conteoPorGrupo: Record<GrupoKey, number> = {
+    cotizacion_enviada: 0,
+    cotizacion_recibida: 0,
+    completadas: 0,
+    eliminadas: 0,
+    compra_plaza: 0,
+  }
+  for (const s of conteos ?? []) {
+    for (const g of GRUPO_KEYS) {
+      if (GRUPO_ESTADOS[g].includes(s.estado)) {
+        conteoPorGrupo[g] += 1
+        break
+      }
+    }
   }
 
-  const { data: completasData, count: totalCompletas } = await completadasQuery
+  // Query del grupo activo
+  const estadosActivos = GRUPO_ESTADOS[grupoActivo]
+  let query = supabase
+    .from('solicitudes_repuestos')
+    .select('*, repuestos_items(id), clientes(id, nombre)', { count: 'exact' })
+    .in('estado', estadosActivos)
+    .order('created_at', { ascending: false })
 
-  const activas  = activasData ?? []
-  const completas = completasData ?? []
-  const hayMasCompletas = !mostrarTodas && (totalCompletas ?? 0) > COMPLETAS_LIMIT
-  const totalActivas = activas.length
+  const gruposConLimite: GrupoKey[] = ['completadas', 'eliminadas', 'compra_plaza']
+  if (gruposConLimite.includes(grupoActivo) && !mostrarTodas) {
+    query = query.limit(COMPLETAS_LIMIT)
+  }
+
+  const { data: solicitudesData, count: totalGrupo } = await query
+  const solicitudes = solicitudesData ?? []
+  const hayMas = gruposConLimite.includes(grupoActivo)
+    && !mostrarTodas
+    && (totalGrupo ?? 0) > COMPLETAS_LIMIT
 
   return (
     <div className="p-8">
@@ -85,7 +110,9 @@ export default async function RepuestosPage({
           </div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Repuestos</h1>
-            <p className="text-oriental-gray text-sm">Solicitudes a Vehimotors · {totalActivas} activa{totalActivas !== 1 ? 's' : ''}</p>
+            <p className="text-oriental-gray text-sm">
+              Solicitudes a Vehimotors · {conteoPorGrupo.cotizacion_enviada + conteoPorGrupo.cotizacion_recibida} activa{(conteoPorGrupo.cotizacion_enviada + conteoPorGrupo.cotizacion_recibida) !== 1 ? 's' : ''}
+            </p>
           </div>
         </div>
         <Link href="/repuestos/nuevo" className="btn-primary flex items-center gap-2">
@@ -93,74 +120,125 @@ export default async function RepuestosPage({
         </Link>
       </div>
 
-      {activas.length === 0 && completas.length === 0 ? (
-        <div className="card p-16 text-center">
-          <Package size={40} className="text-gray-300 mx-auto mb-3" />
-          <p className="text-oriental-gray font-medium">No hay solicitudes de repuestos</p>
-          <p className="text-sm text-gray-400 mt-1">Crea la primera solicitud para enviar a Vehimotors</p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {activas.length > 0 && (
-            <div>
-              <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Clock size={14} className="text-oriental-red" /> En proceso
-              </h2>
-              <RepuestosActivasGrid solicitudes={activas as any} puedeEliminar={puedeEliminar} />
-            </div>
-          )}
-
-          {completas.length > 0 && (
-            <div>
-              <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3 flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-green-600" /> Completadas
-                {totalCompletas != null && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 ml-1">{totalCompletas}</span>
-                )}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {completas.map(s => {
-                  const itemCount = (s.repuestos_items ?? []).length
-                  return (
-                    <div key={s.id} className="relative card hover:shadow-md transition-shadow opacity-70">
-                      {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
-                      <Link href={`/repuestos/${s.id}`} className="block p-5">
-                        <div className="flex items-start justify-between mb-2 pr-6">
-                          <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">{s.numero}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Completado</span>
-                        </div>
-                        <p className="text-sm font-semibold text-oriental-black mt-2">{itemCount} repuesto{itemCount !== 1 ? 's' : ''}</p>
-                        <p className="text-xs text-oriental-gray mt-0.5">
-                          {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </p>
-                      </Link>
-                    </div>
-                  )
-                })}
+      {/* Tabs por grupo */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
+        {GRUPOS.map(g => {
+          const active = grupoActivo === g.key
+          const count = conteoPorGrupo[g.key]
+          const Icon = g.icon
+          return (
+            <Link
+              key={g.key}
+              href={`/repuestos?grupo=${g.key}`}
+              className={`p-3 rounded-xl border-2 transition-all ${
+                active
+                  ? 'border-oriental-red bg-oriental-red/5'
+                  : 'border-gray-100 hover:border-gray-200 bg-white'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`w-7 h-7 rounded-lg ${g.bg} flex items-center justify-center flex-shrink-0`}>
+                  <Icon size={14} className={g.color} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-[11px] font-bold uppercase tracking-wide truncate ${active ? 'text-oriental-black' : 'text-oriental-gray'}`}>
+                    {g.label}
+                  </p>
+                </div>
+                <span className={`text-xs font-black ${active ? 'text-oriental-red' : 'text-oriental-black'}`}>
+                  {count}
+                </span>
               </div>
+              <p className="text-[10px] text-oriental-gray truncate">{g.descripcion}</p>
+            </Link>
+          )
+        })}
+      </div>
 
-              {/* Paginación completadas */}
-              {hayMasCompletas && (
-                <div className="mt-4 text-center">
-                  <Link
-                    href="/repuestos?todas=1"
-                    className="text-sm text-oriental-red font-semibold hover:underline">
-                    Ver todas las completadas ({totalCompletas})
+      {/* Contenido del grupo activo */}
+      {solicitudes.length === 0 ? (
+        <div className="card p-12 text-center">
+          <Package size={36} className="text-gray-300 mx-auto mb-3" />
+          <p className="text-oriental-gray font-medium">Sin solicitudes en este grupo</p>
+          <p className="text-sm text-gray-400 mt-1">
+            {grupoActivo === 'compra_plaza'
+              ? 'Cuando Vehimotors responda que no hay stock, podrás mover la solicitud a Compra en plaza desde su detalle.'
+              : 'Aquí aparecerán las solicitudes que caigan en este estatus.'}
+          </p>
+        </div>
+      ) : grupoActivo === 'cotizacion_enviada' || grupoActivo === 'cotizacion_recibida' ? (
+        <RepuestosActivasGrid solicitudes={solicitudes as any} puedeEliminar={puedeEliminar} />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {solicitudes.map(s => {
+              const itemCount = (s.repuestos_items ?? []).length
+              const badgeCfg =
+                s.estado === 'completado'
+                  ? { label: 'Completado', bg: 'bg-green-100 text-green-700' }
+                  : s.estado === 'comprado_plaza'
+                  ? { label: 'Compra en plaza', bg: 'bg-purple-100 text-purple-700' }
+                  : s.estado === 'rechazado_verificacion'
+                  ? { label: 'Rechazado', bg: 'bg-red-100 text-red-700' }
+                  : { label: 'Cancelado', bg: 'bg-gray-100 text-gray-700' }
+              return (
+                <div key={s.id} className="relative card hover:shadow-md transition-shadow">
+                  {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
+                  <Link href={`/repuestos/${s.id}`} className="block p-5">
+                    <div className="flex items-start justify-between mb-2 pr-6">
+                      <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">
+                        {s.numero}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeCfg.bg}`}>
+                        {badgeCfg.label}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-oriental-black mt-2">
+                      {itemCount} repuesto{itemCount !== 1 ? 's' : ''}
+                    </p>
+                    <p className="text-xs text-oriental-gray mt-0.5">
+                      {new Date(s.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                    {s.estado === 'comprado_plaza' && (
+                      <div className="mt-2 pt-2 border-t border-gray-100 space-y-0.5">
+                        {s.proveedor_plaza && (
+                          <p className="text-[11px] text-oriental-gray">
+                            <span className="text-oriental-black font-semibold">Proveedor:</span> {s.proveedor_plaza}
+                          </p>
+                        )}
+                        {s.monto_plaza != null && (
+                          <p className="text-[11px] text-oriental-gray">
+                            <span className="text-oriental-black font-semibold">Monto:</span>{' '}
+                            USD {Number(s.monto_plaza).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </Link>
                 </div>
-              )}
-              {mostrarTodas && (totalCompletas ?? 0) > COMPLETAS_LIMIT && (
-                <div className="mt-4 text-center">
-                  <Link
-                    href="/repuestos"
-                    className="text-sm text-oriental-gray font-semibold hover:underline">
-                    Ver menos
-                  </Link>
-                </div>
-              )}
+              )
+            })}
+          </div>
+
+          {hayMas && (
+            <div className="mt-4 text-center">
+              <Link
+                href={`/repuestos?grupo=${grupoActivo}&todas=1`}
+                className="text-sm text-oriental-red font-semibold hover:underline">
+                Ver todas ({totalGrupo})
+              </Link>
             </div>
           )}
-        </div>
+          {mostrarTodas && (totalGrupo ?? 0) > COMPLETAS_LIMIT && (
+            <div className="mt-4 text-center">
+              <Link
+                href={`/repuestos?grupo=${grupoActivo}`}
+                className="text-sm text-oriental-gray font-semibold hover:underline">
+                Ver menos
+              </Link>
+            </div>
+          )}
+        </>
       )}
 
       <CatalogoRepuestos isAdmin={isAdmin} />

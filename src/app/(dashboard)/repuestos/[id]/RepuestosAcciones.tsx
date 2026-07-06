@@ -34,6 +34,7 @@ const TODOS_ESTADOS = [
   { key: 'enviado_almacen',        label: 'Enviado a almacén' },
   { key: 'guia_recibida',          label: 'Guía recibida' },
   { key: 'completado',             label: 'Completado' },
+  { key: 'comprado_plaza',         label: 'Comprado en plaza' },
   { key: 'rechazado_verificacion', label: 'Rechazado' },
   { key: 'cancelado',              label: 'Cancelado' },
 ]
