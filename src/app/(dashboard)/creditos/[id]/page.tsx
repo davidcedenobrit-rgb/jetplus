@@ -375,6 +375,27 @@ export default async function CreditoDetallePage({
             </div>
           )}
 
+          {/* Documentos del crédito — Letras de cambio del crédito Inicial La Oriental */}
+          {(() => {
+            const creditoOriental = creditos.find((c: any) => c.plan_tipo === 'inicial_la_oriental')
+            if (!creditoOriental) return null
+            return (
+              <div className="card p-6 border-2 border-purple-100 bg-purple-50/30">
+                <h2 className="font-bold text-oriental-black mb-1 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-500" />
+                  Documentos del crédito · Inicial La Oriental
+                </h2>
+                <p className="text-xs text-oriental-gray mb-3">
+                  Genera el aval legal firmado por el cliente con una letra por cada cuota del crédito.
+                </p>
+                <LetrasCambioButton
+                  origen="credito"
+                  entidadId={creditoOriental.id}
+                />
+              </div>
+            )
+          })()}
+
           {/* Cliente */}
           {cliente && (
             <div className="card p-6">

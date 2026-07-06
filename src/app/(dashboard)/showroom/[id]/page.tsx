@@ -5,6 +5,7 @@ import { ArrowLeft, Car, MapPin, CheckCircle2, DollarSign, User, ExternalLink, H
 import type { VehiculoShowroom } from '@/types/database'
 import ShowroomDocumentos from './ShowroomDocumentos'
 import ShowroomAcciones from './ShowroomAcciones'
+import DesvincularVentaButton from './DesvincularVentaButton'
 
 const PASOS = [
   { key: 'llegada',        label: 'Recibido',         desc: 'Vehículo llegó a La Oriental' },
@@ -253,6 +254,31 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
                   Ver cliente <ExternalLink size={12} />
                 </Link>
               </div>
+              {esJose && (
+                <DesvincularVentaButton
+                  showroomId={v.id}
+                  vehiculoLabel={`${v.marca} ${v.modelo}${v.placa ? ` · ${v.placa}` : ''}`}
+                  clienteNombre={clienteVinculado.nombre}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Vendido sin cliente vinculado — permite tambien desvincular para dejar disponible */}
+          {v.estado === 'vendido' && !clienteVinculado && esJose && (
+            <div className="card p-5 border border-amber-200 bg-amber-50">
+              <h2 className="text-sm font-bold text-amber-900 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <User size={14} className="text-amber-700" />
+                Vendido sin cliente vinculado
+              </h2>
+              <p className="text-xs text-amber-800 mb-2">
+                El vehículo está marcado vendido pero no tiene cliente asociado. Puedes desvincular para dejarlo disponible.
+              </p>
+              <DesvincularVentaButton
+                showroomId={v.id}
+                vehiculoLabel={`${v.marca} ${v.modelo}${v.placa ? ` · ${v.placa}` : ''}`}
+                clienteNombre="—"
+              />
             </div>
           )}
         </div>
