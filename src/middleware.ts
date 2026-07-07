@@ -6,6 +6,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   const publicApiPaths = [
+    '/api/auth/',
     '/api/webhooks/resend',
     '/api/repuestos/respuesta',
     '/api/repuestos/subir-factura',
