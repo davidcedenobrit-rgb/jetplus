@@ -17,14 +17,22 @@ export default function SalidaAlternativaButtons({ showroomId, vehiculoLabel }: 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const [destinatario, setDestinatario] = useState('')
+  const [destinatarioTipo, setDestinatarioTipo] = useState<'ki_auto' | 'autosurca' | 'vehimotors' | 'otro' | ''>('')
+  const [destinatarioOtro, setDestinatarioOtro] = useState('')
   const [aliadoSel, setAliadoSel] = useState<'ki_auto' | 'autosurca'>('ki_auto')
   const [notas, setNotas] = useState('')
+
+  const DEST_LABELS: Record<string, string> = {
+    ki_auto: 'Ki Auto',
+    autosurca: 'Autosurca',
+    vehimotors: 'Vehimotors',
+  }
 
   function cerrar() {
     if (loading) return
     setModo(null)
-    setDestinatario('')
+    setDestinatarioTipo('')
+    setDestinatarioOtro('')
     setAliadoSel('ki_auto')
     setNotas('')
     setError('')
@@ -34,9 +42,15 @@ export default function SalidaAlternativaButtons({ showroomId, vehiculoLabel }: 
     setError('')
     setLoading(true)
     try {
+      const destinatarioTexto =
+        modo === 'transferido'
+          ? destinatarioTipo === 'otro'
+            ? destinatarioOtro.trim()
+            : (DEST_LABELS[destinatarioTipo] ?? '')
+          : ''
       const body =
         modo === 'transferido'
-          ? { tipo: 'transferido', destinatario: destinatario.trim(), notas: notas.trim() || null }
+          ? { tipo: 'transferido', destinatario: destinatarioTexto, notas: notas.trim() || null }
           : { tipo: 'aliado', destinatario: aliadoSel, notas: notas.trim() || null }
 
       const res = await fetch(`/api/showroom/${showroomId}/salida-alternativa`, {
@@ -107,14 +121,37 @@ export default function SalidaAlternativaButtons({ showroomId, vehiculoLabel }: 
                   <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">
                     Destinatario *
                   </label>
-                  <input
-                    type="text"
-                    value={destinatario}
-                    onChange={e => setDestinatario(e.target.value)}
-                    placeholder="Persona / entidad a la que se transfirió"
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-                    autoFocus
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: 'ki_auto',    label: 'Ki Auto' },
+                      { key: 'autosurca',  label: 'Autosurca' },
+                      { key: 'vehimotors', label: 'Vehimotors' },
+                      { key: 'otro',       label: 'Otro' },
+                    ].map(d => (
+                      <button
+                        key={d.key}
+                        type="button"
+                        onClick={() => setDestinatarioTipo(d.key as any)}
+                        className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-colors ${
+                          destinatarioTipo === d.key
+                            ? 'border-blue-600 bg-blue-50 text-blue-800'
+                            : 'border-gray-200 text-oriental-gray hover:border-gray-300'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                  {destinatarioTipo === 'otro' && (
+                    <input
+                      type="text"
+                      value={destinatarioOtro}
+                      onChange={e => setDestinatarioOtro(e.target.value)}
+                      placeholder="Escribe a quién se transfirió"
+                      className="mt-2 w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                      autoFocus
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">
@@ -186,7 +223,13 @@ export default function SalidaAlternativaButtons({ showroomId, vehiculoLabel }: 
               </button>
               <button
                 onClick={confirmar}
-                disabled={loading || (modo === 'transferido' && !destinatario.trim())}
+                disabled={
+                  loading ||
+                  (modo === 'transferido' && (
+                    !destinatarioTipo ||
+                    (destinatarioTipo === 'otro' && !destinatarioOtro.trim())
+                  ))
+                }
                 className={`flex-1 px-4 py-2.5 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 ${
                   modo === 'transferido'
                     ? 'bg-blue-600 hover:bg-blue-700'
