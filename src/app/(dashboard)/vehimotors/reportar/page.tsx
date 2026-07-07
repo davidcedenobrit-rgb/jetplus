@@ -15,11 +15,12 @@ export default async function ReportarPagosVMPage() {
   const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
-  // Cargar todos los ingresos aprobados (incluye los reportados parcialmente)
+  // Cargar ingresos con saldo por reportar: aprobados directos + los que ya
+  // pasaron por el flujo de deposito (el dinero ya esta en cuenta VM/Oriental)
   const { data: ingresosAprobados } = await supabase
     .from('ingresos')
-    .select('id, numero_recibo, concepto, monto, moneda, tasa_cambio, monto_bs, metodo_pago, banco_emisor, banco_receptor, referencia, fecha_pago, fecha_aprobacion, placa, cliente_id, vehiculo_id, clientes(nombre, cedula_rif)')
-    .eq('estado', 'aprobado')
+    .select('id, numero_recibo, concepto, monto, moneda, tasa_cambio, monto_bs, metodo_pago, banco_emisor, banco_receptor, referencia, fecha_pago, fecha_aprobacion, placa, cliente_id, vehiculo_id, estado, deposito_banco, deposito_referencia, clientes(nombre, cedula_rif)')
+    .in('estado', ['aprobado', 'depositado', 'entregado_carla'])
     .order('fecha_aprobacion', { ascending: false })
 
   // Cargar TODOS los reportes asociados para calcular saldos
@@ -132,6 +133,9 @@ export default async function ReportarPagosVMPage() {
             placa: i.placa,
             yaReportado: i.yaReportado,
             saldo: i.saldo,
+            estado: (i as any).estado ?? 'aprobado',
+            depositoBanco: (i as any).deposito_banco ?? null,
+            depositoReferencia: (i as any).deposito_referencia ?? null,
             cliente: (i as any).clientes ? {
               id: i.cliente_id,
               nombre: (i as any).clientes.nombre,

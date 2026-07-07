@@ -357,6 +357,7 @@ function ModalConfirmarDeposito({
   }
 
   const BANCOS = [
+    'Vehimotors', 'La Oriental',
     'Banesco', 'Banco de Venezuela', 'Mercantil', 'BBVA Provincial',
     'Bicentenario', 'Banplus', 'Bancamiga', 'BNC', 'Otro'
   ]
@@ -714,6 +715,11 @@ export default function ActionButtons({
 
     setLoading('')
     setShowModalConfirmar(false)
+    // Si el deposito fue a Vehimotors, encadenar directo con el reporte a VM
+    if (banco === 'Vehimotors') {
+      router.push('/vehimotors/reportar')
+      return
+    }
     router.refresh()
   }
 

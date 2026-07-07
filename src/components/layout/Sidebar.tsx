@@ -182,6 +182,26 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             )
           })()}
 
+          {/* Vehimotors — debajo de Ingresos */}
+          {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const activeReportados = pathname === '/vehimotors'
+            const activeReportar = pathname === '/vehimotors/reportar' || pathname.startsWith('/vehimotors/reportar/')
+            return (
+              <>
+                <Link href="/vehimotors" onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeReportados ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <Building2 size={18} />
+                  <span className="flex-1">Vehimotors</span>
+                </Link>
+                <Link href="/vehimotors/reportar" onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${activeReportar ? 'bg-indigo-600/30 text-white font-semibold border-l-2 border-indigo-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <Zap size={13} />
+                  <span className="flex-1">Reportar pagos</span>
+                </Link>
+              </>
+            )
+          })()}
+
           {/* Egresos — visible para todos excepto almacén */}
           {rol !== 'almacen' && (() => {
             const active = pathname === '/egresos' || pathname.startsWith('/egresos/')
@@ -217,26 +237,6 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
               </Link>
             )
           })}
-
-          {/* Vehimotors */}
-          {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const activeReportados = pathname === '/vehimotors'
-            const activeReportar = pathname === '/vehimotors/reportar' || pathname.startsWith('/vehimotors/reportar/')
-            return (
-              <>
-                <Link href="/vehimotors" onClick={onClose}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeReportados ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <Building2 size={18} />
-                  <span className="flex-1">Vehimotors</span>
-                </Link>
-                <Link href="/vehimotors/reportar" onClick={onClose}
-                  className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${activeReportar ? 'bg-indigo-600/30 text-white font-semibold border-l-2 border-indigo-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <Zap size={13} />
-                  <span className="flex-1">Reportar pagos</span>
-                </Link>
-              </>
-            )
-          })()}
 
           {/* Tasas → Docs. Empresa */}
           {!['arianna', 'almacen'].includes(rol) && navItemsBottom2.map(({ href, label, icon: Icon }) => {

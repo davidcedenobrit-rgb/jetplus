@@ -33,6 +33,9 @@ type IngresoPendiente = {
   yaReportado: number
   saldo: number
   cliente: Cliente | null
+  estado?: string
+  depositoBanco?: string | null
+  depositoReferencia?: string | null
 }
 
 interface Props {
@@ -280,9 +283,24 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
                       />
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/ingresos/${i.id}`} className="font-mono text-xs text-indigo-700 hover:underline">
-                        {i.numeroRecibo}
-                      </Link>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Link href={`/ingresos/${i.id}`} className="font-mono text-xs text-indigo-700 hover:underline">
+                          {i.numeroRecibo}
+                        </Link>
+                        {i.estado === 'depositado' && (
+                          <span
+                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase"
+                            title={`Depositado${i.depositoBanco ? ` en ${i.depositoBanco}` : ''}${i.depositoReferencia ? ` · Ref ${i.depositoReferencia}` : ''}`}
+                          >
+                            Depositado
+                          </span>
+                        )}
+                        {i.estado === 'entregado_carla' && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700 uppercase">
+                            Con Carla
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[10px] text-oriental-gray mt-0.5 truncate max-w-[160px]" title={i.concepto}>
                         {i.concepto}
                       </p>
