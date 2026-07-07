@@ -6,6 +6,7 @@ import type { VehiculoShowroom } from '@/types/database'
 import ShowroomDocumentos from './ShowroomDocumentos'
 import ShowroomAcciones from './ShowroomAcciones'
 import DesvincularVentaButton from './DesvincularVentaButton'
+import SalidaAlternativaButtons from './SalidaAlternativaButtons'
 
 const PASOS = [
   { key: 'llegada',        label: 'Recibido',         desc: 'Vehículo llegó a La Oriental' },
@@ -148,6 +149,7 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
                 { label: 'Color',        value: v.color },
                 { label: 'Placa',        value: v.placa, mono: true },
                 { label: 'Fecha llegada', value: v.fecha_llegada ? new Date(v.fecha_llegada + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' }) : null },
+                { label: 'Proforma Vehimotors', value: (v as any).proforma_vehimotors, mono: true },
               ].map(({ label, value, mono }) =>
                 value ? (
                   <div key={label}>
@@ -314,14 +316,41 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
             </div>
           )}
 
-          {/* Registrar venta */}
+          {/* Registrar venta + salidas alternativas */}
           {esJose && v.estado !== 'vendido' && (
-            <Link
-              href={`/vehiculos/nuevo?showroomId=${id}`}
-              className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm transition-colors"
-            >
-              <Car size={16} /> Registrar venta
-            </Link>
+            <div className="space-y-2">
+              <Link
+                href={`/vehiculos/nuevo?showroomId=${id}`}
+                className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm transition-colors"
+              >
+                <Car size={16} /> Registrar venta
+              </Link>
+              <SalidaAlternativaButtons
+                showroomId={id}
+                vehiculoLabel={`${v.marca} ${v.modelo}${v.placa ? ` · ${v.placa}` : ''}`}
+              />
+            </div>
+          )}
+
+          {/* Info de salida (si aplica) */}
+          {v.estado === 'vendido' && ((v as any).transferido_a || (v as any).vendido_por_aliado) && (
+            <div className="card p-4 border border-gray-200">
+              <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider mb-2">Salida del vehículo</p>
+              {(v as any).transferido_a && (
+                <div className="text-sm">
+                  <p className="text-xs text-oriental-gray">Transferido a</p>
+                  <p className="font-semibold text-oriental-black">{(v as any).transferido_a}</p>
+                </div>
+              )}
+              {(v as any).vendido_por_aliado && (
+                <div className="text-sm mt-2">
+                  <p className="text-xs text-oriental-gray">Vendido por</p>
+                  <p className="font-semibold text-purple-800">
+                    {(v as any).vendido_por_aliado === 'ki_auto' ? 'Ki Auto' : 'Autosurca'}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Panel de acciones */}
