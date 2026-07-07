@@ -19,7 +19,7 @@ export default async function ReportarPagosVMPage() {
   // pasaron por el flujo de deposito (el dinero ya esta en cuenta VM/Oriental)
   const { data: ingresosAprobados } = await supabase
     .from('ingresos')
-    .select('id, numero_recibo, concepto, monto, moneda, tasa_cambio, monto_bs, metodo_pago, banco_emisor, banco_receptor, referencia, fecha_pago, fecha_aprobacion, placa, cliente_id, vehiculo_id, estado, deposito_banco, deposito_referencia, clientes(nombre, cedula_rif)')
+    .select('id, numero_recibo, concepto, monto, moneda, tasa_cambio, monto_bs, metodo_pago, banco_emisor, banco_receptor, referencia, fecha_pago, fecha_aprobacion, placa, cliente_id, vehiculo_id, estado, deposito_banco, deposito_referencia, acuerdo_inicial_id, clientes(nombre, cedula_rif)')
     .in('estado', ['aprobado', 'depositado', 'entregado_carla'])
     .order('fecha_aprobacion', { ascending: false })
 
@@ -38,11 +38,32 @@ export default async function ReportarPagosVMPage() {
     totalReportadoMap[r.ingreso_id] = (totalReportadoMap[r.ingreso_id] ?? 0) + Number(r.monto_reportado)
   }
 
-  // Filtrar ingresos con saldo por reportar > 0
+  // Los pagos de Inicial La Oriental NO se reportan a Vehimotors.
+  // Calcular por ingreso cuanto se aplico a cuotas del credito inicial_la_oriental
+  // para descontarlo del monto reportable (un ingreso puede pagar cuotas mixtas).
+  const montoOrientalMap: Record<string, number> = {}
+  if (ingresoIds.length > 0) {
+    const { data: aplicaciones } = await supabase
+      .from('cuota_ingresos')
+      .select('ingreso_id, monto_aplicado, cuotas!inner(creditos!inner(plan_tipo))')
+      .in('ingreso_id', ingresoIds)
+    for (const a of (aplicaciones ?? []) as any[]) {
+      if (a.cuotas?.creditos?.plan_tipo === 'inicial_la_oriental') {
+        montoOrientalMap[a.ingreso_id] = (montoOrientalMap[a.ingreso_id] ?? 0) + Number(a.monto_aplicado)
+      }
+    }
+  }
+
+  // Filtrar ingresos con saldo por reportar > 0.
+  // Excluidos del reporte a VM:
+  //  - Pagos de acuerdos de pago (acuerdo_inicial_id) -> dinero de La Oriental
+  //  - La porcion aplicada a cuotas del credito Inicial La Oriental
   const ingresosPendientes = (ingresosAprobados ?? [])
+    .filter(i => !(i as any).acuerdo_inicial_id)
     .map(i => {
       const yaReportado = totalReportadoMap[i.id] ?? 0
-      const saldo = Math.max(0, Number(i.monto) - yaReportado)
+      const montoOriental = montoOrientalMap[i.id] ?? 0
+      const saldo = Math.max(0, Number(i.monto) - montoOriental - yaReportado)
       return { ...i, yaReportado, saldo }
     })
     .filter(i => i.saldo > 0)
