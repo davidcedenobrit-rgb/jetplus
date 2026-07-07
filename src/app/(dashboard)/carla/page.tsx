@@ -132,9 +132,10 @@ export default async function CarlaPage() {
                 canalesDelCustodio.set(k, (canalesDelCustodio.get(k) ?? 0) + Number(ing.monto))
               }
               return (
-                <div
+                <Link
                   key={c.id}
-                  className={`rounded-xl border p-3 ${c.total > 0 ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'}`}
+                  href={`/carla/${c.id}`}
+                  className={`rounded-xl border p-3 block transition-all ${c.total > 0 ? 'bg-white border-gray-200 hover:border-oriental-red hover:shadow-md' : 'bg-gray-50 border-gray-100 hover:border-gray-200'}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wide">
@@ -157,7 +158,7 @@ export default async function CarlaPage() {
                       ))}
                     </div>
                   )}
-                </div>
+                </Link>
               )
             })}
           </div>
