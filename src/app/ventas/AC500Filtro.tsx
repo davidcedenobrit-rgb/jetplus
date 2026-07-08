@@ -28,7 +28,7 @@ const COLOR_MAP: Record<string, string> = {
 }
 
 function money(n: number | null | undefined) {
-  return '$ ' + Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return '$ ' + Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(n || 0))*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 function cap(s: string) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s }
 

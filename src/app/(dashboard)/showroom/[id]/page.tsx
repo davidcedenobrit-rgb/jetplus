@@ -99,7 +99,7 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
   const reservaVencida = v.reserva_vence ? new Date(v.reserva_vence) < hoy : false
 
   function fmt(n: number) {
-    return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
   }
 
   return (

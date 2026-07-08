@@ -249,7 +249,7 @@ export default async function AcuerdoDetallePage({ params }: { params: Promise<{
                         <span className="font-bold text-oriental-black text-base">{formatCurrency(ing.monto, ing.moneda)}</span>
                         {ing.monto_bs && (
                           <span className="text-xs text-orange-600 font-semibold">
-                            = Bs.S {Number(ing.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                            = Bs.S {Number(ing.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(ing.monto_bs))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                           </span>
                         )}
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{ing.metodo_pago}</span>

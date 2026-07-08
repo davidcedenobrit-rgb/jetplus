@@ -45,7 +45,7 @@ interface Props {
 
 function fmtMoneda(n: number, moneda: string) {
   const prefix = moneda === 'VES' ? 'Bs.' : moneda
-  return `${prefix} ${n.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
+  return `${prefix} ${n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })}`
 }
 
 export default function BandejaCustodio({ ingresos, custodios, custodioActualId }: Props) {
@@ -83,7 +83,7 @@ export default function BandejaCustodio({ ingresos, custodios, custodioActualId 
               {seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}
             </span>
             <span className="text-sm font-black">
-              USD {totalSeleccionado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+              USD {totalSeleccionado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalSeleccionado)*100)%100===0?0:2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -342,7 +342,7 @@ function ModalEnviarDeposito({
           <div>
             <h2 className="font-bold text-oriental-black text-base">Enviar a depositar</h2>
             <p className="text-xs text-oriental-gray mt-0.5">
-              {ingresoIds.length} recibo{ingresoIds.length !== 1 ? 's' : ''} · USD {total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+              {ingresoIds.length} recibo{ingresoIds.length !== 1 ? 's' : ''} · USD {total.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(total)*100)%100===0?0:2, maximumFractionDigits: 2 })}
             </p>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">

@@ -120,7 +120,7 @@ export default async function ReportarPagosVMPage() {
         <div className="card p-4 text-center">
           <p className="text-[11px] text-amber-600 uppercase tracking-wider mb-1">Total a reportar (USD equiv.)</p>
           <p className="text-2xl font-extrabold text-amber-600">
-            ${totalSaldo.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${totalSaldo.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalSaldo)*100)%100===0?0:2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-[10px] text-oriental-gray mt-1">Bolívares convertidos con su tasa</p>
         </div>

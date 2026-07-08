@@ -378,19 +378,19 @@ export default async function IngresoDetallePage({
                       <div>
                         <p className="text-[9px] text-oriental-gray uppercase font-bold">Acordado</p>
                         <p className="text-lg font-black text-oriental-black">
-                          USD {acuerdoResumen.montoAcordado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          USD {acuerdoResumen.montoAcordado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(acuerdoResumen.montoAcordado)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                       <div>
                         <p className="text-[9px] text-oriental-gray uppercase font-bold">Pagado</p>
                         <p className="text-lg font-black text-green-700">
-                          USD {acuerdoResumen.montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          USD {acuerdoResumen.montoPagado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(acuerdoResumen.montoPagado)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                       <div>
                         <p className="text-[9px] text-oriental-gray uppercase font-bold">Pendiente</p>
                         <p className="text-lg font-black text-oriental-red">
-                          USD {acuerdoResumen.montoPendiente.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          USD {acuerdoResumen.montoPendiente.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(acuerdoResumen.montoPendiente)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
@@ -484,13 +484,13 @@ export default async function IngresoDetallePage({
                                     : '—'}
                                 </td>
                                 <td className="px-3 py-2 text-right text-oriental-gray">
-                                  ${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                  ${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(montoTotal)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className="px-3 py-2 text-right font-bold text-oriental-black">
-                                  ${aplicado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                  ${aplicado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(aplicado)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className={`px-3 py-2 text-right font-bold ${saldoCuota > 0 ? 'text-oriental-red' : 'text-green-600'}`}>
-                                  ${saldoCuota.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                  ${saldoCuota.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(saldoCuota)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                                 </td>
                               </tr>
                             )
@@ -580,15 +580,15 @@ export default async function IngresoDetallePage({
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px]">
                             <span className="text-oriental-gray">Total financiado</span>
-                            <span className="font-semibold text-oriental-black">USD {ecTotalFinanciado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                            <span className="font-semibold text-oriental-black">USD {ecTotalFinanciado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(ecTotalFinanciado)*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
                           </div>
                           <div className="flex justify-between text-[11px]">
                             <span className="text-oriental-gray">Ya pagado</span>
-                            <span className="font-semibold text-green-700">USD {ecTotalPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                            <span className="font-semibold text-green-700">USD {ecTotalPagado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(ecTotalPagado)*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
                           </div>
                           <div className="flex justify-between text-[11px]">
                             <span className="text-oriental-gray">Saldo pendiente</span>
-                            <span className="font-bold text-oriental-red">USD {ecTotalSaldo.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                            <span className="font-bold text-oriental-red">USD {ecTotalSaldo.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(ecTotalSaldo)*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
                           </div>
                         </div>
                         {/* Barra de progreso */}
@@ -647,7 +647,7 @@ export default async function IngresoDetallePage({
                                 </div>
                                 <div className="text-right">
                                   <p className="text-[9px] opacity-60">Saldo</p>
-                                  <p className="text-[11px] font-bold">USD {Number(c.saldo ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                                  <p className="text-[11px] font-bold">USD {Number(c.saldo ?? 0).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(c.saldo ?? 0))*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
                                 </div>
                               </div>
                             )
@@ -741,7 +741,7 @@ export default async function IngresoDetallePage({
                 <div className="text-right">
                   <p className="text-[10px] text-indigo-600 uppercase tracking-wider">Total reportado</p>
                   <p className="text-sm font-extrabold text-indigo-900">
-                    ${totalReportadoVM.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                    ${totalReportadoVM.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalReportadoVM)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
@@ -757,7 +757,7 @@ export default async function IngresoDetallePage({
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-sm font-bold text-indigo-900">
-                          ${Number(r.monto_reportado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          ${Number(r.monto_reportado).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(r.monto_reportado))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                         </p>
                         <p className={`text-[10px] font-bold uppercase tracking-wider ${
                           r.estado === 'confirmado' ? 'text-green-700' :

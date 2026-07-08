@@ -6,7 +6,7 @@ import BottomNav from '../BottomNav'
 import PortalHeader from '../PortalHeader'
 
 function fmtMoney(n: number, moneda: string) {
-  const val = n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const val = n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
   return moneda === 'VES' ? `Bs. ${val}` : `$${val}`
 }
 

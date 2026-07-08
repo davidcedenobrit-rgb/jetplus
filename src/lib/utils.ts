@@ -6,14 +6,29 @@ export function cn(...inputs: ClassValue[]) {
 
 const ISO_CURRENCIES = new Set(['USD', 'EUR', 'VES', 'VEF', 'GBP', 'BRL', 'COP', 'MXN', 'ARS', 'CLP', 'PEN', 'UYU', 'BOB', 'PYG', 'DOP', 'CRC', 'GTQ', 'HNL', 'NIO', 'PAB'])
 
+// ¿El monto tiene centavos reales (parte decimal distinta de .00)?
+function tieneCentavos(amount: number): boolean {
+  return Math.round(Math.abs(amount) * 100) % 100 !== 0
+}
+
+// Formato de número con "decimales inteligentes": sin decimales cuando el
+// monto es entero (1.017 → "1.017") y con 2 decimales cuando tiene centavos
+// (1.017,90 → "1.017,90"). Para la interfaz de pantalla y reportes.
+export function fmtMonto(amount: number): string {
+  const dec = tieneCentavos(amount) ? 2 : 0
+  return amount.toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: 2 })
+}
+
 export function formatCurrency(amount: number, currency = 'USD'): string {
+  const dec = tieneCentavos(amount) ? 2 : 0
   if (!ISO_CURRENCIES.has(currency)) {
-    return `${amount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+    return `${amount.toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: 2 })} ${currency}`
   }
   return new Intl.NumberFormat('es-VE', {
     style: 'currency',
     currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: dec,
+    maximumFractionDigits: 2,
   }).format(amount)
 }
 

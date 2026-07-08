@@ -153,7 +153,7 @@ export default async function CarlaPage() {
                       {Array.from(canalesDelCustodio.entries()).map(([canal, monto]) => (
                         <div key={canal} className="flex justify-between text-[10px]">
                           <span className="text-oriental-gray">{CANAL_LABELS[canal] ?? canal}</span>
-                          <span className="font-semibold text-oriental-black">${monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                          <span className="font-semibold text-oriental-black">${monto.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(monto)*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
                         </div>
                       ))}
                     </div>

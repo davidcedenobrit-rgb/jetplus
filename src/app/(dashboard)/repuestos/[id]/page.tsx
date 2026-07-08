@@ -145,7 +145,7 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
                 <div>
                   <p className="text-[10px] font-bold text-oriental-gray uppercase">Monto</p>
                   <p className="font-semibold text-oriental-black">
-                    USD {Number(solicitud.monto_plaza ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                    USD {Number(solicitud.monto_plaza ?? 0).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(solicitud.monto_plaza ?? 0))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div>

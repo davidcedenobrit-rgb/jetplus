@@ -187,7 +187,7 @@ export default function NuevoEgresoPage() {
               />
               {tasaCambio && parseFloat(monto) > 0 && !isNaN(parseFloat(tasaCambio)) && (
                 <p className="text-[11px] text-gray-500 mt-1">
-                  = Bs {(parseFloat(monto) * parseFloat(tasaCambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  = Bs {(parseFloat(monto) * parseFloat(tasaCambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(parseFloat(monto) * parseFloat(tasaCambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                 </p>
               )}
             </div>

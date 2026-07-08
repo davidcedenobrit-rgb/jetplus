@@ -112,12 +112,12 @@ export default async function EgresoDetallePage({
                   <p className="text-sm text-oriental-gray mt-0.5">{egreso.moneda}</p>
                   {egreso.tasa_cambio && egreso.moneda === 'VES' && (
                     <p className="text-sm font-bold text-green-700 mt-1">
-                      ≈ USD {(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ≈ USD {(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(egreso.monto) / Number(egreso.tasa_cambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   {egreso.monto_bs && egreso.moneda === 'USD' && (
                     <p className="text-sm font-bold text-gray-500 mt-1">
-                      Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(egreso.monto_bs))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                 </div>
@@ -139,8 +139,8 @@ export default async function EgresoDetallePage({
                     <p className="text-sm font-mono font-bold text-oriental-black">{Number(egreso.tasa_cambio).toFixed(4)}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {egreso.moneda === 'VES'
-                        ? `≈ USD ${(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        : `Bs ${(Number(egreso.monto) * Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        ? `≈ USD ${(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(egreso.monto) / Number(egreso.tasa_cambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}`
+                        : `Bs ${(Number(egreso.monto) * Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(egreso.monto) * Number(egreso.tasa_cambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}`
                       }
                     </p>
                   </div>

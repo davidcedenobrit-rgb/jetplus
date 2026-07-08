@@ -26,7 +26,7 @@ type Plan = 'vehimotors' | 'banco_100'
 
 function fmt(n: number | null | undefined) {
   if (!n) return '0,00'
-  return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
 function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan) {

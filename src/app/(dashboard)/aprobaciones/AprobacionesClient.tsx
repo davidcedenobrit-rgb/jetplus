@@ -25,7 +25,7 @@ const CAMPO_LABELS: Record<string, string> = {
 }
 
 function formatCambioValor(campo: string, valor: any) {
-  if (campo === 'monto') return `$${Number(valor).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
+  if (campo === 'monto') return `$${Number(valor).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(valor))*100)%100===0?0:2, maximumFractionDigits: 2 })}`
   if (campo === 'fecha_vencimiento') return new Date(valor + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
   return String(valor ?? '—')
 }

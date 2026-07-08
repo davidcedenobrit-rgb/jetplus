@@ -177,7 +177,7 @@ export async function enviarReporteLoteVehimotors(opts: {
 
   const resend = getResend()
   const totalUSD = items.reduce((s, it) => s + Number(it.montoUSD ?? 0), 0)
-  const fmtN = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const fmtN = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 
   const filas = items.map((it, i) => `
     <tr style="background:${i % 2 === 0 ? '#ffffff' : '#f9fafb'}">

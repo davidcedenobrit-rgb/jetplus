@@ -61,11 +61,11 @@ function montoVES(i: Ingreso): number {
 }
 
 function fmtUSD(n: number) {
-  return `$${n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `$${n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })}`
 }
 
 function fmtBS(n: number) {
-  return `Bs. ${n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `Bs. ${n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })}`
 }
 
 export default function ReporteIngresosPage() {

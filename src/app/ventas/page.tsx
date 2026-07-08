@@ -131,7 +131,7 @@ export default async function VentasPage() {
               const ini40 = v.precio_base * 0.40
               const fin60 = v.precio_base * 0.60
               const totalInicial = ini40 + iva + v.gastos_credito
-              const fmt = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              const fmt = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
               const tdH: CSSProperties = { padding: '7px 12px', fontFamily: 'sans-serif', fontSize: 13, fontWeight: 800, color: '#fff', background: '#1a1a1a' }
               const tdL: CSSProperties = { padding: '6px 12px', fontFamily: 'sans-serif', fontSize: 12, color: '#374151', borderBottom: '1px solid #e5e7eb' }
               const tdV: CSSProperties = { padding: '6px 12px', fontFamily: 'sans-serif', fontSize: 12, color: '#111827', fontWeight: 700, textAlign: 'right', borderBottom: '1px solid #e5e7eb' }

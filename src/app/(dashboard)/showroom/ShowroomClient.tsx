@@ -215,7 +215,7 @@ export default function ShowroomClient({
                           <Lock size={10} /> Reservado
                         </span>
                         <span className="text-[11px] font-bold text-purple-800">
-                          ${v.reserva_monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          ${v.reserva_monto.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(v.reserva_monto)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                       {vence && (

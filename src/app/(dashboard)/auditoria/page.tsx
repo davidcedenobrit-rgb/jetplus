@@ -116,7 +116,7 @@ export default async function AuditoriaPage() {
 
   for (const i of ingresosData ?? []) {
     const cliente = (i as any).clientes?.nombre ?? ''
-    const montoStr = `${i.moneda} ${Number(i.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
+    const montoStr = `${i.moneda} ${Number(i.monto).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(i.monto))*100)%100===0?0:2, maximumFractionDigits: 2 })}`
     eventos.push({
       id: `ing-${i.id}`,
       modulo: 'Ingresos',

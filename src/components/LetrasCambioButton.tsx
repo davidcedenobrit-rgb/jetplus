@@ -86,8 +86,8 @@ export default function LetrasCambioButton({ origen, entidadId, montoAcordado, f
                     {montoPorLetra !== null && (
                       <p className="text-[11px] text-oriental-gray mt-1">
                         {numLetras === 1
-                          ? `1 letra por USD ${montoPorLetra.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
-                          : `${numLetras} letras × ~USD ${montoPorLetra.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`}
+                          ? `1 letra por USD ${montoPorLetra.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(montoPorLetra)*100)%100===0?0:2, maximumFractionDigits: 2 })}`
+                          : `${numLetras} letras × ~USD ${montoPorLetra.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(montoPorLetra)*100)%100===0?0:2, maximumFractionDigits: 2 })}`}
                       </p>
                     )}
                   </div>

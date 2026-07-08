@@ -35,8 +35,8 @@ function fmtDate(d: string) {
 }
 
 function fmtMonto(monto: number, moneda: string) {
-  if (moneda === 'USD' || moneda === 'USDT') return `$${monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
-  return `Bs. ${monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
+  if (moneda === 'USD' || moneda === 'USDT') return `$${monto.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(monto)*100)%100===0?0:2, maximumFractionDigits: 2 })}`
+  return `Bs. ${monto.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(monto)*100)%100===0?0:2, maximumFractionDigits: 2 })}`
 }
 
 function montoUSD(e: Egreso): number {
@@ -134,8 +134,8 @@ export default function ReporteEgresosPage() {
           ${agruparPor === 'beneficiario' ? `<td>${escapeHtml(CATEGORIAS_EGRESO_LABEL[e.categoria] ?? e.categoria)}</td>` : `<td>${escapeHtml(e.beneficiario ?? '—')}</td>`}
           <td class="mono">${escapeHtml(e.referencia ?? '—')}</td>
           <td>${fmtDate(e.fecha_egreso)}</td>
-          <td class="num">$${usd.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-          ${hayVES ? `<td class="num">${bs !== null ? `Bs. ${bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}</td>` : ''}
+          <td class="num">$${usd.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(usd)*100)%100===0?0:2, maximumFractionDigits: 2 })}</td>
+          ${hayVES ? `<td class="num">${bs !== null ? `Bs. ${bs.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(bs)*100)%100===0?0:2, maximumFractionDigits: 2 })}` : '—'}</td>` : ''}
         </tr>`
       }).join('')
 
@@ -147,8 +147,8 @@ export default function ReporteEgresosPage() {
         ${filasItems}
         <tr class="subtotal">
           <td colspan="${cols - (hayVES ? 2 : 1)}">Subtotal — ${escapeHtml(grupoLabel)}</td>
-          <td class="num">$${subUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-          ${hayVES ? `<td class="num">${subVES > 0 ? `Bs. ${subVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}</td>` : ''}
+          <td class="num">$${subUSD.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(subUSD)*100)%100===0?0:2, maximumFractionDigits: 2 })}</td>
+          ${hayVES ? `<td class="num">${subVES > 0 ? `Bs. ${subVES.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(subVES)*100)%100===0?0:2, maximumFractionDigits: 2 })}` : '—'}</td>` : ''}
         </tr>`
     }).join('')
 
@@ -211,11 +211,11 @@ export default function ReporteEgresosPage() {
   </div>
   <div class="summary-item">
     <div class="label">Total USD / USDT</div>
-    <div class="value">$${totalUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</div>
+    <div class="value">$${totalUSD.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalUSD)*100)%100===0?0:2, maximumFractionDigits: 2 })}</div>
   </div>
   ${hayVES ? `<div class="summary-item">
     <div class="label">Total VES (Bs.)</div>
-    <div class="value">Bs. ${totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</div>
+    <div class="value">Bs. ${totalVES.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalVES)*100)%100===0?0:2, maximumFractionDigits: 2 })}</div>
   </div>` : ''}
   <div class="summary-item">
     <div class="label">Grupos</div>
@@ -239,8 +239,8 @@ export default function ReporteEgresosPage() {
     ${filas}
     <tr class="total-row">
       <td colspan="${cols - (hayVES ? 2 : 1)}">TOTAL GENERAL</td>
-      <td class="num">$${totalUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-      ${hayVES ? `<td class="num">${totalVES > 0 ? `Bs. ${totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}</td>` : ''}
+      <td class="num">$${totalUSD.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalUSD)*100)%100===0?0:2, maximumFractionDigits: 2 })}</td>
+      ${hayVES ? `<td class="num">${totalVES > 0 ? `Bs. ${totalVES.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalVES)*100)%100===0?0:2, maximumFractionDigits: 2 })}` : '—'}</td>` : ''}
     </tr>
   </tbody>
 </table>
@@ -345,14 +345,14 @@ export default function ReporteEgresosPage() {
           <div className="card p-4">
             <p className="text-xs text-oriental-gray uppercase tracking-wider mb-1">Total USD / USDT</p>
             <p className="text-2xl font-bold text-oriental-black">
-              ${totalUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+              ${totalUSD.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalUSD)*100)%100===0?0:2, maximumFractionDigits: 2 })}
             </p>
           </div>
           {hayVES && (
             <div className="card p-4">
               <p className="text-xs text-oriental-gray uppercase tracking-wider mb-1">Total VES</p>
               <p className="text-2xl font-bold text-oriental-black">
-                Bs. {totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                Bs. {totalVES.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalVES)*100)%100===0?0:2, maximumFractionDigits: 2 })}
               </p>
             </div>
           )}
@@ -384,11 +384,11 @@ export default function ReporteEgresosPage() {
                   </h3>
                   <div className="flex items-center gap-3 text-xs">
                     <span className="font-semibold text-oriental-black">
-                      ${subUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })} USD
+                      ${subUSD.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(subUSD)*100)%100===0?0:2, maximumFractionDigits: 2 })} USD
                     </span>
                     {subVES > 0 && (
                       <span className="font-semibold text-oriental-black">
-                        Bs. {subVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        Bs. {subVES.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(subVES)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                       </span>
                     )}
                     <span className="text-oriental-gray">({items.length})</span>
@@ -431,11 +431,11 @@ export default function ReporteEgresosPage() {
                             <td className="px-4 py-2.5 text-oriental-gray font-mono text-xs">{e.referencia ?? '—'}</td>
                             <td className="px-4 py-2.5 text-oriental-gray text-xs whitespace-nowrap">{formatDate(e.fecha_egreso)}</td>
                             <td className="px-4 py-2.5 text-right font-bold text-oriental-black whitespace-nowrap">
-                              ${usd.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                              ${usd.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(usd)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                             </td>
                             {hayVES && (
                               <td className="px-4 py-2.5 text-right text-oriental-gray text-xs whitespace-nowrap">
-                                {bs !== null ? `Bs. ${bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
+                                {bs !== null ? `Bs. ${bs.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(bs)*100)%100===0?0:2, maximumFractionDigits: 2 })}` : '—'}
                               </td>
                             )}
                             <td className="px-4 py-2.5">
@@ -458,11 +458,11 @@ export default function ReporteEgresosPage() {
             <span className="font-bold text-sm uppercase tracking-wider">Total General</span>
             <div className="flex items-center gap-4">
               <span className="font-bold text-lg">
-                ${totalUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })} USD
+                ${totalUSD.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalUSD)*100)%100===0?0:2, maximumFractionDigits: 2 })} USD
               </span>
               {hayVES && (
                 <span className="font-bold text-lg">
-                  Bs. {totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                  Bs. {totalVES.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalVES)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                 </span>
               )}
             </div>

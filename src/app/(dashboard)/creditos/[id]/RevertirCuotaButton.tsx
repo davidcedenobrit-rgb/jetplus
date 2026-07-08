@@ -72,12 +72,12 @@ export default function RevertirCuotaButton({ cuotaId, creditoId, numeroCuota, m
                 Cuota #{numeroCuota} — {planLabel}
               </p>
               <p className={`text-xs font-semibold mt-0.5 ${esAbono ? 'text-amber-700' : 'text-red-600'}`}>
-                Abonado: ${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })} USD
+                Abonado: ${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(montoPagado)*100)%100===0?0:2, maximumFractionDigits: 2 })} USD
               </p>
             </div>
 
             <p className="text-xs text-oriental-gray mb-4">
-              Esto eliminará el vínculo con el(los) recibo(s), devolverá <strong>${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong> al saldo del crédito y marcará la cuota como <strong>Pendiente</strong>. Los recibos de ingreso no se eliminan.
+              Esto eliminará el vínculo con el(los) recibo(s), devolverá <strong>${montoPagado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(montoPagado)*100)%100===0?0:2, maximumFractionDigits: 2 })}</strong> al saldo del crédito y marcará la cuota como <strong>Pendiente</strong>. Los recibos de ingreso no se eliminan.
             </p>
 
             {error && (

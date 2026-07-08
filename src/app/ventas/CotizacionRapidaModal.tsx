@@ -11,7 +11,7 @@ interface Vehiculo {
 
 function fmt(n: number | null | undefined) {
   if (n == null || isNaN(n)) return '0,00'
-  return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toLocaleString('de-DE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
 export default function CotizacionRapidaModal({ vehiculo, onClose }: { vehiculo: Vehiculo; onClose: () => void }) {

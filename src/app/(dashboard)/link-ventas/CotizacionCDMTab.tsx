@@ -75,7 +75,7 @@ const ROJAS_CODIGO = 'R000'
 
 function fmt(n: number | null | undefined) {
   if (n == null || n === 0) return '0,00'
-  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(n))*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 function fm(n: number | null | undefined) {
   if (!n) return '0'

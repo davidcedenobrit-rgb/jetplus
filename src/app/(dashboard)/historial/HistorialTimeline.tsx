@@ -41,7 +41,7 @@ function fmtDate(s: string) {
 
 function fmtMoney(n: number | null | undefined) {
   if (n == null) return null
-  return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
 export default function HistorialTimeline({ documentos, estadoCotColors, estadoCotLabel }: Props) {

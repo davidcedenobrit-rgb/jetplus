@@ -618,12 +618,12 @@ export default function EditarCreditoPage() {
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="bg-white rounded-xl p-3 border border-amber-200 text-center">
                 <p className="text-[10px] text-amber-600 font-semibold uppercase">Total financiado</p>
-                <p className="text-base font-extrabold text-oriental-black">${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
-                <p className="text-[10px] text-oriental-gray">{cuotasVehiculo.length} cuotas · ${Number(montoTotal - montoCobrado).toLocaleString('es-VE', { minimumFractionDigits: 2 })} saldo</p>
+                <p className="text-base font-extrabold text-oriental-black">${montoTotal.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(montoTotal)*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-oriental-gray">{cuotasVehiculo.length} cuotas · ${Number(montoTotal - montoCobrado).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(montoTotal - montoCobrado))*100)%100===0?0:2, maximumFractionDigits: 2 })} saldo</p>
               </div>
               <div className="bg-white rounded-xl p-3 border border-green-200 text-center">
                 <p className="text-[10px] text-green-600 font-semibold uppercase">Ya cobrado</p>
-                <p className="text-base font-extrabold text-green-700">${montoCobrado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                <p className="text-base font-extrabold text-green-700">${montoCobrado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(montoCobrado)*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
                 <p className="text-[10px] text-oriental-gray">{pagadas.length} pagadas · {parciales.length} parcial{parciales.length !== 1 ? 'es' : ''}</p>
               </div>
               <div className="bg-white rounded-xl p-3 border border-red-200 text-center">
@@ -752,7 +752,7 @@ export default function EditarCreditoPage() {
               ) : (
                 <>
                   <p className="input bg-gray-50 text-oriental-gray cursor-not-allowed font-semibold">
-                    ${Number(credito?.monto_financiado).toLocaleString('es-VE', { minimumFractionDigits: 2 })} {credito?.moneda}
+                    ${Number(credito?.monto_financiado).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(credito?.monto_financiado))*100)%100===0?0:2, maximumFractionDigits: 2 })} {credito?.moneda}
                   </p>
                   <p className="text-xs text-oriental-gray mt-1">Solo el director puede cambiar el monto</p>
                 </>

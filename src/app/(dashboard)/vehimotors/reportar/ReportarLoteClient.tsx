@@ -125,7 +125,7 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
   }
 
   function fmt(n: number) {
-    return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
   }
 
   // Formato que respeta la moneda real: Bs. para VES, $ para USD/USDT

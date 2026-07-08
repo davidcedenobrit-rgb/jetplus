@@ -39,7 +39,7 @@ function n(v: string | number | null | undefined) {
   return parseFloat(String(v).replace(',', '.')) || 0
 }
 function fmt(v: number) {
-  return v.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return v.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(v)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
 // PMT formula

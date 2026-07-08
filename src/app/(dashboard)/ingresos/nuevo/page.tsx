@@ -603,8 +603,8 @@ function NuevoIngresoPageInner() {
             <div className="flex-1">
               <p className="font-bold text-blue-900 text-sm">Pago de acuerdo de inicial</p>
               <div className="flex items-center gap-4 mt-1 text-xs text-blue-700 flex-wrap">
-                <span>Acordado: <strong>${acuerdoInfo.monto_acordado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong></span>
-                <span>Pagado: <strong>${acuerdoInfo.monto_pagado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong></span>
+                <span>Acordado: <strong>${acuerdoInfo.monto_acordado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(acuerdoInfo.monto_acordado)*100)%100===0?0:2, maximumFractionDigits: 2 })}</strong></span>
+                <span>Pagado: <strong>${acuerdoInfo.monto_pagado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(acuerdoInfo.monto_pagado)*100)%100===0?0:2, maximumFractionDigits: 2 })}</strong></span>
                 <span className="font-bold text-blue-900">Pendiente: <strong>${Math.max(0, acuerdoInfo.monto_acordado - acuerdoInfo.monto_pagado).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong></span>
               </div>
             </div>
@@ -755,7 +755,7 @@ function NuevoIngresoPageInner() {
                           </p>
                         </div>
                         <p className="font-extrabold text-red-700 text-base">
-                          ${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          ${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(c.monto))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     ))}
@@ -791,7 +791,7 @@ function NuevoIngresoPageInner() {
                           </p>
                         </div>
                         <p className="font-extrabold text-blue-700 text-base">
-                          ${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          ${Number(c.monto).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(c.monto))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     ))}
@@ -862,7 +862,7 @@ function NuevoIngresoPageInner() {
                             </span>
                             <span className="text-xs text-oriental-gray">
                               Saldo: <span className="font-semibold text-oriental-black">
-                                ${Number(credito.saldo).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                ${Number(credito.saldo).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(credito.saldo))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                               </span>
                             </span>
                           </div>
@@ -930,7 +930,7 @@ function NuevoIngresoPageInner() {
                                       isAbono ? 'text-amber-600' : isVencida ? 'text-red-500' : 'text-oriental-gray'
                                     }`}>
                                       {isAbono
-                                        ? `Falta: $${faltante.toLocaleString('es-VE', { minimumFractionDigits: 2 })} de $${Number(cuota.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
+                                        ? `Falta: $${faltante.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(faltante)*100)%100===0?0:2, maximumFractionDigits: 2 })} de $${Number(cuota.monto).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(cuota.monto))*100)%100===0?0:2, maximumFractionDigits: 2 })}`
                                         : `${isVencida ? 'Venció' : 'Vence'}: ${new Date(cuota.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}`
                                       }
                                     </p>
@@ -940,7 +940,7 @@ function NuevoIngresoPageInner() {
                                   <p className={`font-extrabold text-base flex-shrink-0 ${
                                     isSelected ? 'text-green-700' : isAbono ? 'text-amber-700' : isVencida ? 'text-red-700' : 'text-oriental-black'
                                   }`}>
-                                    ${Number(cuota.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                    ${Number(cuota.monto).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(cuota.monto))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                                   </p>
                                 </button>
                               )
@@ -967,12 +967,12 @@ function NuevoIngresoPageInner() {
                           {cuotasSeleccionadas.size} cuota{cuotasSeleccionadas.size > 1 ? 's' : ''} seleccionada{cuotasSeleccionadas.size > 1 ? 's' : ''}
                         </p>
                         <p className="font-extrabold text-white text-base">
-                          ${totalCuotasSeleccionadas.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                          ${totalCuotasSeleccionadas.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(totalCuotasSeleccionadas)*100)%100===0?0:2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                       {esAbonoParcial && (
                         <p className="text-xs text-orange-100 mt-1.5">
-                          ⚠ El monto (${montoIngresado.toLocaleString('es-VE', { minimumFractionDigits: 2 })}) no cubre el total — la última cuota quedará como <strong>Abono parcial</strong>
+                          ⚠ El monto (${montoIngresado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(montoIngresado)*100)%100===0?0:2, maximumFractionDigits: 2 })}) no cubre el total — la última cuota quedará como <strong>Abono parcial</strong>
                         </p>
                       )}
                       {hayExcedente && haySiguienteCuota && (

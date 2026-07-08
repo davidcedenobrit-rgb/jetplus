@@ -98,12 +98,12 @@ export default async function EgresosPage({
                     <p className="font-bold text-oriental-black">{formatCurrency(egreso.monto, egreso.moneda)}</p>
                     {egreso.tasa_cambio && egreso.moneda === 'VES' && (
                       <p className="text-[11px] text-gray-400 font-mono">
-                        ≈ USD {(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ≈ USD {(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(egreso.monto) / Number(egreso.tasa_cambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                       </p>
                     )}
                     {egreso.monto_bs && egreso.moneda === 'USD' && (
                       <p className="text-[11px] text-gray-400 font-mono">
-                        Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        Bs {Number(egreso.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(egreso.monto_bs))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                       </p>
                     )}
                   </td>

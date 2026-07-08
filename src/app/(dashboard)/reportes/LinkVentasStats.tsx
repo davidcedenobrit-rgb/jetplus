@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 
 function fmt(n: number | null | undefined) {
   if (n == null) return '0,00'
-  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(n))*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 function fmtFecha(s: string) {
   try { return new Date(s + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }

@@ -669,15 +669,15 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                         <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div>
                             <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Monto financiado</p>
-                            <p className="font-mono font-bold text-emerald-900">${financiado.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="font-mono font-bold text-emerald-900">${financiado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(financiado)*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Inicial ({v.inicial_pct ?? 40}%)</p>
-                            <p className="font-mono font-bold text-emerald-900">${((v.cash ?? 0) * ((v.inicial_pct ?? 40) / 100)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="font-mono font-bold text-emerald-900">${((v.cash ?? 0) * ((v.inicial_pct ?? 40) / 100)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs((v.cash ?? 0) * ((v.inicial_pct ?? 40) / 100))*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Gastos VM (7% auto)</p>
-                            <p className="font-mono font-bold text-emerald-900">${gastosVhmCalc.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="font-mono font-bold text-emerald-900">${gastosVhmCalc.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(gastosVhmCalc)*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Cuota mensual</p>
@@ -697,7 +697,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                         (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0)
                       const cuota   = v.tasa_credito ?? 0
                       const nCuotas = v.cuotas_vhm ?? 24
-                      const fmtN    = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      const fmtN    = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 
                       const itemsCls  = `${inputCls} text-right`
                       const rowLbl    = 'text-xs text-gray-500 font-medium pt-2'
@@ -867,7 +867,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                       const totalInicial = inicial + totalGastos
                       const tasa = (v.tasa_banco_pct ?? 16) / 100 / 12
                       const cuota = tasa > 0 ? financiamiento * tasa * Math.pow(1 + tasa, 24) / (Math.pow(1 + tasa, 24) - 1) : financiamiento / 24
-                      const fmtN = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      const fmtN = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
                       if (precio <= 0) return null
                       return (
                         <div className="mt-3 bg-oriental-black rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1000,7 +1000,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
         const totalI         = ini40 + iva + gcr
         const fin60          = precio * 0.6
 
-        const fmtQ   = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        const fmtQ   = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 
         const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 18px', borderBottom: '1px solid #f3f4f6' }
         const lbl: React.CSSProperties = { fontSize: 12, color: '#374151' }

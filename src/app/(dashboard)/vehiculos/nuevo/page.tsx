@@ -929,7 +929,7 @@ export default function NuevoVehiculoPage() {
               <p className="text-green-700 text-xs">{cotizacionInfo.cliente_ci_rif}</p>
               {cotizacionInfo.cuota_mensual != null && (
                 <p className="text-green-600 text-xs mt-1">
-                  Cuota mensual cotizada: <span className="font-bold">${cotizacionInfo.cuota_mensual.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                  Cuota mensual cotizada: <span className="font-bold">${cotizacionInfo.cuota_mensual.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(cotizacionInfo.cuota_mensual)*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
                 </p>
               )}
               <p className="text-green-600 text-[11px] mt-2 font-medium">Busca al cliente por nombre o cédula para vincularlo al vehículo.</p>
@@ -1864,11 +1864,11 @@ export default function NuevoVehiculoPage() {
                       {ceActivo && calcVehimotors.totalTrim > 0 && calcVehimotors.totalMensual > 0 && (
                         <div className="mt-1.5 bg-teal-50 border border-teal-200 rounded-lg px-2.5 py-1.5 text-[11px]">
                           <span className="text-teal-700">
-                            <strong>${calcVehimotors.monto.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> total
+                            <strong>${calcVehimotors.monto.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(calcVehimotors.monto)*100)%100===0?0:2, maximumFractionDigits: 2 })}</strong> total
                             &nbsp;—&nbsp;
-                            <strong className="text-teal-600">${calcVehimotors.totalTrim.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> cuotas especiales
+                            <strong className="text-teal-600">${calcVehimotors.totalTrim.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(calcVehimotors.totalTrim)*100)%100===0?0:2, maximumFractionDigits: 2 })}</strong> cuotas especiales
                             &nbsp;=&nbsp;
-                            <strong className="text-indigo-700">${calcVehimotors.totalMensual.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong> en cuotas mensuales
+                            <strong className="text-indigo-700">${calcVehimotors.totalMensual.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(calcVehimotors.totalMensual)*100)%100===0?0:2, maximumFractionDigits: 2 })}</strong> en cuotas mensuales
                           </span>
                         </div>
                       )}

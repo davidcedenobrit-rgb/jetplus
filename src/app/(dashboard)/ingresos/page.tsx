@@ -241,7 +241,7 @@ export default async function IngresosPage({
                     {ingreso.moneda === 'VES' && ingreso.tasa_cambio
                       ? <span>
                           <span className="text-oriental-black">{formatCurrency(Number(ingreso.monto) / Number(ingreso.tasa_cambio))}</span>
-                          <span className="block text-[10px] font-normal text-oriental-gray">Bs. {Number(ingreso.monto).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                          <span className="block text-[10px] font-normal text-oriental-gray">Bs. {Number(ingreso.monto).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(ingreso.monto))*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
                         </span>
                       : formatCurrency(ingreso.monto, ingreso.moneda === 'VES' ? 'VES' : 'USD')
                     }

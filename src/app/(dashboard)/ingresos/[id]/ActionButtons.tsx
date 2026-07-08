@@ -522,7 +522,7 @@ function ModalAprobarIngreso({
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-5 flex items-center justify-between">
           <span className="text-xs font-semibold text-green-800">Monto del recibo</span>
           <span className="text-lg font-black text-green-800">
-            {moneda === 'VES' ? 'Bs.' : moneda} {monto.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+            {moneda === 'VES' ? 'Bs.' : moneda} {monto.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(monto)*100)%100===0?0:2, maximumFractionDigits: 2 })}
           </span>
         </div>
 

@@ -209,7 +209,7 @@ export default async function RepuestosPage({
                         {s.monto_plaza != null && (
                           <p className="text-[11px] text-oriental-gray">
                             <span className="text-oriental-black font-semibold">Monto:</span>{' '}
-                            USD {Number(s.monto_plaza).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                            USD {Number(s.monto_plaza).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(s.monto_plaza))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                           </p>
                         )}
                       </div>
