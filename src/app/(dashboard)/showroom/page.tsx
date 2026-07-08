@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Store, Plus } from 'lucide-react'
-import PrintButton from './PrintButton'
+import ExportButtons from './ExportButtons'
 import ShowroomClient from './ShowroomClient'
 import type { VehiculoShowroom } from '@/types/database'
 
@@ -60,7 +60,7 @@ export default async function ShowroomPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <PrintButton />
+          <ExportButtons filas={lista as any} tab={tab} />
           <Link href="/showroom/nuevo" className="btn-primary flex items-center gap-2">
             <Plus size={16} />
             Registrar vehículo
