@@ -9,7 +9,7 @@ export default async function CuestionarioPage({ params }: { params: Promise<{ t
 
   const { data: empleado } = await admin
     .from('empleados')
-    .select('id, nombre, cedula, telefono, correo, fecha_ingreso, cargo, departamento, reporta_a, estado, vence_at')
+    .select('id, nombre, cedula, telefono, correo, correo_empresa, fecha_ingreso, cargo, departamento, reporta_a, estado, vence_at')
     .eq('token', token)
     .maybeSingle()
 
@@ -51,6 +51,7 @@ export default async function CuestionarioPage({ params }: { params: Promise<{ t
         cedula: empleado.cedula ?? '',
         telefono: empleado.telefono ?? '',
         correo: empleado.correo ?? '',
+        correoEmpresa: empleado.correo_empresa ?? '',
         fechaIngreso: empleado.fecha_ingreso ?? '',
         cargo: empleado.cargo ?? '',
         departamento: empleado.departamento ?? '',

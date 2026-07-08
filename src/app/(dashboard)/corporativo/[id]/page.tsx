@@ -98,7 +98,8 @@ export default async function EmpleadoDetallePage({ params }: { params: Promise<
           <Campo label="Nombre" valor={e.nombre} />
           <Campo label="Cédula" valor={e.cedula} />
           <Campo label="Teléfono" valor={e.telefono} />
-          <Campo label="Correo" valor={e.correo} />
+          <Campo label="Correo personal" valor={e.correo} />
+          <Campo label="Correo dentro de la empresa" valor={e.correo_empresa} />
           <Campo label="Fecha de ingreso" valor={fmtDia(e.fecha_ingreso)} />
         </div>
       </div>

@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const {
     token,
-    nombre, cedula, telefono, correo, fechaIngreso,
+    nombre, cedula, telefono, correo, correoEmpresa, fechaIngreso,
     cargo, departamento, reportaA,
     responsabilidades, funciones, tareasDiarias,
     competencias, herramientas, observaciones,
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
       cedula: cedula?.trim() || null,
       telefono: telefono?.trim() || null,
       correo: correo?.trim() || null,
+      correo_empresa: correoEmpresa?.trim() || null,
       fecha_ingreso: fechaIngreso || null,
       cargo: cargo.trim(),
       departamento: departamento?.trim() || null,

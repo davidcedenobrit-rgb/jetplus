@@ -7,6 +7,7 @@ interface Inicial {
   cedula: string
   telefono: string
   correo: string
+  correoEmpresa: string
   fechaIngreso: string
   cargo: string
   departamento: string
@@ -31,7 +32,7 @@ const textarea: React.CSSProperties = { ...input, resize: 'vertical', minHeight:
 const seccion: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: '22px 22px', marginBottom: 16 }
 const secTitle: React.CSSProperties = { fontSize: 13, fontWeight: 800, color: '#C41E3A', textTransform: 'uppercase', letterSpacing: '.05em', margin: '0 0 16px' }
 
-const INICIAL_VACIO: Inicial = { nombre: '', cedula: '', telefono: '', correo: '', fechaIngreso: '', cargo: '', departamento: '', reportaA: '' }
+const INICIAL_VACIO: Inicial = { nombre: '', cedula: '', telefono: '', correo: '', correoEmpresa: '', fechaIngreso: '', cargo: '', departamento: '', reportaA: '' }
 
 export default function CuestionarioForm({ modo = 'token', token, vencido = false, venceAt = null, inicial = INICIAL_VACIO }: Props) {
   const esPublico = modo === 'publico'
@@ -40,6 +41,7 @@ export default function CuestionarioForm({ modo = 'token', token, vencido = fals
     cedula: inicial.cedula,
     telefono: inicial.telefono,
     correo: inicial.correo,
+    correoEmpresa: inicial.correoEmpresa,
     fechaIngreso: inicial.fechaIngreso,
     cargo: inicial.cargo,
     departamento: inicial.departamento,
@@ -151,13 +153,17 @@ export default function CuestionarioForm({ modo = 'token', token, vencido = fals
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={label}>Correo</label>
+                <label style={label}>Correo personal</label>
                 <input style={input} value={f.correo} onChange={e => set('correo', e.target.value)} placeholder="tu@correo.com" />
               </div>
               <div>
-                <label style={label}>Fecha de ingreso</label>
-                <input type="date" style={input} value={f.fechaIngreso} onChange={e => set('fechaIngreso', e.target.value)} />
+                <label style={label}>Correo dentro de la empresa</label>
+                <input style={input} value={f.correoEmpresa} onChange={e => set('correoEmpresa', e.target.value)} placeholder="tu@laoriental.co" />
               </div>
+            </div>
+            <div>
+              <label style={label}>Fecha de ingreso</label>
+              <input type="date" style={input} value={f.fechaIngreso} onChange={e => set('fechaIngreso', e.target.value)} />
             </div>
           </div>
         </div>
