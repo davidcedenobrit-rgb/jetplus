@@ -14,10 +14,13 @@ interface Inicial {
 }
 
 interface Props {
-  token: string
-  vencido: boolean
-  venceAt: string | null
-  inicial: Inicial
+  // Modo 'token': cada empleado con su enlace único. Modo 'publico': enlace base
+  // compartible (auto-registro) que crea al empleado al enviar.
+  modo?: 'token' | 'publico'
+  token?: string
+  vencido?: boolean
+  venceAt?: string | null
+  inicial?: Inicial
 }
 
 const LOGO = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
@@ -28,7 +31,10 @@ const textarea: React.CSSProperties = { ...input, resize: 'vertical', minHeight:
 const seccion: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: '22px 22px', marginBottom: 16 }
 const secTitle: React.CSSProperties = { fontSize: 13, fontWeight: 800, color: '#C41E3A', textTransform: 'uppercase', letterSpacing: '.05em', margin: '0 0 16px' }
 
-export default function CuestionarioForm({ token, vencido, venceAt, inicial }: Props) {
+const INICIAL_VACIO: Inicial = { nombre: '', cedula: '', telefono: '', correo: '', fechaIngreso: '', cargo: '', departamento: '', reportaA: '' }
+
+export default function CuestionarioForm({ modo = 'token', token, vencido = false, venceAt = null, inicial = INICIAL_VACIO }: Props) {
+  const esPublico = modo === 'publico'
   const [f, setF] = useState({
     nombre: inicial.nombre,
     cedula: inicial.cedula,
@@ -63,10 +69,12 @@ export default function CuestionarioForm({ token, vencido, venceAt, inicial }: P
     if (!f.responsabilidades.trim()) { setError('Describe tus responsabilidades principales'); return }
     setEnviando(true)
     try {
-      const res = await fetch('/api/corporativo/cuestionario', {
+      const endpoint = esPublico ? '/api/corporativo/registro-publico' : '/api/corporativo/cuestionario'
+      const payload = esPublico ? f : { token, ...f }
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, ...f }),
+        body: JSON.stringify(payload),
       })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { setError(j.error ?? 'No se pudo enviar. Intenta de nuevo.'); setEnviando(false); return }
@@ -101,19 +109,27 @@ export default function CuestionarioForm({ token, vencido, venceAt, inicial }: P
       </div>
 
       <div style={{ maxWidth: 620, margin: '0 auto', padding: '24px 16px 60px' }}>
-        {/* Aviso de plazo */}
-        <div style={{ background: vencido ? '#fef2f2' : '#eff6ff', border: `1.5px solid ${vencido ? '#fecaca' : '#bfdbfe'}`, borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
-          <p style={{ margin: 0, fontSize: 13, color: vencido ? '#991b1b' : '#1e40af', fontWeight: 600 }}>
-            {vencido
-              ? '⚠️ El plazo de 72 horas venció, pero aún puedes enviar tu descripción de cargo.'
-              : '⏱️ Tienes 72 horas para completar este cuestionario.'}
-          </p>
-          {venceFmt && (
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: vencido ? '#b91c1c' : '#3b82f6' }}>
-              Fecha límite: {venceFmt}
+        {/* Aviso */}
+        {esPublico ? (
+          <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#1e40af', fontWeight: 600 }}>
+              👋 Completa tu descripción de cargo. Al enviarla, quedarás registrado en el sistema de La Oriental.
             </p>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div style={{ background: vencido ? '#fef2f2' : '#eff6ff', border: `1.5px solid ${vencido ? '#fecaca' : '#bfdbfe'}`, borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
+            <p style={{ margin: 0, fontSize: 13, color: vencido ? '#991b1b' : '#1e40af', fontWeight: 600 }}>
+              {vencido
+                ? '⚠️ El plazo de 72 horas venció, pero aún puedes enviar tu descripción de cargo.'
+                : '⏱️ Tienes 72 horas para completar este cuestionario.'}
+            </p>
+            {venceFmt && (
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: vencido ? '#b91c1c' : '#3b82f6' }}>
+                Fecha límite: {venceFmt}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Datos personales */}
         <div style={seccion}>

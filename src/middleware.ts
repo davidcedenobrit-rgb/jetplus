@@ -14,6 +14,7 @@ export async function middleware(request: NextRequest) {
     '/api/repuestos/almacen',
     '/api/portal-clientes/aceptar',
     '/api/corporativo/cuestionario',
+    '/api/corporativo/registro-publico',
   ]
 
   if (publicApiPaths.some(path => pathname.startsWith(path))) {

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Building2, Users, Clock, CheckCircle2, AlertTriangle } from 'lucide-react'
 import NuevoEmpleadoButton from './NuevoEmpleadoButton'
+import EnlaceBaseCard from './EnlaceBaseCard'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
@@ -51,6 +52,9 @@ export default async function CorporativoPage() {
         </div>
         <NuevoEmpleadoButton />
       </div>
+
+      {/* Enlace base para el grupo de WhatsApp */}
+      <EnlaceBaseCard />
 
       {/* Resumen */}
       <div className="grid grid-cols-3 gap-3 mb-6">
