@@ -13,6 +13,7 @@ export async function middleware(request: NextRequest) {
     '/api/repuestos/confirmar-pago',
     '/api/repuestos/almacen',
     '/api/portal-clientes/aceptar',
+    '/api/corporativo/cuestionario',
   ]
 
   if (publicApiPaths.some(path => pathname.startsWith(path))) {
@@ -44,7 +45,7 @@ export async function middleware(request: NextRequest) {
     '/reportes', '/creditos', '/acuerdos', '/showroom', '/tasas',
     '/aprobaciones', '/anulaciones', '/auditoria', '/logs', '/importar',
     '/vehimotors', '/carla', '/repuestos', '/documentos-empresa',
-    '/link-ventas', '/pagos-portal', '/historial', '/api/',
+    '/link-ventas', '/pagos-portal', '/historial', '/corporativo', '/api/',
   ]
   const isProtected = pathname === '/' || protectedPaths.some(p => pathname.startsWith(p))
 
