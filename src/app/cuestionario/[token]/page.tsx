@@ -1,11 +1,11 @@
-import { createAdminClient } from '@/lib/supabase/server'
+import { serviceRoleClient } from '@/lib/supabase/service-role'
 import CuestionarioForm from './CuestionarioForm'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CuestionarioPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
-  const admin = await createAdminClient()
+  const admin = serviceRoleClient()
 
   const { data: empleado } = await admin
     .from('empleados')

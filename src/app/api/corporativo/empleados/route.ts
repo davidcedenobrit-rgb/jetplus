@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { serviceRoleClient } from '@/lib/supabase/service-role'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 })
   }
 
-  const admin = await createAdminClient()
+  const admin = serviceRoleClient()
   const token = randomBytes(24).toString('hex')
   const ahora = new Date()
   const vence = new Date(ahora.getTime() + 72 * 60 * 60 * 1000)

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
-import { createAdminClient } from '@/lib/supabase/server'
+import { serviceRoleClient } from '@/lib/supabase/service-role'
 import { enviarNotificacionCuestionarioCompletado } from '@/lib/email-corporativo'
 
 // Endpoint PÚBLICO de auto-registro: cualquier trabajador con el enlace base
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Las responsabilidades son obligatorias' }, { status: 400 })
   }
 
-  const admin = await createAdminClient()
+  const admin = serviceRoleClient()
   const ahora = new Date().toISOString()
 
   const datos = {
