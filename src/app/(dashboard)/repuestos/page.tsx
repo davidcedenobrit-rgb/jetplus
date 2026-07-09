@@ -1,29 +1,39 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag } from 'lucide-react'
+import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag, FileCheck, Receipt, DollarSign, Truck } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import RepuestosActivasGrid from './RepuestosActivasGrid'
 import CatalogoRepuestos from './CatalogoRepuestos'
 
 const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem', 'almacen']
 
-// Mapeo de grupos pedidos por Rojas
-const GRUPO_KEYS = ['cotizacion_enviada', 'cotizacion_recibida', 'completadas', 'eliminadas', 'compra_plaza'] as const
+// Grupos del flujo de repuestos (segmentado por etapa)
+const GRUPO_KEYS = [
+  'cotizacion_enviada', 'cotizacion_recibida', 'cotizacion_aprobada',
+  'factura_recibida', 'pagada', 'por_recibir',
+  'completadas', 'eliminadas', 'compra_plaza',
+] as const
 type GrupoKey = typeof GRUPO_KEYS[number]
 
 // Cada grupo agrupa uno o mas estados internos
 const GRUPO_ESTADOS: Record<GrupoKey, string[]> = {
-  // Todo lo activo antes de aprobacion + los intermedios en proceso
-  cotizacion_enviada: [
-    'solicitado', 'verificado', 'cotizacion_enviada',
-    'cotizacion_aprobada', 'factura_recibida', 'pago_enviado', 'enviado_almacen', 'guia_recibida',
-  ],
+  cotizacion_enviada:  ['solicitado', 'verificado', 'cotizacion_enviada'],
   cotizacion_recibida: ['cotizacion_recibida'],
-  completadas:        ['completado'],
-  eliminadas:         ['cancelado', 'rechazado_verificacion'],
-  compra_plaza:       ['comprado_plaza'],
+  cotizacion_aprobada: ['cotizacion_aprobada'],
+  factura_recibida:    ['factura_recibida'],
+  pagada:              ['pago_enviado'],
+  por_recibir:         ['enviado_almacen', 'guia_recibida'],
+  completadas:         ['completado'],
+  eliminadas:          ['cancelado', 'rechazado_verificacion'],
+  compra_plaza:        ['comprado_plaza'],
 }
+
+// Grupos "activos" (en proceso) usan la grilla completa con seguimiento
+const GRUPOS_ACTIVOS: GrupoKey[] = [
+  'cotizacion_enviada', 'cotizacion_recibida', 'cotizacion_aprobada',
+  'factura_recibida', 'pagada', 'por_recibir',
+]
 
 const GRUPOS: Array<{
   key: GrupoKey
@@ -33,11 +43,15 @@ const GRUPOS: Array<{
   bg: string
   descripcion: string
 }> = [
-  { key: 'cotizacion_enviada',  label: 'Cotización enviada',        icon: Send,        color: 'text-yellow-700', bg: 'bg-yellow-100', descripcion: 'Solicitudes activas' },
-  { key: 'cotizacion_recibida', label: 'Recibida × aprobación',     icon: Inbox,       color: 'text-orange-700', bg: 'bg-orange-100', descripcion: 'Esperando aprobación' },
-  { key: 'completadas',         label: 'Completadas',               icon: CheckCircle2,color: 'text-green-700',  bg: 'bg-green-100',  descripcion: 'Ciclo cerrado' },
-  { key: 'eliminadas',          label: 'Eliminadas',                icon: XCircle,     color: 'text-gray-600',   bg: 'bg-gray-100',   descripcion: 'Canceladas o rechazadas' },
-  { key: 'compra_plaza',        label: 'Compra en plaza',           icon: ShoppingBag, color: 'text-purple-700', bg: 'bg-purple-100', descripcion: 'Compradas localmente' },
+  { key: 'cotizacion_enviada',  label: 'Cotización enviada',   icon: Send,         color: 'text-yellow-700', bg: 'bg-yellow-100', descripcion: 'Solicitudes activas' },
+  { key: 'cotizacion_recibida', label: 'Cotización recibida',  icon: Inbox,        color: 'text-orange-700', bg: 'bg-orange-100', descripcion: 'Vehimotors respondió' },
+  { key: 'cotizacion_aprobada', label: 'Cotización aprobada',  icon: FileCheck,    color: 'text-blue-700',   bg: 'bg-blue-100',   descripcion: 'Aprobada por Rojas' },
+  { key: 'factura_recibida',    label: 'Factura recibida',     icon: Receipt,      color: 'text-cyan-700',   bg: 'bg-cyan-100',   descripcion: 'Con factura' },
+  { key: 'pagada',              label: 'Pagada',               icon: DollarSign,   color: 'text-emerald-700',bg: 'bg-emerald-100',descripcion: 'Pago enviado' },
+  { key: 'por_recibir',         label: 'Por recibir',          icon: Truck,        color: 'text-indigo-700', bg: 'bg-indigo-100', descripcion: 'En camino al taller' },
+  { key: 'completadas',         label: 'Completadas',          icon: CheckCircle2, color: 'text-green-700',  bg: 'bg-green-100',  descripcion: 'Ciclo cerrado' },
+  { key: 'eliminadas',          label: 'Eliminadas',           icon: XCircle,      color: 'text-gray-600',   bg: 'bg-gray-100',   descripcion: 'Canceladas o rechazadas' },
+  { key: 'compra_plaza',        label: 'Compra en plaza',      icon: ShoppingBag,  color: 'text-purple-700', bg: 'bg-purple-100', descripcion: 'Compradas localmente' },
 ]
 
 const COMPLETAS_LIMIT = 12
@@ -69,6 +83,10 @@ export default async function RepuestosPage({
   const conteoPorGrupo: Record<GrupoKey, number> = {
     cotizacion_enviada: 0,
     cotizacion_recibida: 0,
+    cotizacion_aprobada: 0,
+    factura_recibida: 0,
+    pagada: 0,
+    por_recibir: 0,
     completadas: 0,
     eliminadas: 0,
     compra_plaza: 0,
@@ -110,9 +128,14 @@ export default async function RepuestosPage({
           </div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Repuestos</h1>
-            <p className="text-oriental-gray text-sm">
-              Solicitudes a Vehimotors · {conteoPorGrupo.cotizacion_enviada + conteoPorGrupo.cotizacion_recibida} activa{(conteoPorGrupo.cotizacion_enviada + conteoPorGrupo.cotizacion_recibida) !== 1 ? 's' : ''}
-            </p>
+            {(() => {
+              const totalActivas = GRUPOS_ACTIVOS.reduce((s, k) => s + conteoPorGrupo[k], 0)
+              return (
+                <p className="text-oriental-gray text-sm">
+                  Solicitudes a Vehimotors · {totalActivas} activa{totalActivas !== 1 ? 's' : ''}
+                </p>
+              )
+            })()}
           </div>
         </div>
         <Link href="/repuestos/nuevo" className="btn-primary flex items-center gap-2">
@@ -121,7 +144,7 @@ export default async function RepuestosPage({
       </div>
 
       {/* Tabs por grupo */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-6">
         {GRUPOS.map(g => {
           const active = grupoActivo === g.key
           const count = conteoPorGrupo[g.key]
@@ -166,7 +189,7 @@ export default async function RepuestosPage({
               : 'Aquí aparecerán las solicitudes que caigan en este estatus.'}
           </p>
         </div>
-      ) : grupoActivo === 'cotizacion_enviada' || grupoActivo === 'cotizacion_recibida' ? (
+      ) : GRUPOS_ACTIVOS.includes(grupoActivo) ? (
         <RepuestosActivasGrid solicitudes={solicitudes as any} puedeEliminar={puedeEliminar} />
       ) : (
         <>
