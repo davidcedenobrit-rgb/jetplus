@@ -223,15 +223,6 @@ export default function RespuestaForm({
             ✅ Sí, acepto esta cotización
           </button>
 
-          {/* Solicitar descuento */}
-          <button
-            disabled={step === 'loading'}
-            onClick={() => setStep('descuento_form')}
-            style={{ width: '100%', background: '#fffbeb', color: '#92400e', border: '2px solid #fde68a', padding: '14px 20px', borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: step === 'loading' ? .6 : 1 }}
-          >
-            💬 Solicitar revisión de precio
-          </button>
-
           {/* Posponer */}
           <button
             disabled={step === 'loading'}
