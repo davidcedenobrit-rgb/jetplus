@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   CheckCircle2, XCircle, AlertTriangle,
-  Send, Building2, Printer, Banknote
+  Printer, Banknote
 } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 
@@ -64,22 +64,9 @@ export default function EgresoActionButtons({ egresoId, estado }: Props) {
       show: ['aprobado'],
       style: 'bg-blue-600 hover:bg-blue-700 text-white',
     },
-    {
-      label: 'Reportar a Carla',
-      icon: Send,
-      estado: 'reportado_carla',
-      timestamp: 'reportado_carla_at',
-      show: ['pagado', 'aprobado'],
-      style: 'bg-purple-600 hover:bg-purple-700 text-white',
-    },
-    {
-      label: 'Reportar a Vehimotors',
-      icon: Building2,
-      estado: 'reportado_vehimotors',
-      timestamp: 'vehimotors_at',
-      show: ['pagado', 'reportado_carla'],
-      style: 'bg-indigo-600 hover:bg-indigo-700 text-white',
-    },
+    // Nota: los egresos NO se reportan a Carla ni a Vehimotors.
+    // Pagar a un proveedor (incluido Vehimotors/Avanza Motos) es un egreso normal
+    // que termina en 'pagado'. El reporte a Vehimotors vive solo en Ingresos.
   ]
 
   const visibleActions = actions.filter(a => a.show.includes(estado))
@@ -94,7 +81,7 @@ export default function EgresoActionButtons({ egresoId, estado }: Props) {
           {visibleActions.map(action => (
             <button
               key={action.estado}
-              onClick={() => updateEstado(action.estado, action.timestamp)}
+              onClick={() => updateEstado(action.estado)}
               disabled={loading !== ''}
               className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${action.style}`}
             >

@@ -225,8 +225,7 @@ export default async function EgresoDetallePage({
             <div className="space-y-3">
               <TimelineItem label="Registrado" date={egreso.fecha_registro} active />
               <TimelineItem label="Aprobado" date={egreso.fecha_aprobacion} active={!!egreso.fecha_aprobacion} />
-              <TimelineItem label="Reportado Carla" date={egreso.reportado_carla_at} active={!!egreso.reportado_carla_at} />
-              <TimelineItem label="Reportado Vehimotors" date={egreso.vehimotors_at} active={!!egreso.vehimotors_at} />
+              <TimelineItem label="Pagado" date={null} active={egreso.estado === 'pagado'} />
             </div>
           </div>
 
