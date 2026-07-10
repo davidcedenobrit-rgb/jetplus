@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan de Arquitectura — Sistema Multiconcesionario</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Propuesta para unificar la gestión de La Oriental, Autosurca y KI AUTO en un solo sistema, comenzando por Autosurca.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Plan de Arquitectura — Sistema Multiconcesionario">
+<meta property="og:description" content="Un solo centro de mando para La Oriental, Autosurca y KI AUTO. Flujograma, fases y puntos a confirmar por la Dirección.">
+<meta property="og:image" content="https://centrodemando.laoriental.co/logo-la-oriental.png">
+<meta property="og:site_name" content="La Oriental Automotors">
+<meta name="theme-color" content="#c62027">
+<link rel="icon" href="/icon-192.png">
+<style>
+  :root {
+    --ink: #17191f;
+    --ground: #f6f6f4;
+    --card: #ffffff;
+    --border: #e4e5e8;
+    --text: #24262c;
+    --muted: #5c616b;
+    --faint: #878c95;
+    --accent: #c62027;
+    --accent-soft: #f7e5e5;
+    --green: #2f7d5b;
+    --green-soft: #e4f1ea;
+    --amber: #b17a1a;
+    --amber-soft: #f6ecd8;
+    --shadow: 0 1px 2px rgba(20,22,28,.04), 0 6px 24px rgba(20,22,28,.05);
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f4f5f7;
+      --ground: #101216;
+      --card: #191c22;
+      --border: #2b2f38;
+      --text: #dfe2e7;
+      --muted: #9aa0ab;
+      --faint: #6d7480;
+      --accent: #ee5a60;
+      --accent-soft: #2c1a1c;
+      --green: #5cbf90;
+      --green-soft: #16241d;
+      --amber: #d9a542;
+      --amber-soft: #2a2113;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 30px rgba(0,0,0,.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px 80px; }
+
+  header {
+    border-top: 3px solid var(--accent);
+    padding: 44px 0 30px;
+    margin-bottom: 8px;
+  }
+  .brandline {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 22px;
+  }
+  .brandline img { height: 30px; width: auto; border-radius: 4px; }
+  .brandline span {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 16px;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    margin: 0 0 12px;
+    color: var(--ink);
+    text-wrap: balance;
+    font-weight: 700;
+  }
+  .lede {
+    font-size: 18px;
+    color: var(--muted);
+    margin: 0;
+    max-width: 60ch;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    margin-top: 26px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+  .meta div { display: flex; flex-direction: column; gap: 2px; }
+  .meta .k {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .meta .v { color: var(--text); font-weight: 600; }
+
+  section { margin-top: 48px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 20px; }
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: .05em;
+  }
+  h2 {
+    font-size: 22px;
+    letter-spacing: -.01em;
+    margin: 0;
+    color: var(--ink);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+  p { margin: 0 0 14px; }
+  .intro { color: var(--muted); font-size: 16.5px; max-width: 64ch; }
+
+  .cards { display: grid; gap: 12px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .card h3 {
+    margin: 0 0 5px;
+    font-size: 15.5px;
+    color: var(--ink);
+    font-weight: 650;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-left: auto;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .tag.green { background: var(--green-soft); color: var(--green); }
+  .tag.amber { background: var(--amber-soft); color: var(--amber); }
+
+  .flow-scroll { overflow-x: auto; padding: 6px 2px 10px; }
+  .flow { min-width: 640px; display: flex; flex-direction: column; align-items: center; }
+  .node {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    padding: 14px 22px;
+  }
+  .node .label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 3px;
+  }
+  .node .name { font-weight: 700; color: var(--ink); font-size: 16px; }
+  .node .sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+  .node-director { border-color: var(--accent); border-width: 1.5px; }
+  .node-director .name { color: var(--accent); }
+  .node-system { background: var(--ink); }
+  .node-system .name { color: var(--card); }
+  .node-system .label { color: rgba(255,255,255,.5); }
+  .node-system .sub { color: rgba(255,255,255,.6); }
+  @media (prefers-color-scheme: dark) { .node-system { background: #05070a; } }
+
+  .connector { width: 2px; height: 24px; background: var(--border); }
+  .fan {
+    position: relative;
+    width: 100%;
+    max-width: 620px;
+    height: 22px;
+    border-top: 2px solid var(--border);
+    border-left: 2px solid var(--border);
+    border-right: 2px solid var(--border);
+    border-radius: 8px 8px 0 0;
+  }
+  .fan::before {
+    content: "";
+    position: absolute;
+    top: -24px; left: 50%;
+    transform: translateX(-50%);
+    width: 2px; height: 24px;
+    background: var(--border);
+  }
+  .branch-legs { width: 100%; max-width: 620px; display: flex; justify-content: space-between; }
+  .branch-legs span { width: 2px; height: 18px; background: var(--border); }
+
+  .conc-row { display: flex; gap: 16px; width: 100%; justify-content: center; }
+  .conc {
+    flex: 1 1 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .conc.future { border-style: dashed; opacity: .82; }
+  .conc-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .conc-title .cn { font-weight: 700; color: var(--ink); font-size: 15px; }
+  .conc-title .badge {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 600;
+    background: var(--accent-soft);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .conc.future .badge { background: var(--border); color: var(--faint); }
+  .conc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+  .conc li {
+    font-size: 12px;
+    color: var(--muted);
+    padding-left: 15px;
+    position: relative;
+    line-height: 1.45;
+  }
+  .conc li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 7px;
+    width: 5px; height: 5px;
+    border-radius: 1px;
+    background: var(--accent);
+    opacity: .55;
+  }
+  .isolation {
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .04em;
+    color: var(--faint);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+  }
+  .isolation::before, .isolation::after {
+    content: "";
+    height: 1px; width: 40px;
+    background: var(--border);
+  }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; background: var(--card); font-size: 14px; }
+  thead th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-weight: 600;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--ground);
+  }
+  tbody td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  .phase-code { font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: 13px; }
+  .phase-name { font-weight: 650; color: var(--ink); }
+  td .desc { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .pill { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.no { background: var(--ground); color: var(--faint); border: 1px solid var(--border); }
+  .pill.yes { background: var(--green-soft); color: var(--green); }
+  .risk { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+  .risk.n { color: var(--green); }
+  .risk.b { color: var(--muted); }
+  .risk.m { color: var(--amber); }
+
+  .q-list { display: flex; flex-direction: column; gap: 12px; counter-reset: q; }
+  .q {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    gap: 16px;
+    box-shadow: var(--shadow);
+  }
+  .q .n {
+    counter-increment: q;
+    font-family: var(--mono);
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 15px;
+    flex: none;
+    min-width: 24px;
+  }
+  .q .n::before { content: counter(q, decimal-leading-zero); }
+  .q .body h3 { margin: 0 0 4px; font-size: 15px; color: var(--ink); font-weight: 650; }
+  .q .body p { margin: 0; color: var(--muted); font-size: 14px; }
+  .q .body .hint {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--faint);
+    font-family: var(--mono);
+    line-height: 1.5;
+  }
+
+  .callout {
+    background: var(--amber-soft);
+    border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 14px;
+    color: var(--text);
+    margin-top: 18px;
+  }
+  .callout b { color: var(--amber); }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-family: var(--mono);
+    letter-spacing: .03em;
+  }
+
+  @media (max-width: 560px) {
+    .conc li { font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brandline">
+      <img src="/logo-la-oriental.png" alt="La Oriental Automotors">
+      <span>La Oriental Automotors</span>
+    </div>
+    <p class="eyebrow">Plan de Arquitectura · Desarrollo</p>
+    <h1>Un solo centro de mando para todos los concesionarios</h1>
+    <p class="lede">Propuesta para unificar la gestión de La Oriental, Autosurca y KI AUTO en un mismo sistema, comenzando por Autosurca.</p>
+    <div class="meta">
+      <div><span class="k">Dirigido a</span><span class="v">José Rojas — Dirección</span></div>
+      <div><span class="k">Fecha</span><span class="v">10 de julio de 2026</span></div>
+      <div><span class="k">Primer concesionario</span><span class="v">Autosurca</span></div>
+      <div><span class="k">Estado</span><span class="v">Pendiente de aprobación</span></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>Objetivo</h2></div>
+    <p class="intro">Reunir la administración de los concesionarios en un solo sistema, de modo que la Dirección los maneje todos desde un mismo lugar, cada concesionario conserve su información separada y protegida, y sumar un nuevo concesionario —como KI AUTO— sea inmediato y sin desarrollo adicional. Se comienza por Autosurca y luego se replica el modelo.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>Cómo funcionará</h2></div>
+    <div class="cards">
+      <div class="card">
+        <h3><span class="dot"></span>Acceso total de la Dirección</h3>
+        <p>Rojas ve y hace todo en los tres concesionarios. Un selector en la parte superior permite cambiar de un concesionario a otro sin salir del sistema.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>Datos separados y protegidos</h3>
+        <p>Cada concesionario ve únicamente su propia información. Autosurca no ve los datos de La Oriental y viceversa. La separación se garantiza a nivel del sistema, no solo por pantalla.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>Socios de Autosurca — acceso de consulta<span class="tag green">Solo lectura</span></h3>
+        <p>Los socios consultan reportes y el estado de su concesionario, pero no registran ni modifican operaciones. El manejo operativo y financiero queda en manos de la Dirección.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>Marca propia por concesionario</h3>
+        <p>Cada concesionario opera con su propio nombre legal, RIF, cuentas bancarias y documentos —recibos, cotizaciones y letras de cambio— generados con su identidad.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>Reporte a Vehimotors<span class="tag amber">Solo Dirección</span></h3>
+        <p>Autosurca reporta a Vehimotors, pero ese reporte lo realiza únicamente la Dirección. Los socios registran ingresos; el reporte a Vehimotors lo ejecuta Rojas.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Flujograma del modelo</h2></div>
+    <div class="flow-scroll">
+      <div class="flow">
+        <div class="node node-director">
+          <div class="label">Acceso total</div>
+          <div class="name">José Rojas — Dirección</div>
+          <div class="sub">Ve y hace todo · en los tres concesionarios</div>
+        </div>
+        <div class="connector"></div>
+        <div class="node node-system">
+          <div class="label">Un solo sistema</div>
+          <div class="name">Centro de Mando</div>
+          <div class="sub">Selector de concesionario</div>
+        </div>
+        <div class="fan"></div>
+        <div class="branch-legs"><span></span><span></span><span></span></div>
+        <div class="conc-row">
+          <div class="conc">
+            <div class="conc-title"><span class="cn">La Oriental</span><span class="badge">Activo</span></div>
+            <ul>
+              <li>Clientes, créditos y cobranza propios</li>
+              <li>Ingresos, egresos y caja propios</li>
+              <li>Su marca: nombre, RIF, cuentas</li>
+              <li>Equipo con sus accesos</li>
+            </ul>
+          </div>
+          <div class="conc">
+            <div class="conc-title"><span class="cn">Autosurca</span><span class="badge">En marcha</span></div>
+            <ul>
+              <li>Clientes, créditos y cobranza propios</li>
+              <li>Ingresos y egresos propios</li>
+              <li>Su marca: nombre, RIF, cuentas</li>
+              <li>Socios con acceso de consulta</li>
+              <li>Reporta a Vehimotors · solo Dirección</li>
+            </ul>
+          </div>
+          <div class="conc future">
+            <div class="conc-title"><span class="cn">KI AUTO</span><span class="badge">Futuro</span></div>
+            <ul>
+              <li>Se incorpora cuando se decida</li>
+              <li>Mismo modelo, sin desarrollo nuevo</li>
+              <li>Solo se cargan sus datos y usuarios</li>
+            </ul>
+          </div>
+        </div>
+        <div class="isolation">Información aislada entre concesionarios</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Fases de desarrollo</h2></div>
+    <p class="intro">El desarrollo avanza por fases, cada una entregada y probada por separado. Las primeras trabajan por debajo, sin alterar lo que el equipo de La Oriental usa hoy; Autosurca queda visible y operativo en la Fase&nbsp;4.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Fase</th><th>Qué contempla</th><th>¿Cambia lo actual?</th><th>Riesgo</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="phase-code">F0</span></td>
+            <td><div class="phase-name">Cimiento</div><div class="desc">Preparar el sistema para distinguir a cada concesionario. Todo lo existente se marca como La Oriental.</div></td>
+            <td><span class="pill no">Invisible</span></td>
+            <td><span class="risk n">Nulo</span></td>
+          </tr>
+          <tr>
+            <td><span class="phase-code">F1</span></td>
+            <td><div class="phase-name">Roles por cargo</div><div class="desc">Definir accesos por función —dirección, finanzas, ventas, socio de consulta— en vez de por persona.</div></td>
+            <td><span class="pill no">Sin cambios</span></td>
+            <td><span class="risk b">Bajo</span></td>
+          </tr>
+          <tr>
+            <td><span class="phase-code">F2</span></td>
+            <td><div class="phase-name">Separación de datos</div><div class="desc">Garantizar que cada concesionario vea solo lo suyo, con protección a nivel del sistema.</div></td>
+            <td><span class="pill no">Invisible</span></td>
+            <td><span class="risk m">Controlado</span></td>
+          </tr>
+          <tr>
+            <td><span class="phase-code">F3</span></td>
+            <td><div class="phase-name">Marca por concesionario</div><div class="desc">Nombre, RIF, cuentas y documentos de cada concesionario aplicados automáticamente.</div></td>
+            <td><span class="pill no">Invisible</span></td>
+            <td><span class="risk b">Bajo</span></td>
+          </tr>
+          <tr>
+            <td><span class="phase-code">F4</span></td>
+            <td><div class="phase-name">Puesta en marcha de Autosurca</div><div class="desc">Cargar los datos legales de Autosurca, crear sus usuarios y activar el selector de concesionario.</div></td>
+            <td><span class="pill yes">Autosurca en vivo</span></td>
+            <td><span class="risk b">Bajo</span></td>
+          </tr>
+          <tr>
+            <td><span class="phase-code">F5</span></td>
+            <td><div class="phase-name">Incorporar KI AUTO</div><div class="desc">Se suma cuando la Dirección lo decida: solo cargar sus datos y usuarios, sin nuevo desarrollo.</div></td>
+            <td><span class="pill yes">A demanda</span></td>
+            <td><span class="risk n">Nulo</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Lo que necesitamos de la Dirección</h2></div>
+    <p class="intro">Para cerrar el cronograma y poner en marcha Autosurca, necesitamos su confirmación y los siguientes datos. Los datos legales solo se requieren al llegar a la puesta en marcha (Fase&nbsp;4); el desarrollo puede comenzar antes.</p>
+    <div class="q-list">
+      <div class="q">
+        <span class="n"></span>
+        <div class="body">
+          <h3>Confirmación del enfoque</h3>
+          <p>¿Aprueba avanzar con un solo sistema, donde la Dirección ve y hace todo y cada concesionario mantiene sus datos separados?</p>
+        </div>
+      </div>
+      <div class="q">
+        <span class="n"></span>
+        <div class="body">
+          <h3>Datos legales de Autosurca</h3>
+          <p>Necesarios para recibos, cotizaciones y letras de cambio.</p>
+          <div class="hint">· Razón social exacta&nbsp;&nbsp;· RIF&nbsp;&nbsp;· Cuentas bancarias (banco, número y titular de cada una)</div>
+        </div>
+      </div>
+      <div class="q">
+        <span class="n"></span>
+        <div class="body">
+          <h3>Socios de Autosurca</h3>
+          <p>Nombre y correo de cada socio que tendrá acceso de consulta, para crear sus usuarios.</p>
+        </div>
+      </div>
+      <div class="q">
+        <span class="n"></span>
+        <div class="body">
+          <h3>Procesos de Autosurca</h3>
+          <p>¿La venta a crédito, la inicial y la cobranza en Autosurca funcionan igual que en La Oriental, o hay diferencias que debamos contemplar?</p>
+        </div>
+      </div>
+      <div class="q">
+        <span class="n"></span>
+        <div class="body">
+          <h3>KI AUTO — para más adelante</h3>
+          <p>Cuando se decida incorporarlo, se necesitarán los mismos datos: razón social, RIF, cuentas y usuarios. No es necesario ahora.</p>
+        </div>
+      </div>
+    </div>
+    <div class="callout">
+      <b>Nota.</b> Autosurca arranca con información nueva: no se migran datos de otro sistema. Los clientes, vehículos y créditos se cargan desde cero a partir de la puesta en marcha.
+    </div>
+  </section>
+
+  <footer>
+    <span>Documento confidencial — La Oriental Automotors</span>
+    <span>Plan de arquitectura · v1</span>
+  </footer>
+</div>
+</body>
+</html>
