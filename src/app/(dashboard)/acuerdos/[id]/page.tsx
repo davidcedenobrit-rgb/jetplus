@@ -247,7 +247,11 @@ export default async function AcuerdoDetallePage({ params }: { params: Promise<{
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-bold text-oriental-black text-base">{formatCurrency(ing.monto, ing.moneda)}</span>
-                        {ing.monto_bs && (
+                        {ing.moneda === 'VES' && ing.tasa_cambio && Number(ing.tasa_cambio) > 0 ? (
+                          <span className="text-xs text-green-700 font-semibold">
+                            ≈ {formatCurrency(Number(ing.monto) / Number(ing.tasa_cambio), 'USD')}
+                          </span>
+                        ) : ing.monto_bs && (
                           <span className="text-xs text-orange-600 font-semibold">
                             = Bs.S {Number(ing.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(ing.monto_bs))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                           </span>
