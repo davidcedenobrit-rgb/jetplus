@@ -60,10 +60,10 @@ export default async function CarlaPage() {
   const CANALES_CUSTODIA = ['efectivo', 'personal_jose', 'personal_carla', 'personal_mary', 'personal_leysdem', 'zelle', 'usdt', 'otro']
   const { data: enCustodia } = await supabase
     .from('ingresos')
-    .select('id, numero_recibo, monto, moneda, canal_destino, custodio_id, fecha_pago, clientes(nombre)')
-    .not('custodio_id', 'is', null)
+    .select('id, numero_recibo, monto, moneda, canal_destino, custodio_id, custodio_externo, fecha_pago, clientes(nombre)')
     .in('canal_destino', CANALES_CUSTODIA)
     .in('estado', ['aprobado', 'enviado_carla', 'entregado_carla'])
+    .or('custodio_id.not.is.null,custodio_externo.not.is.null')
     .order('fecha_pago', { ascending: false })
 
   const { data: custodiosData } = await supabase
@@ -75,15 +75,26 @@ export default async function CarlaPage() {
   for (const u of custodiosData ?? []) {
     custodiosMap.set(u.id, { id: u.id, nombre: u.nombre, rol: u.rol, total: 0, ingresos: [] })
   }
+  // Custodios externos (nombre libre): se agrupan por nombre, sin drill-down
+  const externosMap = new Map<string, { nombre: string; total: number; ingresos: any[] }>()
   for (const ing of enCustodia ?? []) {
-    if (!ing.custodio_id) continue
-    const c = custodiosMap.get(ing.custodio_id)
-    if (!c) continue
-    c.total += Number(ing.monto)
-    c.ingresos.push(ing)
+    if (ing.custodio_id) {
+      const c = custodiosMap.get(ing.custodio_id)
+      if (!c) continue
+      c.total += Number(ing.monto)
+      c.ingresos.push(ing)
+    } else if ((ing as any).custodio_externo) {
+      const nombre = (ing as any).custodio_externo as string
+      const e = externosMap.get(nombre) ?? { nombre, total: 0, ingresos: [] }
+      e.total += Number(ing.monto)
+      e.ingresos.push(ing)
+      externosMap.set(nombre, e)
+    }
   }
   const custodios = Array.from(custodiosMap.values()).sort((a, b) => b.total - a.total)
-  const totalEfectivoConsolidado = custodios.reduce((s, c) => s + c.total, 0)
+  const custodiosExternos = Array.from(externosMap.values()).sort((a, b) => b.total - a.total)
+  const totalEfectivoConsolidado =
+    custodios.reduce((s, c) => s + c.total, 0) + custodiosExternos.reduce((s, e) => s + e.total, 0)
 
   // Los que Rojas envió y Carla aún no confirmó
   const pendientes = (deJose ?? []).filter(i => i.estado === 'enviado_carla')
@@ -159,6 +170,33 @@ export default async function CarlaPage() {
                     </div>
                   )}
                 </Link>
+              )
+            })}
+
+            {/* Custodios externos (nombre libre, sin cuenta en el sistema) */}
+            {custodiosExternos.map(e => {
+              const canalesExt = new Map<string, number>()
+              for (const ing of e.ingresos) {
+                const k = ing.canal_destino as string
+                canalesExt.set(k, (canalesExt.get(k) ?? 0) + Number(ing.monto))
+              }
+              return (
+                <div key={`ext-${e.nombre}`} className="rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wide truncate">{e.nombre}</p>
+                    <span className="text-[9px] text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">{e.ingresos.length}</span>
+                  </div>
+                  <p className="text-lg font-black text-oriental-black mb-1">{formatCurrency(e.total)}</p>
+                  <div className="space-y-0.5 mt-2 pt-2 border-t border-amber-100">
+                    {Array.from(canalesExt.entries()).map(([canal, monto]) => (
+                      <div key={canal} className="flex justify-between text-[10px]">
+                        <span className="text-amber-700">{CANAL_LABELS[canal] ?? canal}</span>
+                        <span className="font-semibold text-oriental-black">${monto.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(monto)*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-amber-600 mt-2">Custodio externo (no es usuario del sistema)</p>
+                </div>
               )
             })}
           </div>

@@ -477,12 +477,15 @@ function ModalAprobarIngreso({
   moneda: string
   custodios: Array<{ id: string; nombre: string; rol: string }>
   onClose: () => void
-  onConfirm: (canal: string, custodioId: string | null) => Promise<void>
+  onConfirm: (canal: string, custodioId: string | null, custodioExterno: string | null) => Promise<void>
   loading: boolean
 }) {
   const [canal, setCanal] = useState('')
-  const [custodioId, setCustodioId] = useState('')
+  const [custodioId, setCustodioId] = useState('')      // '' | uuid | 'otro'
+  const [custodioOtro, setCustodioOtro] = useState('')  // nombre libre cuando custodioId === 'otro'
   const canalCfg = CANALES.find(c => c.value === canal)
+  const esOtro = custodioId === 'otro'
+  const custodioValido = !canalCfg?.requiereCustodio || (esOtro ? !!custodioOtro.trim() : !!custodioId)
 
   useEffect(() => {
     if (!canal) return
@@ -496,8 +499,14 @@ function ModalAprobarIngreso({
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!canal) return
-    if (canalCfg?.requiereCustodio && !custodioId) return
-    await onConfirm(canal, canalCfg?.requiereCustodio ? custodioId : null)
+    if (!custodioValido) return
+    if (!canalCfg?.requiereCustodio) {
+      await onConfirm(canal, null, null)
+    } else if (esOtro) {
+      await onConfirm(canal, null, custodioOtro.trim())
+    } else {
+      await onConfirm(canal, custodioId, null)
+    }
   }
 
   return (
@@ -562,7 +571,18 @@ function ModalAprobarIngreso({
                 {custodios.map(c => (
                   <option key={c.id} value={c.id}>{c.nombre} ({c.rol})</option>
                 ))}
+                <option value="otro">Otro (escribir nombre)…</option>
               </select>
+              {esOtro && (
+                <input
+                  type="text"
+                  value={custodioOtro}
+                  onChange={e => setCustodioOtro(e.target.value)}
+                  placeholder="Nombre de quién tiene el dinero"
+                  autoFocus
+                  className="mt-2 w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white"
+                />
+              )}
               <p className="text-[11px] text-oriental-gray mt-1">
                 Después se puede traspasar. Aparece en su bandeja de efectivo.
               </p>
@@ -579,7 +599,7 @@ function ModalAprobarIngreso({
             </button>
             <button
               type="submit"
-              disabled={loading || !canal || (canalCfg?.requiereCustodio && !custodioId)}
+              disabled={loading || !canal || !custodioValido}
               className="flex-1 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
@@ -618,16 +638,18 @@ export default function ActionButtons({
       .then(({ data }) => setCustodios((data ?? []) as any))
   }, [supabase])
 
-  async function handleAprobarConCanal(canal: string, custodioId: string | null) {
+  async function handleAprobarConCanal(canal: string, custodioId: string | null, custodioExterno: string | null) {
     setLoading('aprobado')
     const { data: { user } } = await supabase.auth.getUser()
+    const tieneCustodio = !!custodioId || !!custodioExterno
     const update: Record<string, any> = {
       estado: 'aprobado',
       aprobado_por: user?.id,
       fecha_aprobacion: new Date().toISOString(),
       canal_destino: canal,
       custodio_id: custodioId,
-      custodio_desde: custodioId ? new Date().toISOString() : null,
+      custodio_externo: custodioExterno,
+      custodio_desde: tieneCustodio ? new Date().toISOString() : null,
     }
     await supabase.from('ingresos').update(update).eq('id', ingresoId)
     setLoading('')
