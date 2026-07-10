@@ -38,6 +38,16 @@ export const IngresoSchema = z.object({
   fecha_pago: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida'),
   observaciones: z.string().max(500).optional().nullable(),
   tasa_cambio: z.number().positive().optional().nullable(),
+}).superRefine((data, ctx) => {
+  // Un pago en bolívares (VES) SIEMPRE requiere tasa. Sin ella no se puede
+  // convertir a USD y el monto en Bs se contaría como dólares.
+  if (data.moneda === 'VES' && (data.tasa_cambio == null || data.tasa_cambio <= 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['tasa_cambio'],
+      message: 'Un pago en bolívares (VES) requiere la tasa del día (Bs/$).',
+    })
+  }
 })
 
 export const EgresoSchema = z.object({
@@ -59,6 +69,16 @@ export const EgresoSchema = z.object({
   observaciones: z.string().max(500).optional().nullable(),
   tasa_cambio: z.number().positive().optional().nullable(),
   numero_sa: z.string().max(50).optional().nullable(),
+}).superRefine((data, ctx) => {
+  // Igual que en ingresos: un egreso en bolívares (VES) requiere tasa para
+  // poder expresarlo en USD y no contarlo como dólares.
+  if (data.moneda === 'VES' && (data.tasa_cambio == null || data.tasa_cambio <= 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['tasa_cambio'],
+      message: 'Un egreso en bolívares (VES) requiere la tasa del día (Bs/$).',
+    })
+  }
 })
 
 export const ClienteSchema = z.object({

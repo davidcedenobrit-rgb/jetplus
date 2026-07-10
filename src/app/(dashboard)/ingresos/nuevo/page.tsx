@@ -476,6 +476,17 @@ function NuevoIngresoPageInner() {
     const montoNum = parseFloat(monto)
     if (isNaN(montoNum) || montoNum <= 0) { setError('El monto debe ser mayor a 0'); return }
 
+    // Candado: un pago en bolívares SIEMPRE debe traer la tasa del día.
+    // Sin tasa no se puede convertir a USD y el monto en Bs se contaría
+    // como dólares. No se permite registrar VES sin tasa.
+    if (moneda === 'VES') {
+      const t = parseFloat(tasaCambio)
+      if (isNaN(t) || t <= 0) {
+        setError('Un pago en bolívares (VES) requiere la tasa del día (Bs/$). Sin tasa no se puede registrar.')
+        return
+      }
+    }
+
     if (gruposVehiculo.length > 0 && cuotasSeleccionadas.size === 0 && !sinCuotaConfirmado) {
       setError('⚠ Este cliente tiene cuotas pendientes. Selecciona al menos una cuota, o confirma que este ingreso no aplica al plan de crédito.')
       return
