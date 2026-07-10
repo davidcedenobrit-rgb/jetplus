@@ -47,11 +47,17 @@ export default async function CustodioBandejaPage({ params }: { params: Promise<
   // Ingresos en poder de este custodio
   const { data: ingresos } = await supabase
     .from('ingresos')
-    .select('id, numero_recibo, monto, moneda, canal_destino, custodio_desde, fecha_pago, concepto, estado, clientes(nombre, cedula_rif)')
+    .select('id, numero_recibo, monto, moneda, tasa_cambio, canal_destino, custodio_desde, fecha_pago, concepto, estado, clientes(nombre, cedula_rif)')
     .eq('custodio_id', custodioId)
     .in('canal_destino', CANALES_CUSTODIA)
     .in('estado', ['aprobado', 'enviado_carla', 'entregado_carla'])
     .order('custodio_desde', { ascending: false })
+
+  // Un pago en bolívares se convierte a USD con su tasa; nunca se suma en Bs.
+  const montoUSD = (i: any) =>
+    i?.moneda === 'VES' && Number(i?.tasa_cambio) > 0
+      ? Number(i.monto) / Number(i.tasa_cambio)
+      : Number(i.monto)
 
   // Lista de custodios posibles (para el traspaso)
   const { data: custodiosData } = await supabase
@@ -59,14 +65,14 @@ export default async function CustodioBandejaPage({ params }: { params: Promise<
     .select('id, nombre, rol')
     .in('rol', ['jose', 'carla', 'mary', 'leysdem'])
 
-  const total = (ingresos ?? []).reduce((s, i) => s + Number(i.monto), 0)
+  const total = (ingresos ?? []).reduce((s, i) => s + montoUSD(i), 0)
 
   // Desglose por canal
   const porCanal = new Map<string, { total: number; count: number }>()
   for (const ing of ingresos ?? []) {
     const k = ing.canal_destino as string
     const prev = porCanal.get(k) ?? { total: 0, count: 0 }
-    porCanal.set(k, { total: prev.total + Number(ing.monto), count: prev.count + 1 })
+    porCanal.set(k, { total: prev.total + montoUSD(ing), count: prev.count + 1 })
   }
 
   return (

@@ -28,6 +28,7 @@ interface Ingreso {
   numero_recibo: string
   monto: number
   moneda: string
+  tasa_cambio: number | null
   canal_destino: string | null
   custodio_desde: string | null
   fecha_pago: string
@@ -54,8 +55,15 @@ export default function BandejaCustodio({ ingresos, custodios, custodioActualId 
   const [showTraspaso, setShowTraspaso] = useState(false)
   const [showDeposito, setShowDeposito] = useState(false)
 
+  // El total seleccionado se muestra en USD. Un pago en bolívares se convierte
+  // con su tasa; nunca se suma el monto en Bs como si fueran dólares.
   const totalSeleccionado = useMemo(
-    () => ingresos.filter(i => seleccionados.has(i.id)).reduce((s, i) => s + Number(i.monto), 0),
+    () => ingresos.filter(i => seleccionados.has(i.id)).reduce((s, i) => {
+      const usd = i.moneda === 'VES' && Number(i.tasa_cambio) > 0
+        ? Number(i.monto) / Number(i.tasa_cambio)
+        : Number(i.monto)
+      return s + usd
+    }, 0),
     [ingresos, seleccionados]
   )
 

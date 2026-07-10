@@ -60,7 +60,7 @@ export default async function CarlaPage() {
   const CANALES_CUSTODIA = ['efectivo', 'personal_jose', 'personal_carla', 'personal_mary', 'personal_leysdem', 'zelle', 'usdt', 'otro']
   const { data: enCustodia } = await supabase
     .from('ingresos')
-    .select('id, numero_recibo, monto, moneda, canal_destino, custodio_id, custodio_externo, fecha_pago, clientes(nombre)')
+    .select('id, numero_recibo, monto, moneda, tasa_cambio, canal_destino, custodio_id, custodio_externo, fecha_pago, clientes(nombre)')
     .in('canal_destino', CANALES_CUSTODIA)
     .in('estado', ['aprobado', 'enviado_carla', 'entregado_carla'])
     .or('custodio_id.not.is.null,custodio_externo.not.is.null')
@@ -70,6 +70,13 @@ export default async function CarlaPage() {
     .from('usuarios')
     .select('id, nombre, rol')
     .in('rol', ['jose', 'carla', 'mary', 'leysdem'])
+
+  // Todo total en piso se expresa en USD. Un pago en bolívares se convierte
+  // con su tasa; NUNCA se suma el monto en Bs como si fueran dólares.
+  const montoUSD = (i: any) =>
+    i?.moneda === 'VES' && Number(i?.tasa_cambio) > 0
+      ? Number(i.monto) / Number(i.tasa_cambio)
+      : Number(i.monto)
 
   const custodiosMap = new Map<string, { id: string; nombre: string; rol: string; total: number; ingresos: any[] }>()
   for (const u of custodiosData ?? []) {
@@ -81,12 +88,12 @@ export default async function CarlaPage() {
     if (ing.custodio_id) {
       const c = custodiosMap.get(ing.custodio_id)
       if (!c) continue
-      c.total += Number(ing.monto)
+      c.total += montoUSD(ing)
       c.ingresos.push(ing)
     } else if ((ing as any).custodio_externo) {
       const nombre = (ing as any).custodio_externo as string
       const e = externosMap.get(nombre) ?? { nombre, total: 0, ingresos: [] }
-      e.total += Number(ing.monto)
+      e.total += montoUSD(ing)
       e.ingresos.push(ing)
       externosMap.set(nombre, e)
     }
@@ -102,9 +109,9 @@ export default async function CarlaPage() {
   // Ya confirmados por Carla
   const confirmados = (deJose ?? []).filter(i => i.estado === 'entregado_carla')
 
-  const totalEnviado   = (deJose ?? []).reduce((acc, i) => acc + Number(i.monto), 0)
-  const totalPendiente = pendientes.reduce((acc, i) => acc + Number(i.monto), 0)
-  const totalConfirmado = confirmados.reduce((acc, i) => acc + Number(i.monto), 0)
+  const totalEnviado   = (deJose ?? []).reduce((acc, i) => acc + montoUSD(i), 0)
+  const totalPendiente = pendientes.reduce((acc, i) => acc + montoUSD(i), 0)
+  const totalConfirmado = confirmados.reduce((acc, i) => acc + montoUSD(i), 0)
 
   return (
     <div className="p-4 lg:p-6 h-full">
@@ -140,7 +147,7 @@ export default async function CarlaPage() {
               const canalesDelCustodio = new Map<string, number>()
               for (const ing of c.ingresos) {
                 const k = ing.canal_destino as string
-                canalesDelCustodio.set(k, (canalesDelCustodio.get(k) ?? 0) + Number(ing.monto))
+                canalesDelCustodio.set(k, (canalesDelCustodio.get(k) ?? 0) + montoUSD(ing))
               }
               return (
                 <Link
