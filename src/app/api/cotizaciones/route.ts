@@ -51,15 +51,18 @@ export async function POST(req: Request) {
 
     const supabase = await createAdminClient()
 
-    // Verificar vendedora
+    // Verificar vendedora. El código interno de la casa (R000) siempre es
+    // válido: lo usa el generador del Centro de Mando y no debe depender del
+    // interruptor de "activa" (que sí aplica a las vendedoras públicas).
+    const CODIGO_CASA = 'R000'
+    const codigoTrim = String(codigo).trim()
     const { data: vendedora } = await supabase
       .from('vendedoras')
-      .select('nombre')
-      .eq('codigo', String(codigo).trim())
-      .eq('activa', true)
+      .select('nombre, activa')
+      .eq('codigo', codigoTrim)
       .single()
 
-    if (!vendedora) {
+    if (!vendedora || (!vendedora.activa && codigoTrim !== CODIGO_CASA)) {
       return NextResponse.json({ error: 'Código de vendedora inválido' }, { status: 401 })
     }
 

@@ -55,13 +55,16 @@ export async function POST(req: Request) {
     // 2. Vendedora (usar la del override, o buscar de la original por nombre)
     let vendedoraNombre = original.vendedora_nombre
     if (codigo) {
+      // El código interno de la casa (R000) siempre es válido, aunque esté
+      // inactivo; el interruptor de "activa" solo aplica a vendedoras públicas.
+      const CODIGO_CASA = 'R000'
+      const codigoTrim = String(codigo).trim()
       const { data: vendedora } = await supabase
         .from('vendedoras')
-        .select('nombre')
-        .eq('codigo', String(codigo).trim())
-        .eq('activa', true)
+        .select('nombre, activa')
+        .eq('codigo', codigoTrim)
         .single()
-      if (!vendedora) {
+      if (!vendedora || (!vendedora.activa && codigoTrim !== CODIGO_CASA)) {
         return NextResponse.json({ error: 'Código de vendedora inválido' }, { status: 401 })
       }
       vendedoraNombre = vendedora.nombre
