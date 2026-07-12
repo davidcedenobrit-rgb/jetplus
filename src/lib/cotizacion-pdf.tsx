@@ -391,18 +391,6 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 FIRMÓ, ACEPTÓ, ESTOY DE ACUERDO Y ASUMO EL COMPROMISO EN LO DESCRITO ANTERIORMENTE
               </Text>
             </View>
-          ) : es24 ? (
-            <View style={s.legalBox}>
-              <Text style={s.legalText}>
-                <Text style={s.legalBold}>VEHÍCULO NO HA SIDO PAGADO EN SU TOTALIDAD POR PARTE DEL CLIENTE: </Text>
-                {data.clienteNombre}, R.I.F.: {data.clienteCiRif}, SIN EMBARGO SE PROCEDE A ENTREGAR EL VEHÍCULO, MARCA: {data.marca}, MODELO: {data.modelo}, CON SU RESPECTIVA PÓLIZA DE SEGURO VEHICULAR, PREVIA APROBACIÓN DE LA EMPRESA: LA ORIENTAL AUTOMOTORS, C.A.; RIF: J-505692143.{'\n\n'}
-                <Text style={s.legalBold}>DE LOS PAGOS RESTANTES, EL CLIENTE: </Text>
-                {data.clienteNombre}, R.I.F.: {data.clienteCiRif}, SE COMPROMETE A REALIZAR LOS MISMOS DE LA SIGUIENTE MANERA:{'\n'}
-                • 24 CUOTAS MENSUALES DE: ${fmt(data.cuotaMensual)} C/U PAGADERAS LOS DÍAS 30 DE CADA MES.{'\n\n'}
-                <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
-                FIRMÓ, ACEPTÓ, ESTOY DE ACUERDO Y ASUMO EL COMPROMISO EN LO DESCRITO ANTERIORMENTE
-              </Text>
-            </View>
           ) : (
             <View style={s.legalBox}>
               <Text style={s.legalText}>
