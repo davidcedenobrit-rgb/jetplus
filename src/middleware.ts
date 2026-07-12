@@ -15,6 +15,11 @@ export async function middleware(request: NextRequest) {
     '/api/portal-clientes/aceptar',
     '/api/corporativo/cuestionario',
     '/api/corporativo/registro-publico',
+    // Respuesta del cliente a una cotización desde el correo (sin sesión,
+    // validado por token_respuesta). Sin esto, el POST se redirige al login
+    // y el navegador recibe un 405.
+    '/api/cotizaciones/responder',
+    '/api/cotizaciones/solicitar-descuento',
   ]
 
   if (publicApiPaths.some(path => pathname.startsWith(path))) {
