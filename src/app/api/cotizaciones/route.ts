@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
+import { getLogoBase64 } from '@/lib/cotizacion-logo'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -227,6 +228,7 @@ export async function POST(req: Request) {
     }
 
     const pdfData: CotizacionPDFData = {
+      logoSrc: getLogoBase64(),
       numero: cot.numero,
       fecha: fmtDate(hoy),
       vencimiento: fmtDate(venc),

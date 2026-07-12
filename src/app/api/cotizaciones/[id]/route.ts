@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData } from '@/lib/cotizacion-pdf'
+import { getLogoBase64 } from '@/lib/cotizacion-logo'
 
 function fmtDate(d: Date | string) {
   const date = typeof d === 'string' ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')) : d
@@ -136,6 +137,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (reenviar_correo) {
         try {
           const pdfData: CotizacionPDFData = {
+            logoSrc: getLogoBase64(),
             numero: cotActual.numero,
             fecha: fmtDate(cotActual.fecha),
             vencimiento: fmtDate(cotActual.vencimiento),
