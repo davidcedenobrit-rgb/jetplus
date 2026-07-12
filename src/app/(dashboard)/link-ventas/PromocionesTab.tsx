@@ -170,12 +170,17 @@ function VehiculoEditor({
     if (!f.marca.trim() || !f.modelo.trim()) { setErr('Marca y modelo son obligatorios'); return }
     if (f.precio_base <= 0) { setErr('El precio base debe ser mayor a 0'); return }
     setSaving(true); setErr('')
-    await onSave({
-      ...f,
-      gastos_contado: gcC,
-      gastos_credito: gcCr,
-    })
-    setSaving(false)
+    try {
+      await onSave({
+        ...f,
+        gastos_contado: gcC,
+        gastos_credito: gcCr,
+      })
+    } catch (e: any) {
+      setErr(e?.message || 'No se pudo guardar. Intenta de nuevo.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const inCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red bg-white'
@@ -478,16 +483,19 @@ export default function PromocionesTab({ catalogo }: { catalogo: any[] }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, orden: vehiculos.length }),
     })
-    const j = await r.json()
-    if (j.ok) { await load(); setShowAddForm(false) }
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok || !j.ok) throw new Error(j.error || 'No se pudo agregar el vehículo. Intenta de nuevo.')
+    await load(); setShowAddForm(false)
   }
 
   async function updateVehiculo(id: string, data: Partial<PromoVehiculo>) {
-    await fetch(`/api/promociones/vehiculos/${id}`, {
+    const r = await fetch(`/api/promociones/vehiculos/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(j.error || 'No se pudieron guardar los cambios. Intenta de nuevo.')
     await load()
     setExpandedId(null)
   }
