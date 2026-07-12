@@ -381,21 +381,15 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             </View>
           )}
 
-          {/* Texto legal */}
-          {esAC500 ? (
+          {/* Texto legal — solo en el plan Asegúrate $500 (compromiso de separación).
+              En cotización de contado y crédito no se muestra texto legal. */}
+          {esAC500 && (
             <View style={s.legalBox}>
               <Text style={s.legalText}>
                 <Text style={s.legalBold}>PLAN ASEGÚRATE $500 — COMPROMISO DE SEPARACIÓN: </Text>
                 El cliente {data.clienteNombre}, R.I.F.: {data.clienteCiRif}, separa el vehículo MARCA: {data.marca}, MODELO: {data.modelo}, bajo el PLAN ASEGÚRATE $500 a {data.ac500Schedule?.meses} meses, comprometiéndose a realizar los pagos según el cronograma indicado anteriormente.{'\n\n'}
                 <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
                 FIRMÓ, ACEPTÓ, ESTOY DE ACUERDO Y ASUMO EL COMPROMISO EN LO DESCRITO ANTERIORMENTE
-              </Text>
-            </View>
-          ) : (
-            <View style={s.legalBox}>
-              <Text style={s.legalText}>
-                <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
-                Los precios indicados son referenciales y están sujetos a disponibilidad de stock al momento de la compra. Esta cotización tiene una validez de 2 días a partir de la fecha de emisión. Para confirmar disponibilidad y precio final, contacte a su asesor.
               </Text>
             </View>
           )}
