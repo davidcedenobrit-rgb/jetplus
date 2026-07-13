@@ -122,13 +122,13 @@ export default function CreditosClient({
       const lao  = tieneTipo(grupo, 'inicial_la_oriental')
       const vehi = tieneTipo(grupo, 'financiamiento_vehimotors')
       // Filtros:
-      // - La Oriental: SOLO La Oriental (sin Vehimotors)
-      // - Vehimotors: SOLO Vehimotors (sin La Oriental)
+      // - La Oriental: tiene financiamiento de La Oriental (aunque también tenga Vehimotors)
+      // - Vehimotors: tiene financiamiento de Vehimotors
       // - Combinado: tiene los dos
       // - AC500 / Contado: por tipo
       // - Al día: clientes activos que no están en mora
-      if (filtroPlan === 'lao'       && !(lao && !vehi)) return false
-      if (filtroPlan === 'vehimotor' && !(vehi && !lao)) return false
+      if (filtroPlan === 'lao'       && !lao) return false
+      if (filtroPlan === 'vehimotor' && !vehi) return false
       if (filtroPlan === 'combinado' && !(lao && vehi)) return false
       if (filtroPlan === 'ac500'     && !tieneTipo(grupo, 'asegurate_500')) return false
       if (filtroPlan === 'contado'   && !esContado(grupo)) return false
