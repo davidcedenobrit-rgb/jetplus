@@ -115,6 +115,66 @@ export default async function VentasPage() {
         </div>
       </div>
 
+      {/* ── VEHÍCULOS ─────────────────────────────────────────────────────── */}
+      <section id="vehiculos" style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 20px 56px' }}>
+        <div style={{ marginBottom: 22 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede Maturín · Atención personalizada</p>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
+        </div>
+        <VehiculosFiltro vehiculos={lista} tasas={tasas} />
+      </section>
+
+      {/* ── PLAN 40% ──────────────────────────────────────────────────────── */}
+      <section style={{ background: '#fff', borderTop: '1px solid #ececec', borderBottom: '1px solid #ececec', padding: '60px 16px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
+          <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>📈 Financiamiento directo</span>
+          <h2 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 900, color: '#111827', marginBottom: 14, lineHeight: 1.2 }}>
+            Estrena con <span style={{ color: '#a16207' }}>40% de inicial</span> y 24 cuotas fijas
+          </h2>
+          <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 520, margin: '0 auto 36px', lineHeight: 1.6 }}>
+            Sin bancos, sin trámites eternos. Financiamiento directo con La Oriental Automotors.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, maxWidth: 660, margin: '0 auto 32px' }}>
+            {[
+              { n: '01', icon: '🚗', t: 'Elige tu modelo', d: 'SUVs, sedanes, pickups — el que se adapte a tu estilo.' },
+              { n: '02', icon: '💰', t: 'Entrega el 40% de inicial', d: 'El 60% restante en cuotas mensuales fijas.' },
+              { n: '03', icon: '🔑', t: 'Sal manejando ese día', d: 'Al entregar la inicial, te llevas tu vehículo.' },
+            ].map(s => (
+              <div key={s.n} className="lo-info-box" style={{ textAlign: 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#ca8a04', letterSpacing: '.5px' }}>{s.n}</span>
+                  <span style={{ fontSize: 22 }}>{s.icon}</span>
+                </div>
+                <p style={{ fontWeight: 700, fontSize: 13, color: '#111', marginBottom: 5 }}>{s.t}</p>
+                <p style={{ color: '#6b7280', fontSize: 12, lineHeight: 1.5 }}>{s.d}</p>
+              </div>
+            ))}
+          </div>
+          <a href={`${WA_BASE}?text=${WA_FIN}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">Consultar plan de financiamiento</a>
+        </div>
+      </section>
+
+      {/* ── AC500 ─────────────────────────────────────────────────────────── */}
+      {acLista.length > 0 && (
+        <section id="ac500" style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 20px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>🛡️ Plan exclusivo</span>
+            <h2 style={{ fontSize: 'clamp(26px, 4.5vw, 42px)', fontWeight: 900, color: '#111827', marginBottom: 14, lineHeight: 1.1 }}>
+              Asegúrate con <span style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>$500</span>
+            </h2>
+            <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 560, margin: '0 auto 28px', lineHeight: 1.6 }}>
+              Reserva tu vehículo MG o MAXUS con solo $500 y accede a un precio preferencial hasta 30% por debajo del mercado. Completa el resto con un cronograma de cuotas y recíbelo en el mes 6.
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {['🛡️ Precio congelado', '📉 Hasta 30% menos', '📅 Cuotas programadas', '🚗 Entrega mes 6', '✅ Sin letra chica'].map(p => (
+                <span key={p} className="lo-perk">{p}</span>
+              ))}
+            </div>
+          </div>
+          <AC500Filtro vehiculos={acLista} />
+        </section>
+      )}
+
       {/* ── PROMOCIONES ESPECIALES ────────────────────────────────────────── */}
       {promoActiva && promoVehiculosList.length > 0 && (
         <section id="promociones" style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 48px' }}>
@@ -179,66 +239,6 @@ export default async function VentasPage() {
               )
             })}
           </div>
-        </section>
-      )}
-
-      {/* ── VEHÍCULOS ─────────────────────────────────────────────────────── */}
-      <section id="vehiculos" style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 20px 56px' }}>
-        <div style={{ marginBottom: 22 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede Maturín · Atención personalizada</p>
-          <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
-        </div>
-        <VehiculosFiltro vehiculos={lista} tasas={tasas} />
-      </section>
-
-      {/* ── PLAN 40% ──────────────────────────────────────────────────────── */}
-      <section style={{ background: '#fff', borderTop: '1px solid #ececec', borderBottom: '1px solid #ececec', padding: '60px 16px' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
-          <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>📈 Financiamiento directo</span>
-          <h2 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 900, color: '#111827', marginBottom: 14, lineHeight: 1.2 }}>
-            Estrena con <span style={{ color: '#a16207' }}>40% de inicial</span> y 24 cuotas fijas
-          </h2>
-          <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 520, margin: '0 auto 36px', lineHeight: 1.6 }}>
-            Sin bancos, sin trámites eternos. Financiamiento directo con La Oriental Automotors.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, maxWidth: 660, margin: '0 auto 32px' }}>
-            {[
-              { n: '01', icon: '🚗', t: 'Elige tu modelo', d: 'SUVs, sedanes, pickups — el que se adapte a tu estilo.' },
-              { n: '02', icon: '💰', t: 'Entrega el 40% de inicial', d: 'El 60% restante en cuotas mensuales fijas.' },
-              { n: '03', icon: '🔑', t: 'Sal manejando ese día', d: 'Al entregar la inicial, te llevas tu vehículo.' },
-            ].map(s => (
-              <div key={s.n} className="lo-info-box" style={{ textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#ca8a04', letterSpacing: '.5px' }}>{s.n}</span>
-                  <span style={{ fontSize: 22 }}>{s.icon}</span>
-                </div>
-                <p style={{ fontWeight: 700, fontSize: 13, color: '#111', marginBottom: 5 }}>{s.t}</p>
-                <p style={{ color: '#6b7280', fontSize: 12, lineHeight: 1.5 }}>{s.d}</p>
-              </div>
-            ))}
-          </div>
-          <a href={`${WA_BASE}?text=${WA_FIN}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">Consultar plan de financiamiento</a>
-        </div>
-      </section>
-
-      {/* ── AC500 ─────────────────────────────────────────────────────────── */}
-      {acLista.length > 0 && (
-        <section id="ac500" style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 20px' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>🛡️ Plan exclusivo</span>
-            <h2 style={{ fontSize: 'clamp(26px, 4.5vw, 42px)', fontWeight: 900, color: '#111827', marginBottom: 14, lineHeight: 1.1 }}>
-              Asegúrate con <span style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>$500</span>
-            </h2>
-            <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 560, margin: '0 auto 28px', lineHeight: 1.6 }}>
-              Reserva tu vehículo MG o MAXUS con solo $500 y accede a un precio preferencial hasta 30% por debajo del mercado. Completa el resto con un cronograma de cuotas y recíbelo en el mes 6.
-            </p>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {['🛡️ Precio congelado', '📉 Hasta 30% menos', '📅 Cuotas programadas', '🚗 Entrega mes 6', '✅ Sin letra chica'].map(p => (
-                <span key={p} className="lo-perk">{p}</span>
-              ))}
-            </div>
-          </div>
-          <AC500Filtro vehiculos={acLista} />
         </section>
       )}
 
