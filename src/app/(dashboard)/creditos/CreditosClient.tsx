@@ -179,13 +179,14 @@ export default function CreditosClient({
     return res
   }, [grupos, cuotasObj, filtroPlan, busqueda, mesActual, hoyStr])
 
-  // Orden: por mejor pagador (al día primero, luego mayor % pagado) o por defecto.
+  // Mejores pagadores: SOLO clientes al día (sin ninguna cuota vencida en
+  // ningún crédito), ordenados por mayor % pagado. Si no está activo el modo,
+  // se muestra la lista normal.
   const visible = useMemo(() => {
     if (!ordenMejores) return filtrados
-    return [...filtrados].sort((a, b) =>
-      (Number(a.m.estadoGeneral === 'mora') - Number(b.m.estadoGeneral === 'mora')) ||
-      (b.m.pct - a.m.pct) ||
-      (b.m.montoPagado - a.m.montoPagado))
+    return filtrados
+      .filter(r => r.m.estadoGeneral === 'activo')
+      .sort((a, b) => (b.m.pct - a.m.pct) || (b.m.montoPagado - a.m.montoPagado))
   }, [filtrados, ordenMejores])
 
   // Pendiente por cobrar en el mes actual: suma de las cuotas que vencen este
@@ -264,7 +265,7 @@ export default function CreditosClient({
       {(filtroPlan !== 'todos' || busqueda || ordenMejores) && (
         <p className="text-xs text-oriental-gray mb-3">
           Mostrando <strong className="text-oriental-black">{visible.length}</strong> de {grupos.length} vehículos
-          {ordenMejores && <span className="text-amber-700 font-semibold"> · ordenado por mejor pagador</span>}
+          {ordenMejores && <span className="text-amber-700 font-semibold"> · solo clientes al día, por % pagado</span>}
           <button
             onClick={() => { setFiltroPlan('todos'); setBusqueda(''); setOrdenMejores(false) }}
             className="ml-2 text-oriental-red hover:underline"
