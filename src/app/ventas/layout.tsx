@@ -82,6 +82,19 @@ export default function VentasLayout({ children }: { children: React.ReactNode }
         .lo-perk { display:inline-flex; align-items:center; gap:8px; background:#fff; border:1px solid #e5e7eb; padding:9px 16px; border-radius:40px; font-size:12px; font-weight:600; color:#444; }
 
         @media (max-width:640px){ .lo-brand-sep{display:none} }
+
+        /* ── Responsive móvil ── */
+        @media (max-width:820px){
+          /* Hero: apilar en una sola columna (el grid va en estilo inline, por eso !important) */
+          .lo-hero-grid{ grid-template-columns:1fr !important; }
+          .lo-hero-right{ min-width:0 !important; max-width:none !important; width:100% !important; }
+          .lo-hero-grid > .lo-glass{ padding:26px 22px !important; }
+        }
+        @media (max-width:480px){
+          .lo-hero-grid > .lo-glass{ padding:22px 18px !important; border-radius:22px; }
+          /* Botones del hero a ancho completo para que no se corten */
+          .lo-btn-gold, .lo-btn-glass, .lo-btn-wa{ flex:1 1 100%; }
+        }
       `}</style>
       {children}
     </>
