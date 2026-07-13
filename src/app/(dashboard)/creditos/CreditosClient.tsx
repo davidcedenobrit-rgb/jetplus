@@ -125,10 +125,14 @@ export default function CreditosClient({
     }
     let gruposDisplay = Array.from(map.values())
 
-    // 3. Combinado: solo vehículos que tienen La Oriental Y Vehimotors (fila combinada)
+    // 3. Combinado: vehículos que tienen La Oriental Y Vehimotors. La fila
+    //    suma SOLO esos dos créditos (no otros como cuota especial), para que
+    //    el total cuadre con La Oriental + Vehimotors.
     if (filtroPlan === 'combinado') {
-      gruposDisplay = gruposDisplay.filter(g =>
-        tieneTipo(g, 'inicial_la_oriental') && tieneTipo(g, 'financiamiento_vehimotors'))
+      gruposDisplay = gruposDisplay
+        .filter(g => tieneTipo(g, 'inicial_la_oriental') && tieneTipo(g, 'financiamiento_vehimotors'))
+        .map(g => g.filter((c: any) =>
+          c.plan_tipo === 'inicial_la_oriental' || c.plan_tipo === 'financiamiento_vehimotors'))
     }
 
     let res = gruposDisplay.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj) }))
