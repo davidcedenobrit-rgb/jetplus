@@ -20,17 +20,29 @@ export default async function CreditosPage({
 
   const { data: creditos } = await query
 
-  // Fetch cuotas para calcular saldo real
+  // Fetch cuotas para calcular saldo real.
+  // Se pagina porque Supabase devuelve máx. 1000 filas por consulta y hay más
+  // cuotas que eso; sin paginar, a algunos créditos les faltarían cuotas y
+  // saldrían mal el saldo y la mora.
   const creditoIds = (creditos ?? []).map(c => c.id)
-  const cuotasObj: Record<string, { estado: string; monto: number; monto_pagado: number }[]> = {}
+  const cuotasObj: Record<string, { estado: string; monto: number; monto_pagado: number; fecha_vencimiento: string | null }[]> = {}
   if (creditoIds.length > 0) {
-    const { data: cuotas } = await supabase
-      .from('cuotas')
-      .select('credito_id, estado, monto, monto_pagado, fecha_vencimiento')
-      .in('credito_id', creditoIds)
-    for (const q of cuotas ?? []) {
-      if (!cuotasObj[q.credito_id]) cuotasObj[q.credito_id] = []
-      cuotasObj[q.credito_id].push(q)
+    const PAGE = 1000
+    let from = 0
+    while (true) {
+      const { data: cuotas } = await supabase
+        .from('cuotas')
+        .select('credito_id, estado, monto, monto_pagado, fecha_vencimiento')
+        .in('credito_id', creditoIds)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (!cuotas || cuotas.length === 0) break
+      for (const q of cuotas) {
+        if (!cuotasObj[q.credito_id]) cuotasObj[q.credito_id] = []
+        cuotasObj[q.credito_id].push(q as any)
+      }
+      if (cuotas.length < PAGE) break
+      from += PAGE
     }
   }
 
