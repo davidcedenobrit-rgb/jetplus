@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { CreditCard, Search, X } from 'lucide-react'
+import { CreditCard, Search, X, Trophy, CalendarClock } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -47,11 +47,9 @@ function categorizarGrupo(grupo: any[]): FiltroPlan {
   const tieneVehimotors  = planes.includes('financiamiento_vehimotors')
   const tipoCarro        = (primero as any).vehiculos?.tipo_compra
 
-  // Prioridad: si tiene plan_tipo específico, se usa ese
   if (tieneAC500) return 'ac500'
   if (tieneInicial) return 'f_lao_vehi'
   if (tieneVehimotors) return 'f_vehimotor'
-  // Sin plan específico + vehículo de contado → contado
   if (tipoCarro === 'contado') return 'contado'
   return 'contado'
 }
@@ -67,6 +65,45 @@ function calcSaldo(grupo: any[], cuotasObj: Record<string, any[]>) {
   }, 0)
 }
 
+// Cuota mensual representativa de un crédito: el monto que más se repite entre
+// sus cuotas (todas suelen ser iguales); si no hay cuotas, monto_financiado/num_cuotas.
+function cuotaRepresentativa(qs: any[], credito: any): number {
+  if (qs && qs.length) {
+    const freq: Record<string, number> = {}
+    let best: number | null = null, bestN = 0
+    for (const q of qs) {
+      const m = Number(q.monto)
+      const k = String(m)
+      freq[k] = (freq[k] ?? 0) + 1
+      if (freq[k] > bestN) { bestN = freq[k]; best = m }
+    }
+    if (best != null) return best
+  }
+  const n = Number(credito.num_cuotas) || 0
+  return n > 0 ? Number(credito.monto_financiado) / n : 0
+}
+
+function calcMetrics(grupo: any[], cuotasObj: Record<string, any[]>) {
+  const totalFinanciado = grupo.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
+  const totalSaldo      = calcSaldo(grupo, cuotasObj)
+  const montoPagado     = Math.max(0, totalFinanciado - totalSaldo)
+  const pct             = totalFinanciado > 0 ? (montoPagado / totalFinanciado) * 100 : 0
+  const totalCuotas     = grupo.reduce((s: number, c: any) => s + Number(c.num_cuotas), 0)
+
+  let vencidas = 0, cuotaMensual = 0
+  for (const c of grupo) {
+    const qs = cuotasObj[c.id] ?? []
+    vencidas += qs.filter((q: any) => q.estado === 'vencida').length
+    cuotaMensual += cuotaRepresentativa(qs, c)
+  }
+
+  const estadoGeneral = grupo.some((c: any) => c.estado === 'mora') ? 'mora'
+    : grupo.every((c: any) => c.estado === 'pagado') ? 'pagado'
+    : 'activo'
+
+  return { totalFinanciado, totalSaldo, montoPagado, pct, totalCuotas, vencidas, cuotaMensual, estadoGeneral }
+}
+
 export default function CreditosClient({
   grupos,
   cuotasObj,
@@ -76,10 +113,11 @@ export default function CreditosClient({
 }) {
   const [filtroPlan, setFiltroPlan] = useState<FiltroPlan>('todos')
   const [busqueda, setBusqueda] = useState('')
+  const [showRanking, setShowRanking] = useState(false)
 
   const gruposConCategoria = useMemo(() =>
-    grupos.map(g => ({ grupo: g, categoria: categorizarGrupo(g) })),
-  [grupos])
+    grupos.map(g => ({ grupo: g, categoria: categorizarGrupo(g), m: calcMetrics(g, cuotasObj) })),
+  [grupos, cuotasObj])
 
   const visible = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -98,8 +136,51 @@ export default function CreditosClient({
     })
   }, [gruposConCategoria, filtroPlan, busqueda])
 
+  // Cobro mensual estimado: suma de las cuotas mensuales de la cartera activa
+  // (no pagada). Solo créditos en USD para no mezclar monedas.
+  const cobroMensual = useMemo(() =>
+    visible.reduce((s, { grupo, m }) => {
+      const moneda = (grupo[0] as any).moneda ?? 'USD'
+      if (m.estadoGeneral === 'pagado' || moneda !== 'USD') return s
+      return s + m.cuotaMensual
+    }, 0),
+  [visible])
+
+  // Ranking de mejores pagadores: los que NO están en mora primero, luego mayor % pagado.
+  const ranking = useMemo(() =>
+    [...visible]
+      .map(({ grupo, m }) => ({ cliente: (grupo[0] as any).clientes, primero: grupo[0], m }))
+      .sort((a, b) =>
+        (Number(a.m.estadoGeneral === 'mora') - Number(b.m.estadoGeneral === 'mora')) ||
+        (b.m.pct - a.m.pct) ||
+        (b.m.montoPagado - a.m.montoPagado))
+      .slice(0, 15),
+  [visible])
+
   return (
     <div>
+      {/* Resumen: cobro mensual + mejores pagadores */}
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-sm">
+          <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+            <CalendarClock size={17} className="text-green-700" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider">Cobro mensual estimado</p>
+            <p className="text-lg font-extrabold text-green-700 leading-tight">{formatCurrency(cobroMensual, 'USD')}</p>
+          </div>
+          <p className="text-[10px] text-gray-400 max-w-[130px] leading-snug hidden sm:block">
+            Suma de las cuotas mensuales de la cartera activa mostrada.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowRanking(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-sm transition-colors"
+        >
+          <Trophy size={16} /> Mejores pagadores
+        </button>
+      </div>
+
       {/* Filtros de plan */}
       <div className="flex items-center gap-2 flex-wrap mb-4">
         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Plan</span>
@@ -155,6 +236,7 @@ export default function CreditosClient({
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Cliente</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Placa</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Financiamiento</th>
+                <th className="text-right px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Cuota mensual</th>
                 <th className="text-right px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Total financiado</th>
                 <th className="text-right px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Saldo total</th>
                 <th className="text-left px-4 py-3 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Cuotas</th>
@@ -163,20 +245,9 @@ export default function CreditosClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {visible.map(({ grupo }) => {
+              {visible.map(({ grupo, m }) => {
                 const primero = grupo[0]
                 const cliente = (primero as any).clientes
-
-                const totalFinanciado = grupo.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
-                const totalSaldo      = calcSaldo(grupo, cuotasObj)
-                const totalCuotas     = grupo.reduce((s: number, c: any) => s + Number(c.num_cuotas), 0)
-                const porcentajePagado = totalFinanciado > 0
-                  ? ((totalFinanciado - totalSaldo) / totalFinanciado) * 100 : 0
-
-                const estadoGeneral = grupo.some((c: any) => c.estado === 'mora') ? 'mora'
-                  : grupo.every((c: any) => c.estado === 'pagado') ? 'pagado'
-                  : 'activo'
-
                 const tipos = [...new Set(grupo.map((c: any) => c.plan_tipo))]
                 const detailLink = `/creditos/${primero.id}`
 
@@ -200,19 +271,22 @@ export default function CreditosClient({
                         ))}
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-right font-bold text-oriental-black whitespace-nowrap">
+                      {m.cuotaMensual > 0 ? formatCurrency(m.cuotaMensual, primero.moneda) : '—'}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold text-oriental-black">
-                      {formatCurrency(totalFinanciado, primero.moneda)}
+                      {formatCurrency(m.totalFinanciado, primero.moneda)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="font-bold text-oriental-red">{formatCurrency(totalSaldo, primero.moneda)}</p>
+                      <p className="font-bold text-oriental-red">{formatCurrency(m.totalSaldo, primero.moneda)}</p>
                       <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                        <div className="bg-green-500 h-1 rounded-full" style={{ width: `${Math.min(100, porcentajePagado)}%` }} />
+                        <div className="bg-green-500 h-1 rounded-full" style={{ width: `${Math.min(100, m.pct)}%` }} />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-oriental-gray">{totalCuotas} cuotas</td>
+                    <td className="px-4 py-3 text-oriental-gray">{m.totalCuotas} cuotas</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${estadoColors[estadoGeneral] ?? 'bg-gray-100 text-gray-700'}`}>
-                        {estadoGeneral}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${estadoColors[m.estadoGeneral] ?? 'bg-gray-100 text-gray-700'}`}>
+                        {m.estadoGeneral}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -225,7 +299,7 @@ export default function CreditosClient({
               })}
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={9} className="px-4 py-16 text-center">
                     <CreditCard size={32} className="mx-auto text-gray-300 mb-3" />
                     <p className="text-oriental-gray text-sm">No hay créditos con estos filtros</p>
                     <button
@@ -241,6 +315,62 @@ export default function CreditosClient({
           </table>
         </div>
       </div>
+
+      {/* Modal: mejores pagadores */}
+      {showRanking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowRanking(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
+                  <Trophy size={18} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-oriental-black text-base">Mejores pagadores</h2>
+                  <p className="text-xs text-oriental-gray">Menos cuotas vencidas y mayor % pagado</p>
+                </div>
+              </div>
+              <button onClick={() => setShowRanking(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
+                <X size={16} className="text-oriental-gray" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-2">
+              {ranking.length === 0 && (
+                <p className="text-sm text-oriental-gray text-center py-8">No hay créditos para mostrar.</p>
+              )}
+              {ranking.map(({ cliente, primero, m }, i) => (
+                <Link
+                  key={primero.vehiculo_id ?? primero.id}
+                  href={`/creditos/${primero.id}`}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50/40 transition-all"
+                >
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold flex-shrink-0 ${
+                    i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-gray-300 text-white' : i === 2 ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-oriental-black text-sm truncate">{cliente?.nombre ?? '—'}</p>
+                    <p className="text-[11px] text-oriental-gray">
+                      Pagado {formatCurrency(m.montoPagado, primero.moneda)}
+                      {m.estadoGeneral === 'mora'
+                        ? <span className="text-red-600 font-semibold"> · En mora{m.vencidas > 0 ? ` (${m.vencidas} venc.)` : ''}</span>
+                        : m.estadoGeneral === 'pagado'
+                        ? <span className="text-blue-600 font-semibold"> · Pagado ✓</span>
+                        : <span className="text-green-600 font-semibold"> · Al día</span>}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-extrabold text-green-700">{m.pct.toFixed(0)}%</p>
+                    <p className="text-[10px] text-gray-400">pagado</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
