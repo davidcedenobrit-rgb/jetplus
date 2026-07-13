@@ -7,16 +7,17 @@ import { formatCurrency } from '@/lib/utils'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type FiltroPlan = 'todos' | 'lao' | 'vehimotor' | 'combinado' | 'ac500' | 'contado' | 'aldia'
+type FiltroPlan = 'todos' | 'lao' | 'vehimotor' | 'cuota_especial' | 'combinado' | 'ac500' | 'contado' | 'aldia'
 
 const FILTROS_PLAN: { value: FiltroPlan; label: string; activeClass: string }[] = [
-  { value: 'todos',     label: 'Todos',       activeClass: 'bg-oriental-black text-white border-oriental-black' },
-  { value: 'lao',       label: 'La Oriental', activeClass: 'bg-purple-600 text-white border-purple-600' },
-  { value: 'vehimotor', label: 'Vehimotors',  activeClass: 'bg-indigo-600 text-white border-indigo-600' },
-  { value: 'combinado', label: 'Combinado',   activeClass: 'bg-fuchsia-600 text-white border-fuchsia-600' },
-  { value: 'ac500',     label: 'AC500',       activeClass: 'bg-emerald-600 text-white border-emerald-600' },
-  { value: 'contado',   label: 'Contado',     activeClass: 'bg-blue-600 text-white border-blue-600' },
-  { value: 'aldia',     label: 'Al día',      activeClass: 'bg-green-600 text-white border-green-600' },
+  { value: 'todos',          label: 'Todos',          activeClass: 'bg-oriental-black text-white border-oriental-black' },
+  { value: 'lao',            label: 'La Oriental',    activeClass: 'bg-purple-600 text-white border-purple-600' },
+  { value: 'vehimotor',      label: 'Vehimotors',     activeClass: 'bg-indigo-600 text-white border-indigo-600' },
+  { value: 'cuota_especial', label: 'Cuota especial', activeClass: 'bg-teal-600 text-white border-teal-600' },
+  { value: 'combinado',      label: 'Combinado',      activeClass: 'bg-fuchsia-600 text-white border-fuchsia-600' },
+  { value: 'ac500',          label: 'AC500',          activeClass: 'bg-emerald-600 text-white border-emerald-600' },
+  { value: 'contado',        label: 'Contado',        activeClass: 'bg-blue-600 text-white border-blue-600' },
+  { value: 'aldia',          label: 'Al día',         activeClass: 'bg-green-600 text-white border-green-600' },
 ]
 
 const planBadge = (tipo: string | null) =>
@@ -110,11 +111,12 @@ export default function CreditosClient({
     // 1. Seleccionar SOLO los créditos del tipo filtrado (para que la fila
     //    muestre únicamente ese financiamiento, no el combinado del vehículo).
     let creditos: any[]
-    if (filtroPlan === 'lao')            creditos = all.filter((c: any) => c.plan_tipo === 'inicial_la_oriental')
-    else if (filtroPlan === 'vehimotor') creditos = all.filter((c: any) => c.plan_tipo === 'financiamiento_vehimotors')
-    else if (filtroPlan === 'ac500')     creditos = all.filter((c: any) => c.plan_tipo === 'asegurate_500')
-    else if (filtroPlan === 'contado')   creditos = all.filter((c: any) => !['inicial_la_oriental', 'financiamiento_vehimotors', 'asegurate_500'].includes(c.plan_tipo))
-    else                                 creditos = all // todos, combinado, aldia
+    if (filtroPlan === 'lao')                 creditos = all.filter((c: any) => c.plan_tipo === 'inicial_la_oriental')
+    else if (filtroPlan === 'vehimotor')      creditos = all.filter((c: any) => c.plan_tipo === 'financiamiento_vehimotors')
+    else if (filtroPlan === 'cuota_especial') creditos = all.filter((c: any) => c.plan_tipo === 'cuota_especial')
+    else if (filtroPlan === 'ac500')          creditos = all.filter((c: any) => c.plan_tipo === 'asegurate_500')
+    else if (filtroPlan === 'contado')        creditos = all.filter((c: any) => !['inicial_la_oriental', 'financiamiento_vehimotors', 'asegurate_500', 'cuota_especial'].includes(c.plan_tipo))
+    else                                      creditos = all // todos, combinado, aldia
 
     // 2. Agrupar por vehículo
     const map = new Map<string, any[]>()
@@ -126,13 +128,11 @@ export default function CreditosClient({
     let gruposDisplay = Array.from(map.values())
 
     // 3. Combinado: vehículos que tienen La Oriental Y Vehimotors. La fila
-    //    suma SOLO esos dos créditos (no otros como cuota especial), para que
-    //    el total cuadre con La Oriental + Vehimotors.
+    //    muestra TODOS los créditos del vehículo juntos (La Oriental +
+    //    Vehimotors + Cuota Especial si la tiene).
     if (filtroPlan === 'combinado') {
-      gruposDisplay = gruposDisplay
-        .filter(g => tieneTipo(g, 'inicial_la_oriental') && tieneTipo(g, 'financiamiento_vehimotors'))
-        .map(g => g.filter((c: any) =>
-          c.plan_tipo === 'inicial_la_oriental' || c.plan_tipo === 'financiamiento_vehimotors'))
+      gruposDisplay = gruposDisplay.filter(g =>
+        tieneTipo(g, 'inicial_la_oriental') && tieneTipo(g, 'financiamiento_vehimotors'))
     }
 
     let res = gruposDisplay.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj) }))
