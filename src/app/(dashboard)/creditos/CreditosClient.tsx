@@ -43,14 +43,6 @@ const estadoColors: Record<string, string> = {
 
 const tieneTipo = (grupo: any[], tipo: string) => grupo.some((c: any) => c.plan_tipo === tipo)
 
-// "Contado" agrupa lo que no es La Oriental / Vehimotors / AC500 (catch-all,
-// igual que antes: incluye créditos sin plan, cuota especial, 40/60, etc.).
-function esContado(grupo: any[]) {
-  return !tieneTipo(grupo, 'inicial_la_oriental')
-    && !tieneTipo(grupo, 'financiamiento_vehimotors')
-    && !tieneTipo(grupo, 'asegurate_500')
-}
-
 function calcSaldo(grupo: any[], cuotasObj: Record<string, any[]>) {
   return grupo.reduce((s: number, c: any) => {
     const qs = cuotasObj[c.id] ?? []
@@ -112,40 +104,53 @@ export default function CreditosClient({
   const [busqueda, setBusqueda] = useState('')
   const [ordenMejores, setOrdenMejores] = useState(false)
 
-  const gruposConMetrics = useMemo(() =>
-    grupos.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj) })),
-  [grupos, cuotasObj])
-
   const filtrados = useMemo(() => {
+    const all = grupos.flat()
+
+    // 1. Seleccionar SOLO los créditos del tipo filtrado (para que la fila
+    //    muestre únicamente ese financiamiento, no el combinado del vehículo).
+    let creditos: any[]
+    if (filtroPlan === 'lao')            creditos = all.filter((c: any) => c.plan_tipo === 'inicial_la_oriental')
+    else if (filtroPlan === 'vehimotor') creditos = all.filter((c: any) => c.plan_tipo === 'financiamiento_vehimotors')
+    else if (filtroPlan === 'ac500')     creditos = all.filter((c: any) => c.plan_tipo === 'asegurate_500')
+    else if (filtroPlan === 'contado')   creditos = all.filter((c: any) => !['inicial_la_oriental', 'financiamiento_vehimotors', 'asegurate_500'].includes(c.plan_tipo))
+    else                                 creditos = all // todos, combinado, aldia
+
+    // 2. Agrupar por vehículo
+    const map = new Map<string, any[]>()
+    for (const c of creditos) {
+      const key = c.vehiculo_id ?? c.id
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(c)
+    }
+    let gruposDisplay = Array.from(map.values())
+
+    // 3. Combinado: solo vehículos que tienen La Oriental Y Vehimotors (fila combinada)
+    if (filtroPlan === 'combinado') {
+      gruposDisplay = gruposDisplay.filter(g =>
+        tieneTipo(g, 'inicial_la_oriental') && tieneTipo(g, 'financiamiento_vehimotors'))
+    }
+
+    let res = gruposDisplay.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj) }))
+
+    // 4. Al día: solo activos que no están en mora
+    if (filtroPlan === 'aldia') res = res.filter(r => r.m.estadoGeneral === 'activo')
+
+    // 5. Búsqueda
     const q = busqueda.trim().toLowerCase()
-    return gruposConMetrics.filter(({ grupo, m }) => {
-      const lao  = tieneTipo(grupo, 'inicial_la_oriental')
-      const vehi = tieneTipo(grupo, 'financiamiento_vehimotors')
-      // Filtros:
-      // - La Oriental: tiene financiamiento de La Oriental (aunque también tenga Vehimotors)
-      // - Vehimotors: tiene financiamiento de Vehimotors
-      // - Combinado: tiene los dos
-      // - AC500 / Contado: por tipo
-      // - Al día: clientes activos que no están en mora
-      if (filtroPlan === 'lao'       && !lao) return false
-      if (filtroPlan === 'vehimotor' && !vehi) return false
-      if (filtroPlan === 'combinado' && !(lao && vehi)) return false
-      if (filtroPlan === 'ac500'     && !tieneTipo(grupo, 'asegurate_500')) return false
-      if (filtroPlan === 'contado'   && !esContado(grupo)) return false
-      if (filtroPlan === 'aldia'     && m.estadoGeneral !== 'activo') return false
-      // Búsqueda
-      if (q) {
+    if (q) {
+      res = res.filter(({ grupo }) => {
         const primero = grupo[0]
         const cliente = (primero as any).clientes
         const haystack = [
           primero.placa, cliente?.nombre, cliente?.cedula_rif,
           ...grupo.map((c: any) => c.plan_tipo),
         ].filter(Boolean).join(' ').toLowerCase()
-        if (!haystack.includes(q)) return false
-      }
-      return true
-    })
-  }, [gruposConMetrics, filtroPlan, busqueda])
+        return haystack.includes(q)
+      })
+    }
+    return res
+  }, [grupos, cuotasObj, filtroPlan, busqueda])
 
   // Orden: por mejor pagador (al día primero, luego mayor % pagado) o por defecto.
   const visible = useMemo(() => {
