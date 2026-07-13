@@ -114,6 +114,7 @@ export default function CreditosClient({
   const [filtroPlan, setFiltroPlan] = useState<FiltroPlan>('todos')
   const [busqueda, setBusqueda] = useState('')
   const [showRanking, setShowRanking] = useState(false)
+  const [segRank, setSegRank] = useState<'todos' | 'lao' | 'vehi' | 'ac500'>('todos')
 
   const gruposConCategoria = useMemo(() =>
     grupos.map(g => ({ grupo: g, categoria: categorizarGrupo(g), m: calcMetrics(g, cuotasObj) })),
@@ -146,16 +147,31 @@ export default function CreditosClient({
     }, 0),
   [visible])
 
-  // Ranking de mejores pagadores: los que NO están en mora primero, luego mayor % pagado.
-  const ranking = useMemo(() =>
-    [...visible]
-      .map(({ grupo, m }) => ({ cliente: (grupo[0] as any).clientes, primero: grupo[0], m }))
-      .sort((a, b) =>
-        (Number(a.m.estadoGeneral === 'mora') - Number(b.m.estadoGeneral === 'mora')) ||
-        (b.m.pct - a.m.pct) ||
-        (b.m.montoPagado - a.m.montoPagado))
-      .slice(0, 15),
-  [visible])
+  // Base del ranking: todos los grupos con banderas por tipo de crédito.
+  const rankingBase = useMemo(() =>
+    gruposConCategoria.map(({ grupo, m }) => ({
+      cliente: (grupo[0] as any).clientes,
+      primero: grupo[0],
+      m,
+      tieneLao:    grupo.some((c: any) => c.plan_tipo === 'inicial_la_oriental'),
+      tieneVehi:   grupo.some((c: any) => c.plan_tipo === 'financiamiento_vehimotors'),
+      tieneAc500:  grupo.some((c: any) => c.plan_tipo === 'asegurate_500'),
+    })),
+  [gruposConCategoria])
+
+  // Ranking segmentado por tipo: los que NO están en mora primero, luego mayor % pagado.
+  const ranking = useMemo(() => {
+    const base = rankingBase.filter(r =>
+      segRank === 'todos' ? true :
+      segRank === 'lao'   ? r.tieneLao :
+      segRank === 'vehi'  ? r.tieneVehi :
+      r.tieneAc500)
+    return [...base].sort((a, b) =>
+      (Number(a.m.estadoGeneral === 'mora') - Number(b.m.estadoGeneral === 'mora')) ||
+      (b.m.pct - a.m.pct) ||
+      (b.m.montoPagado - a.m.montoPagado))
+      .slice(0, 15)
+  }, [rankingBase, segRank])
 
   return (
     <div>
@@ -334,6 +350,27 @@ export default function CreditosClient({
               <button onClick={() => setShowRanking(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
                 <X size={16} className="text-oriental-gray" />
               </button>
+            </div>
+            {/* Segmentar por tipo de crédito */}
+            <div className="flex gap-2 px-4 pt-3 pb-2 flex-wrap border-b border-gray-100">
+              {([
+                { v: 'todos', l: 'Todos' },
+                { v: 'lao',   l: 'La Oriental' },
+                { v: 'vehi',  l: 'Vehimotors' },
+                { v: 'ac500', l: 'AC500' },
+              ] as const).map(s => (
+                <button
+                  key={s.v}
+                  onClick={() => setSegRank(s.v)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
+                    segRank === s.v
+                      ? 'bg-amber-500 text-white border-amber-500'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {s.l}
+                </button>
+              ))}
             </div>
             <div className="overflow-y-auto p-4 space-y-2">
               {ranking.length === 0 && (
