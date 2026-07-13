@@ -73,31 +73,34 @@ function cuotaRepresentativa(qs: any[], credito: any): number {
   return n > 0 ? Number(credito.monto_financiado) / n : 0
 }
 
-function calcMetrics(grupo: any[], cuotasObj: Record<string, any[]>, mesActual: string) {
+function calcMetrics(grupo: any[], cuotasObj: Record<string, any[]>, mesActual: string, hoyStr: string) {
   const totalFinanciado = grupo.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
   const totalSaldo      = calcSaldo(grupo, cuotasObj)
   const montoPagado     = Math.max(0, totalFinanciado - totalSaldo)
   const pct             = totalFinanciado > 0 ? (montoPagado / totalFinanciado) * 100 : 0
   const totalCuotas     = grupo.reduce((s: number, c: any) => s + Number(c.num_cuotas), 0)
 
-  let vencidas = 0, cuotaMensual = 0, pendienteMes = 0
+  let vencidas = 0, cuotaMensual = 0, pendienteMes = 0, tieneVencidoReal = false
   for (const c of grupo) {
     const qs = cuotasObj[c.id] ?? []
-    vencidas += qs.filter((q: any) => q.estado === 'vencida').length
     // La cuota mensual solo cuenta créditos que aún se deben (no los ya pagados,
     // aunque compartan vehículo con otro crédito activo).
     if (c.estado !== 'pagado') cuotaMensual += cuotaRepresentativa(qs, c)
-    // Pendiente por cobrar en el mes actual: cuotas que vencen este mes y que
-    // todavía no se han pagado por completo (monto - lo ya abonado).
     for (const q of qs) {
-      if (q.fecha_vencimiento && String(q.fecha_vencimiento).slice(0, 7) === mesActual) {
-        pendienteMes += Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
-      }
+      const venc = q.fecha_vencimiento ? String(q.fecha_vencimiento) : null
+      const pend = Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
+      // Pendiente por cobrar en el mes actual.
+      if (venc && venc.slice(0, 7) === mesActual) pendienteMes += pend
+      // En mora REAL: cuota con fecha vencida (anterior a hoy) y aún sin pagar.
+      if (venc && venc < hoyStr && pend > 0.01) { vencidas++; tieneVencidoReal = true }
     }
   }
 
-  const estadoGeneral = grupo.some((c: any) => c.estado === 'mora') ? 'mora'
-    : grupo.every((c: any) => c.estado === 'pagado') ? 'pagado'
+  // Estado calculado desde las cuotas (el campo estado del crédito no siempre
+  // se actualiza a mora): pagado si todo está pagado; en mora si hay cuota
+  // vencida sin pagar; si no, activo (al día).
+  const estadoGeneral = grupo.every((c: any) => c.estado === 'pagado') ? 'pagado'
+    : tieneVencidoReal ? 'mora'
     : 'activo'
 
   return { totalFinanciado, totalSaldo, montoPagado, pct, totalCuotas, vencidas, cuotaMensual, pendienteMes, estadoGeneral }
@@ -114,11 +117,13 @@ export default function CreditosClient({
   const [busqueda, setBusqueda] = useState('')
   const [ordenMejores, setOrdenMejores] = useState(false)
 
-  // Mes actual (para "pendiente por cobrar este mes")
-  const { mesActual, nombreMes } = useMemo(() => {
+  // Mes y día actuales (para "pendiente del mes" y "en mora / al día")
+  const { mesActual, nombreMes, hoyStr } = useMemo(() => {
     const now = new Date()
+    const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0')
     return {
-      mesActual: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+      mesActual: `${y}-${m}`,
+      hoyStr: `${y}-${m}-${d}`,
       nombreMes: now.toLocaleDateString('es-VE', { month: 'long' }),
     }
   }, [])
@@ -153,7 +158,7 @@ export default function CreditosClient({
         tieneTipo(g, 'inicial_la_oriental') && tieneTipo(g, 'financiamiento_vehimotors'))
     }
 
-    let res = gruposDisplay.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj, mesActual) }))
+    let res = gruposDisplay.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj, mesActual, hoyStr) }))
 
     // 4. Al día: solo activos que no están en mora
     if (filtroPlan === 'aldia') res = res.filter(r => r.m.estadoGeneral === 'activo')
@@ -172,7 +177,7 @@ export default function CreditosClient({
       })
     }
     return res
-  }, [grupos, cuotasObj, filtroPlan, busqueda, mesActual])
+  }, [grupos, cuotasObj, filtroPlan, busqueda, mesActual, hoyStr])
 
   // Orden: por mejor pagador (al día primero, luego mayor % pagado) o por defecto.
   const visible = useMemo(() => {
