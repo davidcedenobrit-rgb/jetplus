@@ -18,6 +18,12 @@ export interface AC500Vehiculo {
   p9_c4: number | null; p9_c5: number | null; p9_c6: number | null
   p9_c7: number | null; p9_c8: number | null; p9_c9: number | null
   p9_total: number | null
+  p12_activo: boolean
+  p12_c1: number | null; p12_c2: number | null; p12_c3: number | null
+  p12_c4: number | null; p12_c5: number | null; p12_c6: number | null
+  p12_c7: number | null; p12_c8: number | null; p12_c9: number | null
+  p12_c10: number | null; p12_c11: number | null; p12_c12: number | null
+  p12_total: number | null
 }
 
 const WA = '584149989010'
@@ -40,11 +46,20 @@ function transNote(model: string) {
   return ''
 }
 
-type Mode = '6' | '9'
+type Mode = '6' | '9' | '12'
 type Filtro = 'ALL' | 'MG' | 'MAXUS'
 
-function has(v: AC500Vehiculo, mode: Mode) { return mode === '6' ? v.p6_activo : v.p9_activo }
-function defaultMode(v: AC500Vehiculo): Mode { return v.p6_activo ? '6' : '9' }
+function has(v: AC500Vehiculo, mode: Mode) {
+  return mode === '6' ? v.p6_activo : mode === '9' ? v.p9_activo : v.p12_activo
+}
+function activeModes(v: AC500Vehiculo): Mode[] {
+  const arr: Mode[] = []
+  if (v.p6_activo) arr.push('6')
+  if (v.p9_activo) arr.push('9')
+  if (v.p12_activo) arr.push('12')
+  return arr
+}
+function defaultMode(v: AC500Vehiculo): Mode { return activeModes(v)[0] ?? '6' }
 
 function schedule(v: AC500Vehiculo, mode: Mode) {
   if (mode === '6') {
@@ -58,17 +73,34 @@ function schedule(v: AC500Vehiculo, mode: Mode) {
       { label: 'Cuota 6 - Día 150 a 180', val: v.p6_c6, delivery: true },
     ]
   }
+  if (mode === '9') {
+    return [
+      { label: 'Cuota 0 - Reserva', val: v.reserva, highlight: true },
+      { label: 'Cuota 1 - Día 0', val: v.p9_c1 },
+      { label: 'Cuota 2 - Día 30', val: v.p9_c2 },
+      { label: 'Cuota 3 - Día 60', val: v.p9_c3 },
+      { label: 'Cuota 4 - Día 90', val: v.p9_c4 },
+      { label: 'Cuota 5 - Día 120', val: v.p9_c5 },
+      { label: 'Cuota 6 - Día 150', val: v.p9_c6 },
+      { label: 'Cuota 7 - Día 180', val: v.p9_c7 },
+      { label: 'Cuota 8 - Día 210', val: v.p9_c8 },
+      { label: 'Cuota 9 - Día 240', val: v.p9_c9, delivery: true },
+    ]
+  }
   return [
     { label: 'Cuota 0 - Reserva', val: v.reserva, highlight: true },
-    { label: 'Cuota 1 - Día 0', val: v.p9_c1 },
-    { label: 'Cuota 2 - Día 30', val: v.p9_c2 },
-    { label: 'Cuota 3 - Día 60', val: v.p9_c3 },
-    { label: 'Cuota 4 - Día 90', val: v.p9_c4 },
-    { label: 'Cuota 5 - Día 120', val: v.p9_c5 },
-    { label: 'Cuota 6 - Día 150', val: v.p9_c6 },
-    { label: 'Cuota 7 - Día 180', val: v.p9_c7 },
-    { label: 'Cuota 8 - Día 210', val: v.p9_c8 },
-    { label: 'Cuota 9 - Día 240', val: v.p9_c9, delivery: true },
+    { label: 'Cuota 1 - Día 0', val: v.p12_c1 },
+    { label: 'Cuota 2 - Día 30', val: v.p12_c2 },
+    { label: 'Cuota 3 - Día 60', val: v.p12_c3 },
+    { label: 'Cuota 4 - Día 90', val: v.p12_c4 },
+    { label: 'Cuota 5 - Día 120', val: v.p12_c5 },
+    { label: 'Cuota 6 - Día 150', val: v.p12_c6 },
+    { label: 'Cuota 7 - Día 180', val: v.p12_c7 },
+    { label: 'Cuota 8 - Día 210', val: v.p12_c8 },
+    { label: 'Cuota 9 - Día 240', val: v.p12_c9 },
+    { label: 'Cuota 10 - Día 270', val: v.p12_c10 },
+    { label: 'Cuota 11 - Día 300', val: v.p12_c11 },
+    { label: 'Cuota 12 - Entrega', val: v.p12_c12, delivery: true },
   ]
 }
 
@@ -77,16 +109,16 @@ function AC500Card({ v }: { v: AC500Vehiculo }) {
   const [mode, setMode] = useState<Mode>(defaultMode(v))
   const [color, setColor] = useState(colors[0] || '')
 
-  const show6 = v.p6_activo, show9 = v.p9_activo, toggle = show6 && show9
+  const modes = activeModes(v)
   const note = transNote(v.model)
-  const total = mode === '6' ? v.p6_total : v.p9_total
-  const entregaMes = mode === '6' ? 6 : 9
+  const total = mode === '6' ? v.p6_total : mode === '9' ? v.p9_total : v.p12_total
+  const entregaMes = mode === '6' ? 6 : mode === '9' ? 9 : 12
   const rows = schedule(v, mode)
 
   function goWA() {
     fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_whatsapp', marca: v.brand, modelo: v.model }) }).catch(() => {})
     const colorPart = color ? ` Color: ${color}.` : ''
-    const entrega = mode === '6' ? '6 meses' : '9 meses'
+    const entrega = `${mode} meses`
     const msg = `Hola 👋 vengo del perfil de ventas de La Oriental. Me interesa el ${v.model} en el Plan Asegúrate con $500 (${entrega}).${colorPart} ¿Me comparten disponibilidad y próximos pasos?`
     window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
   }
@@ -115,14 +147,17 @@ function AC500Card({ v }: { v: AC500Vehiculo }) {
         {/* Cronograma header + toggle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 12, gap: 10 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.8px' }}>Cronograma</span>
-          {toggle ? (
+          {modes.length > 1 ? (
             <div className="plan-toggle">
-              <button className={mode === '6' ? 'active' : ''} onClick={() => setMode('6')}>6 meses</button>
-              <button className={mode === '9' ? 'active gold' : ''} onClick={() => setMode('9')}>9 meses</button>
+              {modes.map(m => (
+                <button key={m} className={mode === m ? (m === '6' ? 'active' : 'active gold') : ''} onClick={() => setMode(m)}>
+                  {m} meses
+                </button>
+              ))}
             </div>
           ) : (
             <div style={{ fontSize: 12, fontWeight: 700, color: '#111', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 10, padding: '6px 12px', whiteSpace: 'nowrap' }}>
-              {show6 ? '6 meses' : '9 meses'}
+              {modes[0] ?? '6'} meses
             </div>
           )}
         </div>

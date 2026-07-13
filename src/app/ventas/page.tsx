@@ -31,7 +31,7 @@ export default async function VentasPage() {
   }
 
   const lista = catalogo ?? []
-  const acLista = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo)
+  const acLista = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo || v.p12_activo)
   const promoActiva = promoData?.activa === true
   const promoVehiculosList = promoVehiculos ?? []
 
