@@ -26,7 +26,7 @@ export default async function CreditosPage({
   if (creditoIds.length > 0) {
     const { data: cuotas } = await supabase
       .from('cuotas')
-      .select('credito_id, estado, monto, monto_pagado')
+      .select('credito_id, estado, monto, monto_pagado, fecha_vencimiento')
       .in('credito_id', creditoIds)
     for (const q of cuotas ?? []) {
       if (!cuotasObj[q.credito_id]) cuotasObj[q.credito_id] = []

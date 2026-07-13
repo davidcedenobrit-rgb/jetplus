@@ -73,27 +73,34 @@ function cuotaRepresentativa(qs: any[], credito: any): number {
   return n > 0 ? Number(credito.monto_financiado) / n : 0
 }
 
-function calcMetrics(grupo: any[], cuotasObj: Record<string, any[]>) {
+function calcMetrics(grupo: any[], cuotasObj: Record<string, any[]>, mesActual: string) {
   const totalFinanciado = grupo.reduce((s: number, c: any) => s + Number(c.monto_financiado), 0)
   const totalSaldo      = calcSaldo(grupo, cuotasObj)
   const montoPagado     = Math.max(0, totalFinanciado - totalSaldo)
   const pct             = totalFinanciado > 0 ? (montoPagado / totalFinanciado) * 100 : 0
   const totalCuotas     = grupo.reduce((s: number, c: any) => s + Number(c.num_cuotas), 0)
 
-  let vencidas = 0, cuotaMensual = 0
+  let vencidas = 0, cuotaMensual = 0, pendienteMes = 0
   for (const c of grupo) {
     const qs = cuotasObj[c.id] ?? []
     vencidas += qs.filter((q: any) => q.estado === 'vencida').length
     // La cuota mensual solo cuenta créditos que aún se deben (no los ya pagados,
     // aunque compartan vehículo con otro crédito activo).
     if (c.estado !== 'pagado') cuotaMensual += cuotaRepresentativa(qs, c)
+    // Pendiente por cobrar en el mes actual: cuotas que vencen este mes y que
+    // todavía no se han pagado por completo (monto - lo ya abonado).
+    for (const q of qs) {
+      if (q.fecha_vencimiento && String(q.fecha_vencimiento).slice(0, 7) === mesActual) {
+        pendienteMes += Math.max(0, Number(q.monto) - Number(q.monto_pagado ?? 0))
+      }
+    }
   }
 
   const estadoGeneral = grupo.some((c: any) => c.estado === 'mora') ? 'mora'
     : grupo.every((c: any) => c.estado === 'pagado') ? 'pagado'
     : 'activo'
 
-  return { totalFinanciado, totalSaldo, montoPagado, pct, totalCuotas, vencidas, cuotaMensual, estadoGeneral }
+  return { totalFinanciado, totalSaldo, montoPagado, pct, totalCuotas, vencidas, cuotaMensual, pendienteMes, estadoGeneral }
 }
 
 export default function CreditosClient({
@@ -106,6 +113,15 @@ export default function CreditosClient({
   const [filtroPlan, setFiltroPlan] = useState<FiltroPlan>('todos')
   const [busqueda, setBusqueda] = useState('')
   const [ordenMejores, setOrdenMejores] = useState(false)
+
+  // Mes actual (para "pendiente por cobrar este mes")
+  const { mesActual, nombreMes } = useMemo(() => {
+    const now = new Date()
+    return {
+      mesActual: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+      nombreMes: now.toLocaleDateString('es-VE', { month: 'long' }),
+    }
+  }, [])
 
   const filtrados = useMemo(() => {
     const all = grupos.flat()
@@ -137,7 +153,7 @@ export default function CreditosClient({
         tieneTipo(g, 'inicial_la_oriental') && tieneTipo(g, 'financiamiento_vehimotors'))
     }
 
-    let res = gruposDisplay.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj) }))
+    let res = gruposDisplay.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj, mesActual) }))
 
     // 4. Al día: solo activos que no están en mora
     if (filtroPlan === 'aldia') res = res.filter(r => r.m.estadoGeneral === 'activo')
@@ -156,7 +172,7 @@ export default function CreditosClient({
       })
     }
     return res
-  }, [grupos, cuotasObj, filtroPlan, busqueda])
+  }, [grupos, cuotasObj, filtroPlan, busqueda, mesActual])
 
   // Orden: por mejor pagador (al día primero, luego mayor % pagado) o por defecto.
   const visible = useMemo(() => {
@@ -167,13 +183,13 @@ export default function CreditosClient({
       (b.m.montoPagado - a.m.montoPagado))
   }, [filtrados, ordenMejores])
 
-  // Cobro mensual estimado: suma de las cuotas mensuales de la cartera activa
-  // mostrada (solo créditos en USD para no mezclar monedas).
-  const cobroMensual = useMemo(() =>
+  // Pendiente por cobrar en el mes actual: suma de las cuotas que vencen este
+  // mes y aún no se han pagado, de los créditos mostrados (solo USD).
+  const pendienteMesTotal = useMemo(() =>
     visible.reduce((s, { grupo, m }) => {
       const moneda = (grupo[0] as any).moneda ?? 'USD'
-      if (m.estadoGeneral === 'pagado' || moneda !== 'USD') return s
-      return s + m.cuotaMensual
+      if (moneda !== 'USD') return s
+      return s + m.pendienteMes
     }, 0),
   [visible])
 
@@ -186,11 +202,11 @@ export default function CreditosClient({
             <CalendarClock size={17} className="text-green-700" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider">Cobro mensual estimado</p>
-            <p className="text-lg font-extrabold text-green-700 leading-tight">{formatCurrency(cobroMensual, 'USD')}</p>
+            <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider">Pendiente de cobrar · {nombreMes}</p>
+            <p className="text-lg font-extrabold text-green-700 leading-tight">{formatCurrency(pendienteMesTotal, 'USD')}</p>
           </div>
-          <p className="text-[10px] text-gray-400 max-w-[130px] leading-snug hidden sm:block">
-            Suma de las cuotas mensuales de la cartera activa mostrada.
+          <p className="text-[10px] text-gray-400 max-w-[140px] leading-snug hidden sm:block">
+            Cuotas que vencen este mes y aún faltan por cobrar (según el filtro).
           </p>
         </div>
         <button
