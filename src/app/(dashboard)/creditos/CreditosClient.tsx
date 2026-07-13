@@ -7,14 +7,14 @@ import { formatCurrency } from '@/lib/utils'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type FiltroPlan = 'todos' | 'ac500' | 'contado' | 'f_lao_vehi' | 'f_vehimotor'
+type FiltroPlan = 'todos' | 'lao' | 'vehimotor' | 'ac500' | 'contado'
 
 const FILTROS_PLAN: { value: FiltroPlan; label: string; activeClass: string }[] = [
-  { value: 'todos',       label: 'Todos',          activeClass: 'bg-oriental-black text-white border-oriental-black' },
-  { value: 'ac500',       label: 'AC500',           activeClass: 'bg-emerald-600 text-white border-emerald-600' },
-  { value: 'contado',     label: 'Contado',         activeClass: 'bg-blue-600 text-white border-blue-600' },
-  { value: 'f_lao_vehi',  label: 'F. LAO + Vehi',  activeClass: 'bg-purple-600 text-white border-purple-600' },
-  { value: 'f_vehimotor', label: 'F. Vehimotor',   activeClass: 'bg-indigo-600 text-white border-indigo-600' },
+  { value: 'todos',     label: 'Todos',       activeClass: 'bg-oriental-black text-white border-oriental-black' },
+  { value: 'lao',       label: 'La Oriental', activeClass: 'bg-purple-600 text-white border-purple-600' },
+  { value: 'vehimotor', label: 'Vehimotors',  activeClass: 'bg-indigo-600 text-white border-indigo-600' },
+  { value: 'ac500',     label: 'AC500',       activeClass: 'bg-emerald-600 text-white border-emerald-600' },
+  { value: 'contado',   label: 'Contado',     activeClass: 'bg-blue-600 text-white border-blue-600' },
 ]
 
 const planBadge = (tipo: string | null) =>
@@ -39,19 +39,14 @@ const estadoColors: Record<string, string> = {
   cancelado: 'bg-gray-200 text-gray-400',
 }
 
-function categorizarGrupo(grupo: any[]): FiltroPlan {
-  const primero = grupo[0]
-  const planes = grupo.map((c: any) => c.plan_tipo).filter(Boolean)
-  const tieneAC500       = planes.includes('asegurate_500')
-  const tieneInicial     = planes.includes('inicial_la_oriental')
-  const tieneVehimotors  = planes.includes('financiamiento_vehimotors')
-  const tipoCarro        = (primero as any).vehiculos?.tipo_compra
+const tieneTipo = (grupo: any[], tipo: string) => grupo.some((c: any) => c.plan_tipo === tipo)
 
-  if (tieneAC500) return 'ac500'
-  if (tieneInicial) return 'f_lao_vehi'
-  if (tieneVehimotors) return 'f_vehimotor'
-  if (tipoCarro === 'contado') return 'contado'
-  return 'contado'
+// "Contado" agrupa lo que no es La Oriental / Vehimotors / AC500 (catch-all,
+// igual que antes: incluye créditos sin plan, cuota especial, 40/60, etc.).
+function esContado(grupo: any[]) {
+  return !tieneTipo(grupo, 'inicial_la_oriental')
+    && !tieneTipo(grupo, 'financiamiento_vehimotors')
+    && !tieneTipo(grupo, 'asegurate_500')
 }
 
 function calcSaldo(grupo: any[], cuotasObj: Record<string, any[]>) {
@@ -113,17 +108,21 @@ export default function CreditosClient({
 }) {
   const [filtroPlan, setFiltroPlan] = useState<FiltroPlan>('todos')
   const [busqueda, setBusqueda] = useState('')
-  const [showRanking, setShowRanking] = useState(false)
-  const [segRank, setSegRank] = useState<'todos' | 'lao' | 'vehi' | 'ac500'>('todos')
+  const [ordenMejores, setOrdenMejores] = useState(false)
 
-  const gruposConCategoria = useMemo(() =>
-    grupos.map(g => ({ grupo: g, categoria: categorizarGrupo(g), m: calcMetrics(g, cuotasObj) })),
+  const gruposConMetrics = useMemo(() =>
+    grupos.map(g => ({ grupo: g, m: calcMetrics(g, cuotasObj) })),
   [grupos, cuotasObj])
 
-  const visible = useMemo(() => {
+  const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    return gruposConCategoria.filter(({ grupo, categoria }) => {
-      if (filtroPlan !== 'todos' && categoria !== filtroPlan) return false
+    return gruposConMetrics.filter(({ grupo }) => {
+      // Filtro por plan (por etiqueta: el grupo tiene ese tipo de financiamiento)
+      if (filtroPlan === 'lao'       && !tieneTipo(grupo, 'inicial_la_oriental')) return false
+      if (filtroPlan === 'vehimotor' && !tieneTipo(grupo, 'financiamiento_vehimotors')) return false
+      if (filtroPlan === 'ac500'     && !tieneTipo(grupo, 'asegurate_500')) return false
+      if (filtroPlan === 'contado'   && !esContado(grupo)) return false
+      // Búsqueda
       if (q) {
         const primero = grupo[0]
         const cliente = (primero as any).clientes
@@ -135,10 +134,19 @@ export default function CreditosClient({
       }
       return true
     })
-  }, [gruposConCategoria, filtroPlan, busqueda])
+  }, [gruposConMetrics, filtroPlan, busqueda])
+
+  // Orden: por mejor pagador (al día primero, luego mayor % pagado) o por defecto.
+  const visible = useMemo(() => {
+    if (!ordenMejores) return filtrados
+    return [...filtrados].sort((a, b) =>
+      (Number(a.m.estadoGeneral === 'mora') - Number(b.m.estadoGeneral === 'mora')) ||
+      (b.m.pct - a.m.pct) ||
+      (b.m.montoPagado - a.m.montoPagado))
+  }, [filtrados, ordenMejores])
 
   // Cobro mensual estimado: suma de las cuotas mensuales de la cartera activa
-  // (no pagada). Solo créditos en USD para no mezclar monedas.
+  // mostrada (solo créditos en USD para no mezclar monedas).
   const cobroMensual = useMemo(() =>
     visible.reduce((s, { grupo, m }) => {
       const moneda = (grupo[0] as any).moneda ?? 'USD'
@@ -146,32 +154,6 @@ export default function CreditosClient({
       return s + m.cuotaMensual
     }, 0),
   [visible])
-
-  // Base del ranking: todos los grupos con banderas por tipo de crédito.
-  const rankingBase = useMemo(() =>
-    gruposConCategoria.map(({ grupo, m }) => ({
-      cliente: (grupo[0] as any).clientes,
-      primero: grupo[0],
-      m,
-      tieneLao:    grupo.some((c: any) => c.plan_tipo === 'inicial_la_oriental'),
-      tieneVehi:   grupo.some((c: any) => c.plan_tipo === 'financiamiento_vehimotors'),
-      tieneAc500:  grupo.some((c: any) => c.plan_tipo === 'asegurate_500'),
-    })),
-  [gruposConCategoria])
-
-  // Ranking segmentado por tipo: los que NO están en mora primero, luego mayor % pagado.
-  const ranking = useMemo(() => {
-    const base = rankingBase.filter(r =>
-      segRank === 'todos' ? true :
-      segRank === 'lao'   ? r.tieneLao :
-      segRank === 'vehi'  ? r.tieneVehi :
-      r.tieneAc500)
-    return [...base].sort((a, b) =>
-      (Number(a.m.estadoGeneral === 'mora') - Number(b.m.estadoGeneral === 'mora')) ||
-      (b.m.pct - a.m.pct) ||
-      (b.m.montoPagado - a.m.montoPagado))
-      .slice(0, 15)
-  }, [rankingBase, segRank])
 
   return (
     <div>
@@ -190,10 +172,14 @@ export default function CreditosClient({
           </p>
         </div>
         <button
-          onClick={() => setShowRanking(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-sm transition-colors"
+          onClick={() => setOrdenMejores(v => !v)}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors border-2 ${
+            ordenMejores
+              ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
+              : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'
+          }`}
         >
-          <Trophy size={16} /> Mejores pagadores
+          <Trophy size={16} /> Mejores pagadores {ordenMejores && '✓'}
         </button>
       </div>
 
@@ -232,11 +218,12 @@ export default function CreditosClient({
         )}
       </div>
 
-      {(filtroPlan !== 'todos' || busqueda) && (
+      {(filtroPlan !== 'todos' || busqueda || ordenMejores) && (
         <p className="text-xs text-oriental-gray mb-3">
           Mostrando <strong className="text-oriental-black">{visible.length}</strong> de {grupos.length} vehículos
+          {ordenMejores && <span className="text-amber-700 font-semibold"> · ordenado por mejor pagador</span>}
           <button
-            onClick={() => { setFiltroPlan('todos'); setBusqueda('') }}
+            onClick={() => { setFiltroPlan('todos'); setBusqueda(''); setOrdenMejores(false) }}
             className="ml-2 text-oriental-red hover:underline"
           >
             Limpiar
@@ -261,7 +248,7 @@ export default function CreditosClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {visible.map(({ grupo, m }) => {
+              {visible.map(({ grupo, m }, idx) => {
                 const primero = grupo[0]
                 const cliente = (primero as any).clientes
                 const tipos = [...new Set(grupo.map((c: any) => c.plan_tipo))]
@@ -270,8 +257,17 @@ export default function CreditosClient({
                 return (
                   <tr key={primero.vehiculo_id ?? primero.id} className="hover:bg-oriental-bg/50 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-oriental-black">{cliente?.nombre}</p>
-                      <p className="text-xs text-oriental-gray">{cliente?.cedula_rif}</p>
+                      <div className="flex items-center gap-2">
+                        {ordenMejores && (
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 ${
+                            idx === 0 ? 'bg-amber-400 text-white' : idx === 1 ? 'bg-gray-300 text-white' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-500'
+                          }`}>{idx + 1}</span>
+                        )}
+                        <div>
+                          <p className="font-medium text-oriental-black">{cliente?.nombre}</p>
+                          <p className="text-xs text-oriental-gray">{cliente?.cedula_rif}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-bold">
@@ -319,7 +315,7 @@ export default function CreditosClient({
                     <CreditCard size={32} className="mx-auto text-gray-300 mb-3" />
                     <p className="text-oriental-gray text-sm">No hay créditos con estos filtros</p>
                     <button
-                      onClick={() => { setFiltroPlan('todos'); setBusqueda('') }}
+                      onClick={() => { setFiltroPlan('todos'); setBusqueda(''); setOrdenMejores(false) }}
                       className="text-oriental-red text-sm font-medium hover:underline mt-1"
                     >
                       Limpiar filtros
@@ -331,83 +327,6 @@ export default function CreditosClient({
           </table>
         </div>
       </div>
-
-      {/* Modal: mejores pagadores */}
-      {showRanking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowRanking(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
-                  <Trophy size={18} className="text-white" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-oriental-black text-base">Mejores pagadores</h2>
-                  <p className="text-xs text-oriental-gray">Menos cuotas vencidas y mayor % pagado</p>
-                </div>
-              </div>
-              <button onClick={() => setShowRanking(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
-                <X size={16} className="text-oriental-gray" />
-              </button>
-            </div>
-            {/* Segmentar por tipo de crédito */}
-            <div className="flex gap-2 px-4 pt-3 pb-2 flex-wrap border-b border-gray-100">
-              {([
-                { v: 'todos', l: 'Todos' },
-                { v: 'lao',   l: 'La Oriental' },
-                { v: 'vehi',  l: 'Vehimotors' },
-                { v: 'ac500', l: 'AC500' },
-              ] as const).map(s => (
-                <button
-                  key={s.v}
-                  onClick={() => setSegRank(s.v)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
-                    segRank === s.v
-                      ? 'bg-amber-500 text-white border-amber-500'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  {s.l}
-                </button>
-              ))}
-            </div>
-            <div className="overflow-y-auto p-4 space-y-2">
-              {ranking.length === 0 && (
-                <p className="text-sm text-oriental-gray text-center py-8">No hay créditos para mostrar.</p>
-              )}
-              {ranking.map(({ cliente, primero, m }, i) => (
-                <Link
-                  key={primero.vehiculo_id ?? primero.id}
-                  href={`/creditos/${primero.id}`}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50/40 transition-all"
-                >
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold flex-shrink-0 ${
-                    i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-gray-300 text-white' : i === 2 ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-oriental-black text-sm truncate">{cliente?.nombre ?? '—'}</p>
-                    <p className="text-[11px] text-oriental-gray">
-                      Pagado {formatCurrency(m.montoPagado, primero.moneda)}
-                      {m.estadoGeneral === 'mora'
-                        ? <span className="text-red-600 font-semibold"> · En mora{m.vencidas > 0 ? ` (${m.vencidas} venc.)` : ''}</span>
-                        : m.estadoGeneral === 'pagado'
-                        ? <span className="text-blue-600 font-semibold"> · Pagado ✓</span>
-                        : <span className="text-green-600 font-semibold"> · Al día</span>}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-extrabold text-green-700">{m.pct.toFixed(0)}%</p>
-                    <p className="text-[10px] text-gray-400">pagado</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
