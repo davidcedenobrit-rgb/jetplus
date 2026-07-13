@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeftRight, Save, Loader2, CheckCircle2 } from 'lucide-react'
+import { ArrowLeftRight, Save, Loader2, CheckCircle2, RefreshCw } from 'lucide-react'
 
 export default function TasasEditor() {
   const [tasaBCV, setTasaBCV] = useState('')
@@ -11,6 +11,8 @@ export default function TasasEditor() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [fetchingRef, setFetchingRef] = useState(false)
+  const [paraleloSug, setParaleloSug] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/cotizaciones/config-tasas')
@@ -26,6 +28,21 @@ export default function TasasEditor() {
       .catch(() => setError('Error al cargar'))
       .finally(() => setLoading(false))
   }, [])
+
+  async function traerReferencias() {
+    setFetchingRef(true); setError('')
+    try {
+      const r = await fetch('/api/cotizaciones/dolarapi')
+      const d = await r.json()
+      if (!r.ok) { setError(d.error ?? 'No se pudo obtener las tasas de referencia'); return }
+      if (d.bcv > 0) setTasaBCV(String(d.bcv))
+      setParaleloSug(d.paralelo > 0 ? Number(d.paralelo) : null)
+    } catch {
+      setError('No se pudo conectar con la fuente de tasas')
+    } finally {
+      setFetchingRef(false)
+    }
+  }
 
   async function guardar() {
     const bcv = parseFloat(tasaBCV)
@@ -69,6 +86,17 @@ export default function TasasEditor() {
         {updatedAt && <span className="ml-auto text-[10px] text-oriental-gray">Actualizado: {updatedAt}</span>}
       </div>
 
+      <div className="mb-4">
+        <button type="button" onClick={traerReferencias} disabled={fetchingRef}
+          className="w-full flex items-center justify-center gap-2 py-2 border border-blue-200 bg-blue-50 text-blue-800 text-xs font-semibold rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-60">
+          {fetchingRef ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+          {fetchingRef ? 'Consultando...' : 'Actualizar BCV automático (dolarapi)'}
+        </button>
+        <p className="text-[10px] text-oriental-gray mt-1.5 text-center">
+          Trae el BCV oficial. El USDT lo defines tú; abajo puedes usar el paralelo como sugerencia.
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <label className="label">Tasa BCV (Bs/$)</label>
@@ -81,6 +109,13 @@ export default function TasasEditor() {
           <input className="input text-sm font-mono" type="number" min="1" step="0.01"
             value={tasaUSDT} onChange={e => { setTasaUSDT(e.target.value); setError('') }}
             placeholder="817.05" />
+          {paraleloSug != null && paraleloSug > 0 && (
+            <button type="button"
+              onClick={() => { setTasaUSDT(String(paraleloSug)); setError('') }}
+              className="mt-1.5 text-[10px] text-blue-700 hover:text-blue-900 hover:underline">
+              Usar paralelo: {paraleloSug.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs
+            </button>
+          )}
         </div>
       </div>
 
