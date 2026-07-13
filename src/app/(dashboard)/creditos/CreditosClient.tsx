@@ -7,14 +7,16 @@ import { formatCurrency } from '@/lib/utils'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type FiltroPlan = 'todos' | 'lao' | 'vehimotor' | 'ac500' | 'contado'
+type FiltroPlan = 'todos' | 'lao' | 'vehimotor' | 'combinado' | 'ac500' | 'contado' | 'aldia'
 
 const FILTROS_PLAN: { value: FiltroPlan; label: string; activeClass: string }[] = [
   { value: 'todos',     label: 'Todos',       activeClass: 'bg-oriental-black text-white border-oriental-black' },
   { value: 'lao',       label: 'La Oriental', activeClass: 'bg-purple-600 text-white border-purple-600' },
   { value: 'vehimotor', label: 'Vehimotors',  activeClass: 'bg-indigo-600 text-white border-indigo-600' },
+  { value: 'combinado', label: 'Combinado',   activeClass: 'bg-fuchsia-600 text-white border-fuchsia-600' },
   { value: 'ac500',     label: 'AC500',       activeClass: 'bg-emerald-600 text-white border-emerald-600' },
   { value: 'contado',   label: 'Contado',     activeClass: 'bg-blue-600 text-white border-blue-600' },
+  { value: 'aldia',     label: 'Al día',      activeClass: 'bg-green-600 text-white border-green-600' },
 ]
 
 const planBadge = (tipo: string | null) =>
@@ -116,12 +118,21 @@ export default function CreditosClient({
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    return gruposConMetrics.filter(({ grupo }) => {
-      // Filtro por plan (por etiqueta: el grupo tiene ese tipo de financiamiento)
-      if (filtroPlan === 'lao'       && !tieneTipo(grupo, 'inicial_la_oriental')) return false
-      if (filtroPlan === 'vehimotor' && !tieneTipo(grupo, 'financiamiento_vehimotors')) return false
+    return gruposConMetrics.filter(({ grupo, m }) => {
+      const lao  = tieneTipo(grupo, 'inicial_la_oriental')
+      const vehi = tieneTipo(grupo, 'financiamiento_vehimotors')
+      // Filtros:
+      // - La Oriental: SOLO La Oriental (sin Vehimotors)
+      // - Vehimotors: SOLO Vehimotors (sin La Oriental)
+      // - Combinado: tiene los dos
+      // - AC500 / Contado: por tipo
+      // - Al día: clientes activos que no están en mora
+      if (filtroPlan === 'lao'       && !(lao && !vehi)) return false
+      if (filtroPlan === 'vehimotor' && !(vehi && !lao)) return false
+      if (filtroPlan === 'combinado' && !(lao && vehi)) return false
       if (filtroPlan === 'ac500'     && !tieneTipo(grupo, 'asegurate_500')) return false
       if (filtroPlan === 'contado'   && !esContado(grupo)) return false
+      if (filtroPlan === 'aldia'     && m.estadoGeneral !== 'activo') return false
       // Búsqueda
       if (q) {
         const primero = grupo[0]
