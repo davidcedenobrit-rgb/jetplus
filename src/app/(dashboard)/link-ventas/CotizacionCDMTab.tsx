@@ -70,6 +70,7 @@ interface PlanAC500 {
 type Step = 'vehiculo' | 'form' | 'sending' | 'success'
 type Modalidad = 'contado' | 'credito_24'
 type Plan = 'vehimotors' | 'banco_100' | 'ac500'
+type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
 
 const ROJAS_CODIGO = 'R000'
 
@@ -143,6 +144,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   const [numeroCot, setNumeroCot] = useState('')
   const [showPreview, setShowPreview] = useState(false)
 
+  // Buscador de clientes existentes (cotizaciones previas + registro de clientes)
+  const [cliQuery, setCliQuery] = useState('')
+  const [cliResultados, setCliResultados] = useState<ClienteBuscado[]>([])
+  const [cliBuscando, setCliBuscando] = useState(false)
+  const [cliOpen, setCliOpen] = useState(false)
+
   // AC500
   const [ac500Meses, setAc500Meses] = useState<6 | 9>(6)
   const [planesAC500, setPlanesAC500] = useState<PlanAC500[]>([])
@@ -164,6 +171,38 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
       .catch(() => setLoadingPlanes(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, ac500Meses, vehiculoSel?.brand])
+
+  // Busca clientes existentes conforme se escribe (debounce)
+  useEffect(() => {
+    const q = cliQuery.trim()
+    if (q.length < 2) { setCliResultados([]); setCliBuscando(false); return }
+    setCliBuscando(true)
+    const t = setTimeout(() => {
+      fetch(`/api/cotizaciones/clientes-buscar?q=${encodeURIComponent(q)}`)
+        .then(r => r.json())
+        .then(d => { if (Array.isArray(d)) setCliResultados(d) })
+        .catch(() => {})
+        .finally(() => setCliBuscando(false))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [cliQuery])
+
+  function seleccionarCliente(c: ClienteBuscado) {
+    setForm(p => ({
+      ...p,
+      clienteNombre: c.nombre || '',
+      clienteCiRif: c.ci_rif || '',
+      clienteCorreo: c.correo || '',
+      clienteTelefono: c.telefono || '',
+      clienteDireccion: c.direccion || '',
+      clienteCiudadEstado: c.ciudad_estado || '',
+      clienteCodigoPostal: c.codigo_postal || '',
+    }))
+    setCliQuery('')
+    setCliResultados([])
+    setCliOpen(false)
+    setErrorMsg('')
+  }
 
   function seleccionarVehiculo(v: Vehiculo) {
     setVehiculoSel(v)
@@ -204,6 +243,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setForm({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false })
     setErrorMsg(''); setNumeroCot('')
     setPlanAC500Sel(null); setPlanesAC500([])
+    setCliQuery(''); setCliResultados([]); setCliOpen(false)
   }
 
   function handleVistaPrevia() {
@@ -426,6 +466,40 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
         {/* Datos del cliente */}
         <div className="card p-4 mb-4">
           <p className="text-xs font-bold text-oriental-black uppercase tracking-wider mb-4">Datos del cliente</p>
+
+          {/* Buscador de cliente existente */}
+          <div className="relative mb-4">
+            <label className={labelCls}>🔍 Buscar cliente existente</label>
+            <input
+              className={inputCls}
+              value={cliQuery}
+              onChange={e => { setCliQuery(e.target.value); setCliOpen(true) }}
+              onFocus={() => setCliOpen(true)}
+              placeholder="Nombre, C.I./RIF, correo o teléfono..."
+            />
+            {cliOpen && cliQuery.trim().length >= 2 && (
+              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                {cliBuscando && <p className="px-3 py-2 text-xs text-gray-400">Buscando...</p>}
+                {!cliBuscando && cliResultados.length === 0 && (
+                  <p className="px-3 py-2 text-xs text-gray-400">Sin coincidencias. Puedes llenar los datos manualmente.</p>
+                )}
+                {cliResultados.map((c, i) => (
+                  <button key={i} type="button" onClick={() => seleccionarCliente(c)}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-oriental-black truncate">{c.nombre || '—'}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${c.fuente === 'cotizacion' ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-700'}`}>
+                        {c.fuente === 'cotizacion' ? 'Ya cotizó' : 'Registrado'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 truncate">{[c.ci_rif, c.correo, c.telefono].filter(Boolean).join(' · ')}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-[10px] text-gray-400 mt-1">Si el cliente ya cotizó o está registrado, selecciónalo y se llenan sus datos automáticamente.</p>
+          </div>
+
           <div className="grid gap-3">
             <div>
               <label className={labelCls}>Nombre completo *</label>
