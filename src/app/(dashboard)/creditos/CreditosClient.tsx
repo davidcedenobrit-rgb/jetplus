@@ -84,7 +84,9 @@ function calcMetrics(grupo: any[], cuotasObj: Record<string, any[]>) {
   for (const c of grupo) {
     const qs = cuotasObj[c.id] ?? []
     vencidas += qs.filter((q: any) => q.estado === 'vencida').length
-    cuotaMensual += cuotaRepresentativa(qs, c)
+    // La cuota mensual solo cuenta créditos que aún se deben (no los ya pagados,
+    // aunque compartan vehículo con otro crédito activo).
+    if (c.estado !== 'pagado') cuotaMensual += cuotaRepresentativa(qs, c)
   }
 
   const estadoGeneral = grupo.some((c: any) => c.estado === 'mora') ? 'mora'
