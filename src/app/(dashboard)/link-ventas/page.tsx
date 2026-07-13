@@ -12,11 +12,17 @@ export default async function LinkVentasPage() {
   const rol = (user?.app_metadata?.rol as string) ?? 'editor'
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
-  const [{ data: vehiculos }, { data: ac500 }, { data: showroomRaw }] = await Promise.all([
+  const [{ data: vehiculos }, { data: ac500 }, { data: showroomRaw }, { data: cfgTasas }] = await Promise.all([
     supabase.from('catalogo_ventas').select('*').order('orden'),
     supabase.from('ac500_vehiculos').select('*').order('orden'),
     supabase.from('vehiculos_showroom').select('marca, modelo').eq('estado', 'en_agencia'),
+    supabase.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt']),
   ])
+
+  const tasas = {
+    bcv: Number(cfgTasas?.find(c => c.clave === 'tasa_bcv')?.valor) || 0,
+    usdt: Number(cfgTasas?.find(c => c.clave === 'tasa_usdt')?.valor) || 0,
+  }
 
   // Agrupar por marca+modelo con conteo de unidades
   const showroomMap: Record<string, number> = {}
@@ -49,7 +55,7 @@ export default async function LinkVentasPage() {
         </a>
       </div>
 
-      <LinkVentasTabs catalogo={vehiculos ?? []} ac500={ac500 ?? []} showroomStock={showroomStock} />
+      <LinkVentasTabs catalogo={vehiculos ?? []} ac500={ac500 ?? []} showroomStock={showroomStock} tasas={tasas} />
     </div>
   )
 }

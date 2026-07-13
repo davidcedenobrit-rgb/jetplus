@@ -17,6 +17,6 @@ export async function GET() {
 
   return NextResponse.json({
     tasa_bcv: map['tasa_bcv'] ?? 0,
-    tasa_vhm: map['tasa_vehimotors'] ?? 0,
+    tasa_usdt: map['tasa_usdt'] ?? 0,
   })
 }

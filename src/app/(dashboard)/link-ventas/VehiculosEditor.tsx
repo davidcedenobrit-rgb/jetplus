@@ -169,7 +169,8 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   inicial_pct: 40,
 }
 
-export default function VehiculosEditor({ initialVehiculos, showroomStock }: { initialVehiculos: Vehiculo[]; showroomStock: ShowroomItem[] }) {
+export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas }: { initialVehiculos: Vehiculo[]; showroomStock: ShowroomItem[]; tasas: { bcv: number; usdt: number } }) {
+  const difGlobalPct = (tasas.bcv > 0 && tasas.usdt > tasas.bcv) ? (tasas.usdt - tasas.bcv) / tasas.bcv : 0
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>(initialVehiculos)
   const [dirty, setDirty] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
@@ -846,8 +847,14 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                       <Field label="Alfombras ($)">
                         <NumField className={inputCls} value={v.alfombras_banco} placeholder="0" onCommit={n => update(v.id, 'alfombras_banco', n)} />
                       </Field>
-                      <Field label="Diferencial cambiario (%)">
-                        <NumField className={inputCls} value={v.diferencial_pct} placeholder="30" onCommit={n => update(v.id, 'diferencial_pct', n)} />
+                      <Field label="Diferencial cambiario (global)">
+                        <input
+                          className={`${inputCls} bg-gray-100 cursor-not-allowed`}
+                          type="text"
+                          readOnly
+                          value={difGlobalPct > 0 ? `${(difGlobalPct * 100).toFixed(2)}% (BCV/USDT)` : 'Configura las tasas'}
+                          title="El diferencial cambiario se calcula con las tasas BCV y USDT del panel de Tasas y aplica a todos los carros"
+                        />
                       </Field>
                       <Field label="Tasa banco (% anual)">
                         <NumField className={inputCls} value={v.tasa_banco_pct} placeholder="16" onCommit={n => update(v.id, 'tasa_banco_pct', n)} />
@@ -859,8 +866,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock }: { i
                       const placa = v.placa_monto ?? 400
                       const totalVeh = precio + iva + placa
                       const financiamiento = totalVeh * 0.70
-                      const diferencialPct = v.diferencial_pct ?? 30
-                      const diferencial = financiamiento * diferencialPct / 100
+                      const diferencial = financiamiento * difGlobalPct
                       const gastosFijos = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
                       const totalGastos = gastosFijos + diferencial
                       const inicial = totalVeh * 0.30

@@ -21,16 +21,19 @@ export async function POST(req: Request) {
 
   const body = await req.json()
   const bcv = Number(body.tasa_bcv)
-  const vhm = Number(body.tasa_vhm)
-  if (!bcv || !vhm || isNaN(bcv) || isNaN(vhm) || bcv <= 0 || vhm <= 0) {
+  const usdt = Number(body.tasa_usdt)
+  if (!bcv || !usdt || isNaN(bcv) || isNaN(usdt) || bcv <= 0 || usdt <= 0) {
     return NextResponse.json({ error: 'Valores de tasa inválidos' }, { status: 400 })
+  }
+  if (usdt <= bcv) {
+    return NextResponse.json({ error: 'La tasa USDT debe ser mayor que la tasa BCV' }, { status: 400 })
   }
 
   const admin = await createAdminClient()
   const now = new Date().toISOString()
   await admin.from('config_cotizaciones').upsert([
-    { clave: 'tasa_bcv',        valor: bcv, updated_at: now },
-    { clave: 'tasa_vehimotors', valor: vhm, updated_at: now },
+    { clave: 'tasa_bcv',  valor: bcv,  updated_at: now },
+    { clave: 'tasa_usdt', valor: usdt, updated_at: now },
   ])
 
   return NextResponse.json({ ok: true })

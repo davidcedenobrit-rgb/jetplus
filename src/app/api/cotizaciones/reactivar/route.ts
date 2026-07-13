@@ -121,15 +121,21 @@ export async function POST(req: Request) {
       }
     }
 
-    // Diferencial banco 100%
+    // Diferencial banco 100% — usa las tasas globales BCV/USDT (panel de Tasas)
     let diferencial = 0
     let totalVehiculoBanco = 0
     if (plan === 'banco_100' && modalidad === 'credito_24') {
+      const { data: cfgTasas } = await supabase
+        .from('config_cotizaciones')
+        .select('clave, valor')
+        .in('clave', ['tasa_bcv', 'tasa_usdt'])
+      const tasaBcv = Number(cfgTasas?.find(c => c.clave === 'tasa_bcv')?.valor) || 0
+      const tasaUsdt = Number(cfgTasas?.find(c => c.clave === 'tasa_usdt')?.valor) || 0
+      const difPct = (tasaBcv > 0 && tasaUsdt > tasaBcv) ? (tasaUsdt - tasaBcv) / tasaBcv : 0
       const placaMonto = Number(vehiculo.placa_monto) || 400
       totalVehiculoBanco = precioBase + iva + placaMonto
-      const diferencialPct = Number(vehiculo.diferencial_pct) || 30
       const financiamientoBanco = totalVehiculoBanco * 0.70
-      diferencial = financiamientoBanco * diferencialPct / 100
+      diferencial = financiamientoBanco * difPct
     }
 
     // Gastos según modalidad

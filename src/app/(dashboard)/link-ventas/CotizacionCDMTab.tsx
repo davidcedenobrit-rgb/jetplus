@@ -82,7 +82,7 @@ function fm(n: number | null | undefined) {
   return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan) {
+function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: { bcv: number; usdt: number }) {
   const precio = v.cash ?? 0
   const iva = precio * 0.16
   if (modalidad === 'contado') {
@@ -93,7 +93,8 @@ function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan) {
     const placaMonto = v.placa_monto ?? 400
     const totalVeh = precio + iva + placaMonto
     const fin = totalVeh * 0.70
-    const dif = fin * (v.diferencial_pct ?? 30) / 100
+    const difPct = (tasas.bcv > 0 && tasas.usdt > tasas.bcv) ? (tasas.usdt - tasas.bcv) / tasas.bcv : 0
+    const dif = fin * difPct
     const gastosBanco = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
     const gastos = gastosBanco + dif
     const inicial = totalVeh * 0.30
@@ -121,7 +122,7 @@ function buildCuotasPreview(p: PlanAC500): { label: string; monto: number }[] {
 const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red bg-white'
 const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1'
 
-export default function CotizacionCDMTab({ catalogo, showroomStock = [] }: { catalogo: any[]; showroomStock?: ShowroomItem[] }) {
+export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }: { catalogo: any[]; showroomStock?: ShowroomItem[]; tasas: { bcv: number; usdt: number } }) {
   // Priorizar los que están en showroom (con stock) sobre los que son por encargo
   const disponibles: Vehiculo[] = useMemo(() => {
     const conStock: Vehiculo[] = []
@@ -219,7 +220,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [] }: { cat
       ? planAC500Sel
         ? { label: 'PAGO INICIAL (Cuota 0)', total: planAC500Sel.cuota_0, cuota: null, financiamiento: planAC500Sel.total - planAC500Sel.cuota_0 }
         : null
-      : calcResumen(vehiculoSel, modalidad, plan)
+      : calcResumen(vehiculoSel, modalidad, plan, tasas)
     : null
 
   /* ── PASO 1: Seleccionar vehículo ── */
@@ -514,7 +515,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [] }: { cat
           const placaMonto = prev.placa_monto ?? 400
           const totalVeh = precioBase + iva + placaMonto
           const fin = totalVeh * 0.70
-          const dif = fin * (prev.diferencial_pct ?? 30) / 100
+          const difPct = (tasas.bcv > 0 && tasas.usdt > tasas.bcv) ? (tasas.usdt - tasas.bcv) / tasas.bcv : 0
+          const dif = fin * difPct
           const gastosBanco = (prev.poliza_vehiculo_banco ?? 0) + (prev.poliza_vida_banco ?? 0) + (prev.honorarios_banco ?? 0) + (prev.gastos_internos_banco ?? 0) + (prev.alfombras_banco ?? 0) + dif
           totalInicial = totalVeh * 0.30 + gastosBanco
           financiamiento = fin

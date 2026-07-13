@@ -16,12 +16,19 @@ export const revalidate = 60
 export default async function VentasPage() {
   const supabase = await createClient()
 
-  const [{ data: catalogo }, { data: ac500 }, { data: promoVehiculos }, { data: promoData }] = await Promise.all([
+  const [{ data: catalogo }, { data: ac500 }, { data: promoVehiculos }, { data: promoData }, { data: tasasCfg }] = await Promise.all([
     supabase.from('catalogo_ventas').select('*').eq('disponible', true).order('orden'),
     supabase.from('ac500_vehiculos').select('*').eq('disponible', true).order('orden'),
     supabase.from('promocion_vehiculos').select('*').order('orden').order('created_at'),
     supabase.from('promociones_especiales').select('*').limit(1).single(),
+    supabase.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt']),
   ])
+
+  // Tasas para el diferencial cambiario del plan 100% Banco
+  const tasas = {
+    bcv:  Number((tasasCfg ?? []).find(t => t.clave === 'tasa_bcv')?.valor) || 0,
+    usdt: Number((tasasCfg ?? []).find(t => t.clave === 'tasa_usdt')?.valor) || 0,
+  }
 
   const lista = catalogo ?? []
   const acLista = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo)
@@ -181,7 +188,7 @@ export default async function VentasPage() {
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede Maturín · Atención personalizada</p>
           <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
         </div>
-        <VehiculosFiltro vehiculos={lista} />
+        <VehiculosFiltro vehiculos={lista} tasas={tasas} />
       </section>
 
       {/* ── PLAN 40% ──────────────────────────────────────────────────────── */}

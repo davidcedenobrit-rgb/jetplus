@@ -29,7 +29,7 @@ function fmt(n: number | null | undefined) {
   return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
-function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan) {
+function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: { bcv: number; usdt: number }) {
   const precio = v.cash ?? 0
   const iva = precio * 0.16
   if (modalidad === 'contado') {
@@ -40,8 +40,9 @@ function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan) {
     const placaMonto = v.placa_monto ?? 400
     const totalVehiculo = precio + iva + placaMonto
     const financiamientoBanco = totalVehiculo * 0.70
-    const diferencialPct = v.diferencial_pct ?? 30
-    const diferencial = financiamientoBanco * diferencialPct / 100
+    // Diferencial cambiario = (USDT - BCV) / BCV, sobre el monto financiado.
+    const difPct = (tasas.bcv > 0 && tasas.usdt > tasas.bcv) ? (tasas.usdt - tasas.bcv) / tasas.bcv : 0
+    const diferencial = financiamientoBanco * difPct
     const gastosBanco = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
     const gastos = gastosBanco + diferencial
     const inicialBanco = totalVehiculo * 0.30
@@ -59,7 +60,7 @@ function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan) {
   return { iva, gastos, totalVehiculo: null, inicialBanco: null, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
 }
 
-export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehiculo; onClose: () => void }) {
+export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo: Vehiculo; tasas: { bcv: number; usdt: number }; onClose: () => void }) {
   const [step, setStep] = useState<Step>('pin')
   const [pin, setPin] = useState('')
   const [pinError, setPinError] = useState('')
@@ -76,7 +77,7 @@ export default function CotizacionModal({ vehiculo, onClose }: { vehiculo: Vehic
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
 
-  const calc = calcular(vehiculo, modalidad, plan)
+  const calc = calcular(vehiculo, modalidad, plan, tasas)
 
   async function verificarPin() {
     if (!/^[A-Za-z]\d{3}$/.test(pin.trim())) { setPinError('El código debe ser una letra seguida de 3 dígitos (ej: D198)'); return }
