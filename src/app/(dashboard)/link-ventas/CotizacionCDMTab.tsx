@@ -150,6 +150,9 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   const [cliBuscando, setCliBuscando] = useState(false)
   const [cliOpen, setCliOpen] = useState(false)
 
+  // Cantidad de vehículos (independiente del stock de showroom)
+  const [cantidad, setCantidad] = useState(1)
+
   // AC500
   const [ac500Meses, setAc500Meses] = useState<6 | 9>(6)
   const [planesAC500, setPlanesAC500] = useState<PlanAC500[]>([])
@@ -229,6 +232,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           clienteCodigoPostal: form.clienteCodigoPostal || null, agenteRetencion: form.agenteRetencion,
           modalidad: 'credito_24',
           plan,
+          cantidad,
           ...(plan === 'ac500' && planAC500Sel ? { ac500PlanId: planAC500Sel.id, ac500Meses } : {}),
         }),
       })
@@ -244,6 +248,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setErrorMsg(''); setNumeroCot('')
     setPlanAC500Sel(null); setPlanesAC500([])
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
+    setCantidad(1)
   }
 
   function handleVistaPrevia() {
@@ -359,6 +364,21 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
             </button>
           </div>
 
+          {/* Cantidad de vehículos */}
+          <div className="mt-3">
+            <p className={labelCls}>Cantidad de vehículos</p>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setCantidad(c => Math.max(1, c - 1))}
+                className="w-9 h-9 rounded-lg border-2 border-gray-200 text-gray-600 font-bold hover:border-gray-300">−</button>
+              <input type="number" min={1} step={1} value={cantidad}
+                onChange={e => setCantidad(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                className={`${inputCls} w-20 text-center`} />
+              <button type="button" onClick={() => setCantidad(c => c + 1)}
+                className="w-9 h-9 rounded-lg border-2 border-gray-200 text-gray-600 font-bold hover:border-gray-300">+</button>
+              <span className="text-[11px] text-gray-400 ml-1">Independiente del stock en showroom · los totales se multiplican por esta cantidad.</span>
+            </div>
+          </div>
+
           {/* Sub-plan para crédito 24 */}
           {modalidad === 'credito_24' && plan !== 'ac500' && (
             <div className="mt-3">
@@ -449,6 +469,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                   <span className="text-sm font-bold text-amber-700">${fmt(resumen.cuota)}</span>
                 </div>
               )}
+              {cantidad > 1 && (
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-amber-200">
+                  <span className="text-xs font-bold text-amber-800">Total × {cantidad} unidades</span>
+                  <span className="text-sm font-extrabold text-amber-900">${fmt(resumen.total * cantidad)}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -459,6 +485,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                 <span className="text-xs text-gray-600">{resumen.label}</span>
                 <span className="text-sm font-bold text-blue-900">${fmt(resumen.total)}</span>
               </div>
+              {cantidad > 1 && planAC500Sel && (
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-blue-200">
+                  <span className="text-xs font-bold text-blue-800">Total plan × {cantidad} unidades</span>
+                  <span className="text-sm font-extrabold text-blue-900">${fmt(planAC500Sel.total * cantidad)}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -722,6 +754,52 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                     </div>
                   )
                 })()}
+
+                {/* Total por N unidades */}
+                {cantidad > 1 && (
+                  <div className="border-2 border-oriental-black rounded-xl overflow-hidden">
+                    <div className="bg-oriental-black px-4 py-2">
+                      <p className="text-[10px] font-bold text-white uppercase tracking-wider">Total por {cantidad} unidades</p>
+                    </div>
+                    {plan === 'ac500' && planAC500Sel ? (
+                      <>
+                        <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">Reserva total (× {cantidad})</span>
+                          <span className="text-xs font-semibold text-oriental-black">${fmt(planAC500Sel.cuota_0 * cantidad)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-3 bg-blue-50">
+                          <span className="text-xs font-bold text-blue-900 uppercase">Total plan ({cantidad} u)</span>
+                          <span className="text-sm font-extrabold text-blue-900">${fmt(planAC500Sel.total * cantidad)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">{labelInicial} (× {cantidad})</span>
+                          <span className="text-xs font-semibold text-oriental-black">${fmt(totalInicial * cantidad)}</span>
+                        </div>
+                        {financiamiento != null && cuotaMensual != null && (
+                          <>
+                            <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                              <span className="text-xs text-gray-500">Financiamiento (× {cantidad})</span>
+                              <span className="text-xs font-semibold text-oriental-black">${fmt(financiamiento * cantidad)}</span>
+                            </div>
+                            <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                              <span className="text-xs text-gray-500">Cuota mensual total (24 × {cantidad})</span>
+                              <span className="text-xs font-semibold text-oriental-black">${fmt(cuotaMensual * cantidad)}</span>
+                            </div>
+                          </>
+                        )}
+                        {costoTotal != null && (
+                          <div className="flex justify-between items-center px-4 py-3 bg-green-50">
+                            <span className="text-xs font-bold text-green-800 uppercase">Costo total ({cantidad} u)</span>
+                            <span className="text-sm font-extrabold text-green-900">${fmt(costoTotal * cantidad)}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
 
                 <p className="text-[11px] text-gray-400 text-center bg-gray-50 rounded-lg px-3 py-2">
                   Los precios son referenciales y están sujetos a disponibilidad al momento de la compra.

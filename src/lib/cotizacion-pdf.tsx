@@ -154,6 +154,7 @@ export interface CotizacionPDFData {
   agenteRetencion: boolean
   marca: string
   modelo: string
+  cantidad?: number
   precioBase: number
   modalidad: 'contado' | 'credito_24'
   plan?: 'vehimotors' | 'banco_100' | 'ac500'
@@ -171,6 +172,8 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const esAC500 = data.plan === 'ac500'
   const es24 = data.modalidad === 'credito_24'
   const esBanco = data.plan === 'banco_100'
+  const cantidad = Math.max(1, Math.floor(data.cantidad ?? 1))
+  const importeUnit = esAC500 ? (data.ac500Schedule?.total ?? 0) : data.precioBase
   const modalidadLabel = esAC500
     ? `ASEGÚRATE CON $500 — ${data.ac500Schedule?.meses ?? ''} MESES`
     : es24
@@ -251,9 +254,9 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           <View style={s.tableRow}>
             <Text style={[s.tableCell, s.colMarca]}>{data.marca}</Text>
             <Text style={[s.tableCell, s.colModelo]}>{data.modelo}</Text>
-            <Text style={[s.tableCell, s.colCant, { textAlign: 'center' }]}>1</Text>
+            <Text style={[s.tableCell, s.colCant, { textAlign: 'center' }]}>{cantidad}</Text>
             <Text style={[s.tableCell, s.colPrecio, { textAlign: 'right' }]}>{fmt(esAC500 ? data.ac500Schedule?.reserva : data.precioBase)}</Text>
-            <Text style={[s.tableCell, s.colImporte, { textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{fmt(esAC500 ? data.ac500Schedule?.total : data.precioBase)}</Text>
+            <Text style={[s.tableCell, s.colImporte, { textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{fmt(importeUnit * cantidad)}</Text>
           </View>
 
           {/* ── AC500 Schedule ── */}
@@ -376,6 +379,54 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 <View style={s.finRow}>
                   <Text style={s.finLabel}>Cuotas mensuales</Text>
                   <Text style={s.finVal}>24   ${fmt(data.cuotaMensual)}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Total por N unidades (solo si cantidad > 1) */}
+          {!esAC500 && cantidad > 1 && (
+            <View style={{ marginTop: 8, alignItems: 'flex-end' }}>
+              <View style={[s.finBox, { width: 240 }]}>
+                <View style={[s.finHeader, { backgroundColor: DARK }]}>
+                  <Text style={s.finHeaderText}>TOTAL POR {cantidad} UNIDADES</Text>
+                </View>
+                <View style={s.finRow}>
+                  <Text style={s.finLabel}>{es24 ? 'Inicial total' : 'Total a pagar'} (x{cantidad})</Text>
+                  <Text style={s.finVal}>${fmt(data.totalInicial * cantidad)}</Text>
+                </View>
+                {es24 && data.financiamientoMonto != null && (
+                  <>
+                    <View style={s.finRow}>
+                      <Text style={s.finLabel}>Financiamiento (x{cantidad})</Text>
+                      <Text style={s.finVal}>${fmt(data.financiamientoMonto * cantidad)}</Text>
+                    </View>
+                    <View style={s.finRow}>
+                      <Text style={s.finLabel}>Cuota mensual total (24 x {cantidad})</Text>
+                      <Text style={s.finVal}>${fmt((data.cuotaMensual ?? 0) * cantidad)}</Text>
+                    </View>
+                  </>
+                )}
+                <View style={s.finTotalRow}>
+                  <Text style={s.finTotalLabel}>COSTO TOTAL ({cantidad} u)</Text>
+                  <Text style={s.finTotalVal}>${fmt(data.costoTotal * cantidad)}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+          {esAC500 && data.ac500Schedule && cantidad > 1 && (
+            <View style={{ marginTop: 8, alignItems: 'flex-end' }}>
+              <View style={[s.finBox, { width: 240 }]}>
+                <View style={[s.finHeader, { backgroundColor: BLUE_DARK }]}>
+                  <Text style={s.finHeaderText}>TOTAL POR {cantidad} UNIDADES</Text>
+                </View>
+                <View style={s.finRow}>
+                  <Text style={s.finLabel}>Reserva total (x{cantidad})</Text>
+                  <Text style={s.finVal}>${fmt(data.ac500Schedule.reserva * cantidad)}</Text>
+                </View>
+                <View style={s.finTotalRow}>
+                  <Text style={s.finTotalLabel}>TOTAL PLAN ({cantidad} u)</Text>
+                  <Text style={s.finTotalVal}>${fmt(data.ac500Schedule.total * cantidad)}</Text>
                 </View>
               </View>
             </View>

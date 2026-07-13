@@ -31,7 +31,11 @@ export async function POST(req: Request) {
       plan = 'vehimotors',
       ac500PlanId,
       ac500Meses: ac500MesesBody,
+      cantidad,
     } = body
+
+    // Cantidad de vehículos (entero >= 1), independiente del stock de showroom
+    const cantidadNum = Math.max(1, Math.floor(Number(cantidad) || 1))
 
     // Validaciones básicas
     if (!codigo || !vehiculoId || !clienteNombre?.trim() || !clienteCiRif?.trim() || !clienteCorreo?.trim() || !modalidad) {
@@ -213,6 +217,7 @@ export async function POST(req: Request) {
         vehiculo_id: vehiculoId,
         marca: vehiculo.brand,
         modelo: vehiculo.model,
+        cantidad: cantidadNum,
         precio_base: precioBase,
         modalidad,
         plan,
@@ -251,6 +256,7 @@ export async function POST(req: Request) {
       agenteRetencion: !!agenteRetencion,
       marca: vehiculo.brand,
       modelo: vehiculo.model,
+      cantidad: cantidadNum,
       precioBase,
       modalidad,
       plan,
