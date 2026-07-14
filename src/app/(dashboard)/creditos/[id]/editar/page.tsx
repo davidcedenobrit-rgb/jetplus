@@ -456,9 +456,10 @@ export default function EditarCreditoPage() {
     setCuotas(cs ?? [])
     setMontoHistorico('')
 
+    const fmtMonto = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 5 })
     const completadas = aplicadas - (cuotaAbono ? 1 : 0)
-    let msg = `✓ $${totalPagado.toFixed(2)} distribuidos en todos los planes: ${completadas} cuota${completadas !== 1 ? 's' : ''} pagadas`
-    if (cuotaAbono) msg += `, cuota #${cuotaAbono.numero_cuota} con abono $${montoAbono.toFixed(2)} (pendiente $${(Number(cuotaAbono.monto) - montoAbono).toFixed(2)})`
+    let msg = `✓ $${fmtMonto(totalPagado)} distribuidos en todos los planes: ${completadas} cuota${completadas !== 1 ? 's' : ''} pagadas`
+    if (cuotaAbono) msg += `, cuota #${cuotaAbono.numero_cuota} con abono $${fmtMonto(montoAbono)} (pendiente $${fmtMonto(Number(cuotaAbono.monto) - montoAbono)})`
     setAntiguedadMsg(msg)
     setAplicandoAntiguedad(false)
     router.refresh()
@@ -655,9 +656,9 @@ export default function EditarCreditoPage() {
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
-                    <input type="number" step="0.01" min="0"
+                    <input type="number" step="0.00001" min="0"
                       className="input pl-7 font-bold text-lg"
-                      placeholder="0.00"
+                      placeholder="0.00000"
                       value={montoHistorico}
                       onChange={e => { setMontoHistorico(e.target.value); setAntiguedadMsg('') }} />
                   </div>
