@@ -315,7 +315,7 @@ export async function POST(req: Request) {
       if (r.status === 'rejected') console.error(`[cotizaciones] email ${i} error:`, r.reason)
     })
 
-    return NextResponse.json({ ok: true, numero: cot.numero }, { status: 201 })
+    return NextResponse.json({ ok: true, numero: cot.numero, id: cot.id }, { status: 201 })
   } catch (err) {
     console.error('[cotizaciones] unexpected error:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
