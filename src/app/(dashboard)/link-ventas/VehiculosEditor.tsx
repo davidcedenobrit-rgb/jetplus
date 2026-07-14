@@ -446,7 +446,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       {toast && <Toast msg={toast.msg} ok={toast.ok} />}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
         <h2 className="text-base font-bold text-oriental-black">
           Catálogo de vehículos
           <span className="ml-2 text-xs font-normal text-oriental-gray">({vehiculos.length} modelos)</span>
@@ -512,66 +512,67 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                 isDirty ? 'border-orange-300 shadow-sm' : 'border-gray-200'
               }`}
             >
-              {/* Collapsed row — always visible */}
-              <div className="flex items-center gap-3 px-4 py-3">
-                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded flex-shrink-0 ${
-                  v.brand === 'MG' ? 'bg-red-50 text-oriental-red' : 'bg-blue-50 text-blue-600'
-                }`}>
-                  {v.brand}
-                </span>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-oriental-black text-sm truncate">
-                      {v.model || <span className="text-gray-400">Sin nombre</span>}
+              {/* Collapsed row — always visible (info arriba, acciones abajo) */}
+              <div className="px-4 py-3">
+                {/* Info */}
+                <div className="flex items-start gap-2.5">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded flex-shrink-0 mt-0.5 ${
+                    v.brand === 'MG' ? 'bg-red-50 text-oriental-red' : 'bg-blue-50 text-blue-600'
+                  }`}>
+                    {v.brand}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-oriental-black text-sm">
+                        {v.model || <span className="text-gray-400">Sin nombre</span>}
+                      </p>
+                      {enShowroom && (
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                          🏪 {unidadesShowroom}u
+                        </span>
+                      )}
+                      {isDirty && !isExpanded && (
+                        <span className="text-[10px] font-semibold text-orange-500 bg-orange-50 px-2 py-0.5 rounded">
+                          Sin guardar
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      {v.cash ? `$${v.cash.toLocaleString('es-VE', { minimumFractionDigits: 0 })}` : 'Sin precio'}
+                      {v.stock != null ? ` · ${v.stock} en stock` : ''}
+                      {v.ano ? ` · ${v.ano}` : ''}
                     </p>
-                    {enShowroom && (
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded flex-shrink-0">
-                        🏪 {unidadesShowroom}u showroom
-                      </span>
-                    )}
                   </div>
-                  <p className="text-[11px] text-gray-400">
-                    {v.cash ? `$${v.cash.toLocaleString('es-VE', { minimumFractionDigits: 0 })}` : 'Sin precio'}
-                    {v.stock != null ? ` · ${v.stock} en stock` : ''}
-                    {v.ano ? ` · ${v.ano}` : ''}
-                  </p>
                 </div>
 
-                {isDirty && !isExpanded && (
-                  <span className="text-[10px] font-semibold text-orange-500 bg-orange-50 px-2 py-0.5 rounded flex-shrink-0">
-                    Sin guardar
-                  </span>
-                )}
-
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                {/* Acciones */}
+                <div className="flex items-center gap-2 mt-3">
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
                     v.disponible ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
                   }`}>
                     {v.disponible ? 'Activo' : 'Inactivo'}
                   </span>
                   <Toggle on={!!v.disponible} onClick={() => toggleDisp(v.id)} />
-                </div>
-
-                {v.disponible && (
+                  <div className="flex-1" />
+                  {v.disponible && (
+                    <button
+                      onClick={() => openQuick(v)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors flex-shrink-0"
+                    >
+                      <Zap size={12} /> Cotizar
+                    </button>
+                  )}
                   <button
-                    onClick={() => openQuick(v)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors flex-shrink-0"
+                    onClick={() => toggleExpand(v.id)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
+                      isExpanded
+                        ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-oriental-black text-white hover:bg-gray-800'
+                    }`}
                   >
-                    <Zap size={12} /> Cotizar
+                    {isExpanded ? <><ChevronUp size={13} /> Cerrar</> : <><Pencil size={12} /> Editar</>}
                   </button>
-                )}
-
-                <button
-                  onClick={() => toggleExpand(v.id)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
-                    isExpanded
-                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      : 'bg-oriental-black text-white hover:bg-gray-800'
-                  }`}
-                >
-                  {isExpanded ? <><ChevronUp size={13} /> Cerrar</> : <><Pencil size={12} /> Editar</>}
-                </button>
+                </div>
               </div>
 
               {/* Expanded edit panel */}
