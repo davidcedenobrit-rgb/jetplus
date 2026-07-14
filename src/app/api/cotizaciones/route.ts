@@ -57,16 +57,19 @@ export async function POST(req: Request) {
 
     const supabase = await createAdminClient()
 
-    // Identidad del concesionario para el encabezado. Solo se acepta uno ACTIVO;
-    // si no existe o está inactivo, se usa La Oriental (por defecto).
+    // Concesionario del encabezado. Solo el código de la casa (R000) puede
+    // cotizar para otro concesionario; el resto de vendedoras siempre va a La
+    // Oriental. Además debe ser un concesionario ACTIVO.
+    const esCodigoCasa = String(codigo || '').trim().toUpperCase() === 'R000'
     let concIdSolicitado: string | null = concesionarioId ?? null
-    if (concIdSolicitado) {
+    if (!esCodigoCasa) concIdSolicitado = 'la-oriental'
+    if (concIdSolicitado && concIdSolicitado !== 'la-oriental') {
       const { data: cRow } = await supabase
         .from('concesionarios')
         .select('activo')
         .eq('id', concIdSolicitado)
         .maybeSingle()
-      if (!cRow || !cRow.activo) concIdSolicitado = null
+      if (!cRow || !cRow.activo) concIdSolicitado = 'la-oriental'
     }
     const conces = await getConcesionarioIdentity(supabase, concIdSolicitado)
 

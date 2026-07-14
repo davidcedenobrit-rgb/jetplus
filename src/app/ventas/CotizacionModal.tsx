@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react'
 
 type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
 
+const CONCES_CORTO: Record<string, string> = {
+  'la-oriental': 'La Oriental', 'autosurca': 'Autosurca', 'capital-motors': 'Capital Motors', 'kiauto': 'Ki Auto',
+}
+
 interface Vehiculo {
   id: string
   brand: string
@@ -79,6 +83,11 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
 
+  // Concesionario — solo el código de la casa (R000) puede elegir; el resto va a La Oriental
+  const esCasa = pin.trim().toUpperCase() === 'R000'
+  const [concesionarios, setConcesionarios] = useState<{ id: string; nombre: string; es_principal: boolean }[]>([])
+  const [concesionarioId, setConcesionarioId] = useState('la-oriental')
+
   // Buscador de clientes existentes
   const [cliQuery, setCliQuery] = useState('')
   const [cliResultados, setCliResultados] = useState<ClienteBuscado[]>([])
@@ -129,6 +138,18 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
       if (json.valida) {
         setVendedoraNombre(json.nombre)
         setStep('form')
+        if (pin.trim().toUpperCase() === 'R000') {
+          fetch('/api/concesionarios')
+            .then(r => r.json())
+            .then((d: { id: string; nombre: string; es_principal: boolean }[]) => {
+              if (Array.isArray(d) && d.length) {
+                setConcesionarios(d)
+                const principal = d.find(c => c.es_principal) ?? d[0]
+                setConcesionarioId(principal.id)
+              }
+            })
+            .catch(() => {})
+        }
       } else {
         setPinError('Código incorrecto. Intenta de nuevo.')
       }
@@ -167,6 +188,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
           agenteRetencion: form.agenteRetencion,
           modalidad,
           plan: modalidad === 'credito_24' ? plan : 'vehimotors',
+          concesionarioId: esCasa ? concesionarioId : 'la-oriental',
         }),
       })
       const json = await r.json()
@@ -250,6 +272,21 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
                 <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, margin: '0 0 2px' }}>{vehiculo.brand}</p>
                 <p style={{ fontSize: 14, fontWeight: 800, color: '#111', margin: 0 }}>{vehiculo.model}</p>
               </div>
+
+              {/* Concesionario (solo código de la casa R000) */}
+              {esCasa && concesionarios.length > 1 && (
+                <div style={{ marginBottom: 18 }}>
+                  <label style={label}>Concesionario</label>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {concesionarios.map(c => (
+                      <button key={c.id} onClick={() => setConcesionarioId(c.id)}
+                        style={{ flex: '1 1 auto', padding: '10px 8px', border: `2px solid ${concesionarioId === c.id ? '#dc2626' : '#e5e7eb'}`, borderRadius: 10, background: concesionarioId === c.id ? '#dc2626' : '#fff', color: concesionarioId === c.id ? '#fff' : '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                        {CONCES_CORTO[c.id] ?? c.nombre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Modalidad */}
               <div style={{ marginBottom: 18 }}>
