@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -210,6 +210,42 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
                 <TrendingDown size={18} />
                 Egresos
+              </Link>
+            )
+          })()}
+
+          {/* Balance — debajo de Egresos, solo dirección */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/balance' || pathname.startsWith('/balance/')
+            return (
+              <Link href="/balance" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Scale size={18} />
+                <span className="flex-1">Balance</span>
+              </Link>
+            )
+          })()}
+
+          {/* Cuentas por pagar/cobrar — solo dirección */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/cuentas' || pathname.startsWith('/cuentas/')
+            return (
+              <Link href="/cuentas" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Coins size={18} />
+                <span className="flex-1">Por pagar / cobrar</span>
+              </Link>
+            )
+          })()}
+
+          {/* Pago Fijo — debajo de Balance, solo dirección */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/pagos-fijos' || pathname.startsWith('/pagos-fijos/')
+            return (
+              <Link href="/pagos-fijos" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Repeat size={18} />
+                <span className="flex-1">Pago Fijo</span>
               </Link>
             )
           })()}

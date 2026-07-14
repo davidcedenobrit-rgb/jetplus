@@ -1024,7 +1024,7 @@ export default function NuevoCreditoPage() {
                       </div>
                       <div className="relative mb-3">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
-                        <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
+                        <input type="number" step="0.00001" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
                           placeholder="0.00 — monto total ya cobrado"
                           value={orMontoHistorico} onChange={e => setOrMontoHistorico(e.target.value)} />
                       </div>
@@ -1136,7 +1136,7 @@ export default function NuevoCreditoPage() {
                       </div>
                       <div className="relative mb-3">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
-                        <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
+                        <input type="number" step="0.00001" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
                           placeholder="0.00 — monto total ya cobrado"
                           value={vhMontoHistorico} onChange={e => setVhMontoHistorico(e.target.value)} />
                       </div>
@@ -1228,7 +1228,7 @@ export default function NuevoCreditoPage() {
                           </div>
                           <div className="relative mb-3">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
-                            <input type="number" step="0.01" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
+                            <input type="number" step="0.00001" min="0" className="input pl-7 border-amber-300 bg-white font-semibold"
                               placeholder="0.00 — monto total ya cobrado"
                               value={ceMontoHistorico} onChange={e => setCeMontoHistorico(e.target.value)} />
                           </div>

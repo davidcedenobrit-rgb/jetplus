@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { formatCurrency, CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
 import LinkVentasStats from './LinkVentasStats'
 import AvisoCobro from './AvisoCobro'
@@ -773,21 +774,21 @@ export default function ReportesPage() {
     setLoading(true)
 
     const [
-      { data: clientesData },
-      { data: vehiculosData },
-      { data: creditosData },
-      { data: cuotasData },
-      { data: ingData },
-      { data: egrData },
+      clientesData,
+      vehiculosData,
+      creditosData,
+      cuotasData,
+      ingData,
+      egrData,
     ] = await Promise.all([
-      supabase.from('clientes').select('id').eq('activo', true),
-      supabase.from('vehiculos').select('id, marca, modelo, tipo_compra'),
-      supabase.from('creditos').select('id, plan_tipo, saldo, monto_financiado, placa, cliente_id, clientes(id, nombre, cedula_rif, telefono, whatsapp, correo)'),
-      supabase.from('cuotas').select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id'),
-      supabase.from('ingresos').select('id, monto, moneda, tasa_cambio, metodo_pago, estado, fecha_pago')
-        .gte('fecha_pago', fechaDesde).lte('fecha_pago', fechaHasta),
-      supabase.from('egresos').select('id, monto, moneda, tasa_cambio, categoria, estado, fecha_egreso')
-        .gte('fecha_egreso', fechaDesde).lte('fecha_egreso', fechaHasta),
+      fetchAllRows<any>((f, t) => supabase.from('clientes').select('id').eq('activo', true).range(f, t)),
+      fetchAllRows<any>((f, t) => supabase.from('vehiculos').select('id, marca, modelo, tipo_compra').range(f, t)),
+      fetchAllRows<any>((f, t) => supabase.from('creditos').select('id, plan_tipo, saldo, monto_financiado, placa, cliente_id, clientes(id, nombre, cedula_rif, telefono, whatsapp, correo)').range(f, t)),
+      fetchAllRows<any>((f, t) => supabase.from('cuotas').select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id').range(f, t)),
+      fetchAllRows<any>((f, t) => supabase.from('ingresos').select('id, monto, moneda, tasa_cambio, metodo_pago, estado, fecha_pago')
+        .gte('fecha_pago', fechaDesde).lte('fecha_pago', fechaHasta).range(f, t)),
+      fetchAllRows<any>((f, t) => supabase.from('egresos').select('id, monto, moneda, tasa_cambio, categoria, estado, fecha_egreso')
+        .gte('fecha_egreso', fechaDesde).lte('fecha_egreso', fechaHasta).range(f, t)),
     ])
 
     // ── KPIs globales

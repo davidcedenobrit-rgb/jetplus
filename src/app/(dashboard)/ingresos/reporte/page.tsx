@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { formatDate, METODOS_PAGO } from '@/lib/utils'
 import { ArrowLeft, Printer, Search } from 'lucide-react'
 import Link from 'next/link'
@@ -87,22 +88,24 @@ export default function ReporteIngresosPage() {
 
   const cargar = useCallback(async () => {
     setLoading(true)
-    let q = supabase
-      .from('ingresos')
-      .select('id, numero_recibo, placa, concepto, monto, moneda, metodo_pago, referencia, fecha_pago, fecha_registro, estado, tasa_cambio, monto_bs, clientes(nombre, cedula_rif)')
-      .gte(tipoFecha, tipoFecha === 'fecha_registro' ? fechaDesde + 'T00:00:00' : fechaDesde)
-      .lte(tipoFecha, tipoFecha === 'fecha_registro' ? fechaHasta + 'T23:59:59' : fechaHasta)
-      .neq('estado', 'anulado')
-      .order('concepto')
-      .order('fecha_pago')
+    const data = await fetchAllRows<Ingreso>((from, to) => {
+      let q = supabase
+        .from('ingresos')
+        .select('id, numero_recibo, placa, concepto, monto, moneda, metodo_pago, referencia, fecha_pago, fecha_registro, estado, tasa_cambio, monto_bs, clientes(nombre, cedula_rif)')
+        .gte(tipoFecha, tipoFecha === 'fecha_registro' ? fechaDesde + 'T00:00:00' : fechaDesde)
+        .lte(tipoFecha, tipoFecha === 'fecha_registro' ? fechaHasta + 'T23:59:59' : fechaHasta)
+        .neq('estado', 'anulado')
+        .order('concepto')
+        .order('fecha_pago')
 
-    if (estado) q = q.eq('estado', estado)
-    if (moneda) q = q.eq('moneda', moneda)
-    if (metodoPago) q = q.eq('metodo_pago', metodoPago)
-    if (concepto) q = q.eq('concepto', concepto)
+      if (estado) q = q.eq('estado', estado)
+      if (moneda) q = q.eq('moneda', moneda)
+      if (metodoPago) q = q.eq('metodo_pago', metodoPago)
+      if (concepto) q = q.eq('concepto', concepto)
 
-    const { data } = await q
-    setIngresosRaw((data ?? []) as unknown as Ingreso[])
+      return q.range(from, to)
+    })
+    setIngresosRaw(data)
     setLoading(false)
   }, [fechaDesde, fechaHasta, tipoFecha, estado, moneda, metodoPago, concepto])
 

@@ -1,16 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { ArrowLeftRight } from 'lucide-react'
 
 export default async function TasasPage() {
   const supabase = await createClient()
 
-  const { data: ingresos } = await supabase
+  const ingresos = await fetchAllRows<any>((from, to) => supabase
     .from('ingresos')
     .select('id, numero_recibo, monto, tasa_cambio, fecha_pago, clientes(nombre)')
     .eq('moneda', 'VES')
     .not('tasa_cambio', 'is', null)
     .order('fecha_pago', { ascending: false })
+    .range(from, to))
 
   const registros = (ingresos ?? []).map((i: any) => ({
     id: i.id,

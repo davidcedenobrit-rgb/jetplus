@@ -1,17 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { METODOS_PAGO, BANCOS_VE, CATEGORIAS_EGRESO_LABEL, CONCEPTOS_POR_CATEGORIA } from '@/lib/utils'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
-import { crearEgreso } from '../actions'
+import { crearEgreso, type Proveedor } from '../actions'
+import ProveedorPicker from './ProveedorPicker'
+
+type CentroCosto = { id: string; nombre: string }
 
 export default function NuevoEgresoPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const [centros, setCentros] = useState<CentroCosto[]>([])
+  const [centroCosto, setCentroCosto] = useState('')
+  const [origenCapital, setOrigenCapital] = useState('')
+  const [tipoMovimiento, setTipoMovimiento] = useState<'gasto' | 'inversion'>('gasto')
 
   const [categoria, setCategoria] = useState('')
   const [concepto, setConcepto] = useState('')
@@ -22,14 +31,22 @@ export default function NuevoEgresoPage() {
   const [tasaCambio, setTasaCambio] = useState('')
   const [metodoPago, setMetodoPago] = useState('')
   const [bancoOrigen, setBancoOrigen] = useState('')
-  const [beneficiario, setBeneficiario] = useState('')
-  const [cedulaRifBenef, setCedulaRifBenef] = useState('')
+  const [proveedor, setProveedor] = useState<Proveedor | null>(null)
   const [referencia, setReferencia] = useState('')
   const [fechaEgreso, setFechaEgreso] = useState(new Date().toISOString().split('T')[0])
-  const [areaResponsable, setAreaResponsable] = useState('')
   const [observaciones, setObservaciones] = useState('')
   const [numeroSa, setNumeroSa] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('centros_costo')
+      .select('id, nombre')
+      .eq('activo', true)
+      .order('orden')
+      .then(({ data }) => { if (data) setCentros(data) })
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,6 +62,7 @@ export default function NuevoEgresoPage() {
     setError('')
 
     const tasaNum = parseFloat(tasaCambio)
+    const centroNombre = centros.find(c => c.id === centroCosto)?.nombre ?? null
     const result = await crearEgreso({
       categoria,
       concepto: conceptoFinal,
@@ -54,13 +72,17 @@ export default function NuevoEgresoPage() {
       tasa_cambio: !isNaN(tasaNum) && tasaNum > 0 ? tasaNum : null,
       metodo_pago: metodoPago || null,
       banco_origen: bancoOrigen || null,
-      beneficiario: beneficiario || null,
-      cedula_rif_benef: cedulaRifBenef || null,
+      beneficiario: proveedor?.nombre ?? null,
+      cedula_rif_benef: proveedor?.rif ?? null,
       referencia: referencia || null,
       fecha_egreso: fechaEgreso,
-      area_responsable: areaResponsable || null,
+      area_responsable: centroNombre,
       observaciones: observaciones || null,
       numero_sa: numeroSa || null,
+      centro_costo_id: centroCosto || null,
+      origen_capital: origenCapital.trim() || null,
+      tipo_movimiento: tipoMovimiento,
+      proveedor_id: proveedor?.id ?? null,
       comprobantes,
     })
 
@@ -91,6 +113,15 @@ export default function NuevoEgresoPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <label className="label">Centro de costo *</label>
+              <select className="select" value={centroCosto} onChange={e => setCentroCosto(e.target.value)} required>
+                <option value="">Seleccionar...</option>
+                {centros.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="label">Categoría *</label>
               <select className="select" value={categoria} onChange={e => { setCategoria(e.target.value); setConcepto(''); setConceptoPersonalizado('') }} required>
                 <option value="">Seleccionar...</option>
@@ -100,8 +131,21 @@ export default function NuevoEgresoPage() {
               </select>
             </div>
             <div>
-              <label className="label">Área responsable</label>
-              <input type="text" className="input" placeholder="Ej: Administración, Taller" value={areaResponsable} onChange={e => setAreaResponsable(e.target.value)} />
+              <label className="label">Tipo de movimiento *</label>
+              <div className="flex gap-2">
+                {([['gasto', 'Gasto'], ['inversion', 'Inversión']] as const).map(([val, lbl]) => (
+                  <button key={val} type="button" onClick={() => setTipoMovimiento(val)}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border transition-colors ${
+                      tipoMovimiento === val ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                    }`}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="label">Origen de capital</label>
+              <input type="text" className="input" placeholder="Ej: Caja fuerte, Banco Mercantil, Aporte socios" value={origenCapital} onChange={e => setOrigenCapital(e.target.value)} />
             </div>
           </div>
         </div>
@@ -208,13 +252,10 @@ export default function NuevoEgresoPage() {
             Beneficiario y pago
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Beneficiario</label>
-              <input type="text" className="input" placeholder="Nombre del beneficiario" value={beneficiario} onChange={e => setBeneficiario(e.target.value)} />
-            </div>
-            <div>
-              <label className="label">Cédula / RIF beneficiario</label>
-              <input type="text" className="input font-mono" placeholder="V-12345678" value={cedulaRifBenef} onChange={e => setCedulaRifBenef(e.target.value)} />
+            <div className="md:col-span-2">
+              <label className="label">Beneficiario (proveedor)</label>
+              <ProveedorPicker proveedor={proveedor} onChange={setProveedor} />
+              <p className="text-[11px] text-oriental-gray mt-1">Busca un proveedor o créalo en línea (nombre, RIF, correo, teléfono, N° de cuenta).</p>
             </div>
             <div>
               <label className="label">Banco origen</label>

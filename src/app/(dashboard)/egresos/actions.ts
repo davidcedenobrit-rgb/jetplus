@@ -19,7 +19,21 @@ export type CrearEgresoPayload = {
   area_responsable: string | null
   observaciones: string | null
   numero_sa: string | null
+  centro_costo_id: string | null
+  origen_capital: string | null
+  tipo_movimiento: string | null
+  proveedor_id: string | null
   comprobantes: { url: string; nombre: string }[]
+}
+
+export type Proveedor = {
+  id: string
+  nombre: string
+  rif: string | null
+  correo: string | null
+  telefono: string | null
+  numero_cuenta: string | null
+  banco: string | null
 }
 
 export async function crearEgreso(payload: CrearEgresoPayload) {
@@ -50,6 +64,12 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
     return { error: parsed.error.errors[0]?.message ?? 'Datos inválidos' }
   }
 
+  // Normalizar los campos nuevos (no forman parte del schema base de Zod)
+  const tipoMovimiento = payload.tipo_movimiento === 'inversion' ? 'inversion' : 'gasto'
+  const origenCapital = payload.origen_capital?.trim() || null
+  const centroCostoId = payload.centro_costo_id?.trim() || null
+  const proveedorId = payload.proveedor_id?.trim() || null
+
   // 3. Generar número de egreso y persistir (admin client — SECURITY DEFINER equivalente)
   const admin = await createAdminClient()
 
@@ -75,6 +95,10 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       referencia:       parsed.data.referencia ?? null,
       fecha_egreso:     parsed.data.fecha_egreso,
       area_responsable: parsed.data.area_responsable ?? null,
+      centro_costo_id:  centroCostoId,
+      origen_capital:   origenCapital,
+      tipo_movimiento:  tipoMovimiento,
+      proveedor_id:     proveedorId,
       observaciones:    parsed.data.observaciones ?? null,
       numero_sa:        parsed.data.numero_sa ?? null,
       tasa_cambio:      parsed.data.tasa_cambio ?? null,
@@ -128,4 +152,61 @@ export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto
 
   if (error) return { error: 'Error al actualizar la tasa' }
   return { ok: true }
+}
+
+// ── Proveedores (beneficiario del egreso) ──────────────────────────────────
+
+const PROVEEDOR_COLS = 'id, nombre, rif, correo, telefono, numero_cuenta, banco'
+
+export async function buscarProveedores(query: string): Promise<{ proveedores: Proveedor[] }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { proveedores: [] }
+
+  const q = query.trim()
+  const admin = await createAdminClient()
+  let sel = admin.from('proveedores').select(PROVEEDOR_COLS).eq('activo', true)
+
+  if (q) {
+    const like = `%${q.replace(/[%_,]/g, '')}%`
+    sel = sel.or(`nombre.ilike.${like},rif.ilike.${like}`)
+  }
+
+  const { data } = await sel.order('nombre').limit(20)
+  return { proveedores: (data ?? []) as Proveedor[] }
+}
+
+export async function crearProveedor(input: {
+  nombre: string
+  rif?: string | null
+  correo?: string | null
+  telefono?: string | null
+  numero_cuenta?: string | null
+  banco?: string | null
+}): Promise<{ proveedor?: Proveedor; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autorizado' }
+
+  const nombre = input.nombre?.trim()
+  if (!nombre) return { error: 'El nombre del proveedor es requerido' }
+
+  const clean = (v?: string | null) => (v && v.trim() ? v.trim() : null)
+
+  const admin = await createAdminClient()
+  const { data, error } = await admin
+    .from('proveedores')
+    .insert({
+      nombre,
+      rif:           clean(input.rif),
+      correo:        clean(input.correo),
+      telefono:      clean(input.telefono),
+      numero_cuenta: clean(input.numero_cuenta),
+      banco:         clean(input.banco),
+    })
+    .select(PROVEEDOR_COLS)
+    .single()
+
+  if (error || !data) return { error: 'Error al crear el proveedor' }
+  return { proveedor: data as Proveedor }
 }

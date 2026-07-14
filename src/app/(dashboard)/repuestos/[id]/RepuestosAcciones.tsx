@@ -18,8 +18,8 @@ interface Props {
 const ROL_OPERADOR  = ['arianna', 'director', 'admin', 'mary', 'leysdem']
 // Aprobar cotización — solo Rojas
 const ROL_DIRECTOR  = ['director', 'admin']
-// Cargar pago y retención — mismo nivel que operador
-const ROL_PAGO      = ['arianna', 'director', 'admin', 'mary', 'leysdem']
+// Cargar pago y retención — Mary es quien carga el pago (dirección de respaldo)
+const ROL_PAGO      = ['mary', 'director', 'admin']
 // Panel admin y acciones internas
 const ROL_ADMIN     = ['arianna', 'director', 'admin', 'mary', 'leysdem']
 
@@ -28,6 +28,7 @@ const TODOS_ESTADOS = [
   { key: 'verificado',             label: 'Verificado' },
   { key: 'cotizacion_enviada',     label: 'Cotización enviada' },
   { key: 'cotizacion_recibida',    label: 'Cotización recibida' },
+  { key: 'sin_stock',              label: 'Sin stock' },
   { key: 'cotizacion_aprobada',    label: 'Cotización aprobada' },
   { key: 'factura_recibida',       label: 'Factura recibida' },
   { key: 'pago_enviado',           label: 'Pago enviado' },

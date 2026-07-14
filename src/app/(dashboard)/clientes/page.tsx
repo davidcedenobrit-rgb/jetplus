@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { sanitizeSearch } from '@/lib/utils'
 import Link from 'next/link'
 import { Plus, User, Search, Phone, Mail } from 'lucide-react'
@@ -11,21 +12,23 @@ export default async function ClientesPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  let query = supabase
-    .from('clientes')
-    .select('*, vehiculos(id)')
-    .eq('activo', true)
-    .order('nombre')
+  const clientes = await fetchAllRows<any>((from, to) => {
+    let query = supabase
+      .from('clientes')
+      .select('*, vehiculos(id)')
+      .eq('activo', true)
+      .order('nombre')
 
-  if (params.q) {
-    const q = sanitizeSearch(params.q)
-    if (q) query = query.or(`nombre.ilike.%${q}%,cedula_rif.ilike.%${q}%`)
-  }
-  if (params.tipo) {
-    query = query.eq('tipo', params.tipo)
-  }
+    if (params.q) {
+      const q = sanitizeSearch(params.q)
+      if (q) query = query.or(`nombre.ilike.%${q}%,cedula_rif.ilike.%${q}%`)
+    }
+    if (params.tipo) {
+      query = query.eq('tipo', params.tipo)
+    }
 
-  const { data: clientes } = await query
+    return query.range(from, to)
+  })
 
   return (
     <div className="p-4 lg:p-8">

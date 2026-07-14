@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import VehiculosClient from './VehiculosClient'
@@ -6,15 +7,17 @@ import VehiculosClient from './VehiculosClient'
 export default async function VehiculosPage() {
   const supabase = await createClient()
 
-  const [{ data: vehiculos }, { data: credPlanes }] = await Promise.all([
-    supabase
+  const [vehiculos, credPlanes] = await Promise.all([
+    fetchAllRows<any>((from, to) => supabase
       .from('vehiculos')
       .select('*, clientes(nombre, cedula_rif)')
-      .order('created_at', { ascending: false }),
-    supabase
+      .order('created_at', { ascending: false })
+      .range(from, to)),
+    fetchAllRows<any>((from, to) => supabase
       .from('creditos')
       .select('vehiculo_id, plan_tipo')
-      .not('vehiculo_id', 'is', null),
+      .not('vehiculo_id', 'is', null)
+      .range(from, to)),
   ])
 
   const lista = vehiculos ?? []

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { formatCurrency } from '@/lib/utils'
 import {
   TrendingUp, TrendingDown, Wallet, Clock, AlertCircle, Store, Lock, Wrench, CheckCircle2,
@@ -26,27 +27,27 @@ export default async function DashboardPage() {
   const CANALES_CUSTODIA = ['efectivo', 'personal_jose', 'personal_carla', 'personal_mary', 'personal_leysdem', 'zelle', 'usdt', 'otro']
 
   const [
-    { data: ingresosMes },
-    { data: egresosMes },
-    { data: pendientesAprobacion },
-    { data: pendientesEgresos },
-    { data: showroomTodos },
-    { data: enCustodia },
-    { data: custodiosData },
-    { data: cotizacionesMes },
-    { data: creditosActivos },
+    ingresosMes,
+    egresosMes,
+    pendientesAprobacion,
+    pendientesEgresos,
+    showroomTodos,
+    enCustodia,
+    custodiosData,
+    cotizacionesMes,
+    creditosActivos,
   ] = await Promise.all([
-    supabase.from('ingresos').select('monto, moneda, tasa_cambio').gte('fecha_pago', inicioMes).eq('estado', 'aprobado'),
-    supabase.from('egresos').select('monto, moneda, tasa_cambio').gte('fecha_egreso', inicioMes).eq('estado', 'aprobado'),
-    supabase.from('ingresos').select('id').eq('estado', 'pendiente_aprobacion'),
-    supabase.from('egresos').select('id').eq('estado', 'pendiente_aprobacion'),
-    supabase.from('vehiculos_showroom').select('estado, reserva_vence, marca, modelo, placa').neq('estado', 'vendido'),
-    supabase.from('ingresos').select('monto, moneda, tasa_cambio, canal_destino, custodio_id, custodio_externo')
+    fetchAllRows<any>((f, t) => supabase.from('ingresos').select('monto, moneda, tasa_cambio').gte('fecha_pago', inicioMes).eq('estado', 'aprobado').range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('egresos').select('monto, moneda, tasa_cambio').gte('fecha_egreso', inicioMes).eq('estado', 'aprobado').range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('ingresos').select('id').eq('estado', 'pendiente_aprobacion').range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('egresos').select('id').eq('estado', 'pendiente_aprobacion').range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('vehiculos_showroom').select('estado, reserva_vence, marca, modelo, placa').neq('estado', 'vendido').range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('ingresos').select('monto, moneda, tasa_cambio, canal_destino, custodio_id, custodio_externo')
       .in('canal_destino', CANALES_CUSTODIA).in('estado', ['aprobado', 'enviado_carla', 'entregado_carla'])
-      .or('custodio_id.not.is.null,custodio_externo.not.is.null'),
-    supabase.from('usuarios').select('id, nombre, rol'),
-    supabase.from('cotizaciones').select('estado').gte('fecha', inicioMes),
-    supabase.from('creditos').select('id').neq('estado', 'pagado'),
+      .or('custodio_id.not.is.null,custodio_externo.not.is.null').range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('usuarios').select('id, nombre, rol').range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('cotizaciones').select('estado').gte('fecha', inicioMes).range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('creditos').select('id').neq('estado', 'pagado').range(f, t)),
   ])
 
   const toUSD = (m: any): number => {

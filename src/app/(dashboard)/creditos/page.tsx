@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import CreditosClient from './CreditosClient'
@@ -11,14 +12,16 @@ export default async function CreditosPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  let query = supabase
-    .from('creditos')
-    .select('*, clientes(nombre, cedula_rif), vehiculos(tipo_compra)')
-    .order('created_at', { ascending: false })
+  const creditos = await fetchAllRows<any>((from, to) => {
+    let query = supabase
+      .from('creditos')
+      .select('*, clientes(nombre, cedula_rif), vehiculos(tipo_compra)')
+      .order('created_at', { ascending: false })
 
-  if (params.estado) query = query.eq('estado', params.estado)
+    if (params.estado) query = query.eq('estado', params.estado)
 
-  const { data: creditos } = await query
+    return query.range(from, to)
+  })
 
   // Fetch cuotas para calcular saldo real.
   // Se pagina porque Supabase devuelve máx. 1000 filas por consulta y hay más

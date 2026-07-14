@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -12,7 +13,7 @@ export default async function PagosPortalPage() {
   const rol = (user?.app_metadata?.rol as string) ?? 'editor'
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
-  const { data: pendientes } = await supabase
+  const pendientes = await fetchAllRows<any>((from, to) => supabase
     .from('ingresos')
     .select(`
       id, numero_recibo, concepto, monto, moneda, metodo_pago,
@@ -24,6 +25,7 @@ export default async function PagosPortalPage() {
     .eq('origen', 'portal_cliente')
     .eq('estado', 'pendiente_aprobacion')
     .order('fecha_registro', { ascending: true })
+    .range(from, to))
 
   // Últimos verificados (histórico corto)
   const { data: verificados } = await supabase

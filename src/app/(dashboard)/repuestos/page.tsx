@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag, FileCheck, Receipt, DollarSign, Truck } from 'lucide-react'
@@ -10,7 +11,7 @@ const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem', 'a
 
 // Grupos del flujo de repuestos (segmentado por etapa)
 const GRUPO_KEYS = [
-  'cotizacion_enviada', 'cotizacion_recibida', 'cotizacion_aprobada',
+  'cotizacion_enviada', 'cotizacion_recibida', 'sin_stock', 'cotizacion_aprobada',
   'factura_recibida', 'pagada', 'por_recibir',
   'completadas', 'eliminadas', 'compra_plaza',
 ] as const
@@ -20,6 +21,7 @@ type GrupoKey = typeof GRUPO_KEYS[number]
 const GRUPO_ESTADOS: Record<GrupoKey, string[]> = {
   cotizacion_enviada:  ['solicitado', 'verificado', 'cotizacion_enviada'],
   cotizacion_recibida: ['cotizacion_recibida'],
+  sin_stock:           ['sin_stock'],
   cotizacion_aprobada: ['cotizacion_aprobada'],
   factura_recibida:    ['factura_recibida'],
   pagada:              ['pago_enviado'],
@@ -31,7 +33,7 @@ const GRUPO_ESTADOS: Record<GrupoKey, string[]> = {
 
 // Grupos "activos" (en proceso) usan la grilla completa con seguimiento
 const GRUPOS_ACTIVOS: GrupoKey[] = [
-  'cotizacion_enviada', 'cotizacion_recibida', 'cotizacion_aprobada',
+  'cotizacion_enviada', 'cotizacion_recibida', 'sin_stock', 'cotizacion_aprobada',
   'factura_recibida', 'pagada', 'por_recibir',
 ]
 
@@ -45,6 +47,7 @@ const GRUPOS: Array<{
 }> = [
   { key: 'cotizacion_enviada',  label: 'Cotización enviada',   icon: Send,         color: 'text-yellow-700', bg: 'bg-yellow-100', descripcion: 'Solicitudes activas' },
   { key: 'cotizacion_recibida', label: 'Cotización recibida',  icon: Inbox,        color: 'text-orange-700', bg: 'bg-orange-100', descripcion: 'Vehimotors respondió' },
+  { key: 'sin_stock',           label: 'Sin stock',            icon: XCircle,      color: 'text-red-700',    bg: 'bg-red-100',    descripcion: 'Vehimotors no tiene · comprar en plaza' },
   { key: 'cotizacion_aprobada', label: 'Cotización aprobada',  icon: FileCheck,    color: 'text-blue-700',   bg: 'bg-blue-100',   descripcion: 'Aprobada por Rojas' },
   { key: 'factura_recibida',    label: 'Factura recibida',     icon: Receipt,      color: 'text-cyan-700',   bg: 'bg-cyan-100',   descripcion: 'Con factura' },
   { key: 'pagada',              label: 'Pagada',               icon: DollarSign,   color: 'text-emerald-700',bg: 'bg-emerald-100',descripcion: 'Pago enviado' },
@@ -75,14 +78,16 @@ export default async function RepuestosPage({
     : 'cotizacion_enviada'
   const mostrarTodas = todas === '1'
 
-  // Contadores por grupo (una sola query trae todos)
-  const { data: conteos } = await supabase
+  // Contadores por grupo (se pagina para no cortar el conteo en 1000 filas)
+  const conteos = await fetchAllRows<{ estado: string }>((from, to) => supabase
     .from('solicitudes_repuestos')
     .select('estado')
+    .range(from, to))
 
   const conteoPorGrupo: Record<GrupoKey, number> = {
     cotizacion_enviada: 0,
     cotizacion_recibida: 0,
+    sin_stock: 0,
     cotizacion_aprobada: 0,
     factura_recibida: 0,
     pagada: 0,

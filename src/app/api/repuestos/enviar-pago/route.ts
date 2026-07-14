@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { enviarConfirmacionPago } from '@/lib/email-repuestos'
 import { revalidatePath } from 'next/cache'
 
@@ -9,8 +10,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Mary es quien carga el pago a Vehimotors (dirección de respaldo)
+const ROL_PAGO = ['mary', 'director', 'admin']
+
 export async function POST(req: NextRequest) {
   try {
+    const authClient = await createServerClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const rol = (user.app_metadata?.rol as string) ?? ''
+    if (!ROL_PAGO.includes(rol)) return NextResponse.json({ error: 'Solo Mary puede cargar el pago' }, { status: 403 })
+
     const { solicitudId, comprobanteUrl, numeroCotizacion } = await req.json()
     if (!solicitudId || !comprobanteUrl) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
 

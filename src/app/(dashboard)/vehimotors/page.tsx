@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { redirect } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
@@ -24,11 +25,12 @@ export default async function VehimotorsPage() {
   const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
-  const { data: reportados } = await supabase
+  const reportados = await fetchAllRows<any>((from, to) => supabase
     .from('ingresos')
     .select('*, clientes(nombre, cedula_rif)')
     .eq('estado', 'reportado_vehimotors')
     .order('vehimotors_at', { ascending: false })
+    .range(from, to))
 
   const confirmados = (reportados ?? []).filter(i => i.confirmado_vehimotors_at)
   const pendientes  = (reportados ?? []).filter(i => !i.confirmado_vehimotors_at)

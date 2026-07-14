@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Wallet, User } from 'lucide-react'
@@ -45,13 +46,14 @@ export default async function CustodioBandejaPage({ params }: { params: Promise<
   if (!custodio) notFound()
 
   // Ingresos en poder de este custodio
-  const { data: ingresos } = await supabase
+  const ingresos = await fetchAllRows<any>((from, to) => supabase
     .from('ingresos')
     .select('id, numero_recibo, monto, moneda, tasa_cambio, canal_destino, custodio_desde, fecha_pago, concepto, estado, clientes(nombre, cedula_rif)')
     .eq('custodio_id', custodioId)
     .in('canal_destino', CANALES_CUSTODIA)
     .in('estado', ['aprobado', 'enviado_carla', 'entregado_carla'])
     .order('custodio_desde', { ascending: false })
+    .range(from, to))
 
   // Un pago en bolívares se convierte a USD con su tasa; nunca se suma en Bs.
   const montoUSD = (i: any) =>

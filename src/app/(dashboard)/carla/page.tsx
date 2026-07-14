@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { redirect } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
@@ -50,21 +51,23 @@ export default async function CarlaPage() {
   if (!ROL_CARLA_VISIBLE.includes(rol)) redirect('/dashboard')
 
   // Todo lo que José ha enviado a Carla (cualquier estado del flujo Carla)
-  const { data: deJose } = await supabase
+  const deJose = await fetchAllRows<any>((from, to) => supabase
     .from('ingresos')
     .select('*, clientes(nombre, cedula_rif)')
     .in('estado', ['enviado_carla', 'enviado_deposito', 'depositado', 'entregado_carla', 'reportado_vehimotors'])
     .order('fecha_registro', { ascending: false })
+    .range(from, to))
 
   // Efectivo en poder de cada custodio (canales con billete/cuenta personal)
   const CANALES_CUSTODIA = ['efectivo', 'personal_jose', 'personal_carla', 'personal_mary', 'personal_leysdem', 'zelle', 'usdt', 'otro']
-  const { data: enCustodia } = await supabase
+  const enCustodia = await fetchAllRows<any>((from, to) => supabase
     .from('ingresos')
     .select('id, numero_recibo, monto, moneda, tasa_cambio, canal_destino, custodio_id, custodio_externo, fecha_pago, clientes(nombre)')
     .in('canal_destino', CANALES_CUSTODIA)
     .in('estado', ['aprobado', 'enviado_carla', 'entregado_carla'])
     .or('custodio_id.not.is.null,custodio_externo.not.is.null')
     .order('fecha_pago', { ascending: false })
+    .range(from, to))
 
   const { data: custodiosData } = await supabase
     .from('usuarios')

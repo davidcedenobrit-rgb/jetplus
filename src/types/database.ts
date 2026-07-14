@@ -159,6 +159,9 @@ export interface Egreso {
   placa: string | null
   ingreso_id: string | null
   area_responsable: string | null
+  centro_costo_id: string | null
+  origen_capital: string | null
+  tipo_movimiento: string | null
   registrado_por: string
   aprobado_por: string | null
   fecha_egreso: string

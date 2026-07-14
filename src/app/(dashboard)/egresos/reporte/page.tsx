@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { formatDate, CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
-import { ArrowLeft, Printer, Search, LayoutGrid, Users } from 'lucide-react'
+import { ArrowLeft, Printer, Search, LayoutGrid, Users, Building2 } from 'lucide-react'
 import Link from 'next/link'
 
 type Egreso = {
@@ -21,7 +22,10 @@ type Egreso = {
   fecha_egreso: string
   estado: string
   area_responsable: string | null
+  centro_costo_id: string | null
 }
+
+type CentroCosto = { id: string; nombre: string }
 
 function escapeHtml(s: string | number | null | undefined): string {
   return String(s ?? '')
@@ -60,7 +64,7 @@ const ESTADOS_LABEL: Record<string, string> = {
   anulado: 'Anulado',
 }
 
-type AgruparPor = 'categoria' | 'beneficiario'
+type AgruparPor = 'categoria' | 'centro_costo' | 'beneficiario'
 
 export default function ReporteEgresosPage() {
   const supabase = createClient()
@@ -71,29 +75,45 @@ export default function ReporteEgresosPage() {
   const [fechaDesde, setFechaDesde] = useState(primerDiaMes)
   const [fechaHasta, setFechaHasta] = useState(hoy)
   const [categoria, setCategoria] = useState('')
+  const [centroCostoFiltro, setCentroCostoFiltro] = useState('')
   const [estado, setEstado] = useState('')
   const [agruparPor, setAgruparPor] = useState<AgruparPor>('categoria')
+  const [centros, setCentros] = useState<CentroCosto[]>([])
   const [egresos, setEgresos] = useState<Egreso[]>([])
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    supabase.from('centros_costo').select('id, nombre').eq('activo', true).order('orden')
+      .then(({ data }) => { if (data) setCentros(data) })
+  }, [])
+
+  // Nombre del centro de costo para mostrar (prefiere el catálogo; cae al texto libre histórico)
+  const centroNombre = useCallback((e: Egreso): string => {
+    if (e.centro_costo_id) return centros.find(c => c.id === e.centro_costo_id)?.nombre ?? e.centro_costo_id
+    return e.area_responsable?.trim() || 'Sin centro de costo'
+  }, [centros])
+
   const cargar = useCallback(async () => {
     setLoading(true)
-    let q = supabase
-      .from('egresos')
-      .select('id, numero_egreso, categoria, concepto, descripcion, monto, moneda, tasa_cambio, monto_bs, beneficiario, referencia, fecha_egreso, estado, area_responsable')
-      .gte('fecha_egreso', fechaDesde)
-      .lte('fecha_egreso', fechaHasta)
-      .neq('estado', 'anulado')
-      .order(agruparPor === 'beneficiario' ? 'beneficiario' : 'categoria')
-      .order('fecha_egreso')
+    const data = await fetchAllRows<Egreso>((from, to) => {
+      let q = supabase
+        .from('egresos')
+        .select('id, numero_egreso, categoria, concepto, descripcion, monto, moneda, tasa_cambio, monto_bs, beneficiario, referencia, fecha_egreso, estado, area_responsable, centro_costo_id')
+        .gte('fecha_egreso', fechaDesde)
+        .lte('fecha_egreso', fechaHasta)
+        .neq('estado', 'anulado')
+        .order(agruparPor === 'beneficiario' ? 'beneficiario' : 'categoria')
+        .order('fecha_egreso')
 
-    if (categoria) q = q.eq('categoria', categoria)
-    if (estado) q = q.eq('estado', estado)
+      if (categoria) q = q.eq('categoria', categoria)
+      if (centroCostoFiltro) q = q.eq('centro_costo_id', centroCostoFiltro)
+      if (estado) q = q.eq('estado', estado)
 
-    const { data } = await q
-    setEgresos(data ?? [])
+      return q.range(from, to)
+    })
+    setEgresos(data)
     setLoading(false)
-  }, [fechaDesde, fechaHasta, categoria, estado, agruparPor])
+  }, [fechaDesde, fechaHasta, categoria, centroCostoFiltro, estado, agruparPor])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -102,7 +122,9 @@ export default function ReporteEgresosPage() {
   for (const e of egresos) {
     const k = agruparPor === 'beneficiario'
       ? (e.beneficiario?.trim() || 'Sin beneficiario')
-      : (e.categoria ?? 'otros')
+      : agruparPor === 'centro_costo'
+        ? centroNombre(e)
+        : (e.categoria ?? 'otros')
     if (!grupos[k]) grupos[k] = []
     grupos[k].push(e)
   }
@@ -117,12 +139,13 @@ export default function ReporteEgresosPage() {
     const etiquetaHasta = fmtDate(fechaHasta)
     const etiquetaCat = categoria ? (CATEGORIAS_EGRESO_LABEL[categoria] ?? categoria) : 'Todas las categorías'
     const etiquetaEst = estado ? (ESTADOS_LABEL[estado] ?? estado) : 'Todos los estados'
-    const etiquetaAgrup = agruparPor === 'beneficiario' ? 'Por beneficiario' : 'Por categoría'
+    const etiquetaAgrup = agruparPor === 'beneficiario' ? 'Por beneficiario' : agruparPor === 'centro_costo' ? 'Por centro de costo' : 'Por categoría'
+    const etiquetaCentro = centroCostoFiltro ? (centros.find(c => c.id === centroCostoFiltro)?.nombre ?? centroCostoFiltro) : 'Todos los centros'
 
     const filas = Object.entries(grupos).map(([grupo, items]) => {
       const subUSD = items.reduce((s, e) => s + montoUSD(e), 0)
       const subVES = items.filter(e => e.moneda === 'VES').reduce((s, e) => s + e.monto, 0)
-      const grupoLabel = agruparPor === 'categoria' ? (CATEGORIAS_EGRESO_LABEL[grupo] ?? grupo) : grupo
+      const grupoLabel = agruparPor === 'categoria' ? (CATEGORIAS_EGRESO_LABEL[grupo] ?? grupo) : grupo // centro_costo y beneficiario ya vienen con su nombre
 
       const filasItems = items.map(e => {
         const usd = montoUSD(e)
@@ -131,7 +154,7 @@ export default function ReporteEgresosPage() {
         <tr>
           <td class="mono">${escapeHtml(e.numero_egreso)}</td>
           <td>${escapeHtml(e.concepto)}</td>
-          ${agruparPor === 'beneficiario' ? `<td>${escapeHtml(CATEGORIAS_EGRESO_LABEL[e.categoria] ?? e.categoria)}</td>` : `<td>${escapeHtml(e.beneficiario ?? '—')}</td>`}
+          ${agruparPor === 'categoria' ? `<td>${escapeHtml(e.beneficiario ?? '—')}</td>` : `<td>${escapeHtml(CATEGORIAS_EGRESO_LABEL[e.categoria] ?? e.categoria)}</td>`}
           <td class="mono">${escapeHtml(e.referencia ?? '—')}</td>
           <td>${fmtDate(e.fecha_egreso)}</td>
           <td class="num">$${usd.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(usd)*100)%100===0?0:2, maximumFractionDigits: 2 })}</td>
@@ -153,7 +176,7 @@ export default function ReporteEgresosPage() {
     }).join('')
 
     const cols = hayVES ? 7 : 6
-    const colTercer = agruparPor === 'beneficiario' ? 'Categoría' : 'Beneficiario'
+    const colTercer = agruparPor === 'categoria' ? 'Beneficiario' : 'Categoría'
 
     const html = `<!DOCTYPE html>
 <html lang="es">
@@ -198,8 +221,8 @@ export default function ReporteEgresosPage() {
   <div style="text-align:right">
     <div class="report-title">REPORTE DE EGRESOS</div>
     <div class="meta">Período: <span>${escapeHtml(etiquetaDesde)}</span> al <span>${escapeHtml(etiquetaHasta)}</span></div>
-    <div class="meta">Categoría: <span>${escapeHtml(etiquetaCat)}</span> &nbsp;·&nbsp; Estado: <span>${escapeHtml(etiquetaEst)}</span></div>
-    <div class="meta">Agrupado: <span>${escapeHtml(etiquetaAgrup)}</span></div>
+    <div class="meta">Centro de costo: <span>${escapeHtml(etiquetaCentro)}</span> &nbsp;·&nbsp; Categoría: <span>${escapeHtml(etiquetaCat)}</span></div>
+    <div class="meta">Estado: <span>${escapeHtml(etiquetaEst)}</span> &nbsp;·&nbsp; Agrupado: <span>${escapeHtml(etiquetaAgrup)}</span></div>
     <div class="meta" style="margin-top:4px">Generado: ${new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
   </div>
 </div>
@@ -280,7 +303,7 @@ export default function ReporteEgresosPage() {
 
       {/* Filtros */}
       <div className="card p-4 mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
           <div>
             <label className="label">Desde</label>
             <input type="date" className="input" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
@@ -288,6 +311,15 @@ export default function ReporteEgresosPage() {
           <div>
             <label className="label">Hasta</label>
             <input type="date" className="input" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Centro de costo</label>
+            <select className="select" value={centroCostoFiltro} onChange={e => setCentroCostoFiltro(e.target.value)}>
+              <option value="">Todos</option>
+              {centros.map(c => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="label">Categoría</label>
@@ -321,6 +353,16 @@ export default function ReporteEgresosPage() {
             }`}
           >
             <LayoutGrid size={13} /> Categoría
+          </button>
+          <button
+            onClick={() => setAgruparPor('centro_costo')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              agruparPor === 'centro_costo'
+                ? 'bg-oriental-black text-white border-oriental-black'
+                : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+            }`}
+          >
+            <Building2 size={13} /> Centro de costo
           </button>
           <button
             onClick={() => setAgruparPor('beneficiario')}
@@ -403,7 +445,7 @@ export default function ReporteEgresosPage() {
                         <th className="text-left px-4 py-2 font-medium text-oriental-gray text-xs">N° Egreso</th>
                         <th className="text-left px-4 py-2 font-medium text-oriental-gray text-xs">Concepto</th>
                         <th className="text-left px-4 py-2 font-medium text-oriental-gray text-xs">
-                          {agruparPor === 'beneficiario' ? 'Categoría' : 'Beneficiario'}
+                          {agruparPor === 'categoria' ? 'Beneficiario' : 'Categoría'}
                         </th>
                         <th className="text-left px-4 py-2 font-medium text-oriental-gray text-xs">Referencia</th>
                         <th className="text-left px-4 py-2 font-medium text-oriental-gray text-xs">Fecha</th>
@@ -424,9 +466,9 @@ export default function ReporteEgresosPage() {
                               {e.descripcion && <div className="text-xs text-oriental-gray mt-0.5">{e.descripcion}</div>}
                             </td>
                             <td className="px-4 py-2.5 text-oriental-gray text-xs">
-                              {agruparPor === 'beneficiario'
-                                ? (CATEGORIAS_EGRESO_LABEL[e.categoria] ?? e.categoria)
-                                : (e.beneficiario ?? '—')}
+                              {agruparPor === 'categoria'
+                                ? (e.beneficiario ?? '—')
+                                : (CATEGORIAS_EGRESO_LABEL[e.categoria] ?? e.categoria)}
                             </td>
                             <td className="px-4 py-2.5 text-oriental-gray font-mono text-xs">{e.referencia ?? '—'}</td>
                             <td className="px-4 py-2.5 text-oriental-gray text-xs whitespace-nowrap">{formatDate(e.fecha_egreso)}</td>

@@ -1,14 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import DocumentosEmpresaClient from './DocumentosEmpresaClient'
 import { FolderOpen } from 'lucide-react'
 
 export default async function DocumentosEmpresaPage() {
   const supabase = await createClient()
-  const { data: documentos } = await supabase
+  const documentos = await fetchAllRows<any>((from, to) => supabase
     .from('archivos')
     .select('*')
     .eq('es_empresa', true)
     .order('created_at', { ascending: false })
+    .range(from, to))
 
   return (
     <div className="p-8 max-w-4xl">

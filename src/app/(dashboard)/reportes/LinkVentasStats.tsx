@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -79,17 +80,19 @@ export default function LinkVentasStats() {
     const desdeISO = desde.toISOString()
 
     Promise.all([
-      supabase.from('cotizaciones')
+      fetchAllRows<any>((f, t) => supabase.from('cotizaciones')
         .select('id, numero, fecha, created_at, vendedora_nombre, marca, modelo, modalidad, plan, total_inicial, cuota_mensual, estado, cliente_nombre')
         .gte('created_at', desdeISO)
-        .order('created_at', { ascending: false }),
-      supabase.from('eventos_link_ventas')
+        .order('created_at', { ascending: false })
+        .range(f, t)),
+      fetchAllRows<any>((f, t) => supabase.from('eventos_link_ventas')
         .select('id, evento, marca, modelo, created_at')
         .gte('created_at', desdeISO)
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .range(f, t)),
     ]).then(([cots, evts]) => {
-      setCotizaciones(cots.data ?? [])
-      setEventos(evts.data ?? [])
+      setCotizaciones(cots)
+      setEventos(evts)
     }).finally(() => setLoading(false))
   }, [dias])
 
