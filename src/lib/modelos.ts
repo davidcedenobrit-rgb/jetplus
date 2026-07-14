@@ -31,4 +31,5 @@ export const MODELOS_MAXUS = [
   'Maxus C300 Chasis',
   'Maxus G10 Van',
   'Maxus G10 Pasajero',
+  'Maxus V80 Pasajeros',
 ]
