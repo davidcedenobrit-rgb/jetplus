@@ -217,9 +217,14 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
                 <label style={label}>Código de vendedora</label>
                 <input
                   type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  autoComplete="off"
+                  spellCheck={false}
                   maxLength={4}
                   value={pin}
-                  onChange={e => { setPin(e.target.value.toUpperCase()); setPinError('') }}
+                  onChange={e => { setPin(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)); setPinError('') }}
                   onKeyDown={e => e.key === 'Enter' && verificarPin()}
                   placeholder="X000"
                   style={{ ...Object.fromEntries(inp.split(';').filter(Boolean).map(p => { const [k, v] = p.split(':'); return [k.trim().replace(/-([a-z])/g, (_,c) => c.toUpperCase()), v?.trim()] })), fontSize: 24, textAlign: 'center', letterSpacing: 12, fontWeight: 800 } as React.CSSProperties}
