@@ -123,7 +123,7 @@ export async function POST(req: Request) {
     } else {
       const { data: v } = await supabase
         .from('catalogo_ventas')
-        .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, diferencial_pct, tasa_banco_pct')
+        .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, diferencial_pct, tasa_banco_pct, cuotas_banco')
         .eq('id', vehiculoId)
         .single()
       if (!v) {
@@ -208,6 +208,8 @@ export async function POST(req: Request) {
     let financiamientoMonto: number | null = null
     let cuotaMensual: number | null = null
     let costoTotal: number
+    // Meses del plan 100% Banco (editable por vehículo; por defecto 24)
+    const mesesBanco = Math.max(1, Math.round(Number((vehiculo as { cuotas_banco?: number | null }).cuotas_banco) || 24))
 
     if (plan === 'ac500' && ac500Schedule) {
       totalInicial = ac500Schedule.reserva
@@ -224,8 +226,10 @@ export async function POST(req: Request) {
       const tasaBanco = Number(vehiculo.tasa_banco_pct) || 16
       const r = tasaBanco / 100 / 12
       const financiamiento = totalVehiculoBanco * 0.70
-      cuotaMensual = financiamiento * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
-      costoTotal = totalInicial + cuotaMensual * 24
+      cuotaMensual = r > 0
+        ? financiamiento * r * Math.pow(1 + r, mesesBanco) / (Math.pow(1 + r, mesesBanco) - 1)
+        : financiamiento / mesesBanco
+      costoTotal = totalInicial + cuotaMensual * mesesBanco
     } else {
       const inicial40 = precioBase * 0.4
       totalInicial = inicial40 + iva + gastos
@@ -283,6 +287,7 @@ export async function POST(req: Request) {
         costo_total: costoTotal,
         ac500_meses: plan === 'ac500' ? ac500Meses : null,
         ac500_cuotas: plan === 'ac500' && ac500Schedule ? ac500Schedule.cuotas.map(c => c.monto) : null,
+        cuotas_banco: plan === 'banco_100' ? mesesBanco : null,
       }])
       .select()
       .single()
@@ -322,6 +327,7 @@ export async function POST(req: Request) {
       totalInicial,
       financiamientoMonto,
       cuotaMensual,
+      mesesBanco: plan === 'banco_100' ? mesesBanco : undefined,
       costoTotal,
       ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
     }

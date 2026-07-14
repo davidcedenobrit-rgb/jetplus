@@ -167,6 +167,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             totalInicial: total_inicial,
             financiamientoMonto: financiamiento_monto,
             cuotaMensual: cuota_mensual_final,
+            mesesBanco: plan === 'banco_100' ? (Number(cotActual.cuotas_banco) || 24) : undefined,
             costoTotal: costo_total,
           }
           await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id)

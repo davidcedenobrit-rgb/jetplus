@@ -169,6 +169,7 @@ export interface CotizacionPDFData {
   totalInicial: number
   financiamientoMonto: number | null
   cuotaMensual: number | null
+  mesesBanco?: number
   costoTotal: number
   ac500Schedule?: AC500ScheduleData
 }
@@ -178,6 +179,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const es24 = data.modalidad === 'credito_24'
   const esBanco = data.plan === 'banco_100'
   const cantidad = Math.max(1, Math.floor(data.cantidad ?? 1))
+  const mesesBanco = Math.max(1, Math.round(data.mesesBanco ?? 24))
   const importeUnit = esAC500 ? (data.ac500Schedule?.total ?? 0) : data.precioBase
 
   // Si el llamador manda empresaNombre, es consciente del concesionario y se
@@ -195,7 +197,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const modalidadLabel = esAC500
     ? `ASEGÚRATE CON $500 — ${data.ac500Schedule?.meses ?? ''} MESES`
     : es24
-      ? (esBanco ? 'CRÉDITO BANCARIO 24 MESES (30% INICIAL)' : 'CRÉDITO 24 MESES (40% INICIAL)')
+      ? (esBanco ? `CRÉDITO BANCARIO ${mesesBanco} MESES (30% INICIAL)` : 'CRÉDITO 24 MESES (40% INICIAL)')
       : 'CONTADO'
 
   return (
@@ -399,7 +401,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 </View>
                 <View style={s.finRow}>
                   <Text style={s.finLabel}>Cuotas mensuales</Text>
-                  <Text style={s.finVal}>24   ${fmt(data.cuotaMensual)}</Text>
+                  <Text style={s.finVal}>{esBanco ? mesesBanco : 24}   ${fmt(data.cuotaMensual)}</Text>
                 </View>
               </View>
             </View>
@@ -423,7 +425,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                       <Text style={s.finVal}>${fmt(data.financiamientoMonto * cantidad)}</Text>
                     </View>
                     <View style={s.finRow}>
-                      <Text style={s.finLabel}>Cuota mensual total (24 x {cantidad})</Text>
+                      <Text style={s.finLabel}>Cuota mensual total ({esBanco ? mesesBanco : 24} x {cantidad})</Text>
                       <Text style={s.finVal}>${fmt((data.cuotaMensual ?? 0) * cantidad)}</Text>
                     </View>
                   </>

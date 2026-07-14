@@ -74,6 +74,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       totalInicial: Number(cot.total_inicial),
       financiamientoMonto: cot.financiamiento_monto ? Number(cot.financiamiento_monto) : null,
       cuotaMensual: cot.cuota_mensual ? Number(cot.cuota_mensual) : null,
+      mesesBanco: cot.cuotas_banco != null ? Number(cot.cuotas_banco) : undefined,
       costoTotal: Number(cot.costo_total),
       ac500Schedule,
     }

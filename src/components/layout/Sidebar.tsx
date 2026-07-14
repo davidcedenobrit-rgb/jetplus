@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -336,6 +336,30 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
                 <Briefcase size={18} />
                 Corporativo La Oriental
+              </Link>
+            )
+          })()}
+
+          {/* Materiales e insumos */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/materiales' || pathname.startsWith('/materiales/')
+            return (
+              <Link href="/materiales" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Boxes size={18} />
+                Materiales e insumos
+              </Link>
+            )
+          })()}
+
+          {/* Obsequios a clientes */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/obsequios' || pathname.startsWith('/obsequios/')
+            return (
+              <Link href="/obsequios" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Gift size={18} />
+                Obsequios a clientes
               </Link>
             )
           })()}

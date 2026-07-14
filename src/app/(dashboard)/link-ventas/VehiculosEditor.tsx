@@ -80,6 +80,7 @@ interface Vehiculo {
   alfombras_banco: number | null
   diferencial_pct: number | null
   tasa_banco_pct: number | null
+  cuotas_banco: number | null
   tasa_vhm_pct: number | null
   cuotas_vhm: number | null
   inicial_pct: number | null
@@ -164,7 +165,7 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   placa_monto: 400,
   poliza_vehiculo_banco: null, poliza_vida_banco: null, honorarios_banco: null,
   gastos_internos_banco: null, alfombras_banco: null,
-  diferencial_pct: 30, tasa_banco_pct: 16,
+  diferencial_pct: 30, tasa_banco_pct: 16, cuotas_banco: 24,
   tasa_vhm_pct: null, cuotas_vhm: 24,
   inicial_pct: 40,
 }
@@ -357,6 +358,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       honorarios_banco: v.honorarios_banco, gastos_internos_banco: v.gastos_internos_banco,
       alfombras_banco: v.alfombras_banco,
       diferencial_pct: v.diferencial_pct, tasa_banco_pct: v.tasa_banco_pct,
+      cuotas_banco: v.cuotas_banco ?? 24,
       tasa_vhm_pct: v.tasa_vhm_pct, cuotas_vhm: v.cuotas_vhm ?? 24,
       inicial_pct: v.inicial_pct ?? 40,
       updated_at: new Date().toISOString(),
@@ -860,6 +862,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                       <Field label="Tasa banco (% anual)">
                         <NumField className={inputCls} value={v.tasa_banco_pct} placeholder="16" onCommit={n => update(v.id, 'tasa_banco_pct', n)} />
                       </Field>
+                      <Field label="Meses del plan 100%">
+                        <NumField className={inputCls} value={v.cuotas_banco} placeholder="24" onCommit={n => update(v.id, 'cuotas_banco', n != null && n > 0 ? Math.round(n) : 24)} />
+                      </Field>
                     </div>
                     {(() => {
                       const precio = v.cash ?? 0
@@ -873,7 +878,8 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                       const inicial = totalVeh * 0.30
                       const totalInicial = inicial + totalGastos
                       const tasa = (v.tasa_banco_pct ?? 16) / 100 / 12
-                      const cuota = tasa > 0 ? financiamiento * tasa * Math.pow(1 + tasa, 24) / (Math.pow(1 + tasa, 24) - 1) : financiamiento / 24
+                      const nMeses = v.cuotas_banco ?? 24
+                      const cuota = tasa > 0 ? financiamiento * tasa * Math.pow(1 + tasa, nMeses) / (Math.pow(1 + tasa, nMeses) - 1) : financiamiento / nMeses
                       const fmtN = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
                       if (precio <= 0) return null
                       return (
@@ -891,7 +897,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                             <p className="text-white font-bold text-sm">${fmtN(financiamiento)}</p>
                           </div>
                           <div className="text-center border-l border-gray-700">
-                            <p className="text-gray-400 text-[10px] uppercase tracking-wider">Cuota mensual (auto)</p>
+                            <p className="text-gray-400 text-[10px] uppercase tracking-wider">Cuota mensual · {nMeses} meses</p>
                             <p className="text-oriental-red font-extrabold text-sm">${fmtN(cuota)}/mes</p>
                           </div>
                         </div>
