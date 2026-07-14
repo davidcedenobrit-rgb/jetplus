@@ -22,7 +22,11 @@ export async function middleware(request: NextRequest) {
     '/api/cotizaciones/solicitar-descuento',
   ]
 
-  if (publicApiPaths.some(path => pathname.startsWith(path))) {
+  // PDF de la cotización: público (se comparte al cliente por WhatsApp/correo).
+  // La URL lleva un UUID no adivinable, mismo modelo que el token del correo.
+  const esPdfCotizacionPublico = /^\/api\/cotizaciones\/[^/]+\/pdf$/.test(pathname)
+
+  if (esPdfCotizacionPublico || publicApiPaths.some(path => pathname.startsWith(path))) {
     return supabaseResponse
   }
 
