@@ -40,6 +40,7 @@ type Solicitud = {
   estado: string
   created_at: string
   respuesta_vehimotors: string | null
+  numero_cotizacion_vehimotors?: string | null
   repuestos_items?: { id: string }[]
   resend_email_id?: string | null
   email_ultimo_estado?: string | null
@@ -75,7 +76,7 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
     const q = busqueda.trim().toLowerCase()
     return solicitudes.filter(s => {
       if (estatus && s.estado !== estatus) return false
-      if (q && !s.numero.toLowerCase().includes(q)) return false
+      if (q && !s.numero.toLowerCase().includes(q) && !(s.numero_cotizacion_vehimotors ?? '').toLowerCase().includes(q)) return false
       return true
     })
   }, [solicitudes, busqueda, estatus])
@@ -98,7 +99,7 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
               type="text"
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
-              placeholder="Buscar por número (ej: SORE-2026-00015)"
+              placeholder="Buscar por número o N° cotización SA (ej: SORE-2026-00015 · SA04199)"
               className="input pl-9"
             />
           </div>
@@ -149,7 +150,14 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
                 {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
                 <Link href={`/repuestos/${s.id}`} className="block p-5">
                   <div className="flex items-start justify-between mb-2 pr-6 gap-2">
-                    <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">{s.numero}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded w-fit">{s.numero}</span>
+                      {s.numero_cotizacion_vehimotors && (
+                        <span className="font-mono text-[10px] font-bold text-orange-800 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded w-fit">
+                          N° Cotiz. {s.numero_cotizacion_vehimotors.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est?.bg} ${est?.color}`}>{est?.label}</span>
                   </div>
                   <p className="text-sm font-semibold text-oriental-black mt-2">{itemCount} repuesto{itemCount !== 1 ? 's' : ''}</p>
