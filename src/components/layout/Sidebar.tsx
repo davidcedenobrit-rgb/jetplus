@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -336,6 +336,18 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
                 <Briefcase size={18} />
                 Corporativo La Oriental
+              </Link>
+            )
+          })()}
+
+          {/* Proveedores */}
+          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
+            const active = pathname === '/proveedores' || pathname.startsWith('/proveedores/')
+            return (
+              <Link href="/proveedores" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Truck size={18} />
+                Proveedores
               </Link>
             )
           })()}

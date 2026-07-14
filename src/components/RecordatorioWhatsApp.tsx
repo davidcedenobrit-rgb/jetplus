@@ -101,7 +101,9 @@ export default function RecordatorioWhatsApp({
 
   const mensaje = lineas.join('\n')
   const numero  = limpiarNumero(whatsapp)
-  const waUrl   = `https://web.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(mensaje)}`
+  // wa.me detecta el dispositivo (abre la app en móvil y la web en escritorio);
+  // web.whatsapp.com se traba en el teléfono.
+  const waUrl   = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
 
   const totalUsdAprox =
     cuotasVencidas.filter(c => c.moneda !== 'VES').reduce((s, c) => s + c.saldo + c.mora, 0) +

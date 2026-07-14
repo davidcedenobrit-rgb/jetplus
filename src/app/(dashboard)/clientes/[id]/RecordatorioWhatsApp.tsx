@@ -75,7 +75,8 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
 
   const mensaje = lineas.join('\n')
   const numero  = limpiarNumero(whatsapp)
-  const waUrl   = `https://web.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(mensaje)}`
+  // wa.me detecta el dispositivo (app en móvil, web en escritorio); web.whatsapp.com se traba en el teléfono.
+  const waUrl   = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
 
   async function copiar() {
     await navigator.clipboard.writeText(mensaje)

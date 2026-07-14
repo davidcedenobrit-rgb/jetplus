@@ -38,15 +38,17 @@ export default function AvisoCobro({ clienteId, nombre, cedula, telefono, whatsa
   const waMsg = buildWhatsAppMsg(nombre, cuotasVencidas, montoVencido, diasMaxVencido, placa)
 
   async function enviar() {
-    setLoading(true); setError('')
+    setError('')
+    // Abrir WhatsApp de inmediato, dentro del gesto del toque, ANTES de cualquier
+    // await: en móvil el navegador bloquea la apertura si ocurre tras una promesa.
+    if (tipoEnvio === 'whatsapp' || tipoEnvio === 'ambos') {
+      if (!waNum) { setError('El cliente no tiene número de WhatsApp/teléfono registrado'); return }
+      window.open(`https://wa.me/${waNum}?text=${encodeURIComponent(waMsg)}`, '_blank')
+    }
+    setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const registradoPor = user?.user_metadata?.nombre ?? user?.email ?? 'Sistema'
-
-      if (tipoEnvio === 'whatsapp' || tipoEnvio === 'ambos') {
-        if (!waNum) { setError('El cliente no tiene número de WhatsApp/teléfono registrado'); setLoading(false); return }
-        window.open(`https://wa.me/${waNum}?text=${encodeURIComponent(waMsg)}`, '_blank')
-      }
 
       await fetch('/api/avisos-cobro', {
         method: 'POST',
