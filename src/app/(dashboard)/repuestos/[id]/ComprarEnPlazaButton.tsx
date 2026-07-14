@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ShoppingBag, Loader2, X, DollarSign } from 'lucide-react'
+import ProveedorPicker from '../../egresos/nuevo/ProveedorPicker'
+import type { Proveedor } from '../../egresos/actions'
 
 interface Props {
   solicitudId: string
@@ -15,7 +17,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const [proveedor, setProveedor] = useState('')
+  const [proveedor, setProveedor] = useState<Proveedor | null>(null)
   const [monto, setMonto] = useState('')
   const [fechaCompra, setFechaCompra] = useState(new Date().toISOString().slice(0, 10))
   const [metodoPago, setMetodoPago] = useState('')
@@ -26,7 +28,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero }: Props) {
   async function confirmar() {
     setError('')
     const montoNum = parseFloat(monto.replace(',', '.'))
-    if (!proveedor.trim()) { setError('Escribe el proveedor'); return }
+    if (!proveedor) { setError('Selecciona o crea el proveedor'); return }
     if (isNaN(montoNum) || montoNum <= 0) { setError('Monto inválido'); return }
     setLoading(true)
     try {
@@ -34,7 +36,8 @@ export default function ComprarEnPlazaButton({ solicitudId, numero }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          proveedor: proveedor.trim(),
+          proveedor: proveedor.nombre,
+          proveedorId: proveedor.id,
           monto: montoNum,
           fechaCompra,
           metodoPago: metodoPago || null,
@@ -93,13 +96,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero }: Props) {
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">Proveedor *</label>
-                <input
-                  type="text"
-                  value={proveedor}
-                  onChange={e => setProveedor(e.target.value)}
-                  placeholder="Ej: Repuestos Maturín C.A."
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-500"
-                />
+                <ProveedorPicker proveedor={proveedor} onChange={setProveedor} />
               </div>
 
               <div className="grid grid-cols-2 gap-2">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { buscarOCrearClienteExterno } from './actions'
 import { ArrowLeft, Plus, Trash2, Save, Search, X, ChevronDown, BookmarkPlus, Check, Building2, User, UserPlus, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -216,6 +217,8 @@ export default function NuevaSolicitudPage() {
   const [resultadosClientes, setResultadosClientes] = useState<ClienteLite[]>([])
   const [buscandoClientes, setBuscandoClientes] = useState(false)
   const [clienteExterno, setClienteExterno] = useState('')
+  const [clienteExternoCedula, setClienteExternoCedula] = useState('')
+  const [clienteExternoTelefono, setClienteExternoTelefono] = useState('')
 
   const categoriasCatalogo = [...new Set(catalogo.map(c => c.categoria).filter(Boolean))].sort()
 
@@ -304,6 +307,18 @@ export default function NuevaSolicitudPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('Sesión expirada'); setLoading(false); return }
 
+    // Si es "Otro cliente" con cédula, se registra (o reutiliza) como cliente real y buscable.
+    let clienteExternoId: string | null = null
+    if (destino === 'externo' && clienteExternoCedula.trim()) {
+      const res = await buscarOCrearClienteExterno({
+        nombre: clienteExterno.trim(),
+        cedula_rif: clienteExternoCedula.trim(),
+        telefono: clienteExternoTelefono.trim() || null,
+      })
+      if (res.error) { setError(res.error); setLoading(false); return }
+      clienteExternoId = res.clienteId ?? null
+    }
+
     const año = new Date().getFullYear()
     const { data: lastSol } = await supabase
       .from('solicitudes_repuestos')
@@ -326,9 +341,10 @@ export default function NuevaSolicitudPage() {
         solicitado_por_id: user.id,
         solicitado_por_email: user.email,
         notas_almacenista: notas || null,
-        cliente_id: destino === 'cliente' ? clienteSel!.id : null,
+        cliente_id: destino === 'cliente' ? clienteSel!.id : clienteExternoId,
         para_la_oriental: destino === 'oriental',
-        cliente_externo: destino === 'externo' ? clienteExterno.trim() : null,
+        // Si quedó registrado como cliente real, no se duplica en el texto libre
+        cliente_externo: destino === 'externo' && !clienteExternoId ? clienteExterno.trim() : null,
       })
       .select().single()
 
@@ -473,9 +489,31 @@ export default function NuevaSolicitudPage() {
                   placeholder="Ej: Pedro Perez / Auto Repuestos Maturín…"
                   className="input"
                 />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="label">Cédula / RIF <span className="text-oriental-gray font-normal">(opcional)</span></label>
+                    <input
+                      type="text"
+                      value={clienteExternoCedula}
+                      onChange={e => setClienteExternoCedula(e.target.value)}
+                      placeholder="V-12345678 / J-…"
+                      className="input font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Teléfono <span className="text-oriental-gray font-normal">(opcional)</span></label>
+                    <input
+                      type="text"
+                      value={clienteExternoTelefono}
+                      onChange={e => setClienteExternoTelefono(e.target.value)}
+                      placeholder="0414-…"
+                      className="input"
+                    />
+                  </div>
+                </div>
                 <p className="text-[11px] text-oriental-gray flex items-start gap-1">
                   <AlertCircle size={11} className="mt-0.5 flex-shrink-0" />
-                  <span>Cliente no registrado en el sistema. Se guarda solo el nombre como referencia.</span>
+                  <span>Si agregas la cédula/RIF, el cliente queda <b>registrado y buscable</b> para próximas solicitudes. Sin cédula, se guarda solo el nombre como referencia.</span>
                 </p>
               </div>
             )}

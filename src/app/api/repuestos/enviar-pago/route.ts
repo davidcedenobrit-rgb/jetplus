@@ -21,8 +21,12 @@ export async function POST(req: NextRequest) {
     const rol = (user.app_metadata?.rol as string) ?? ''
     if (!ROL_PAGO.includes(rol)) return NextResponse.json({ error: 'Solo Mary puede cargar el pago' }, { status: 403 })
 
-    const { solicitudId, comprobanteUrl, numeroCotizacion } = await req.json()
+    const { solicitudId, comprobanteUrl, numeroCotizacion, monto } = await req.json()
     if (!solicitudId || !comprobanteUrl) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+    const montoNum = Number(monto)
+    if (!(montoNum > 0)) return NextResponse.json({ error: 'Monto pagado inválido' }, { status: 400 })
+    // La factura de Vehimotors es en USD; se fija USD para no perder el monto en reportes.
+    const monedaPago = 'USD'
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
@@ -35,19 +39,52 @@ export async function POST(req: NextRequest) {
       descripcion: i.descripcion, referencia: i.referencia, cantidad: i.cantidad,
     }))
 
+    const cotiz = sol.numero_cotizacion_vehimotors ?? numeroCotizacion ?? null
+
     await enviarConfirmacionPago({
       numero: sol.numero, solicitudId, tokenPago: sol.token_pago,
       comprobanteUrl, items, retencionUrl: sol.retencion_url ?? null,
-      numeroCotizacion: sol.numero_cotizacion_vehimotors ?? numeroCotizacion ?? null,
+      numeroCotizacion: cotiz,
     })
+
+    // Auto-egreso: registrar el pago a Vehimotors como egreso (no duplica si ya existe)
+    let egresoId: string | null = sol.egreso_pago_id ?? null
+    if (!egresoId) {
+      const year = new Date().getFullYear()
+      const buf = new Uint32Array(1)
+      crypto.getRandomValues(buf)
+      const seq = String(buf[0] % 1_000_000).padStart(6, '0')
+      const numero_egreso = `LOA-EGR-${year}-${seq}`
+
+      const { data: egreso } = await supabase.from('egresos').insert({
+        numero_egreso,
+        categoria:        'repuestos',
+        concepto:         `Pago repuestos Vehimotors — ${sol.numero}`,
+        descripcion:      cotiz ? `Cotización Vehimotors ${cotiz}` : null,
+        monto:            montoNum,
+        moneda:           monedaPago,
+        beneficiario:     'Vehimotors',
+        numero_sa:        cotiz,
+        centro_costo_id:  'repuestos',
+        area_responsable: 'Repuestos',
+        tipo_movimiento:  'gasto',
+        fecha_egreso:     new Date().toISOString().split('T')[0],
+        estado:           'pendiente_aprobacion',
+        registrado_por:   user.id,
+      }).select('id').single()
+      egresoId = egreso?.id ?? null
+    }
 
     await supabase.from('solicitudes_repuestos').update({
       estado: 'pago_enviado', updated_at: new Date().toISOString(),
+      monto_pago: montoNum, moneda_pago: monedaPago,
+      ...(egresoId ? { egreso_pago_id: egresoId } : {}),
     }).eq('id', solicitudId)
 
     revalidatePath('/repuestos')
     revalidatePath(`/repuestos/${solicitudId}`)
-    return NextResponse.json({ ok: true })
+    revalidatePath('/egresos')
+    return NextResponse.json({ ok: true, egresoId })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag
 } from 'lucide-react'
 
 const navItemsTop = [
@@ -102,8 +102,30 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           })
         })()}
 
+        {/* ── NAV EXCLUSIVA TALLER (Jose Manuel, Yoiber) ───────────── */}
+        {rol === 'taller' && (() => {
+          const tallerNav = [
+            { href: '/dashboard',  label: 'Dashboard',          icon: LayoutDashboard },
+            { href: '/showroom',   label: 'Vehículo Showroom',  icon: Store },
+            { href: '/repuestos',  label: 'Repuestos',          icon: Package },
+            { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
+          ]
+          return tallerNav.map(({ href, label, icon: Icon }) => {
+            const active = href === '/repuestos'
+              ? (pathname === '/repuestos' || (pathname.startsWith('/repuestos/') && !pathname.startsWith('/repuestos/compra-plaza')))
+              : (pathname === href || pathname.startsWith(href + '/'))
+            return (
+              <Link key={href} href={href} onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                <Icon size={18} />
+                <span className="flex-1">{label}</span>
+              </Link>
+            )
+          })
+        })()}
+
         {/* ── NAV RESTO DE ROLES ────────────────────────────────── */}
-        {rol !== 'carla' && <>
+        {rol !== 'carla' && rol !== 'taller' && <>
 
           {/* Dashboard — oculto para Arianna y Almacén */}
           {!['arianna', 'almacen'].includes(rol) && navItemsTop.map(({ href, label, icon: Icon }) => {
@@ -143,13 +165,21 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
           {/* Repuestos — visible para todos */}
           {(() => {
-            const active = pathname === '/repuestos' || pathname.startsWith('/repuestos/')
+            const active = pathname === '/repuestos' || (pathname.startsWith('/repuestos/') && pathname !== '/repuestos/compra-plaza' && !pathname.startsWith('/repuestos/compra-plaza/'))
+            const activePlaza = pathname === '/repuestos/compra-plaza' || pathname.startsWith('/repuestos/compra-plaza/')
             return (
-              <Link href="/repuestos" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Package size={18} />
-                <span className="flex-1">Repuestos</span>
-              </Link>
+              <>
+                <Link href="/repuestos" onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <Package size={18} />
+                  <span className="flex-1">Repuestos</span>
+                </Link>
+                <Link href="/repuestos/compra-plaza" onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${activePlaza ? 'bg-purple-600/30 text-white font-semibold border-l-2 border-purple-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <ShoppingBag size={13} />
+                  <span className="flex-1">Compra en plaza</span>
+                </Link>
+              </>
             )
           })()}
 
@@ -411,6 +441,9 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           )}
           {rol === 'almacen' && (
             <span className="text-[10px] bg-blue-600/20 text-blue-600 font-semibold px-1.5 py-0.5 rounded">ALMACÉN</span>
+          )}
+          {rol === 'taller' && (
+            <span className="text-[10px] bg-amber-600/20 text-amber-600 font-semibold px-1.5 py-0.5 rounded">TALLER</span>
           )}
         </div>
         <button

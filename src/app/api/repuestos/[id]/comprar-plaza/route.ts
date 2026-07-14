@@ -30,6 +30,7 @@ export async function POST(
   const body = await req.json().catch(() => ({}))
   const {
     proveedor,
+    proveedorId,
     monto,
     fechaCompra,
     metodoPago,
@@ -37,6 +38,7 @@ export async function POST(
     bancoOrigen,
     notas,
   } = body ?? {}
+  const provId = typeof proveedorId === 'string' && proveedorId.trim() ? proveedorId.trim() : null
 
   if (!proveedor || typeof proveedor !== 'string' || !proveedor.trim()) {
     return NextResponse.json({ error: 'Proveedor requerido' }, { status: 400 })
@@ -83,9 +85,12 @@ export async function POST(
       metodo_pago: metodoPago ?? null,
       banco_origen: bancoOrigen ?? null,
       beneficiario: proveedor.trim(),
+      proveedor_id: provId,
       referencia: referencia ?? null,
       fecha_egreso: fechaValida,
-      area_responsable: 'Compra en plaza',
+      area_responsable: 'Repuestos',
+      centro_costo_id: 'repuestos',
+      tipo_movimiento: 'gasto',
       cliente_id: solicitud.cliente_id ?? null,
       registrado_por: user.id,
       estado: 'registrado',
@@ -107,6 +112,7 @@ export async function POST(
     .update({
       estado: 'comprado_plaza',
       proveedor_plaza: proveedor.trim(),
+      proveedor_id: provId,
       monto_plaza: montoNum,
       fecha_compra_plaza: fechaValida,
       notas_plaza: notas ?? null,

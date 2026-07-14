@@ -72,6 +72,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
 
   // Cotización Vehimotors al enviar pago
   const [numCotizacionPago, setNumCotizacionPago] = useState('')
+  const [montoPago, setMontoPago] = useState('')
 
   const esOperador = ROL_OPERADOR.includes(rol)
   const esDirector = ROL_DIRECTOR.includes(rol)
@@ -121,10 +122,12 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   async function handleEnviarPago() {
     if (!solicitud.comprobante_url) { setError('Debes cargar el comprobante de pago primero'); return }
     if (!numCotizacionPago.trim()) { setError('Ingresa el número de cotización de Vehimotors'); return }
+    const montoNum = parseFloat(montoPago)
+    if (isNaN(montoNum) || montoNum <= 0) { setError('Ingresa el monto pagado (mayor a 0)'); return }
     setLoading(true); setError('')
     const res = await fetch('/api/repuestos/enviar-pago', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, comprobanteUrl: solicitud.comprobante_url, numeroCotizacion: numCotizacionPago.trim() }),
+      body: JSON.stringify({ solicitudId: solicitud.id, comprobanteUrl: solicitud.comprobante_url, numeroCotizacion: numCotizacionPago.trim(), monto: montoNum }),
     })
     if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
     await log('pago_enviado', 'Pago enviado a Vehimotors')
@@ -363,11 +366,25 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                 />
                 <p className="text-[11px] text-oriental-gray mt-1">Aparecerá en el email: "Se ha pagado la cotización XXXXX del pedido SORE-XXXXX".</p>
               </div>
-              <button onClick={handleEnviarPago} disabled={!pagoListo || !numCotizacionPago.trim() || loading}
+              <div className="mb-3">
+                <label className="label">Monto pagado a Vehimotors (USD) *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold text-sm">$</span>
+                  <input
+                    className="input text-sm font-semibold pl-7"
+                    type="number" step="0.01" min="0"
+                    placeholder="0.00"
+                    value={montoPago}
+                    onChange={e => setMontoPago(e.target.value)}
+                  />
+                </div>
+                <p className="text-[11px] text-oriental-gray mt-1">Con este monto se registra automáticamente el egreso a Vehimotors.</p>
+              </div>
+              <button onClick={handleEnviarPago} disabled={!pagoListo || !numCotizacionPago.trim() || !(parseFloat(montoPago) > 0) || loading}
                 className={`w-full mt-1 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2
-                  ${pagoListo && numCotizacionPago.trim() ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                  ${pagoListo && numCotizacionPago.trim() && parseFloat(montoPago) > 0 ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                {pagoListo ? 'Enviar pago a Vehimotors' : 'Carga el comprobante para continuar'}
+                {pagoListo ? 'Enviar pago y registrar egreso' : 'Carga el comprobante para continuar'}
               </button>
             </>
           )}

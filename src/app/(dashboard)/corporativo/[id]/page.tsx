@@ -3,6 +3,8 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, User, Briefcase, ClipboardList, Award, CheckCircle2, Clock, AlertTriangle } from 'lucide-react'
 import ReenviarEnlaceButton from './ReenviarEnlaceButton'
+import PrestamosEmpleado from './PrestamosEmpleado'
+import EditarFichaButton from './EditarFichaButton'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
@@ -61,6 +63,7 @@ export default async function EmpleadoDetallePage({ params }: { params: Promise<
           </div>
           <p className="text-oriental-gray text-sm mt-0.5">{e.cargo ?? 'Cargo sin definir'}{e.departamento ? ` · ${e.departamento}` : ''}</p>
         </div>
+        <EditarFichaButton empleado={e} />
       </div>
 
       {/* Estado del cuestionario */}
@@ -101,6 +104,22 @@ export default async function EmpleadoDetallePage({ params }: { params: Promise<
           <Campo label="Correo personal" valor={e.correo} />
           <Campo label="Correo dentro de la empresa" valor={e.correo_empresa} />
           <Campo label="Fecha de ingreso" valor={fmtDia(e.fecha_ingreso)} />
+          <Campo label="Fecha de nacimiento" valor={fmtDia(e.fecha_nacimiento)} />
+          <Campo label="Dirección" valor={e.direccion} />
+        </div>
+      </div>
+
+      {/* Nómina y emergencia */}
+      <div className="card p-6 mb-4">
+        <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
+          <User size={15} className="text-oriental-red" /> Nómina y emergencia
+        </h2>
+        <div className="grid grid-cols-2 gap-4">
+          <Campo label="Tipo de contrato" valor={e.tipo_contrato} />
+          <Campo label="Salario" valor={e.salario != null ? `${e.salario_moneda === 'VES' ? 'Bs.' : '$'} ${Number(e.salario).toLocaleString('es-VE', { minimumFractionDigits: 2 })}${e.salario_frecuencia ? ` / ${e.salario_frecuencia}` : ''}` : null} />
+          <Campo label="Cuenta bancaria" valor={e.cuenta_banco} />
+          <Campo label="Contacto de emergencia" valor={e.contacto_emergencia_nombre} />
+          <Campo label="Teléfono de emergencia" valor={e.contacto_emergencia_telefono} />
         </div>
       </div>
 
@@ -138,6 +157,11 @@ export default async function EmpleadoDetallePage({ params }: { params: Promise<
           <Campo label="Herramientas / sistemas" valor={e.herramientas} />
           <Campo label="Observaciones" valor={e.observaciones} />
         </div>
+      </div>
+
+      {/* Préstamos a empleado */}
+      <div className="mt-4">
+        <PrestamosEmpleado empleadoId={e.id} empleadoNombre={e.nombre} />
       </div>
     </div>
   )

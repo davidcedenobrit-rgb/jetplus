@@ -12,7 +12,13 @@ interface CatalogoItem {
   frecuencia: string | null
   codigo: string | null
   nombre: string
+  precio_vehimotors: number | null
   activo: boolean
+}
+
+function fmtPrecio(n: number | null | undefined) {
+  if (n == null) return null
+  return `$${Number(n).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(n)) * 100) % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`
 }
 
 const FRECUENCIAS = ['ALTA ROTACION', 'MEDIA ROTACION', 'BAJA ROTACION', 'CARROCERIA']
@@ -24,7 +30,7 @@ const frecuenciaColor: Record<string, string> = {
   'CARROCERIA':     'bg-purple-100 text-purple-700',
 }
 
-const EMPTY_FORM = { nombre: '', codigo: '', modelo: '', categoria: '', frecuencia: '' }
+const EMPTY_FORM = { nombre: '', codigo: '', modelo: '', categoria: '', frecuencia: '', precio: '' }
 
 // Select con categorías existentes + opción de escribir una nueva
 function CategoriaInput({
@@ -105,6 +111,7 @@ function ItemRow({
     modelo: item.modelo ?? '',
     categoria: item.categoria ?? '',
     frecuencia: item.frecuencia ?? '',
+    precio: item.precio_vehimotors != null ? String(item.precio_vehimotors) : '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -117,6 +124,7 @@ function ItemRow({
       modelo: form.modelo.trim() || null,
       categoria: form.categoria.trim() || null,
       frecuencia: form.frecuencia || null,
+      precio_vehimotors: form.precio.trim() ? Number(form.precio.replace(',', '.')) : null,
     })
     setSaving(false)
     setEditing(false)
@@ -129,6 +137,7 @@ function ItemRow({
       modelo: item.modelo ?? '',
       categoria: item.categoria ?? '',
       frecuencia: item.frecuencia ?? '',
+      precio: item.precio_vehimotors != null ? String(item.precio_vehimotors) : '',
     })
     setEditing(false)
   }
@@ -182,6 +191,18 @@ function ItemRow({
           </div>
         </td>
         <td className="px-3 py-2">
+          <div className="relative">
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-oriental-gray text-xs pointer-events-none">$</span>
+            <input
+              className="input text-sm py-1.5 pl-5 font-mono"
+              type="text" inputMode="decimal"
+              value={form.precio}
+              onChange={e => setForm(p => ({ ...p, precio: e.target.value }))}
+              placeholder="0,00"
+            />
+          </div>
+        </td>
+        <td className="px-3 py-2">
           <div className="flex items-center gap-1.5">
             <button onClick={handleSave} disabled={saving || !form.nombre.trim()}
               className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40">
@@ -211,6 +232,9 @@ function ItemRow({
         {item.frecuencia
           ? <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${frecuenciaColor[item.frecuencia] ?? 'bg-gray-100 text-gray-600'}`}>{item.frecuencia}</span>
           : <span className="text-gray-300 text-xs">—</span>}
+      </td>
+      <td className="px-3 py-2.5 font-mono text-xs text-oriental-black whitespace-nowrap">
+        {fmtPrecio(item.precio_vehimotors) ?? <span className="text-gray-300">—</span>}
       </td>
       <td className="px-3 py-2.5">
         {isAdmin && (
@@ -254,6 +278,7 @@ function AddRow({
       modelo: form.modelo.trim() || null,
       categoria: form.categoria.trim() || null,
       frecuencia: form.frecuencia || null,
+      precio_vehimotors: form.precio.trim() ? Number(form.precio.replace(',', '.')) : null,
     })
     setSaving(false)
     setForm(EMPTY_FORM)
@@ -305,6 +330,18 @@ function AddRow({
             {FRECUENCIAS.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
           <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-oriental-gray" />
+        </div>
+      </td>
+      <td className="px-3 py-2">
+        <div className="relative">
+          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-oriental-gray text-xs pointer-events-none">$</span>
+          <input
+            className="input text-sm py-1.5 pl-5 font-mono"
+            type="text" inputMode="decimal"
+            value={form.precio}
+            onChange={e => setForm(p => ({ ...p, precio: e.target.value }))}
+            placeholder="0,00"
+          />
         </div>
       </td>
       <td className="px-3 py-2">
@@ -512,6 +549,7 @@ export default function CatalogoRepuestos({ isAdmin = false }: { isAdmin?: boole
                   <th className="px-3 py-2.5 text-[11px] font-bold text-oriental-gray uppercase tracking-wider">Modelo</th>
                   <th className="px-3 py-2.5 text-[11px] font-bold text-oriental-gray uppercase tracking-wider">Categoría</th>
                   <th className="px-3 py-2.5 text-[11px] font-bold text-oriental-gray uppercase tracking-wider">Frecuencia</th>
+                  <th className="px-3 py-2.5 text-[11px] font-bold text-oriental-gray uppercase tracking-wider whitespace-nowrap">Precio VM</th>
                   <th className="px-3 py-2.5 w-20"></th>
                 </tr>
               </thead>
