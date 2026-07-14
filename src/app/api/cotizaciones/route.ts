@@ -333,7 +333,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabase
     .from('cotizaciones')
-    .select('id, numero, fecha, vencimiento, vendedora_nombre, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, descuento_solicitado, motivo_descuento, created_at, resend_email_id, email_ultimo_estado, email_ultimo_evento_at')
+    .select('id, numero, fecha, vencimiento, vendedora_nombre, concesionario_id, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, descuento_solicitado, motivo_descuento, created_at, resend_email_id, email_ultimo_estado, email_ultimo_evento_at')
     .order('created_at', { ascending: false })
     .limit(limit)
 

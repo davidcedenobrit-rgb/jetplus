@@ -14,6 +14,7 @@ interface Cotizacion {
   fecha: string
   vencimiento: string
   vendedora_nombre: string
+  concesionario_id: string | null
   cliente_nombre: string
   cliente_ci_rif: string
   cliente_correo: string
@@ -537,6 +538,7 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
             </div>
           </div>
 
+          <InfoRow label="Concesionario" value={concesLabel(cot.concesionario_id, {})} />
           <InfoRow label="Vendedora" value={cot.vendedora_nombre} />
 
           {cot.estado === 'rechazada' && cot.motivo_rechazo && (
@@ -636,10 +638,21 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
 /* ── Main Tab ── */
 type Filtro = 'todas' | Estado | 'descuento'
 
+// Nombre corto por concesionario (los legales son largos para la tabla)
+const CONCES_CORTO: Record<string, string> = {
+  'la-oriental': 'La Oriental', 'autosurca': 'Autosurca', 'capital-motors': 'Capital Motors', 'kiauto': 'Ki Auto',
+}
+function concesLabel(id: string | null | undefined, mapa: Record<string, string>) {
+  if (!id) return 'La Oriental'
+  return CONCES_CORTO[id] ?? mapa[id] ?? id
+}
+
 export default function CotizacionesTab() {
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<Filtro>('todas')
+  const [filtroConces, setFiltroConces] = useState<string>('todos')
+  const [concesMap, setConcesMap] = useState<Record<string, string>>({})
   const [selected, setSelected] = useState<Cotizacion | null>(null)
 
   useEffect(() => {
@@ -647,6 +660,12 @@ export default function CotizacionesTab() {
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setCotizaciones(data) })
       .finally(() => setLoading(false))
+    fetch('/api/concesionarios?all=1')
+      .then(r => r.json())
+      .then((d: { id: string; nombre: string }[]) => {
+        if (Array.isArray(d)) setConcesMap(Object.fromEntries(d.map(c => [c.id, c.nombre])))
+      })
+      .catch(() => {})
   }, [])
 
   const handleEstadoChange = useCallback((id: string, estado: Estado, motivo: string | null) => {
@@ -659,9 +678,21 @@ export default function CotizacionesTab() {
     setSelected(prev => prev && prev.id === id ? { ...prev, ...partial } : prev)
   }, [])
 
-  const visible = filtro === 'todas' ? cotizaciones
+  const visiblePorEstado = filtro === 'todas' ? cotizaciones
     : filtro === 'descuento' ? cotizaciones.filter(c => c.descuento_solicitado)
     : cotizaciones.filter(c => c.estado === filtro)
+
+  const visible = filtroConces === 'todos'
+    ? visiblePorEstado
+    : visiblePorEstado.filter(c => (c.concesionario_id ?? 'la-oriental') === filtroConces)
+
+  // Concesionarios presentes en las cotizaciones (para el filtro)
+  const concesCount = new Map<string, number>()
+  for (const c of cotizaciones) {
+    const id = c.concesionario_id ?? 'la-oriental'
+    concesCount.set(id, (concesCount.get(id) ?? 0) + 1)
+  }
+  const concesFiltros = Array.from(concesCount.entries()).sort((a, b) => b[1] - a[1])
 
   const counts = {
     todas: cotizaciones.length,
@@ -732,6 +763,24 @@ export default function CotizacionesTab() {
         ))}
       </div>
 
+      {/* Filtro por concesionario */}
+      {concesFiltros.length > 1 && (
+        <div className="flex gap-2 mb-5 flex-wrap items-center">
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1">Concesionario:</span>
+          <button onClick={() => setFiltroConces('todos')}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filtroConces === 'todos' ? 'border-oriental-red bg-oriental-red text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+            Todos
+          </button>
+          {concesFiltros.map(([id, count]) => (
+            <button key={id} onClick={() => setFiltroConces(id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filtroConces === id ? 'border-oriental-red bg-oriental-red text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+              {concesLabel(id, concesMap)}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${filtroConces === id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {visible.length === 0 ? (
         <div className="card p-10 text-center text-oriental-gray text-sm">
           No hay cotizaciones con este estado.
@@ -743,7 +792,7 @@ export default function CotizacionesTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['N° Cotización', 'Fecha', 'Cliente', 'Vehículo', 'Modalidad', 'Vendedora', 'Total inicial', 'Estado', ''].map(h => (
+                  {['N° Cotización', 'Concesionario', 'Fecha', 'Cliente', 'Vehículo', 'Modalidad', 'Vendedora', 'Total inicial', 'Estado', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-bold text-oriental-gray uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -757,6 +806,11 @@ export default function CotizacionesTab() {
                   >
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs font-bold text-oriental-red">{c.numero}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 whitespace-nowrap">
+                        {concesLabel(c.concesionario_id, concesMap)}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-oriental-gray whitespace-nowrap">{fmtFecha(c.fecha)}</td>
                     <td className="px-4 py-3">
@@ -816,7 +870,10 @@ export default function CotizacionesTab() {
               <div key={c.id} onClick={() => setSelected(c)} className="card p-4 cursor-pointer active:bg-gray-50">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <span className="font-mono text-xs font-bold text-oriental-red">{c.numero}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-oriental-red">{c.numero}</span>
+                      <span className="inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-gray-100 text-gray-700">{concesLabel(c.concesionario_id, concesMap)}</span>
+                    </div>
                     <p className="text-[11px] text-oriental-gray mt-0.5">{fmtFecha(c.fecha)} · {c.vendedora_nombre}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
