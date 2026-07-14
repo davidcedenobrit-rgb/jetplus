@@ -28,18 +28,23 @@ export async function POST(req: Request) {
       clienteCodigoPostal,
       agenteRetencion,
       modalidad,
-      plan = 'vehimotors',
+      plan: planBody,
       ac500PlanId,
       ac500Meses: ac500MesesBody,
       cantidad,
       concesionarioId,
+      promoVehiculoId,
     } = body
+
+    // Las promociones especiales solo cotizan Contado o Crédito 24 (Vehimotors)
+    let plan = planBody ?? 'vehimotors'
+    if (promoVehiculoId) plan = 'vehimotors'
 
     // Cantidad de vehículos (entero >= 1), independiente del stock de showroom
     const cantidadNum = Math.max(1, Math.floor(Number(cantidad) || 1))
 
     // Validaciones básicas
-    if (!codigo || !vehiculoId || !clienteNombre?.trim() || !clienteCiRif?.trim() || !clienteCorreo?.trim() || !modalidad) {
+    if (!codigo || (!vehiculoId && !promoVehiculoId) || !clienteNombre?.trim() || !clienteCiRif?.trim() || !clienteCorreo?.trim() || !modalidad) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
     if (!['contado', 'credito_24'].includes(modalidad)) {
@@ -88,15 +93,43 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Código de vendedora inválido' }, { status: 401 })
     }
 
-    // Obtener vehículo
-    const { data: vehiculo } = await supabase
-      .from('catalogo_ventas')
-      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, diferencial_pct, tasa_banco_pct')
-      .eq('id', vehiculoId)
-      .single()
+    // Obtener vehículo — desde una promoción especial o del catálogo normal.
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    let vehiculo: any
+    let vehiculoIdGuardar: string | null = vehiculoId ?? null
 
-    if (!vehiculo) {
-      return NextResponse.json({ error: 'Vehículo no encontrado' }, { status: 404 })
+    if (promoVehiculoId) {
+      const { data: promo } = await supabase
+        .from('promocion_vehiculos')
+        .select('vehiculo_id, marca, modelo, precio_base, gastos_contado, gastos_credito, cuota_mensual')
+        .eq('id', promoVehiculoId)
+        .single()
+      if (!promo) {
+        return NextResponse.json({ error: 'Promoción no encontrada' }, { status: 404 })
+      }
+      // Se mapea a la forma de catálogo para reusar el mismo cálculo (Vehimotors):
+      // gc = gastos contado, gcr = gastos crédito, tasa_credito = cuota mensual.
+      vehiculo = {
+        brand: promo.marca, model: promo.modelo,
+        cash: Number(promo.precio_base) || 0,
+        gc: Number(promo.gastos_contado) || 0,
+        gcr: Number(promo.gastos_credito) || 0,
+        tasa_credito: Number(promo.cuota_mensual) || 0,
+        placa_monto: null, poliza_vehiculo_banco: null, poliza_vida_banco: null,
+        honorarios_banco: null, gastos_internos_banco: null, alfombras_banco: null,
+        diferencial_pct: null, tasa_banco_pct: null,
+      }
+      vehiculoIdGuardar = promo.vehiculo_id ?? null
+    } else {
+      const { data: v } = await supabase
+        .from('catalogo_ventas')
+        .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, diferencial_pct, tasa_banco_pct')
+        .eq('id', vehiculoId)
+        .single()
+      if (!v) {
+        return NextResponse.json({ error: 'Vehículo no encontrado' }, { status: 404 })
+      }
+      vehiculo = v
     }
 
     const precioBase = Number(vehiculo.cash) || 0
@@ -232,7 +265,7 @@ export async function POST(req: Request) {
         cliente_ciudad_estado: clienteCiudadEstado?.trim() || null,
         cliente_codigo_postal: clienteCodigoPostal?.trim() || null,
         agente_retencion: !!agenteRetencion,
-        vehiculo_id: vehiculoId,
+        vehiculo_id: vehiculoIdGuardar,
         marca: vehiculo.brand,
         modelo: vehiculo.model,
         cantidad: cantidadNum,

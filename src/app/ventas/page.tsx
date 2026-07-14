@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import VehiculosFiltro from './VehiculosFiltro'
 import AC500Filtro from './AC500Filtro'
+import PromoCotizar from './PromoCotizar'
 import StickyNav from './StickyNav'
 
 const LOGO    = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
@@ -189,7 +190,7 @@ export default async function VentasPage() {
           </div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
             {promoVehiculosList.map((v: {
-              id: string; img_url: string | null; marca: string; modelo: string;
+              id: string; vehiculo_id: string | null; img_url: string | null; marca: string; modelo: string;
               precio_base: number; gastos_label: string; gastos_contado: number;
               mostrar_credito: boolean; gastos_credito: number; cuota_mensual: number;
             }) => {
@@ -235,6 +236,14 @@ export default async function VentasPage() {
                       )}
                     </tbody>
                   </table>
+                  <PromoCotizar
+                    promo={{
+                      id: v.id, vehiculo_id: v.vehiculo_id, marca: v.marca, modelo: v.modelo,
+                      precio_base: v.precio_base, gastos_contado: v.gastos_contado,
+                      gastos_credito: v.gastos_credito, cuota_mensual: v.cuota_mensual,
+                    }}
+                    tasas={tasas}
+                  />
                 </div>
               )
             })}

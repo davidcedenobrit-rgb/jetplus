@@ -67,7 +67,7 @@ function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: { bcv: n
   return { iva, gastos, totalVehiculo: null, inicialBanco: null, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
 }
 
-export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo: Vehiculo; tasas: { bcv: number; usdt: number }; onClose: () => void }) {
+export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = false, promoId }: { vehiculo: Vehiculo; tasas: { bcv: number; usdt: number }; onClose: () => void; esPromo?: boolean; promoId?: string }) {
   const [step, setStep] = useState<Step>('pin')
   const [pin, setPin] = useState('')
   const [pinError, setPinError] = useState('')
@@ -179,7 +179,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           codigo: pin,
-          vehiculoId: vehiculo.id,
+          ...(esPromo && promoId ? { promoVehiculoId: promoId } : { vehiculoId: vehiculo.id }),
           clienteNombre: form.clienteNombre,
           clienteCiRif: form.clienteCiRif,
           clienteCorreo: form.clienteCorreo,
@@ -307,8 +307,8 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
                 </div>
               </div>
 
-              {/* Plan (solo para crédito) */}
-              {modalidad === 'credito_24' && (
+              {/* Plan (solo para crédito, no en promociones) */}
+              {modalidad === 'credito_24' && !esPromo && (
                 <div style={{ marginBottom: 18 }}>
                   <label style={label}>Plan de financiamiento</label>
                   <div style={{ display: 'flex', gap: 8 }}>
