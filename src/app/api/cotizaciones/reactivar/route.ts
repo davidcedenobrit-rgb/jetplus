@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
-import { getLogoBase64 } from '@/lib/cotizacion-logo'
+import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -224,6 +224,7 @@ export async function POST(req: Request) {
         fecha: hoy.toISOString().slice(0, 10),
         vencimiento: venc.toISOString().slice(0, 10),
         vendedora_nombre: vendedoraNombre,
+        concesionario_id: original.concesionario_id ?? 'la-oriental',
         cliente_id: original.cliente_id,
         cliente_nombre: original.cliente_nombre,
         cliente_ci_rif: original.cliente_ci_rif,
@@ -268,8 +269,14 @@ export async function POST(req: Request) {
 
     // 9. Enviar correos si se pidió
     if (enviarCorreo) {
+      const conces = await getConcesionarioIdentity(supabase, original.concesionario_id ?? null)
       const pdfData: CotizacionPDFData = {
-        logoSrc: getLogoBase64(),
+        logoSrc: conces.logoSrc,
+        empresaNombre: conces.nombre,
+        empresaRif: conces.rif,
+        empresaDireccion: conces.direccion,
+        empresaTelefono: conces.telefono,
+        empresaCorreo: conces.correo,
         numero: cot.numero,
         fecha: fmtDate(hoy),
         vencimiento: fmtDate(venc),

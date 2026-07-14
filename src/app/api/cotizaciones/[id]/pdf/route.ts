@@ -2,20 +2,10 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
-import { readFileSync } from 'fs'
-import { join } from 'path'
 import { createAdminClient } from '@/lib/supabase/server'
 import { CotizacionPDF } from '@/lib/cotizacion-pdf'
 import type { CotizacionPDFData } from '@/lib/cotizacion-pdf'
-
-function getLogoBase64(): string {
-  try {
-    const buf = readFileSync(join(process.cwd(), 'public', 'logo-la-oriental.png'))
-    return `data:image/png;base64,${buf.toString('base64')}`
-  } catch {
-    return 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
-  }
-}
+import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 function fmtDate(s: string) {
   try { return new Date(s + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
@@ -34,8 +24,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   if (error || !cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
 
+  const conces = await getConcesionarioIdentity(supabase, cot.concesionario_id ?? null)
+
   const pdfData: CotizacionPDFData = {
-    logoSrc: getLogoBase64(),
+    logoSrc: conces.logoSrc,
+    empresaNombre: conces.nombre,
+    empresaRif: conces.rif,
+    empresaDireccion: conces.direccion,
+    empresaTelefono: conces.telefono,
+    empresaCorreo: conces.correo,
     numero: cot.numero,
     fecha: fmtDate(cot.fecha),
     vencimiento: fmtDate(cot.vencimiento),
@@ -49,6 +46,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     agenteRetencion: !!cot.agente_retencion,
     marca: cot.marca,
     modelo: cot.modelo,
+    cantidad: Number(cot.cantidad) || 1,
     precioBase: Number(cot.precio_base),
     modalidad: cot.modalidad,
     plan: cot.plan ?? 'vehimotors',

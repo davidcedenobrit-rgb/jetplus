@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
-import { getLogoBase64 } from '@/lib/cotizacion-logo'
+import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       ac500PlanId,
       ac500Meses: ac500MesesBody,
       cantidad,
+      concesionarioId,
     } = body
 
     // Cantidad de vehículos (entero >= 1), independiente del stock de showroom
@@ -55,6 +56,19 @@ export async function POST(req: Request) {
     }
 
     const supabase = await createAdminClient()
+
+    // Identidad del concesionario para el encabezado. Solo se acepta uno ACTIVO;
+    // si no existe o está inactivo, se usa La Oriental (por defecto).
+    let concIdSolicitado: string | null = concesionarioId ?? null
+    if (concIdSolicitado) {
+      const { data: cRow } = await supabase
+        .from('concesionarios')
+        .select('activo')
+        .eq('id', concIdSolicitado)
+        .maybeSingle()
+      if (!cRow || !cRow.activo) concIdSolicitado = null
+    }
+    const conces = await getConcesionarioIdentity(supabase, concIdSolicitado)
 
     // Verificar vendedora. El código interno de la casa (R000) siempre es
     // válido: lo usa el generador del Centro de Mando y no debe depender del
@@ -205,6 +219,7 @@ export async function POST(req: Request) {
         fecha: hoy.toISOString().slice(0, 10),
         vencimiento: venc.toISOString().slice(0, 10),
         vendedora_nombre: vendedora.nombre,
+        concesionario_id: conces.id,
         cliente_id: clienteIdVinculado,
         cliente_nombre: clienteNombre.trim(),
         cliente_ci_rif: clienteCiRif.trim(),
@@ -242,7 +257,12 @@ export async function POST(req: Request) {
     }
 
     const pdfData: CotizacionPDFData = {
-      logoSrc: getLogoBase64(),
+      logoSrc: conces.logoSrc,
+      empresaNombre: conces.nombre,
+      empresaRif: conces.rif,
+      empresaDireccion: conces.direccion,
+      empresaTelefono: conces.telefono,
+      empresaCorreo: conces.correo,
       numero: cot.numero,
       fecha: fmtDate(hoy),
       vencimiento: fmtDate(venc),

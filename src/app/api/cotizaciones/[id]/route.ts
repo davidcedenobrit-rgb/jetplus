@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData } from '@/lib/cotizacion-pdf'
-import { getLogoBase64 } from '@/lib/cotizacion-logo'
+import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 function fmtDate(d: Date | string) {
   const date = typeof d === 'string' ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')) : d
@@ -136,8 +136,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       let correoError: string | null = null
       if (reenviar_correo) {
         try {
+          const conces = await getConcesionarioIdentity(supabase, cotActual.concesionario_id ?? null)
           const pdfData: CotizacionPDFData = {
-            logoSrc: getLogoBase64(),
+            logoSrc: conces.logoSrc,
+            empresaNombre: conces.nombre,
+            empresaRif: conces.rif,
+            empresaDireccion: conces.direccion,
+            empresaTelefono: conces.telefono,
+            empresaCorreo: conces.correo,
             numero: cotActual.numero,
             fecha: fmtDate(cotActual.fecha),
             vencimiento: fmtDate(cotActual.vencimiento),
@@ -151,6 +157,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             agenteRetencion: nuevos.agente_retencion,
             marca: nuevos.marca,
             modelo: nuevos.modelo,
+            cantidad: Number(cotActual.cantidad) || 1,
             precioBase: precio_base,
             modalidad,
             plan,

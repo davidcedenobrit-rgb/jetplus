@@ -141,6 +141,11 @@ export interface AC500ScheduleData {
 
 export interface CotizacionPDFData {
   logoSrc?: string
+  empresaNombre?: string
+  empresaRif?: string | null
+  empresaDireccion?: string | null
+  empresaTelefono?: string | null
+  empresaCorreo?: string | null
   numero: string
   fecha: string
   vencimiento: string
@@ -174,6 +179,19 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const esBanco = data.plan === 'banco_100'
   const cantidad = Math.max(1, Math.floor(data.cantidad ?? 1))
   const importeUnit = esAC500 ? (data.ac500Schedule?.total ?? 0) : data.precioBase
+
+  // Si el llamador manda empresaNombre, es consciente del concesionario y se
+  // respetan SUS valores tal cual (incluidos los nulos: p. ej. Autosurca sin
+  // RIF no debe mostrar el RIF de La Oriental). Solo si NO viene nombre se usa
+  // el fallback completo de La Oriental (compatibilidad con llamadas antiguas).
+  const conoceEmpresa = data.empresaNombre != null
+  const empNombre = conoceEmpresa ? data.empresaNombre! : 'LA ORIENTAL AUTOMOTORS, C.A.'
+  const empRif = conoceEmpresa ? (data.empresaRif ?? null) : 'J-505692143'
+  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AV. UGARTE ALIRIO PELYO · CENTRO PROFESIONAL DAVID\nMATURÍN - MONAGAS - VENEZUELA'
+  const empTelefono = conoceEmpresa ? (data.empresaTelefono ?? null) : '0414-9989010'
+  const empCorreo = conoceEmpresa ? (data.empresaCorreo ?? null) : 'laorientalautomotorsc@gmail.com'
+  const empDireccionLineas = empDireccion ? String(empDireccion).split('\n').filter(Boolean) : []
+  const empContacto = [empTelefono, empCorreo].filter(Boolean).join(' · ')
   const modalidadLabel = esAC500
     ? `ASEGÚRATE CON $500 — ${data.ac500Schedule?.meses ?? ''} MESES`
     : es24
@@ -189,14 +207,17 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
         {/* Header */}
         <View style={s.header}>
           <View style={s.logoWrap}>
-            <Image src={data.logoSrc ?? LOGO} style={s.logo} />
+            {data.logoSrc
+              ? <Image src={data.logoSrc} style={s.logo} />
+              : <Text style={{ fontSize: 18, fontFamily: 'Helvetica-Bold', color: DARK }}>{empNombre}</Text>}
           </View>
           <View style={s.companyBlock}>
-            <Text style={s.companyName}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
-            <Text style={s.companyRif}>RIF: J-505692143</Text>
-            <Text style={s.companyLine}>AV. UGARTE ALIRIO PELYO · CENTRO PROFESIONAL DAVID</Text>
-            <Text style={s.companyLine}>MATURÍN - MONAGAS - VENEZUELA</Text>
-            <Text style={s.companyLine}>TEL: 0414-9989010 · laorientalautomotorsc@gmail.com</Text>
+            <Text style={s.companyName}>{empNombre}</Text>
+            {empRif ? <Text style={s.companyRif}>RIF: {empRif}</Text> : null}
+            {empDireccionLineas.map((linea, i) => (
+              <Text key={i} style={s.companyLine}>{linea}</Text>
+            ))}
+            {empContacto ? <Text style={s.companyLine}>{empContacto}</Text> : null}
           </View>
         </View>
 
@@ -459,12 +480,12 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
               <View style={s.selloBox}>
                 <View style={s.selloInner}>
                   <Text style={s.selloText}>SELLO</Text>
-                  <Text style={s.selloSubText}>LA ORIENTAL{'\n'}AUTOMOTORS</Text>
+                  <Text style={s.selloSubText}>{empNombre}</Text>
                 </View>
               </View>
               <View style={s.sigLineOnly} />
-              <Text style={s.sigLabel}>REPRESENTANTE LA ORIENTAL</Text>
-              <Text style={s.sigSub}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
+              <Text style={s.sigLabel}>REPRESENTANTE</Text>
+              <Text style={s.sigSub}>{empNombre}</Text>
             </View>
           </View>
 
@@ -477,7 +498,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
 
         {/* Footer */}
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>La Oriental Automotors · MG &amp; MAXUS · Maturín, Venezuela</Text>
+          <Text style={s.footerText}>{empNombre} · MG &amp; MAXUS</Text>
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
         </View>
       </Page>

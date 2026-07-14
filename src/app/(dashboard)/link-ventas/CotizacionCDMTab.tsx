@@ -71,6 +71,7 @@ type Step = 'vehiculo' | 'form' | 'sending' | 'success'
 type Modalidad = 'contado' | 'credito_24'
 type Plan = 'vehimotors' | 'banco_100' | 'ac500'
 type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
+type Concesionario = { id: string; nombre: string; prefijo: string; es_principal: boolean; activo: boolean; orden: number }
 
 const ROJAS_CODIGO = 'R000'
 
@@ -153,6 +154,23 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   // Cantidad de vehículos (independiente del stock de showroom)
   const [cantidad, setCantidad] = useState(1)
 
+  // Concesionario (encabezado de la cotización)
+  const [concesionarios, setConcesionarios] = useState<Concesionario[]>([])
+  const [concesionarioId, setConcesionarioId] = useState('la-oriental')
+
+  useEffect(() => {
+    fetch('/api/concesionarios')
+      .then(r => r.json())
+      .then((d: Concesionario[]) => {
+        if (Array.isArray(d) && d.length) {
+          setConcesionarios(d)
+          const principal = d.find(c => c.es_principal) ?? d[0]
+          setConcesionarioId(principal.id)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   // AC500
   const [ac500Meses, setAc500Meses] = useState<6 | 9>(6)
   const [planesAC500, setPlanesAC500] = useState<PlanAC500[]>([])
@@ -233,6 +251,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           modalidad: 'credito_24',
           plan,
           cantidad,
+          concesionarioId,
           ...(plan === 'ac500' && planAC500Sel ? { ac500PlanId: planAC500Sel.id, ac500Meses } : {}),
         }),
       })
@@ -345,6 +364,21 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           <span className="text-gray-300">|</span>
           <h2 className="text-base font-bold text-oriental-black">{vehiculoSel?.brand} {vehiculoSel?.model}</h2>
         </div>
+
+        {/* Concesionario (encabezado de la cotización) */}
+        {concesionarios.length > 1 && (
+          <div className="card p-4 mb-4">
+            <p className={labelCls}>Concesionario · encabezado de la cotización</p>
+            <div className="flex gap-2 flex-wrap">
+              {concesionarios.map(c => (
+                <button key={c.id} type="button" onClick={() => setConcesionarioId(c.id)}
+                  className={`py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${concesionarioId === c.id ? 'border-oriental-red bg-oriental-red text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                  {c.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Modalidad */}
         <div className="card p-4 mb-4">
