@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
 
 interface Vehiculo {
   id: string
@@ -76,6 +78,40 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
   })
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
+
+  // Buscador de clientes existentes
+  const [cliQuery, setCliQuery] = useState('')
+  const [cliResultados, setCliResultados] = useState<ClienteBuscado[]>([])
+  const [cliBuscando, setCliBuscando] = useState(false)
+  const [cliOpen, setCliOpen] = useState(false)
+
+  useEffect(() => {
+    const q = cliQuery.trim()
+    if (q.length < 2) { setCliResultados([]); setCliBuscando(false); return }
+    setCliBuscando(true)
+    const t = setTimeout(() => {
+      fetch(`/api/cotizaciones/clientes-buscar?q=${encodeURIComponent(q)}`)
+        .then(r => r.json())
+        .then(d => { if (Array.isArray(d)) setCliResultados(d) })
+        .catch(() => {})
+        .finally(() => setCliBuscando(false))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [cliQuery])
+
+  function seleccionarCliente(c: ClienteBuscado) {
+    setForm(p => ({
+      ...p,
+      clienteNombre: c.nombre || '',
+      clienteCiRif: c.ci_rif || '',
+      clienteCorreo: c.correo || '',
+      clienteTelefono: c.telefono || '',
+      clienteDireccion: c.direccion || '',
+      clienteCiudadEstado: c.ciudad_estado || '',
+      clienteCodigoPostal: c.codigo_postal || '',
+    }))
+    setCliQuery(''); setCliResultados([]); setCliOpen(false); setErrorMsg('')
+  }
 
   const calc = calcular(vehiculo, modalidad, plan, tasas)
 
@@ -280,6 +316,32 @@ export default function CotizacionModal({ vehiculo, tasas, onClose }: { vehiculo
 
               {/* Datos del cliente */}
               <p style={{ fontSize: 12, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>Datos del cliente</p>
+
+              {/* Buscador de cliente existente */}
+              <div style={{ position: 'relative', marginBottom: 14 }}>
+                <label style={label}>🔍 Buscar cliente existente</label>
+                <input
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
+                  value={cliQuery}
+                  onChange={e => { setCliQuery(e.target.value); setCliOpen(true) }}
+                  onFocus={() => setCliOpen(true)}
+                  placeholder="Nombre, C.I./RIF, correo o teléfono..."
+                />
+                {cliOpen && cliQuery.trim().length >= 2 && (
+                  <div style={{ position: 'absolute', zIndex: 10, left: 0, right: 0, marginTop: 4, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.12)', maxHeight: 220, overflowY: 'auto' }}>
+                    {cliBuscando && <p style={{ padding: '8px 12px', fontSize: 12, color: '#9ca3af', margin: 0 }}>Buscando...</p>}
+                    {!cliBuscando && cliResultados.length === 0 && <p style={{ padding: '8px 12px', fontSize: 12, color: '#9ca3af', margin: 0 }}>Sin coincidencias. Llena los datos abajo.</p>}
+                    {cliResultados.map((c, i) => (
+                      <button key={i} type="button" onClick={() => seleccionarCliente(c)}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: '#fff', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#111' }}>{c.nombre || '—'}</span>
+                        <span style={{ display: 'block', fontSize: 11, color: '#6b7280' }}>{[c.ci_rif, c.correo, c.telefono].filter(Boolean).join(' · ')}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 4, marginBottom: 0 }}>Si el cliente ya cotizó, selecciónalo y se llenan sus datos.</p>
+              </div>
 
               <div style={{ display: 'grid', gap: 12 }}>
                 <div>
