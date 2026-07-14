@@ -10,10 +10,11 @@ import CotizacionCDMTab from './CotizacionCDMTab'
 import TasasEditor from './TasasEditor'
 import ClientesHistorialTab from './ClientesHistorialTab'
 import PromocionesTab from './PromocionesTab'
+import ConcesionariosTab from './ConcesionariosTab'
 
-type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas' | 'clientes' | 'promociones'
+type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas' | 'clientes' | 'promociones' | 'concesionarios'
 
-const TABS_VALIDOS: Tab[] = ['catalogo', 'ac500', 'vendedoras', 'cotizaciones', 'generar', 'tasas', 'clientes', 'promociones']
+const TABS_VALIDOS: Tab[] = ['catalogo', 'ac500', 'vendedoras', 'cotizaciones', 'generar', 'tasas', 'clientes', 'promociones', 'concesionarios']
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
@@ -33,6 +34,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas }
     { key: 'tasas', label: 'Tasas' },
     { key: 'clientes', label: 'Historial de clientes' },
     { key: 'promociones', label: 'Promociones Especiales' },
+    { key: 'concesionarios', label: 'Concesionarios' },
   ]
 
   return (
@@ -59,6 +61,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas }
       {tab === 'tasas' && <TasasEditor />}
       {tab === 'clientes' && <ClientesHistorialTab />}
       {tab === 'promociones' && <PromocionesTab catalogo={catalogo} />}
+      {tab === 'concesionarios' && <ConcesionariosTab />}
     </div>
   )
 }

@@ -19,30 +19,33 @@ function logoUrl() {
   return `${APP_URL}/logo-la-oriental-blanco.png`
 }
 
-function headerHTML() {
+function headerHTML(empresa: string, conLogo: boolean) {
+  const logo = conLogo
+    ? `<td style="vertical-align:middle"><img src="${logoUrl()}" alt="${empresa}" style="height:44px;width:auto;display:block" /></td>`
+    : ''
   return `<div style="background:#C41E3A;padding:20px 32px;border-radius:12px 12px 0 0">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="vertical-align:middle"><img src="${logoUrl()}" alt="La Oriental" style="height:44px;width:auto;display:block" /></td>
-      <td style="padding-left:14px;vertical-align:middle">
-        <p style="margin:0;color:#fff;font-weight:800;font-size:15px;font-family:sans-serif">LA ORIENTAL AUTOMOTORS</p>
-        <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-family:sans-serif">MG &amp; MAXUS · Maturín, Venezuela</p>
+      ${logo}
+      <td style="${conLogo ? 'padding-left:14px;' : ''}vertical-align:middle">
+        <p style="margin:0;color:#fff;font-weight:800;font-size:15px;font-family:sans-serif">${empresa}</p>
+        <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-family:sans-serif">MG &amp; MAXUS</p>
       </td>
     </tr></table>
   </div>`
 }
 
-function footerHTML() {
+function footerHTML(empresa: string) {
   return `<div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;border-radius:0 0 12px 12px;text-align:center">
-    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">La Oriental Automotors · MG &amp; MAXUS · Maturín, Venezuela</p>
+    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">${empresa} · MG &amp; MAXUS</p>
   </div>`
 }
 
-function wrap(body: string) {
+function wrap(body: string, empresa = 'LA ORIENTAL AUTOMOTORS', conLogo = true) {
   return `<div style="background:#f3f4f6;padding:24px 16px">
     <div style="background:#fff;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
-      ${headerHTML()}
+      ${headerHTML(empresa, conLogo)}
       <div style="padding:32px">${body}</div>
-      ${footerHTML()}
+      ${footerHTML(empresa)}
     </div>
   </div>`
 }
@@ -158,12 +161,15 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;margin:0">* Precios referenciales sujetos a disponibilidad. Consulte con su asesor para confirmar.</p>
   `
 
-  const asunto = `Cotización ${data.numero} — ${data.marca} ${data.modelo} · La Oriental Automotors`
+  const empresa = data.empresaNombre ?? 'LA ORIENTAL AUTOMOTORS'
+  const esLaOriental = empresa.toUpperCase().includes('ORIENTAL')
+  const fromDinamico = `${empresa} <cotizaciones@laoriental.co>`
+  const asunto = `Cotización ${data.numero} — ${data.marca} ${data.modelo} · ${empresa}`
   const resendResult = await resend.emails.send({
-    from: FROM,
+    from: fromDinamico,
     to: [data.clienteCorreo],
     subject: asunto,
-    html: wrap(body),
+    html: wrap(body, empresa, esLaOriental),
     attachments: [{
       filename: `${data.numero}.pdf`,
       content: Buffer.from(pdfBuffer),
