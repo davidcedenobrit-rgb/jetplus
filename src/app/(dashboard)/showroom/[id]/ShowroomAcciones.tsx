@@ -7,7 +7,7 @@ import { ChevronRight, MapPin, Lock, Loader2, CheckCircle2 } from 'lucide-react'
 import type { VehiculoShowroom } from '@/types/database'
 
 const FLUJO: Record<string, { siguiente: string; label: string; color: string }> = {
-  llegada:        { siguiente: 'por_enviar_pdi', label: 'Marcar: Por enviar a PDI',  color: 'btn-primary' },
+  llegada:        { siguiente: 'por_enviar_pdi', label: 'Marcar: Por enviar a taller',  color: 'btn-primary' },
   por_enviar_pdi: { siguiente: 'en_taller',      label: 'Marcar: Enviado al taller', color: 'btn-primary' },
   en_taller:      { siguiente: 'en_agencia',     label: 'Marcar: Regresó a agencia', color: 'btn-primary' },
   en_agencia:     { siguiente: 'reservado',      label: 'Reservar vehículo',         color: 'btn-primary' },

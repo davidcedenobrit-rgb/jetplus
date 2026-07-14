@@ -6,11 +6,13 @@ import type { VehiculoShowroom } from '@/types/database'
 import ShowroomDocumentos from './ShowroomDocumentos'
 import ShowroomAcciones from './ShowroomAcciones'
 import DesvincularVentaButton from './DesvincularVentaButton'
+import EtiquetaExpedienteButton from './EtiquetaExpedienteButton'
+import EtiquetaVentaButton from './EtiquetaVentaButton'
 import SalidaAlternativaButtons from './SalidaAlternativaButtons'
 
 const PASOS = [
   { key: 'llegada',        label: 'Recibido',         desc: 'Vehículo llegó a La Oriental' },
-  { key: 'por_enviar_pdi', label: 'Por enviar a PDI', desc: 'Pendiente de ir al taller' },
+  { key: 'por_enviar_pdi', label: 'Por enviar a taller', desc: 'Pendiente de ir al taller' },
   { key: 'en_taller',      label: 'En taller',        desc: 'Realizando PDI' },
   { key: 'en_agencia',     label: 'En agencia',       desc: 'Disponible para venta' },
   { key: 'reservado',      label: 'Reservado',        desc: 'Con reserva activa' },
@@ -109,7 +111,7 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
         <Link href="/showroom" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
           <ArrowLeft size={18} className="text-oriental-gray" />
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-oriental-black">{v.marca} {v.modelo}</h1>
           <p className="text-oriental-gray text-sm mt-0.5 flex items-center gap-2">
             {v.placa && <span className="font-mono font-bold">{v.placa}</span>}
@@ -124,6 +126,21 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
               {PASOS.find(p => p.key === v.estado)?.label ?? v.estado}
             </span>
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {v.estado === 'vendido' && (
+            <EtiquetaVentaButton
+              vehiculoId={v.id} marca={v.marca} modelo={v.modelo} placa={v.placa}
+              clienteNombre={clienteVinculado?.nombre ?? null}
+              vendedoraActual={(v as any).vendedora_venta ?? null}
+              fechaVentaActual={(v as any).fecha_venta ?? null}
+            />
+          )}
+          <EtiquetaExpedienteButton
+            marca={v.marca} modelo={v.modelo} version={v.version} anio={v.anio} color={v.color}
+            placa={v.placa} fechaLlegada={v.fecha_llegada} proformaVehimotors={(v as any).proforma_vehimotors}
+            vin={v.vin} serialMotor={v.serial_motor}
+          />
         </div>
       </div>
 

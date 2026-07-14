@@ -8,8 +8,8 @@ import type { VehiculoShowroom } from '@/types/database'
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
   llegada:        { label: 'Recibido',        color: 'text-blue-700',   bg: 'bg-blue-100',   step: 1 },
-  por_enviar_pdi: { label: 'Por enviar a PDI', color: 'text-yellow-700', bg: 'bg-yellow-100', step: 2 },
-  en_taller:      { label: 'En taller (PDI)',  color: 'text-orange-700', bg: 'bg-orange-100', step: 3 },
+  por_enviar_pdi: { label: 'Por enviar a taller', color: 'text-yellow-700', bg: 'bg-yellow-100', step: 2 },
+  en_taller:      { label: 'En taller',           color: 'text-orange-700', bg: 'bg-orange-100', step: 3 },
   en_agencia:     { label: 'Disponible',       color: 'text-green-700',  bg: 'bg-green-100',  step: 4 },
   reservado:      { label: 'Reservado',        color: 'text-purple-700', bg: 'bg-purple-100', step: 5 },
   vendido:        { label: 'Vendido',          color: 'text-gray-600',   bg: 'bg-gray-100',   step: 6 },
