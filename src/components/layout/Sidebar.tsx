@@ -141,13 +141,21 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
           {/* Vehículo Showroom */}
           {!['almacen'].includes(rol) && (() => {
-            const active = pathname === '/showroom' || pathname.startsWith('/showroom/')
+            const active = pathname === '/showroom' || (pathname.startsWith('/showroom/') && pathname !== '/showroom/transferencias')
+            const activeTransf = pathname === '/showroom/transferencias'
             return (
-              <Link href="/showroom" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Store size={18} />
-                <span className="flex-1">Vehículo Showroom</span>
-              </Link>
+              <>
+                <Link href="/showroom" onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <Store size={18} />
+                  <span className="flex-1">Vehículo Showroom</span>
+                </Link>
+                <Link href="/showroom/transferencias" onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${activeTransf ? 'bg-blue-600/30 text-white font-semibold border-l-2 border-blue-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <ArrowLeftRight size={13} />
+                  <span className="flex-1">Transferencias</span>
+                </Link>
+              </>
             )
           })()}
 
