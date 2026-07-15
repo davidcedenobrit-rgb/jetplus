@@ -14,6 +14,7 @@ function fmtDate(s: string) {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const descargar = new URL(_req.url).searchParams.get('download') === '1'
 
   const supabase = await createAdminClient()
   const { data: cot, error } = await supabase
@@ -68,7 +69,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="${cot.numero}.pdf"`,
+      'Content-Disposition': `${descargar ? 'attachment' : 'inline'}; filename="${cot.numero}.pdf"`,
       'Cache-Control': 'private, no-cache',
     },
   })
