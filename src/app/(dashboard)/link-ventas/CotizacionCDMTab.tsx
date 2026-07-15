@@ -250,7 +250,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           clienteCorreo: form.clienteCorreo, clienteTelefono: form.clienteTelefono || null,
           clienteDireccion: form.clienteDireccion || null, clienteCiudadEstado: form.clienteCiudadEstado || null,
           clienteCodigoPostal: form.clienteCodigoPostal || null, agenteRetencion: form.agenteRetencion,
-          modalidad: 'credito_24',
+          modalidad,
           plan,
           cantidad,
           concesionarioId,
