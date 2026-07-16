@@ -1,34 +1,121 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown
 } from 'lucide-react'
 
-const navItemsTop = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-]
-const navItemsBottom1 = [
-  { href: '/clientes', label: 'Clientes', icon: Users },
-  { href: '/vehiculos', label: 'Vehículos', icon: Car },
-  { href: '/ingresos', label: 'Ingresos', icon: TrendingUp },
-  { href: '/egresos', label: 'Egresos', icon: TrendingDown },
-  { href: '/creditos', label: 'Créditos', icon: CreditCard },
-]
-const navItemsBottom2 = [
-  { href: '/tasas', label: 'Tasas', icon: ArrowLeftRight },
-  { href: '/reportes', label: 'Reportes', icon: BarChart2 },
-  { href: '/documentos-empresa', label: 'Docs. Empresa', icon: FolderOpen },
-]
-const navItemsBottom = [...navItemsBottom1, ...navItemsBottom2]
-const navItems = [...navItemsTop, ...navItemsBottom]
+// ── Roles auxiliares ────────────────────────────────────────────────
+const DIR = ['jose', 'admin', 'director', 'mary', 'leysdem']
+const DIR_CORE = ['director', 'admin']
 
-const ROL_CARLA_VISIBLE = ['jose', 'admin', 'director', 'carla']
+type BadgeKey = 'aprob' | 'anul' | 'dep' | 'portal'
+
+interface NavLink {
+  href: string
+  label: string
+  icon: LucideIcon
+  roles?: string[]      // lista blanca: solo estos roles lo ven
+  hideFor?: string[]    // lista negra: todos menos estos
+  badge?: BadgeKey
+  sub?: NavLink[]
+}
+
+interface NavSection {
+  id: string
+  title: string
+  icon: LucideIcon
+  links: NavLink[]
+}
+
+// ── Estructura del menú (roles distintos de carla / taller) ─────────
+const SECTIONS: NavSection[] = [
+  {
+    id: 'ventas',
+    title: 'Ventas y Clientes',
+    icon: Users,
+    links: [
+      { href: '/clientes',  label: 'Clientes',          icon: Users,         hideFor: ['arianna', 'almacen'] },
+      { href: '/vehiculos', label: 'Vehículos',         icon: Car,           hideFor: ['arianna', 'almacen'] },
+      { href: '/showroom',  label: 'Vehículo Showroom', icon: Store,         hideFor: ['almacen'], sub: [
+        { href: '/showroom/transferencias', label: 'Transferencias', icon: ArrowLeftRight, hideFor: ['almacen'] },
+      ] },
+      { href: '/link-ventas', label: 'Link de Ventas',  icon: Globe,         roles: ['jose', 'admin', 'director'] },
+      { href: '/creditos',  label: 'Créditos',          icon: CreditCard,    hideFor: ['arianna', 'almacen'] },
+      { href: '/acuerdos',  label: 'Acuerdos de Pago',  icon: Handshake,     hideFor: ['arianna', 'almacen'] },
+      { href: '/historial', label: 'Historial cliente', icon: ClipboardList, hideFor: ['arianna', 'almacen'] },
+    ],
+  },
+  {
+    id: 'finanzas',
+    title: 'Finanzas',
+    icon: Coins,
+    links: [
+      { href: '/ingresos',     label: 'Ingresos',           icon: TrendingUp,   hideFor: ['arianna', 'almacen'] },
+      { href: '/egresos',      label: 'Egresos',            icon: TrendingDown, hideFor: ['almacen'] },
+      { href: '/pagos-portal', label: 'Pagos del portal',   icon: Inbox,        roles: DIR, badge: 'portal' },
+      { href: '/balance',      label: 'Balance',            icon: Scale,        roles: DIR },
+      { href: '/cuentas',      label: 'Por pagar / cobrar', icon: Coins,        roles: DIR },
+      { href: '/pagos-fijos',  label: 'Pago Fijo',          icon: Repeat,       roles: DIR },
+      { href: '/tasas',        label: 'Tasas',              icon: ArrowLeftRight, hideFor: ['arianna', 'almacen'] },
+      { href: '/reportes',     label: 'Reportes',           icon: BarChart2,    hideFor: ['arianna', 'almacen'] },
+      { href: '/proveedores',  label: 'Proveedores',        icon: Truck,        roles: DIR },
+      { href: '/aprobaciones', label: 'Aprobaciones',       icon: ShieldCheck,  hideFor: ['arianna', 'almacen'], badge: 'aprob' },
+      { href: '/anulaciones',  label: 'Anulaciones',        icon: Ban,          roles: DIR, badge: 'anul' },
+      { href: '/carla',        label: 'Efectivo / Depósitos', icon: PackageCheck, roles: ['director', 'admin', 'jose', 'mary', 'leysdem'], badge: 'dep' },
+    ],
+  },
+  {
+    id: 'inventario',
+    title: 'Inventario y Repuestos',
+    icon: Boxes,
+    links: [
+      { href: '/repuestos',  label: 'Repuestos',          icon: Package, sub: [
+        { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
+      ] },
+      { href: '/materiales', label: 'Materiales e insumos', icon: Boxes,     roles: DIR },
+      { href: '/vehimotors', label: 'Vehimotors',          icon: Building2,  roles: DIR, sub: [
+        { href: '/vehimotors/reportar', label: 'Reportar pagos', icon: Zap, roles: DIR },
+      ] },
+    ],
+  },
+  {
+    id: 'corporativo',
+    title: 'Corporativo',
+    icon: Briefcase,
+    links: [
+      { href: '/corporativo',        label: 'Corporativo La Oriental', icon: Briefcase,  roles: DIR },
+      { href: '/obsequios',          label: 'Obsequios a clientes',    icon: Gift,       roles: DIR },
+      { href: '/eventos',            label: 'Eventos',                 icon: CalendarDays, roles: DIR },
+      { href: '/documentos-empresa', label: 'Docs. Empresa',           icon: FolderOpen, hideFor: ['arianna', 'almacen'] },
+    ],
+  },
+  {
+    id: 'admin',
+    title: 'Administración',
+    icon: Shield,
+    links: [
+      { href: '/importar',  label: 'Importar datos',   icon: Upload,     roles: DIR },
+      { href: '/auditoria', label: 'Auditoría',        icon: Shield,     roles: DIR_CORE },
+      { href: '/logs',      label: 'Logs del sistema', icon: ScrollText, roles: DIR_CORE },
+    ],
+  },
+]
+
+const DASHBOARD_LINK: NavLink = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hideFor: ['arianna', 'almacen'] }
+
+function canSee(link: NavLink, rol: string): boolean {
+  if (link.roles) return link.roles.includes(rol)
+  if (link.hideFor) return !link.hideFor.includes(rol)
+  return true
+}
 
 interface SidebarProps {
   userEmail: string
@@ -44,11 +131,70 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [open, setOpen] = useState<Record<string, boolean>>({})
+
+  const toggle = (id: string) => setOpen(o => ({ ...o, [id]: !o[id] }))
+
+  const badgeCounts: Record<BadgeKey, number> = {
+    aprob: aprobacionesPendientes,
+    anul: anulacionesPendientes,
+    dep: depositosPendientesCarla,
+    portal: pagosPortalPendientes,
+  }
+  const badgeColor: Record<BadgeKey, string> = {
+    aprob: 'bg-oriental-red',
+    anul: 'bg-orange-600',
+    dep: 'bg-teal-600',
+    portal: 'bg-blue-500',
+  }
+
+  const matchPath = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const isActive = (link: NavLink) => {
+    const self = matchPath(link.href)
+    if (link.sub) return self && !link.sub.some(s => matchPath(s.href))
+    return self
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
+  }
+
+  const linkBadge = (link: NavLink) => (link.badge ? badgeCounts[link.badge] : 0)
+
+  function renderLink(link: NavLink, isSub = false) {
+    const active = isActive(link)
+    const count = linkBadge(link)
+    const Icon = link.icon
+    if (isSub) {
+      return (
+        <Link key={link.href} href={link.href} onClick={onClose}
+          className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${active ? 'bg-oriental-red/20 text-white font-semibold border-l-2 border-oriental-red' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+          <Icon size={13} />
+          <span className="flex-1">{link.label}</span>
+          {count > 0 && (
+            <span className={`${badgeColor[link.badge!]} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none`}>
+              {count > 99 ? '99+' : count}
+            </span>
+          )}
+        </Link>
+      )
+    }
+    return (
+      <div key={link.href}>
+        <Link href={link.href} onClick={onClose}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
+          <Icon size={18} />
+          <span className="flex-1">{link.label}</span>
+          {count > 0 && (
+            <span className={`${badgeColor[link.badge!]} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none`}>
+              {count > 99 ? '99+' : count}
+            </span>
+          )}
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -69,7 +215,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
 
-        {/* ── NAV EXCLUSIVA CARLA ───────────────────────────────── */}
+        {/* ── NAV EXCLUSIVA DIRECTORA CH ───────────────────────────── */}
         {rol === 'carla' && (() => {
           const carlaNav = [
             { href: '/dashboard', label: 'Dashboard',         icon: LayoutDashboard },
@@ -124,360 +270,49 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           })
         })()}
 
-        {/* ── NAV RESTO DE ROLES ────────────────────────────────── */}
+        {/* ── NAV RESTO DE ROLES (agrupada en secciones) ───────────── */}
         {rol !== 'carla' && rol !== 'taller' && <>
 
-          {/* Dashboard — oculto para Arianna y Almacén */}
-          {!['arianna', 'almacen'].includes(rol) && navItemsTop.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
+          {/* Dashboard — enlace suelto arriba */}
+          {canSee(DASHBOARD_LINK, rol) && renderLink(DASHBOARD_LINK)}
+
+          {/* Secciones colapsables */}
+          {SECTIONS.map(section => {
+            const links = section.links.filter(l => canSee(l, rol))
+            if (links.length === 0) return null
+
+            const isOpen = open[section.id] ?? false
+            const sectionActive = links.some(l => isActive(l) || (l.sub?.some(s => matchPath(s.href)) ?? false))
+            const pending = links.reduce((n, l) => n + linkBadge(l), 0)
+            const SectionIcon = section.icon
+
             return (
-              <Link key={href} href={href} onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Icon size={18} />
-                {label}
-              </Link>
+              <div key={section.id} className="pt-0.5">
+                <button onClick={() => toggle(section.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${sectionActive ? 'text-white bg-gray-800/40' : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'}`}>
+                  <SectionIcon size={18} />
+                  <span className="flex-1 text-left">{section.title}</span>
+                  {!isOpen && pending > 0 && (
+                    <span className="bg-oriental-red text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                      {pending > 99 ? '99+' : pending}
+                    </span>
+                  )}
+                  <ChevronDown size={15} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isOpen && (
+                  <div className="mt-0.5 space-y-0.5">
+                    {links.map(link => (
+                      <div key={link.href}>
+                        {renderLink(link)}
+                        {link.sub?.filter(s => canSee(s, rol)).map(s => renderLink(s, true))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )
           })}
-
-          {/* Vehículo Showroom */}
-          {!['almacen'].includes(rol) && (() => {
-            const active = pathname === '/showroom' || (pathname.startsWith('/showroom/') && pathname !== '/showroom/transferencias')
-            const activeTransf = pathname === '/showroom/transferencias'
-            return (
-              <>
-                <Link href="/showroom" onClick={onClose}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <Store size={18} />
-                  <span className="flex-1">Vehículo Showroom</span>
-                </Link>
-                <Link href="/showroom/transferencias" onClick={onClose}
-                  className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${activeTransf ? 'bg-blue-600/30 text-white font-semibold border-l-2 border-blue-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <ArrowLeftRight size={13} />
-                  <span className="flex-1">Transferencias</span>
-                </Link>
-              </>
-            )
-          })()}
-
-          {/* Acuerdos de Pago — debajo de Showroom */}
-          {!['arianna', 'almacen'].includes(rol) && (() => {
-            const active = pathname === '/acuerdos' || pathname.startsWith('/acuerdos/')
-            return (
-              <Link href="/acuerdos" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Handshake size={18} />
-                <span className="flex-1">Acuerdos de Pago</span>
-              </Link>
-            )
-          })()}
-
-          {/* Repuestos — visible para todos */}
-          {(() => {
-            const active = pathname === '/repuestos' || (pathname.startsWith('/repuestos/') && pathname !== '/repuestos/compra-plaza' && !pathname.startsWith('/repuestos/compra-plaza/'))
-            const activePlaza = pathname === '/repuestos/compra-plaza' || pathname.startsWith('/repuestos/compra-plaza/')
-            return (
-              <>
-                <Link href="/repuestos" onClick={onClose}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <Package size={18} />
-                  <span className="flex-1">Repuestos</span>
-                </Link>
-                <Link href="/repuestos/compra-plaza" onClick={onClose}
-                  className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${activePlaza ? 'bg-purple-600/30 text-white font-semibold border-l-2 border-purple-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <ShoppingBag size={13} />
-                  <span className="flex-1">Compra en plaza</span>
-                </Link>
-              </>
-            )
-          })()}
-
-          {/* Clientes → Ingresos */}
-          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.slice(0, 3).map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
-            return (
-              <Link key={href} href={href} onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Icon size={18} />
-                {label}
-              </Link>
-            )
-          })}
-
-          {/* Pagos del portal — bandeja de verificación */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/pagos-portal' || pathname.startsWith('/pagos-portal/')
-            return (
-              <Link href="/pagos-portal" onClick={onClose}
-                className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${active ? 'bg-blue-600/30 text-white font-semibold border-l-2 border-blue-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Inbox size={13} />
-                <span className="flex-1">Pagos del portal</span>
-                {pagosPortalPendientes > 0 && (
-                  <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                    {pagosPortalPendientes > 99 ? '99+' : pagosPortalPendientes}
-                  </span>
-                )}
-              </Link>
-            )
-          })()}
-
-          {/* Vehimotors — debajo de Ingresos */}
-          {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const activeReportados = pathname === '/vehimotors'
-            const activeReportar = pathname === '/vehimotors/reportar' || pathname.startsWith('/vehimotors/reportar/')
-            return (
-              <>
-                <Link href="/vehimotors" onClick={onClose}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeReportados ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <Building2 size={18} />
-                  <span className="flex-1">Vehimotors</span>
-                </Link>
-                <Link href="/vehimotors/reportar" onClick={onClose}
-                  className={`flex items-center gap-3 pl-10 pr-3 py-2 rounded-lg text-xs transition-all ${activeReportar ? 'bg-indigo-600/30 text-white font-semibold border-l-2 border-indigo-400' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <Zap size={13} />
-                  <span className="flex-1">Reportar pagos</span>
-                </Link>
-              </>
-            )
-          })()}
-
-          {/* Egresos — visible para todos excepto almacén */}
-          {rol !== 'almacen' && (() => {
-            const active = pathname === '/egresos' || pathname.startsWith('/egresos/')
-            return (
-              <Link href="/egresos" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <TrendingDown size={18} />
-                Egresos
-              </Link>
-            )
-          })()}
-
-          {/* Balance — debajo de Egresos, solo dirección */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/balance' || pathname.startsWith('/balance/')
-            return (
-              <Link href="/balance" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Scale size={18} />
-                <span className="flex-1">Balance</span>
-              </Link>
-            )
-          })()}
-
-          {/* Cuentas por pagar/cobrar — solo dirección */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/cuentas' || pathname.startsWith('/cuentas/')
-            return (
-              <Link href="/cuentas" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Coins size={18} />
-                <span className="flex-1">Por pagar / cobrar</span>
-              </Link>
-            )
-          })()}
-
-          {/* Pago Fijo — debajo de Balance, solo dirección */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/pagos-fijos' || pathname.startsWith('/pagos-fijos/')
-            return (
-              <Link href="/pagos-fijos" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Repeat size={18} />
-                <span className="flex-1">Pago Fijo</span>
-              </Link>
-            )
-          })()}
-
-          {/* Link de Ventas — debajo de Egresos */}
-          {!['arianna', 'almacen'].includes(rol) && ['jose', 'admin', 'director'].includes(rol) && (() => {
-            const active = pathname === '/link-ventas' || pathname.startsWith('/link-ventas/')
-            return (
-              <Link href="/link-ventas" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Globe size={18} />
-                <span className="flex-1">Link de Ventas</span>
-              </Link>
-            )
-          })()}
-
-          {/* Créditos */}
-          {!['arianna', 'almacen'].includes(rol) && navItemsBottom1.slice(4).map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
-            return (
-              <Link key={href} href={href} onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Icon size={18} />
-                {label}
-              </Link>
-            )
-          })}
-
-          {/* Tasas → Docs. Empresa */}
-          {!['arianna', 'almacen'].includes(rol) && navItemsBottom2.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
-            return (
-              <Link key={href} href={href} onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Icon size={18} />
-                {label}
-              </Link>
-            )
-          })}
-
-          {/* Historial del cliente */}
-          {!['arianna', 'almacen'].includes(rol) && (() => {
-            const active = pathname === '/historial' || pathname.startsWith('/historial/')
-            return (
-              <Link href="/historial" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <ClipboardList size={18} />
-                Historial cliente
-              </Link>
-            )
-          })()}
-
-          {/* Corporativo La Oriental */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem', 'carla'].includes(rol) && (() => {
-            const active = pathname === '/corporativo' || pathname.startsWith('/corporativo/')
-            return (
-              <Link href="/corporativo" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Briefcase size={18} />
-                Corporativo La Oriental
-              </Link>
-            )
-          })()}
-
-          {/* Proveedores */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/proveedores' || pathname.startsWith('/proveedores/')
-            return (
-              <Link href="/proveedores" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Truck size={18} />
-                Proveedores
-              </Link>
-            )
-          })()}
-
-          {/* Materiales e insumos */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/materiales' || pathname.startsWith('/materiales/')
-            return (
-              <Link href="/materiales" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Boxes size={18} />
-                Materiales e insumos
-              </Link>
-            )
-          })()}
-
-          {/* Obsequios a clientes */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/obsequios' || pathname.startsWith('/obsequios/')
-            return (
-              <Link href="/obsequios" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Gift size={18} />
-                Obsequios a clientes
-              </Link>
-            )
-          })()}
-
-          {/* Eventos */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/eventos' || pathname.startsWith('/eventos/')
-            return (
-              <Link href="/eventos" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <CalendarDays size={18} />
-                Eventos
-              </Link>
-            )
-          })()}
-
-          {/* Aprobaciones */}
-          {!['arianna', 'almacen'].includes(rol) && (() => {
-            const active = pathname === '/aprobaciones' || pathname.startsWith('/aprobaciones/')
-            return (
-              <Link href="/aprobaciones" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <ShieldCheck size={18} />
-                <span className="flex-1">Aprobaciones</span>
-                {aprobacionesPendientes > 0 && (
-                  <span className="bg-oriental-red text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                    {aprobacionesPendientes > 99 ? '99+' : aprobacionesPendientes}
-                  </span>
-                )}
-              </Link>
-            )
-          })()}
-
-          {/* Anulaciones */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/anulaciones' || pathname.startsWith('/anulaciones/')
-            return (
-              <Link href="/anulaciones" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Ban size={18} />
-                <span className="flex-1">Anulaciones</span>
-                {anulacionesPendientes > 0 && (
-                  <span className="bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                    {anulacionesPendientes > 99 ? '99+' : anulacionesPendientes}
-                  </span>
-                )}
-              </Link>
-            )
-          })()}
-
-          {/* Importar */}
-          {['jose', 'admin', 'director', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/importar' || pathname.startsWith('/importar/')
-            return (
-              <Link href="/importar" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <Upload size={18} />
-                Importar datos
-              </Link>
-            )
-          })()}
-
-          {/* Auditoría y Logs */}
-          {['director', 'admin'].includes(rol) && (() => {
-            const activeAud = pathname === '/auditoria' || pathname.startsWith('/auditoria/')
-            const activeLogs = pathname === '/logs' || pathname.startsWith('/logs/')
-            return (
-              <>
-                <Link href="/auditoria" onClick={onClose}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeAud ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <Shield size={18} />
-                  Auditoría
-                </Link>
-                <Link href="/logs" onClick={onClose}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${activeLogs ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                  <ScrollText size={18} />
-                  Logs del sistema
-                </Link>
-              </>
-            )
-          })()}
-
-          {/* Efectivo / Depositos */}
-          {['director', 'admin', 'jose', 'mary', 'leysdem'].includes(rol) && (() => {
-            const active = pathname === '/carla' || pathname.startsWith('/carla/')
-            return (
-              <Link href="/carla" onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? 'bg-oriental-red text-white font-semibold' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'}`}>
-                <PackageCheck size={18} />
-                <span className="flex-1">Efectivo / Depósitos</span>
-                {depositosPendientesCarla > 0 && (
-                  <span className="bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                    {depositosPendientesCarla > 99 ? '99+' : depositosPendientesCarla}
-                  </span>
-                )}
-              </Link>
-            )
-          })()}
 
         </>}
       </nav>
@@ -490,7 +325,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             <span className="text-[10px] bg-oriental-red/20 text-oriental-red font-semibold px-1.5 py-0.5 rounded">DIR</span>
           )}
           {rol === 'carla' && (
-            <span className="text-[10px] bg-teal-600/20 text-teal-600 font-semibold px-1.5 py-0.5 rounded">CARLA</span>
+            <span className="text-[10px] bg-teal-600/20 text-teal-600 font-semibold px-1.5 py-0.5 rounded">DIRECTORA CH</span>
           )}
           {rol === 'arianna' && (
             <span className="text-[10px] bg-orange-600/20 text-orange-500 font-semibold px-1.5 py-0.5 rounded">SHOWROOM</span>
