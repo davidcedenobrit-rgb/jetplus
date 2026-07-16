@@ -99,7 +99,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     id: 'admin',
-    title: 'Administración',
+    title: 'Sistema CDM',
     icon: Shield,
     links: [
       { href: '/importar',  label: 'Importar datos',   icon: Upload,     roles: DIR },
