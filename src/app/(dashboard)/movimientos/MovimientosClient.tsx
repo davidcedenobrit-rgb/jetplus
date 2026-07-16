@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Wallet, Search, X, Check, Loader2, ArrowDownCircle, ArrowUpCircle, Settings2, Banknote, Coins } from 'lucide-react'
+import { Wallet, Search, X, Check, Loader2, ArrowDownCircle, ArrowUpCircle, Settings2 } from 'lucide-react'
 import { conciliarMovimiento, asignarCuenta, type Cuenta } from './actions'
 
 export interface Movimiento {
@@ -19,6 +19,8 @@ export interface Movimiento {
   banco: string | null
   estado: string | null
   cuenta_id: string | null
+  cuentaLabel: string          // cuenta derivada (o la explícita si se asignó)
+  esVehimotors: boolean         // pago directo a Vehimotors → no cuenta en saldos
   conciliado: boolean
   conciliado_por: string | null
   conciliado_at: string | null
@@ -36,8 +38,6 @@ function fmt(m: number, cur: string) {
   return `${sign}${pre}${s}`
 }
 
-const tipoIcono: Record<string, string> = { banco: '🏦', usdt: '₮', efectivo: '💵', otro: '•' }
-
 const LIMITE = 500
 
 export default function MovimientosClient({ movimientos, cuentas }: Props) {
@@ -46,36 +46,44 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
   const [trabajando, setTrabajando] = useState<string | null>(null)
 
   const [busqueda, setBusqueda] = useState('')
-  const [fCuenta, setFCuenta] = useState('')      // cuenta_id | 'sin' | ''
-  const [fTipo, setFTipo] = useState('')          // 'ingreso' | 'egreso' | ''
-  const [fConcil, setFConcil] = useState('')      // 'si' | 'no' | ''
-  const [fMoneda, setFMoneda] = useState('')      // 'USD' | 'VES' | 'USDT' | ''
+  const [fCuenta, setFCuenta] = useState('')      // cuentaLabel | ''
+  const [fTipo, setFTipo] = useState('')
+  const [fConcil, setFConcil] = useState('')
+  const [fMoneda, setFMoneda] = useState('')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
 
-  const cuentaById = useMemo(() => Object.fromEntries(cuentas.map(c => [c.id, c])), [cuentas])
+  const custodioPorNombre = useMemo(
+    () => Object.fromEntries(cuentas.map(c => [c.nombre.toLowerCase(), c.custodio])),
+    [cuentas])
 
-  // Saldo por cuenta (sobre todos los movimientos, sin filtrar)
-  const saldoPorCuenta = useMemo(() => {
+  // Saldos por cuenta derivada + moneda (excluye Vehimotors)
+  const saldos = useMemo(() => {
+    const m: Record<string, { label: string; moneda: string; total: number; n: number }> = {}
+    for (const mv of movimientos) {
+      if (mv.esVehimotors) continue
+      const key = `${mv.cuentaLabel}|${mv.moneda}`
+      if (!m[key]) m[key] = { label: mv.cuentaLabel, moneda: mv.moneda, total: 0, n: 0 }
+      m[key].total += mv.tipo === 'ingreso' ? mv.monto : -mv.monto
+      m[key].n += 1
+    }
+    return Object.values(m).sort((a, b) => a.label.localeCompare(b.label) || a.moneda.localeCompare(b.moneda))
+  }, [movimientos])
+
+  // Vehimotors CCS (informativo, no suma a La Oriental)
+  const vehimotorsPorMoneda = useMemo(() => {
     const m: Record<string, number> = {}
     for (const mv of movimientos) {
-      if (!mv.cuenta_id) continue
-      m[mv.cuenta_id] = (m[mv.cuenta_id] ?? 0) + (mv.tipo === 'ingreso' ? mv.monto : -mv.monto)
+      if (!mv.esVehimotors) continue
+      m[mv.moneda] = (m[mv.moneda] ?? 0) + mv.monto
     }
     return m
   }, [movimientos])
 
-  // Movimientos sin cuenta agrupados por moneda
-  const sinCuentaPorMoneda = useMemo(() => {
-    const m: Record<string, { total: number; n: number }> = {}
-    for (const mv of movimientos) {
-      if (mv.cuenta_id) continue
-      const k = mv.moneda
-      if (!m[k]) m[k] = { total: 0, n: 0 }
-      m[k].total += mv.tipo === 'ingreso' ? mv.monto : -mv.monto
-      m[k].n += 1
-    }
-    return m
+  const etiquetas = useMemo(() => {
+    const s = new Set<string>()
+    for (const mv of movimientos) s.add(mv.esVehimotors ? 'Vehimotors CCS' : mv.cuentaLabel)
+    return Array.from(s).sort()
   }, [movimientos])
 
   const pendientesConciliar = useMemo(() => movimientos.filter(m => !m.conciliado).length, [movimientos])
@@ -83,10 +91,10 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
   const filtradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
     return movimientos.filter(mv => {
+      const label = mv.esVehimotors ? 'Vehimotors CCS' : mv.cuentaLabel
       if (fTipo && mv.tipo !== fTipo) return false
       if (fMoneda && mv.moneda !== fMoneda) return false
-      if (fCuenta === 'sin' && mv.cuenta_id) return false
-      if (fCuenta && fCuenta !== 'sin' && mv.cuenta_id !== fCuenta) return false
+      if (fCuenta && label !== fCuenta) return false
       if (fConcil === 'si' && !mv.conciliado) return false
       if (fConcil === 'no' && mv.conciliado) return false
       if (desde && (mv.fecha ?? '') < desde) return false
@@ -105,26 +113,15 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
   const visibles = filtradas.slice(0, LIMITE)
   const hayFiltro = busqueda || fCuenta || fTipo || fConcil || fMoneda || desde || hasta
 
-  function limpiar() {
-    setBusqueda(''); setFCuenta(''); setFTipo(''); setFConcil(''); setFMoneda(''); setDesde(''); setHasta('')
-  }
+  function limpiar() { setBusqueda(''); setFCuenta(''); setFTipo(''); setFConcil(''); setFMoneda(''); setDesde(''); setHasta('') }
 
   function toggleConciliado(mv: Movimiento) {
     setTrabajando(mv.id)
-    startTransition(async () => {
-      await conciliarMovimiento(mv.tipo, mv.id, !mv.conciliado)
-      router.refresh()
-      setTrabajando(null)
-    })
+    startTransition(async () => { await conciliarMovimiento(mv.tipo, mv.id, !mv.conciliado); router.refresh(); setTrabajando(null) })
   }
-
   function cambiarCuenta(mv: Movimiento, cuentaId: string) {
     setTrabajando(mv.id)
-    startTransition(async () => {
-      await asignarCuenta(mv.tipo, mv.id, cuentaId || null)
-      router.refresh()
-      setTrabajando(null)
-    })
+    startTransition(async () => { await asignarCuenta(mv.tipo, mv.id, cuentaId || null); router.refresh(); setTrabajando(null) })
   }
 
   const fmtFecha = (d: string | null) =>
@@ -149,35 +146,40 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
         </Link>
       </div>
 
-      {/* Saldos por cuenta */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
-        {cuentas.map(c => (
-          <button key={c.id} onClick={() => setFCuenta(fCuenta === c.id ? '' : c.id)}
-            className={`text-left p-3 rounded-xl border-2 transition-all ${fCuenta === c.id ? 'border-oriental-red bg-oriental-red/5' : 'border-gray-100 hover:border-gray-200 bg-white'}`}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-sm">{tipoIcono[c.tipo] ?? '•'}</span>
-              <p className="text-[11px] font-bold text-oriental-black truncate flex-1">{c.nombre}</p>
-              <span className="text-[9px] font-bold text-oriental-gray bg-gray-100 px-1 py-0.5 rounded">{c.moneda}</span>
-            </div>
-            {c.custodio && <p className="text-[10px] text-oriental-gray truncate mb-0.5">{c.custodio}</p>}
-            <p className={`text-base font-black ${(saldoPorCuenta[c.id] ?? 0) < 0 ? 'text-red-600' : 'text-oriental-black'}`}>
-              {fmt(saldoPorCuenta[c.id] ?? 0, c.moneda)}
-            </p>
-          </button>
-        ))}
-        {Object.entries(sinCuentaPorMoneda).map(([mon, v]) => (
-          <button key={`sin-${mon}`} onClick={() => { setFCuenta('sin'); setFMoneda(mon) }}
-            className={`text-left p-3 rounded-xl border-2 border-dashed transition-all ${fCuenta === 'sin' && fMoneda === mon ? 'border-amber-400 bg-amber-50' : 'border-amber-200 hover:border-amber-300 bg-amber-50/40'}`}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-sm">⚠️</span>
-              <p className="text-[11px] font-bold text-amber-800 truncate flex-1">Sin cuenta</p>
-              <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.5 rounded">{mon}</span>
-            </div>
-            <p className="text-[10px] text-amber-700 mb-0.5">{v.n} mov. por asignar</p>
-            <p className="text-base font-black text-amber-800">{fmt(v.total, mon)}</p>
-          </button>
-        ))}
+      {/* Saldos por cuenta (derivada del propio movimiento) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+        {saldos.map(s => {
+          const activo = fCuenta === s.label && fMoneda === s.moneda
+          const custodio = custodioPorNombre[s.label.toLowerCase()]
+          const sinClasificar = s.label === 'Sin clasificar'
+          return (
+            <button key={`${s.label}|${s.moneda}`}
+              onClick={() => { setFCuenta(activo ? '' : s.label); setFMoneda(activo ? '' : s.moneda) }}
+              className={`text-left p-3 rounded-xl border-2 transition-all ${activo ? 'border-oriental-red bg-oriental-red/5' : sinClasificar ? 'border-amber-200 bg-amber-50/40 hover:border-amber-300' : 'border-gray-100 hover:border-gray-200 bg-white'}`}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <p className={`text-[11px] font-bold truncate flex-1 ${sinClasificar ? 'text-amber-800' : 'text-oriental-black'}`}>{s.label}</p>
+                <span className="text-[9px] font-bold text-oriental-gray bg-gray-100 px-1 py-0.5 rounded">{s.moneda}</span>
+              </div>
+              {custodio && <p className="text-[10px] text-oriental-gray truncate mb-0.5">{custodio}</p>}
+              <p className={`text-base font-black ${s.total < 0 ? 'text-red-600' : 'text-oriental-black'}`}>{fmt(s.total, s.moneda)}</p>
+              <p className="text-[10px] text-oriental-gray">{s.n} mov.</p>
+            </button>
+          )
+        })}
       </div>
+
+      {/* Vehimotors CCS — informativo, no cuenta para La Oriental */}
+      {Object.keys(vehimotorsPorMoneda).length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <span className="text-[11px] font-semibold text-oriental-gray">Directo a Vehimotors CCS (no suma a saldos):</span>
+          {Object.entries(vehimotorsPorMoneda).map(([mon, tot]) => (
+            <button key={mon} onClick={() => { setFCuenta('Vehimotors CCS'); setFMoneda(mon) }}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-xs font-bold text-oriental-black hover:bg-gray-200">
+              {mon} · {fmt(tot, mon)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="card p-4 mb-4">
@@ -196,8 +198,7 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
         <div className="flex flex-wrap gap-2">
           <select className="select text-sm py-1.5 w-auto" value={fCuenta} onChange={e => setFCuenta(e.target.value)}>
             <option value="">Todas las cuentas</option>
-            <option value="sin">Sin cuenta</option>
-            {cuentas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            {etiquetas.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
           <select className="select text-sm py-1.5 w-auto" value={fTipo} onChange={e => setFTipo(e.target.value)}>
             <option value="">Ingresos y egresos</option>
@@ -245,8 +246,8 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
               <tbody className="divide-y divide-gray-50">
                 {visibles.map(mv => {
                   const esIng = mv.tipo === 'ingreso'
-                  const cuenta = mv.cuenta_id ? cuentaById[mv.cuenta_id] : null
                   const ocupado = trabajando === mv.id && pending
+                  const label = mv.esVehimotors ? 'Vehimotors CCS' : mv.cuentaLabel
                   return (
                     <tr key={`${mv.tipo}-${mv.id}`} className="hover:bg-gray-50 align-top">
                       <td className="px-3 py-2.5 whitespace-nowrap text-xs text-oriental-gray">{fmtFecha(mv.fecha)}</td>
@@ -261,17 +262,18 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
                         </p>
                       </td>
                       <td className="px-3 py-2.5">
+                        <span className={`inline-block text-[11px] font-semibold px-2 py-1 rounded-lg ${mv.esVehimotors ? 'bg-gray-100 text-gray-600' : label === 'Sin clasificar' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-blue-50 text-blue-800'}`}>
+                          {label}
+                        </span>
                         <select
                           value={mv.cuenta_id ?? ''}
                           disabled={ocupado}
                           onChange={e => cambiarCuenta(mv, e.target.value)}
-                          className={`text-xs rounded-lg border px-2 py-1.5 max-w-[150px] ${mv.cuenta_id ? 'border-gray-200 bg-white text-oriental-black' : 'border-amber-300 bg-amber-50 text-amber-800'}`}>
-                          <option value="">— Sin cuenta —</option>
+                          title="Forzar otra cuenta"
+                          className="block mt-1 text-[10px] rounded border border-gray-200 bg-white px-1.5 py-1 max-w-[140px] text-oriental-gray">
+                          <option value="">Automática</option>
                           {cuentas.map(c => <option key={c.id} value={c.id}>{c.nombre} ({c.moneda})</option>)}
                         </select>
-                        {cuenta && cuenta.moneda !== mv.moneda && (
-                          <p className="text-[10px] text-red-600 mt-0.5">⚠ Moneda ({mv.moneda}) ≠ cuenta ({cuenta.moneda})</p>
-                        )}
                       </td>
                       <td className={`px-3 py-2.5 text-right whitespace-nowrap font-bold ${esIng ? 'text-green-700' : 'text-red-600'}`}>
                         {fmt(esIng ? mv.monto : -mv.monto, mv.moneda)}
