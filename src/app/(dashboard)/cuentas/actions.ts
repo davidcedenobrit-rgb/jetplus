@@ -35,6 +35,7 @@ export type CxPInput = {
   tasaCambio: number | null
   fechaLimite: string | null
   notas: string | null
+  facturaUrl: string | null
 }
 
 export async function crearCuentaPorPagar(input: CxPInput): Promise<{ ok?: boolean; error?: string }> {
@@ -57,6 +58,7 @@ export async function crearCuentaPorPagar(input: CxPInput): Promise<{ ok?: boole
     tasa_cambio: input.tasaCambio ?? null,
     fecha_limite: clean(input.fechaLimite),
     notas: clean(input.notas),
+    factura_url: clean(input.facturaUrl),
     estado: 'pendiente',
     registrado_por: g.user.id,
   })

@@ -52,7 +52,7 @@ export default function CuentasPage() {
     setLoading(true)
     const [cxpData, cuo, cre] = await Promise.all([
       fetchAll<CxP>((f, t) => supabase.from('cuentas_por_pagar')
-        .select('id, beneficiario, concepto, categoria, monto, moneda, tasa_cambio, fecha_limite, fecha_emision, proveedor_id')
+        .select('id, beneficiario, concepto, categoria, monto, moneda, tasa_cambio, fecha_limite, fecha_emision, proveedor_id, factura_url')
         .eq('estado', 'pendiente')
         .order('fecha_limite', { ascending: true, nullsFirst: false })
         .range(f, t)),
@@ -78,6 +78,14 @@ export default function CuentasPage() {
 
   // ── Por cobrar ──
   const hoy = new Date().toISOString().split('T')[0]
+
+  // Recordatorios de vencimiento (por pagar)
+  const cxpVencidas = cxp.filter(c => c.fecha_limite && c.fecha_limite < hoy).length
+  const cxpPorVencer = cxp.filter(c => {
+    if (!c.fecha_limite || c.fecha_limite < hoy) return false
+    const d = (new Date(c.fecha_limite + 'T00:00:00').getTime() - new Date(hoy + 'T00:00:00').getTime()) / 86400000
+    return d <= 7
+  }).length
   const cxc = cuotas.map(c => {
     const saldo = Math.max(0, c.monto - (c.monto_pagado ?? 0))
     const cred = creditos[c.credito_id]
@@ -114,7 +122,11 @@ export default function CuentasPage() {
         <div className="card p-5">
           <div className="flex items-center gap-2 text-oriental-red mb-1"><TrendingDown size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por pagar</p></div>
           <p className="text-2xl font-bold text-oriental-black">${fmt(totalPorPagar)}</p>
-          <p className="text-[11px] text-oriental-gray mt-1">{cxp.length} obligaciones pendientes</p>
+          <p className="text-[11px] text-oriental-gray mt-1">
+            {cxp.length} pendientes
+            {cxpVencidas > 0 && <span className="text-oriental-red font-semibold"> · {cxpVencidas} vencida{cxpVencidas !== 1 ? 's' : ''}</span>}
+            {cxpPorVencer > 0 && <span className="text-amber-600 font-semibold"> · {cxpPorVencer} por vencer</span>}
+          </p>
         </div>
         <div className="card p-5">
           <div className="flex items-center gap-2 text-green-700 mb-1"><TrendingUp size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por cobrar</p></div>
