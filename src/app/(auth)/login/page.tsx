@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Car } from 'lucide-react'
 import { LoginSchema } from '@/lib/validations'
+import { BRANDING } from '@/lib/branding'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -50,8 +51,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-oriental-red rounded-2xl mb-4">
             <Car size={32} className="text-white" />
           </div>
-          <h1 className="text-white text-2xl font-extrabold tracking-tight">LA ORIENTAL</h1>
-          <p className="text-oriental-gray text-sm mt-1">AUTOMOTORS</p>
+          <h1 className="text-white text-2xl font-extrabold tracking-tight">{BRANDING.nombre}</h1>
+          <p className="text-oriental-gray text-sm mt-1">{BRANDING.sub}</p>
           <div className="w-12 h-0.5 bg-oriental-red mx-auto mt-3" />
         </div>
 
@@ -59,7 +60,7 @@ export default function LoginPage() {
         <div className="bg-[#1A1A1A] rounded-2xl border border-gray-800 overflow-hidden">
           <div className="px-8 pt-8 pb-2">
             <h2 className="text-white text-lg font-bold">Control Financiero</h2>
-            <p className="text-oriental-gray text-sm mt-1">MG & MAXUS · Maturín</p>
+            <p className="text-oriental-gray text-sm mt-1">{BRANDING.ubicacion}</p>
           </div>
 
           <form onSubmit={handleLogin} className="px-8 py-6 space-y-4">
@@ -68,7 +69,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 className="w-full bg-oriental-black border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-oriental-red/40 focus:border-oriental-red transition-colors"
-                placeholder="tu@laoriental.co"
+                placeholder={BRANDING.emailPlaceholder}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required

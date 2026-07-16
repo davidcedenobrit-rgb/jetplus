@@ -11,6 +11,7 @@ import {
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
   Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink
 } from 'lucide-react'
+import { BRANDING } from '@/lib/branding'
 
 // ── Roles auxiliares ────────────────────────────────────────────────
 const DIR = ['jose', 'admin', 'director', 'mary', 'leysdem']
@@ -231,8 +232,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             <Car size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-tight tracking-tight">CENTRO DE MANDO</p>
-            <p className="text-oriental-gray text-[11px] tracking-widest uppercase">La Oriental Automotors</p>
+            <p className="text-white font-bold text-sm leading-tight tracking-tight">{BRANDING.sidebarTitulo}</p>
+            <p className="text-oriental-gray text-[11px] tracking-widest uppercase">{BRANDING.sidebarSub}</p>
           </div>
         </div>
       </div>

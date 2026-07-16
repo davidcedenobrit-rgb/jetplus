@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import Sidebar from './Sidebar'
+import { BRANDING } from '@/lib/branding'
 
 interface ClientLayoutProps {
   children: React.ReactNode
@@ -67,7 +68,7 @@ export default function ClientLayout({
           </button>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-oriental-red rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-[9px] font-bold">LO</span>
+              <span className="text-white text-[9px] font-bold">{BRANDING.iniciales}</span>
             </div>
             <span className="font-bold text-oriental-black text-sm tracking-tight">Centro de Mando</span>
           </div>

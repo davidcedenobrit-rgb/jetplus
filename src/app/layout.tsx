@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { BRANDING } from '@/lib/branding'
 
 export const viewport: Viewport = {
   themeColor: '#D31F2A',
@@ -10,13 +11,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Centro de Mando · La Oriental',
-  description: 'Control financiero — La Oriental Automotors MG & MAXUS',
+  title: `Centro de Mando · ${BRANDING.nombre}`,
+  description: 'Control financiero',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'LO Centro de Mando',
+    title: `${BRANDING.iniciales} Centro de Mando`,
   },
   formatDetection: {
     telephone: false,
