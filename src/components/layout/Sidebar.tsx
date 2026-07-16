@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet
 } from 'lucide-react'
 
 // ── Roles auxiliares ────────────────────────────────────────────────
@@ -62,6 +62,7 @@ const SECTIONS: NavSection[] = [
       { href: '/egresos',      label: 'Egresos',            icon: TrendingDown, hideFor: ['almacen'] },
       { href: '/pagos-portal', label: 'Pagos del portal',   icon: Inbox,        roles: DIR, badge: 'portal' },
       { href: '/balance',      label: 'Balance',            icon: Scale,        roles: DIR },
+      { href: '/movimientos',  label: 'Movimientos y conciliación', icon: Wallet, roles: DIR },
       { href: '/cuentas',      label: 'Por pagar / cobrar', icon: Coins,        roles: DIR },
       { href: '/pagos-fijos',  label: 'Pago Fijo',          icon: Repeat,       roles: DIR },
       { href: '/tasas',        label: 'Tasas',              icon: ArrowLeftRight, hideFor: ['arianna', 'almacen'] },
