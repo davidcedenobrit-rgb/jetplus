@@ -11,6 +11,7 @@ import FileUpload from '@/components/FileUpload'
 import type { Cliente, Vehiculo } from '@/types/database'
 
 const CONCEPTOS = [
+  'Venta de contado',
   'Cuota de vehículo',
   'Reserva AC500',
   'Cuota de AC500',
@@ -126,9 +127,14 @@ function NuevoIngresoPageInner() {
     const acuerdoParam = searchParams.get('acuerdo')
     const clienteParam = searchParams.get('cliente')
     const vehiculoParam = searchParams.get('vehiculo')
+    const conceptoParam = searchParams.get('concepto')
 
     if (cuotaIdParam) {
       preselectedCuotaIdRef.current = cuotaIdParam
+    }
+    // Concepto precargado (ej. "Venta de contado" desde la ficha del vehículo)
+    if (conceptoParam && CONCEPTOS.includes(conceptoParam)) {
+      setConcepto(conceptoParam)
     }
     if (montoParam && parseFloat(montoParam) > 0) {
       setMonto(parseFloat(montoParam).toFixed(2))

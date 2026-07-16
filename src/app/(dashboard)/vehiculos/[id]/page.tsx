@@ -257,6 +257,14 @@ export default async function VehiculoDetallePage({
             </div>
             {puedeEditar && (
               <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
+                {vehiculo.tipo_compra === 'contado' && (
+                  <Link
+                    href={`/ingresos/nuevo?cliente=${vehiculo.cliente_id ?? ''}&vehiculo=${id}${vehiculo.placa ? `&placa=${encodeURIComponent(vehiculo.placa)}` : ''}&concepto=${encodeURIComponent('Venta de contado')}`}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors"
+                  >
+                    <TrendingUp size={13} /> Registrar venta de contado
+                  </Link>
+                )}
                 <Link
                   href={`/creditos/nuevo?vehiculo_id=${id}`}
                   className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-oriental-red-dark transition-colors"
