@@ -9,7 +9,7 @@ import { crearCompraPlazaDirecta } from './actions'
 
 type Item = { descripcion: string; cantidad: number }
 
-const METODOS = ['Efectivo USD', 'Efectivo Bs.', 'Transferencia bancaria', 'Pago Móvil', 'Zelle', 'USDT / Binance']
+const METODOS = ['Efectivo USD', 'Efectivo Bs.', 'Transferencia bancaria', 'Pago Móvil', 'Zelle', 'USDT / Binance', 'Tarjeta de crédito', 'Tarjeta de débito']
 
 export default function NuevaCompraPlaza() {
   const router = useRouter()

@@ -178,6 +178,8 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [], 
                     <option value="Pago Móvil">Pago Móvil</option>
                     <option value="Zelle">Zelle</option>
                     <option value="USDT VE">USDT / Binance</option>
+                    <option value="Tarjeta de crédito">Tarjeta de crédito</option>
+                    <option value="Tarjeta de débito">Tarjeta de débito</option>
                   </select>
                 </div>
                 <div>
