@@ -2,19 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
-import { ArrowLeft, TrendingDown, TrendingUp, AlertTriangle, Building2, User } from 'lucide-react'
+import { ArrowLeft, TrendingDown, TrendingUp, AlertTriangle, User } from 'lucide-react'
 import Link from 'next/link'
+import CuentasPorPagarTab, { type CxP } from './CuentasPorPagarTab'
 
-// Estados de egreso que representan una obligación aún no pagada
-const POR_PAGAR = new Set(['registrado', 'pendiente_aprobacion', 'aprobado', 'correccion_requerida'])
 // Estados de cuota que representan saldo por cobrar
 const POR_COBRAR = new Set(['pendiente', 'vencida', 'abono_parcial'])
 
-type Egreso = {
-  id: string; concepto: string; categoria: string; monto: number; moneda: string
-  tasa_cambio: number | null; fecha_egreso: string; estado: string; beneficiario: string | null
-}
 type Cuota = {
   id: string; estado: string; fecha_vencimiento: string; monto: number
   monto_pagado: number | null; credito_id: string
@@ -34,9 +28,6 @@ function usd(m: number, moneda: string, t: number | null): number {
 function fmt(n: number): string {
   return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n) * 100) % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })
 }
-function fmtFecha(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null }>): Promise<T[]> {
   const PAGE = 1000
   let out: T[] = []
@@ -52,16 +43,18 @@ async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ da
 export default function CuentasPage() {
   const supabase = createClient()
   const [tab, setTab] = useState<'pagar' | 'cobrar'>('pagar')
-  const [egresos, setEgresos] = useState<Egreso[]>([])
+  const [cxp, setCxp] = useState<CxP[]>([])
   const [cuotas, setCuotas] = useState<Cuota[]>([])
   const [creditos, setCreditos] = useState<Record<string, Credito>>({})
   const [loading, setLoading] = useState(true)
 
   const cargar = useCallback(async () => {
     setLoading(true)
-    const [egr, cuo, cre] = await Promise.all([
-      fetchAll<Egreso>((f, t) => supabase.from('egresos')
-        .select('id, concepto, categoria, monto, moneda, tasa_cambio, fecha_egreso, estado, beneficiario')
+    const [cxpData, cuo, cre] = await Promise.all([
+      fetchAll<CxP>((f, t) => supabase.from('cuentas_por_pagar')
+        .select('id, beneficiario, concepto, categoria, monto, moneda, tasa_cambio, fecha_limite, fecha_emision, proveedor_id')
+        .eq('estado', 'pendiente')
+        .order('fecha_limite', { ascending: true, nullsFirst: false })
         .range(f, t)),
       fetchAll<Cuota>((f, t) => supabase.from('cuotas')
         .select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id')
@@ -70,7 +63,7 @@ export default function CuentasPage() {
         .select('id, placa, clientes(nombre, cedula_rif)')
         .range(f, t)),
     ])
-    setEgresos(egr.filter(e => POR_PAGAR.has(e.estado)))
+    setCxp(cxpData)
     setCuotas(cuo.filter(c => POR_COBRAR.has(c.estado)))
     const map: Record<string, Credito> = {}
     for (const c of cre) map[c.id] = c
@@ -80,8 +73,8 @@ export default function CuentasPage() {
 
   useEffect(() => { cargar() }, [cargar])
 
-  // ── Por pagar ──
-  const totalPorPagar = egresos.reduce((s, e) => s + usd(e.monto, e.moneda, e.tasa_cambio), 0)
+  // ── Por pagar (obligaciones pendientes cargadas a mano) ──
+  const totalPorPagar = cxp.reduce((s, e) => s + usd(Number(e.monto), e.moneda, e.tasa_cambio), 0)
 
   // ── Por cobrar ──
   const hoy = new Date().toISOString().split('T')[0]
@@ -94,7 +87,6 @@ export default function CuentasPage() {
   const totalPorCobrar = cxc.reduce((s, c) => s + c.saldo, 0)
   const totalVencido = cxc.filter(c => c.vencida).reduce((s, c) => s + c.saldo, 0)
 
-  // Agrupar CxC por cliente
   const cxcPorCliente: Record<string, { nombre: string; placa: string | null; saldo: number; vencido: number; cuotas: number }> = {}
   for (const c of cxc) {
     const key = primerCliente(c.cred)?.nombre ?? `Crédito ${c.credito_id.slice(0, 8)}`
@@ -105,16 +97,6 @@ export default function CuentasPage() {
   }
   const clientesOrden = Object.values(cxcPorCliente).sort((a, b) => b.vencido - a.vencido || b.saldo - a.saldo)
 
-  // Agrupar CxP por beneficiario
-  const cxpPorBenef: Record<string, { nombre: string; total: number; items: number }> = {}
-  for (const e of egresos) {
-    const key = e.beneficiario?.trim() || 'Sin beneficiario'
-    if (!cxpPorBenef[key]) cxpPorBenef[key] = { nombre: key, total: 0, items: 0 }
-    cxpPorBenef[key].total += usd(e.monto, e.moneda, e.tasa_cambio)
-    cxpPorBenef[key].items += 1
-  }
-  const benefOrden = Object.values(cxpPorBenef).sort((a, b) => b.total - a.total)
-
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
       <div className="flex items-center gap-4 mb-6">
@@ -123,7 +105,7 @@ export default function CuentasPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-oriental-black">Cuentas por pagar y por cobrar</h1>
-          <p className="text-oriental-gray text-sm mt-0.5">Se alimenta solo de los egresos pendientes y las cuotas por cobrar</p>
+          <p className="text-oriental-gray text-sm mt-0.5">Obligaciones a proveedores cargadas manualmente y cuotas de clientes por cobrar</p>
         </div>
       </div>
 
@@ -132,7 +114,7 @@ export default function CuentasPage() {
         <div className="card p-5">
           <div className="flex items-center gap-2 text-oriental-red mb-1"><TrendingDown size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por pagar</p></div>
           <p className="text-2xl font-bold text-oriental-black">${fmt(totalPorPagar)}</p>
-          <p className="text-[11px] text-oriental-gray mt-1">{egresos.length} egresos pendientes</p>
+          <p className="text-[11px] text-oriental-gray mt-1">{cxp.length} obligaciones pendientes</p>
         </div>
         <div className="card p-5">
           <div className="flex items-center gap-2 text-green-700 mb-1"><TrendingUp size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por cobrar</p></div>
@@ -159,42 +141,7 @@ export default function CuentasPage() {
       {loading ? (
         <div className="card p-12 text-center text-oriental-gray text-sm">Cargando...</div>
       ) : tab === 'pagar' ? (
-        <div className="card overflow-hidden">
-          <div className="px-4 py-3 bg-oriental-bg border-b border-gray-200 flex items-center gap-2">
-            <Building2 size={15} className="text-oriental-gray" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-oriental-black">Por proveedor / beneficiario</h2>
-          </div>
-          {benefOrden.length === 0 ? (
-            <p className="px-4 py-8 text-sm text-oriental-gray text-center">No hay egresos pendientes de pago</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-gray-100">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-medium text-oriental-gray text-xs">Beneficiario</th>
-                    <th className="text-right px-4 py-2 font-medium text-oriental-gray text-xs">Egresos</th>
-                    <th className="text-right px-4 py-2 font-medium text-oriental-gray text-xs">Total por pagar</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {benefOrden.map(b => (
-                    <tr key={b.nombre} className="hover:bg-gray-50">
-                      <td className="px-4 py-2.5 font-semibold text-oriental-black">{b.nombre}</td>
-                      <td className="px-4 py-2.5 text-right text-oriental-gray text-xs">{b.items}</td>
-                      <td className="px-4 py-2.5 text-right font-bold text-oriental-black">${fmt(b.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-oriental-black text-white">
-                    <td className="px-4 py-2.5 font-bold text-sm" colSpan={2}>Total por pagar</td>
-                    <td className="px-4 py-2.5 text-right font-bold">${fmt(totalPorPagar)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
-        </div>
+        <CuentasPorPagarTab items={cxp} reload={cargar} />
       ) : (
         <div className="card overflow-hidden">
           <div className="px-4 py-3 bg-oriental-bg border-b border-gray-200 flex items-center gap-2">
@@ -240,8 +187,8 @@ export default function CuentasPage() {
       )}
 
       <p className="text-[11px] text-oriental-gray mt-4">
-        Por pagar: egresos registrados, en aprobación, aprobados o en corrección (no incluye pagados, anulados ni rechazados).
-        Por cobrar: cuotas de crédito pendientes, vencidas o con abono parcial (saldo = monto − abonado). Montos en USD.
+        Por pagar: obligaciones a proveedores que se cargan a mano y salen de la lista al marcarlas como pagadas
+        (al pagar se registra el egreso automáticamente). Por cobrar: cuotas de crédito pendientes, vencidas o con abono parcial. Montos en USD.
       </p>
     </div>
   )
