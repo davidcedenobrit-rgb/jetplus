@@ -26,6 +26,7 @@ interface NavLink {
   hideFor?: string[]    // lista negra: todos menos estos
   badge?: BadgeKey
   sub?: NavLink[]
+  exact?: boolean       // activo solo con coincidencia exacta de ruta
 }
 
 interface NavSection {
@@ -82,9 +83,16 @@ const SECTIONS: NavSection[] = [
         { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
       ] },
       { href: '/materiales', label: 'Materiales e insumos', icon: Boxes,     roles: DIR },
-      { href: '/vehimotors', label: 'Vehimotors',          icon: Building2,  roles: DIR, sub: [
-        { href: '/vehimotors/reportar', label: 'Reportar pagos', icon: Zap, roles: DIR },
-      ] },
+    ],
+  },
+  {
+    id: 'vehimotors',
+    title: 'Vehimotors',
+    icon: Building2,
+    links: [
+      { href: '/vehimotors',              label: 'Reportes de pagos', icon: Building2, roles: DIR, exact: true },
+      { href: '/vehimotors/reportar',     label: 'Reportar pagos',    icon: Zap,       roles: DIR },
+      { href: '/vehimotors/conciliacion', label: 'Conciliación',      icon: Wallet,    roles: DIR },
     ],
   },
   {
@@ -151,6 +159,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
   const matchPath = (href: string) => pathname === href || pathname.startsWith(href + '/')
   const isActive = (link: NavLink) => {
+    if (link.exact) return pathname === link.href
     const self = matchPath(link.href)
     if (link.sub) return self && !link.sub.some(s => matchPath(s.href))
     return self
