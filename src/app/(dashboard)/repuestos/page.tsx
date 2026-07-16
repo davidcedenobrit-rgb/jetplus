@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag, FileCheck, Receipt, DollarSign, Truck } from 'lucide-react'
+import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag, FileCheck, Receipt, DollarSign, Truck, FilePlus } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import RepuestosActivasGrid from './RepuestosActivasGrid'
 import CatalogoRepuestos from './CatalogoRepuestos'
@@ -11,7 +11,7 @@ const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem', 'a
 
 // Grupos del flujo de repuestos (segmentado por etapa)
 const GRUPO_KEYS = [
-  'cotizacion_enviada', 'cotizacion_recibida', 'sin_stock', 'cotizacion_aprobada',
+  'solicitud_creada', 'cotizacion_enviada', 'cotizacion_recibida', 'sin_stock', 'cotizacion_aprobada',
   'factura_recibida', 'pagada', 'por_recibir',
   'completadas', 'eliminadas', 'compra_plaza',
 ] as const
@@ -19,7 +19,8 @@ type GrupoKey = typeof GRUPO_KEYS[number]
 
 // Cada grupo agrupa uno o mas estados internos
 const GRUPO_ESTADOS: Record<GrupoKey, string[]> = {
-  cotizacion_enviada:  ['solicitado', 'verificado', 'cotizacion_enviada'],
+  solicitud_creada:    ['solicitado', 'verificado'],
+  cotizacion_enviada:  ['cotizacion_enviada'],
   cotizacion_recibida: ['cotizacion_recibida'],
   sin_stock:           ['sin_stock'],
   cotizacion_aprobada: ['cotizacion_aprobada'],
@@ -33,7 +34,7 @@ const GRUPO_ESTADOS: Record<GrupoKey, string[]> = {
 
 // Grupos "activos" (en proceso) usan la grilla completa con seguimiento
 const GRUPOS_ACTIVOS: GrupoKey[] = [
-  'cotizacion_enviada', 'cotizacion_recibida', 'sin_stock', 'cotizacion_aprobada',
+  'solicitud_creada', 'cotizacion_enviada', 'cotizacion_recibida', 'sin_stock', 'cotizacion_aprobada',
   'factura_recibida', 'pagada', 'por_recibir',
 ]
 
@@ -45,7 +46,8 @@ const GRUPOS: Array<{
   bg: string
   descripcion: string
 }> = [
-  { key: 'cotizacion_enviada',  label: 'Cotización enviada',   icon: Send,         color: 'text-yellow-700', bg: 'bg-yellow-100', descripcion: 'Solicitudes activas' },
+  { key: 'solicitud_creada',    label: 'Solicitud creada',     icon: FilePlus,     color: 'text-slate-700',  bg: 'bg-slate-100',  descripcion: 'Creada por almacén (SCR)' },
+  { key: 'cotizacion_enviada',  label: 'Cotización enviada',   icon: Send,         color: 'text-yellow-700', bg: 'bg-yellow-100', descripcion: 'Enviada a VM' },
   { key: 'cotizacion_recibida', label: 'Cotización recibida',  icon: Inbox,        color: 'text-orange-700', bg: 'bg-orange-100', descripcion: 'Vehimotors respondió' },
   { key: 'sin_stock',           label: 'Sin stock',            icon: XCircle,      color: 'text-red-700',    bg: 'bg-red-100',    descripcion: 'Vehimotors no tiene · comprar en plaza' },
   { key: 'cotizacion_aprobada', label: 'Cotización aprobada',  icon: FileCheck,    color: 'text-blue-700',   bg: 'bg-blue-100',   descripcion: 'Aprobada por Rojas' },
@@ -75,7 +77,7 @@ export default async function RepuestosPage({
   const { grupo, todas } = await searchParams
   const grupoActivo: GrupoKey = (GRUPO_KEYS as readonly string[]).includes(grupo ?? '')
     ? (grupo as GrupoKey)
-    : 'cotizacion_enviada'
+    : 'solicitud_creada'
   const mostrarTodas = todas === '1'
 
   // Contadores por grupo (se pagina para no cortar el conteo en 1000 filas)
@@ -85,6 +87,7 @@ export default async function RepuestosPage({
     .range(from, to))
 
   const conteoPorGrupo: Record<GrupoKey, number> = {
+    solicitud_creada: 0,
     cotizacion_enviada: 0,
     cotizacion_recibida: 0,
     sin_stock: 0,
@@ -137,7 +140,7 @@ export default async function RepuestosPage({
               const totalActivas = GRUPOS_ACTIVOS.reduce((s, k) => s + conteoPorGrupo[k], 0)
               return (
                 <p className="text-oriental-gray text-sm">
-                  Solicitudes a Vehimotors · {totalActivas} activa{totalActivas !== 1 ? 's' : ''}
+                  Solicitudes a VM · {totalActivas} activa{totalActivas !== 1 ? 's' : ''}
                 </p>
               )
             })()}
@@ -211,11 +214,11 @@ export default async function RepuestosPage({
                   : { label: 'Cancelado', bg: 'bg-gray-100 text-gray-700' }
               return (
                 <div key={s.id} className="relative card hover:shadow-md transition-shadow">
-                  {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
+                  {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero ?? s.numero_scr} />}
                   <Link href={`/repuestos/${s.id}`} className="block p-5">
                     <div className="flex items-start justify-between mb-2 pr-6">
                       <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded">
-                        {s.numero}
+                        {s.numero ?? s.numero_scr}
                       </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeCfg.bg}`}>
                         {badgeCfg.label}

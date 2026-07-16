@@ -228,13 +228,19 @@ export default function NuevaSolicitudPage() {
       .then(({ data }) => setCatalogo(data ?? []))
   }, [])
 
-  // Buscar clientes con debounce
+  // Buscar clientes con debounce — aplica a "Cliente registrado" y a "Otro cliente"
+  // (para reutilizar clientes ya registrados en solicitudes anteriores y traer sus datos)
   useEffect(() => {
-    if (destino !== 'cliente' || clienteSel || !buscaCliente.trim() || buscaCliente.trim().length < 2) {
+    const query = destino === 'cliente'
+      ? buscaCliente
+      : destino === 'externo'
+        ? (clienteExterno.trim() || clienteExternoCedula.trim())
+        : ''
+    if ((destino !== 'cliente' && destino !== 'externo') || clienteSel || !query.trim() || query.trim().length < 2) {
       setResultadosClientes([])
       return
     }
-    const q = buscaCliente.trim().toLowerCase()
+    const q = query.trim().toLowerCase()
     const timer = setTimeout(async () => {
       setBuscandoClientes(true)
       const { data } = await supabase
@@ -248,7 +254,7 @@ export default function NuevaSolicitudPage() {
       setBuscandoClientes(false)
     }, 250)
     return () => clearTimeout(timer)
-  }, [buscaCliente, destino, clienteSel])
+  }, [buscaCliente, clienteExterno, clienteExternoCedula, destino, clienteSel])
 
   function seleccionarDelCatalogo(cat: CatalogoItem, idx: number) {
     setItems(prev => prev.map((it, i) => i === idx ? {
@@ -319,24 +325,27 @@ export default function NuevaSolicitudPage() {
       clienteExternoId = res.clienteId ?? null
     }
 
+    // Correlativo SCR de la solicitud creada por almacén. El SORE se asigna
+    // recién cuando Arianna envía la cotización a Vehimotors.
     const año = new Date().getFullYear()
     const { data: lastSol } = await supabase
       .from('solicitudes_repuestos')
-      .select('numero')
-      .ilike('numero', `SORE-${año}-%`)
-      .order('created_at', { ascending: false })
+      .select('numero_scr')
+      .ilike('numero_scr', `SCR-${año}-%`)
+      .order('numero_scr', { ascending: false })
       .limit(1)
       .maybeSingle()
     let seq = 1
-    if (lastSol?.numero) {
-      const n = parseInt(lastSol.numero.split('-')[2] ?? '0', 10)
+    if (lastSol?.numero_scr) {
+      const n = parseInt(lastSol.numero_scr.split('-')[2] ?? '0', 10)
       if (!isNaN(n)) seq = n + 1
     }
-    const numero = `SORE-${año}-${String(seq).padStart(5, '0')}`
+    const numeroScr = `SCR-${año}-${String(seq).padStart(5, '0')}`
     const { data: solicitud, error: err } = await supabase
       .from('solicitudes_repuestos')
       .insert({
-        numero,
+        numero: null,
+        numero_scr: numeroScr,
         estado: 'solicitado',
         solicitado_por_id: user.id,
         solicitado_por_email: user.email,
@@ -489,6 +498,22 @@ export default function NuevaSolicitudPage() {
                   placeholder="Ej: Pedro Perez / Auto Repuestos Maturín…"
                   className="input"
                 />
+                {(clienteExterno.trim().length >= 2 || clienteExternoCedula.trim().length >= 2) && resultadosClientes.length > 0 && (
+                  <div className="border border-green-200 rounded-xl overflow-hidden divide-y divide-gray-100 max-h-56 overflow-y-auto bg-green-50/40">
+                    <p className="px-3 py-1.5 text-[10px] font-bold text-green-700 uppercase tracking-wide bg-green-50">Ya registrados — toca para reutilizar sus datos</p>
+                    {resultadosClientes.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => { setClienteSel(c); setDestino('cliente'); setBuscaCliente('') }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-green-100 transition-colors"
+                      >
+                        <p className="text-sm font-semibold text-oriental-black">{c.nombre}</p>
+                        <p className="text-[11px] text-oriental-gray font-mono">{c.cedula_rif}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <label className="label">Cédula / RIF <span className="text-oriental-gray font-normal">(opcional)</span></label>

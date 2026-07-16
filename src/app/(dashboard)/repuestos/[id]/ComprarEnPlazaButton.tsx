@@ -2,20 +2,28 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingBag, Loader2, X, DollarSign } from 'lucide-react'
+import { ShoppingBag, Loader2, X, DollarSign, Check } from 'lucide-react'
 import ProveedorPicker from '../../egresos/nuevo/ProveedorPicker'
 import type { Proveedor } from '../../egresos/actions'
 
+interface ItemPlaza { id: string; descripcion: string; referencia?: string | null; cantidad: number }
 interface Props {
   solicitudId: string
   numero: string
+  items?: ItemPlaza[]
 }
 
-export default function ComprarEnPlazaButton({ solicitudId, numero }: Props) {
+export default function ComprarEnPlazaButton({ solicitudId, numero, items = [] }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [sel, setSel] = useState<Set<string>>(() => new Set(items.map(i => i.id)))
+  const toggleSel = (id: string) => setSel(prev => {
+    const n = new Set(prev)
+    n.has(id) ? n.delete(id) : n.add(id)
+    return n
+  })
 
   const [proveedor, setProveedor] = useState<Proveedor | null>(null)
   const [monto, setMonto] = useState('')
@@ -30,6 +38,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero }: Props) {
     const montoNum = parseFloat(monto.replace(',', '.'))
     if (!proveedor) { setError('Selecciona o crea el proveedor'); return }
     if (isNaN(montoNum) || montoNum <= 0) { setError('Monto inválido'); return }
+    if (items.length > 0 && sel.size === 0) { setError('Selecciona al menos un repuesto para comprar en plaza'); return }
     setLoading(true)
     try {
       const res = await fetch(`/api/repuestos/${solicitudId}/comprar-plaza`, {
@@ -44,6 +53,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero }: Props) {
           referencia: referencia || null,
           bancoOrigen: bancoOrigen || null,
           notas: notas || null,
+          itemIds: items.length > 0 ? Array.from(sel) : undefined,
         }),
       })
       const j = await res.json()
@@ -92,6 +102,30 @@ export default function ComprarEnPlazaButton({ solicitudId, numero }: Props) {
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-4 text-xs text-purple-800">
               Al confirmar se crea un <strong>egreso</strong> vinculado (categoría "cr_plaza") y la solicitud queda en el grupo <strong>Compra en plaza</strong>.
             </div>
+
+            {items.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">Repuestos a comprar en plaza</label>
+                <div className="space-y-1.5">
+                  {items.map(it => {
+                    const activo = sel.has(it.id)
+                    return (
+                      <button key={it.id} type="button" onClick={() => toggleSel(it.id)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-colors ${activo ? 'border-purple-300 bg-purple-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                        <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${activo ? 'bg-purple-600' : 'border border-gray-300'}`}>
+                          {activo && <Check size={11} className="text-white" />}
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-semibold text-oriental-black truncate">{it.descripcion}</span>
+                          {it.referencia && <span className="block text-[11px] font-mono text-oriental-gray">{it.referencia}</span>}
+                        </span>
+                        <span className="text-xs font-bold text-oriental-gray flex-shrink-0">×{it.cantidad}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div>

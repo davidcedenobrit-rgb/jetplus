@@ -37,8 +37,10 @@ export async function POST(
     referencia,
     bancoOrigen,
     notas,
+    itemIds,
   } = body ?? {}
   const provId = typeof proveedorId === 'string' && proveedorId.trim() ? proveedorId.trim() : null
+  const itemIdsSel: string[] = Array.isArray(itemIds) ? itemIds.filter((x: any) => typeof x === 'string') : []
 
   if (!proveedor || typeof proveedor !== 'string' || !proveedor.trim()) {
     return NextResponse.json({ error: 'Proveedor requerido' }, { status: 400 })
@@ -55,7 +57,7 @@ export async function POST(
 
   const { data: solicitud, error: solErr } = await admin
     .from('solicitudes_repuestos')
-    .select('id, numero, estado, cliente_id, para_la_oriental, cliente_externo')
+    .select('id, numero, numero_scr, estado, cliente_id, para_la_oriental, cliente_externo')
     .eq('id', solicitudId)
     .single()
 
@@ -69,8 +71,10 @@ export async function POST(
     )
   }
 
+  const numeroRef = solicitud.numero ?? solicitud.numero_scr ?? solicitudId
+
   // Crear egreso vinculado
-  const conceptoEg = `Compra de repuestos en plaza — ${solicitud.numero}`
+  const conceptoEg = `Compra de repuestos en plaza — ${numeroRef}`
   const numeroEgreso = generarNumeroEgreso()
 
   const { data: egreso, error: egErr } = await admin
@@ -124,6 +128,15 @@ export async function POST(
   if (upErr) {
     console.error('[repuestos/comprar-plaza] update solicitud error:', upErr)
     return NextResponse.json({ error: upErr.message }, { status: 500 })
+  }
+
+  // Marcar los ítems que se compran en plaza (los que Vehimotors no tiene)
+  if (itemIdsSel.length > 0) {
+    await admin
+      .from('repuestos_items')
+      .update({ comprar_plaza: true })
+      .in('id', itemIdsSel)
+      .eq('solicitud_id', solicitudId)
   }
 
   await admin.from('repuestos_historial').insert({

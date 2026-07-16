@@ -39,10 +39,30 @@ export async function POST(req: NextRequest) {
       cantidad: i.cantidad,
     }))
 
+    // Asignar el SORE recién ahora (al enviar a Vehimotors), si aún no tiene.
+    // La solicitud creada por almacén solo traía el correlativo SCR.
+    let numeroSore = solicitud.numero as string | null
+    if (!numeroSore) {
+      const year = new Date().getFullYear()
+      const { data: lastSore } = await supabase
+        .from('solicitudes_repuestos')
+        .select('numero')
+        .ilike('numero', `SORE-${year}-%`)
+        .order('numero', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      let seq = 1
+      if (lastSore?.numero) {
+        const n = parseInt(String(lastSore.numero).split('-')[2] ?? '0', 10)
+        if (!isNaN(n)) seq = n + 1
+      }
+      numeroSore = `SORE-${year}-${String(seq).padStart(5, '0')}`
+    }
+
     try {
       await enviarSolicitudCotizacion({
         solicitudId: solicitud.id,
-        numero: solicitud.numero,
+        numero: numeroSore,
         token: solicitud.token_respuesta,
         items,
         notasAdicionales: solicitud.notas_almacenista ?? undefined,
@@ -58,6 +78,7 @@ export async function POST(req: NextRequest) {
     // antes de este write, no sobrescribimos su respuesta.
     await supabase.from('solicitudes_repuestos').update({
       estado: 'cotizacion_enviada',
+      numero: numeroSore,
       correo_enviado_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq('id', solicitudId).in('estado', ESTADOS_PERMITIDOS)

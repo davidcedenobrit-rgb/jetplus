@@ -36,7 +36,8 @@ function ProgressBar({ estado }: { estado: string }) {
 
 type Solicitud = {
   id: string
-  numero: string
+  numero: string | null
+  numero_scr?: string | null
   estado: string
   created_at: string
   respuesta_vehimotors: string | null
@@ -76,7 +77,9 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
     const q = busqueda.trim().toLowerCase()
     return solicitudes.filter(s => {
       if (estatus && s.estado !== estatus) return false
-      if (q && !s.numero.toLowerCase().includes(q) && !(s.numero_cotizacion_vehimotors ?? '').toLowerCase().includes(q)) return false
+      if (q && !(s.numero ?? '').toLowerCase().includes(q)
+            && !(s.numero_scr ?? '').toLowerCase().includes(q)
+            && !(s.numero_cotizacion_vehimotors ?? '').toLowerCase().includes(q)) return false
       return true
     })
   }, [solicitudes, busqueda, estatus])
@@ -147,11 +150,14 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
             const itemCount = (s.repuestos_items ?? []).length
             return (
               <div key={s.id} className="relative card hover:shadow-md transition-shadow">
-                {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero} />}
+                {puedeEliminar && <RepuestosCardDeleteBtn solicitudId={s.id} numero={s.numero ?? s.numero_scr ?? ''} />}
                 <Link href={`/repuestos/${s.id}`} className="block p-5">
                   <div className="flex items-start justify-between mb-2 pr-6 gap-2">
                     <div className="flex flex-col gap-1">
-                      <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded w-fit">{s.numero}</span>
+                      <span className="font-mono text-xs font-bold text-oriental-gray bg-gray-100 px-2 py-0.5 rounded w-fit">{s.numero ?? s.numero_scr}</span>
+                      {s.numero && s.numero_scr && (
+                        <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded w-fit">{s.numero_scr}</span>
+                      )}
                       {s.numero_cotizacion_vehimotors && (
                         <span className="font-mono text-[10px] font-bold text-orange-800 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded w-fit">
                           N° Cotiz. {s.numero_cotizacion_vehimotors.toUpperCase()}
@@ -230,7 +236,7 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
       {editarDestinatario && (
         <CambiarDestinatarioModal
           solicitudId={editarDestinatario.id}
-          numero={editarDestinatario.numero}
+          numero={editarDestinatario.numero ?? editarDestinatario.numero_scr ?? ''}
           destinoActual={
             editarDestinatario.para_la_oriental ? 'oriental' :
             editarDestinatario.clientes ? 'cliente' :
