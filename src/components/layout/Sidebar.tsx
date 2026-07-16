@@ -29,7 +29,12 @@ interface NavLink {
   sub?: NavLink[]
   exact?: boolean       // activo solo con coincidencia exacta de ruta
   external?: boolean    // enlace a otro dominio (abre en pestaña nueva)
+  emails?: string[]     // lista blanca por correo (además del rol)
 }
+
+// Super-admin que navega entre concesionarios (Rojas). Configurable por env.
+const SUPER_ADMIN_EMAILS = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS ?? 'admin@gmail.com')
+  .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
 
 interface NavSection {
   id: string
@@ -113,8 +118,8 @@ const SECTIONS: NavSection[] = [
     title: 'Sistema CDM',
     icon: Shield,
     links: [
-      { href: 'https://centrodemandokiauto.laoriental.co', label: 'Ir a Ki Auto', icon: Building2, roles: ['director', 'admin', 'jose'], external: true },
-      { href: '/capital-motors', label: 'Capital Motors', icon: Building2, roles: ['director', 'admin', 'jose'] },
+      { href: 'https://centrodemandokiauto.laoriental.co', label: 'Ir a Ki Auto', icon: Building2, emails: SUPER_ADMIN_EMAILS, external: true },
+      { href: '/capital-motors', label: 'Capital Motors', icon: Building2, emails: SUPER_ADMIN_EMAILS },
       { href: '/importar',  label: 'Importar datos',   icon: Upload,     roles: DIR },
       { href: '/auditoria', label: 'Auditoría',        icon: Shield,     roles: DIR_CORE },
       { href: '/logs',      label: 'Logs del sistema', icon: ScrollText, roles: DIR_CORE },
@@ -124,7 +129,8 @@ const SECTIONS: NavSection[] = [
 
 const DASHBOARD_LINK: NavLink = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hideFor: ['arianna', 'almacen'] }
 
-function canSee(link: NavLink, rol: string): boolean {
+function canSee(link: NavLink, rol: string, email?: string): boolean {
+  if (link.emails) return link.emails.map(e => e.toLowerCase()).includes((email ?? '').toLowerCase())
   if (link.roles) return link.roles.includes(rol)
   if (link.hideFor) return !link.hideFor.includes(rol)
   return true
@@ -300,11 +306,11 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
         {rol !== 'carla' && rol !== 'taller' && <>
 
           {/* Dashboard — enlace suelto arriba */}
-          {canSee(DASHBOARD_LINK, rol) && renderLink(DASHBOARD_LINK)}
+          {canSee(DASHBOARD_LINK, rol, userEmail) && renderLink(DASHBOARD_LINK)}
 
           {/* Secciones colapsables */}
           {SECTIONS.map(section => {
-            const links = section.links.filter(l => canSee(l, rol))
+            const links = section.links.filter(l => canSee(l, rol, userEmail))
             if (links.length === 0) return null
 
             const isOpen = open[section.id] ?? false
@@ -331,7 +337,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                     {links.map(link => (
                       <div key={link.href}>
                         {renderLink(link)}
-                        {link.sub?.filter(s => canSee(s, rol)).map(s => renderLink(s, true))}
+                        {link.sub?.filter(s => canSee(s, rol, userEmail)).map(s => renderLink(s, true))}
                       </div>
                     ))}
                   </div>
