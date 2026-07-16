@@ -1,10 +1,11 @@
 import { MetadataRoute } from 'next'
+import { BRANDING } from '@/lib/branding'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'LO Centro de Mando',
-    short_name: 'LO CDM',
-    description: 'Control financiero — La Oriental Automotors MG & MAXUS',
+    name: `${BRANDING.iniciales} Centro de Mando`,
+    short_name: `${BRANDING.iniciales} CDM`,
+    description: `Control financiero — ${BRANDING.empresa} MG & MAXUS`,
     start_url: '/dashboard',
     display: 'standalone',
     orientation: 'portrait',

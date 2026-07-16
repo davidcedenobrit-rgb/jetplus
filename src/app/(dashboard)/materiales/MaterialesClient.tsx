@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowLeft, Boxes, Plus, Pencil, Trash2, Check, X, Search } from 'lucide-react'
+import { BRANDING } from '@/lib/branding'
 
 type Material = {
   id: string
@@ -94,7 +95,7 @@ export default function MaterialesClient() {
         <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50"><ArrowLeft size={18} className="text-oriental-gray" /></Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-oriental-black flex items-center gap-2"><Boxes size={22} className="text-oriental-red" /> Materiales e insumos</h1>
-          <p className="text-oriental-gray text-sm mt-0.5">Base de datos de materiales e insumos de La Oriental</p>
+          <p className="text-oriental-gray text-sm mt-0.5">Base de datos de materiales e insumos de {BRANDING.marca}</p>
         </div>
         <button onClick={abrirNuevo} className="btn-primary flex items-center gap-2"><Plus size={16} /> Nuevo</button>
       </div>

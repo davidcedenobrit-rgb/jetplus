@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { BRANDING } from '@/lib/branding'
 
 const ROLES = ['jose', 'admin', 'director', 'carla', 'mary', 'leysdem']
 
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     .update({
       estado: 'enviado_deposito',
       enviado_deposito_responsable: responsable.trim() + (notas ? ` — ${notas}` : ''),
-      deposito_banco: destino === 'oriental' ? 'La Oriental' : 'Vehimotors',
+      deposito_banco: destino === 'oriental' ? BRANDING.marca : 'Vehimotors',
       enviado_carla_at: fechaHora,
       updated_at: new Date().toISOString(),
     })

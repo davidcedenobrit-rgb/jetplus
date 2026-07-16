@@ -11,4 +11,9 @@ export const BRANDING = {
   sidebarTitulo: process.env.NEXT_PUBLIC_MARCA_SIDEBAR       ?? 'CENTRO DE MANDO',
   sidebarSub:    process.env.NEXT_PUBLIC_MARCA_SIDEBAR_SUB   ?? 'La Oriental Automotors',
   iniciales:     process.env.NEXT_PUBLIC_MARCA_INICIALES     ?? 'LO',
+  // Nombre corto de la marca para textos internos del Centro de Mando
+  // (subtítulos, etiquetas, títulos de pestaña). En Ki Auto = 'Ki Auto'.
+  marca:         process.env.NEXT_PUBLIC_MARCA_CORTA         ?? 'La Oriental',
+  // Nombre comercial completo (razón social sin la parte legal C.A.).
+  empresa:       process.env.NEXT_PUBLIC_MARCA_EMPRESA       ?? 'La Oriental Automotors',
 }

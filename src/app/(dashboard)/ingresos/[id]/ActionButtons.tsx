@@ -10,10 +10,11 @@ import {
   Wallet, Loader2
 } from 'lucide-react'
 import ReporteVehimotorsModal from './ReporteVehimotorsModal'
+import { BRANDING } from '@/lib/branding'
 
 const CANALES: Array<{ value: string; label: string; requiereCustodio: boolean }> = [
   { value: 'efectivo',         label: 'Efectivo',                          requiereCustodio: true },
-  { value: 'cta_oriental',     label: 'Cuenta La Oriental (banco)',        requiereCustodio: false },
+  { value: 'cta_oriental',     label: `Cuenta ${BRANDING.marca} (banco)`,  requiereCustodio: false },
   { value: 'cta_vehimotors',   label: 'Cuenta Vehimotors (directo)',       requiereCustodio: false },
   { value: 'personal_jose',    label: 'Cuenta personal — José (Rojas)',    requiereCustodio: true },
   { value: 'personal_carla',   label: 'Cuenta personal — Carla',           requiereCustodio: true },
@@ -357,7 +358,7 @@ function ModalConfirmarDeposito({
   }
 
   const BANCOS = [
-    'Vehimotors', 'La Oriental',
+    'Vehimotors', BRANDING.marca,
     'Banesco', 'Banco de Venezuela', 'Mercantil', 'BBVA Provincial',
     'Bicentenario', 'Banplus', 'Bancamiga', 'BNC', 'Otro'
   ]

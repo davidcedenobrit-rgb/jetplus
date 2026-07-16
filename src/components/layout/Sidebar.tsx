@@ -107,7 +107,7 @@ const SECTIONS: NavSection[] = [
     title: 'Corporativo',
     icon: Briefcase,
     links: [
-      { href: '/corporativo',        label: 'Corporativo La Oriental', icon: Briefcase,  roles: DIR },
+      { href: '/corporativo',        label: `Corporativo ${BRANDING.marca}`, icon: Briefcase,  roles: DIR },
       { href: '/obsequios',          label: 'Obsequios a clientes',    icon: Gift,       roles: DIR },
       { href: '/eventos',            label: 'Eventos',                 icon: CalendarDays, roles: DIR },
       { href: '/documentos-empresa', label: 'Docs. Empresa',           icon: FolderOpen, hideFor: ['arianna', 'almacen'] },
