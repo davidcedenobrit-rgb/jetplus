@@ -251,9 +251,9 @@ export async function enviarReporteRecepcion(opts: {
 export async function enviarConfirmacionPago(opts: {
   numero: string; solicitudId: string; tokenPago: string
   comprobanteUrl: string; items: Item[]; retencionUrl?: string | null
-  numeroCotizacion?: string | null
+  numeroCotizacion?: string | null; correoAdicional?: string | null
 }) {
-  const { numero, solicitudId, tokenPago, comprobanteUrl, items, retencionUrl, numeroCotizacion } = opts
+  const { numero, solicitudId, tokenPago, comprobanteUrl, items, retencionUrl, numeroCotizacion, correoAdicional } = opts
   const urlConfirmar = `${APP_URL}/api/repuestos/confirmar-pago?id=${solicitudId}&token=${tokenPago}&accion=confirmar`
   const urlGuia      = `${APP_URL}/api/repuestos/confirmar-pago?id=${solicitudId}&token=${tokenPago}&accion=guia`
 
@@ -280,7 +280,8 @@ export async function enviarConfirmacionPago(opts: {
     ? `PAGO DE COTIZACIÓN ${numeroCotizacion} DEL PEDIDO ${numero}`
     : `💰 Pago realizado — Repuestos ${numero}`
 
-  return getResend().emails.send({ from: FROM, ...applyVMOverride({ to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asuntoPago }), html: wrap(body) })
+  const ccPago = correoAdicional?.trim() ? [...EQUIPO_INTERNO, correoAdicional.trim()] : EQUIPO_INTERNO
+  return getResend().emails.send({ from: FROM, ...applyVMOverride({ to: TO_VEHIMOTORS, cc: ccPago, replyTo: EQUIPO_INTERNO, subject: asuntoPago }), html: wrap(body) })
 }
 
 // ── 8. Email a almacén para cargar guía ──────────────────────────

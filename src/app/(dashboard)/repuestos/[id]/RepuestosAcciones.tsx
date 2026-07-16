@@ -55,6 +55,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [showAlmacen, setShowAlmacen] = useState(false)
   const [correosAlmacen, setCorreosAlmacen] = useState<boolean[]>([true, true])
   const [numCotizacion, setNumCotizacion] = useState('')
+  const [correoAdicionalAlmacen, setCorreoAdicionalAlmacen] = useState('')
   const [enviandoAlmacen, setEnviandoAlmacen] = useState(false)
 
   // Novedad de recepción
@@ -73,6 +74,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   // Cotización Vehimotors al enviar pago
   const [numCotizacionPago, setNumCotizacionPago] = useState('')
   const [montoPago, setMontoPago] = useState('')
+  const [correoAdicionalPago, setCorreoAdicionalPago] = useState('')
 
   const esOperador = ROL_OPERADOR.includes(rol)
   const esDirector = ROL_DIRECTOR.includes(rol)
@@ -127,7 +129,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
     setLoading(true); setError('')
     const res = await fetch('/api/repuestos/enviar-pago', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, comprobanteUrl: solicitud.comprobante_url, numeroCotizacion: numCotizacionPago.trim(), monto: montoNum }),
+      body: JSON.stringify({ solicitudId: solicitud.id, comprobanteUrl: solicitud.comprobante_url, numeroCotizacion: numCotizacionPago.trim(), monto: montoNum, correoAdicional: correoAdicionalPago.trim() || null }),
     })
     if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setLoading(false); return }
     await log('pago_enviado', 'Pago enviado a Vehimotors')
@@ -169,7 +171,7 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
     setEnviandoAlmacen(true); setError('')
     const res = await fetch('/api/repuestos/enviar-almacen', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, correosAlmacen: emails, numeroCotizacion: numCotizacion.trim(), userEmail }),
+      body: JSON.stringify({ solicitudId: solicitud.id, correosAlmacen: emails, numeroCotizacion: numCotizacion.trim(), userEmail, correoAdicional: correoAdicionalAlmacen.trim() || null }),
     })
     if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoAlmacen(false); return }
     setShowAlmacen(false); router.refresh()
@@ -380,6 +382,13 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                 </div>
                 <p className="text-[11px] text-oriental-gray mt-1">Con este monto se registra automáticamente el egreso a Vehimotors.</p>
               </div>
+              <div className="mb-3">
+                <label className="label">Correo adicional <span className="text-oriental-gray font-normal">(opcional)</span></label>
+                <input className="input text-sm" type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={correoAdicionalPago} onChange={e => setCorreoAdicionalPago(e.target.value)} />
+                <p className="text-[11px] text-oriental-gray mt-1">Recibirá copia del correo de pago que se envía a Vehimotors.</p>
+              </div>
               <button onClick={handleEnviarPago} disabled={!pagoListo || !numCotizacionPago.trim() || !(parseFloat(montoPago) > 0) || loading}
                 className={`w-full mt-1 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2
                   ${pagoListo && numCotizacionPago.trim() && parseFloat(montoPago) > 0 ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
@@ -431,6 +440,13 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                 <input className="input text-sm" type="text"
                   placeholder="Ej: COT-2026-00123"
                   value={numCotizacion} onChange={e => setNumCotizacion(e.target.value)} />
+              </div>
+              <div className="mb-4">
+                <label className="label">Correo adicional <span className="text-oriental-gray font-normal">(opcional)</span></label>
+                <input className="input text-sm" type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={correoAdicionalAlmacen} onChange={e => setCorreoAdicionalAlmacen(e.target.value)} />
+                <p className="text-[11px] text-oriental-gray mt-1">Se agrega como destinatario junto a los correos de Vehimotors marcados.</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={handleEnviarAlmacen} disabled={enviandoAlmacen}

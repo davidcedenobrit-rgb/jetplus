@@ -21,8 +21,11 @@ export async function POST(req: NextRequest) {
     const rol = (user.app_metadata?.rol as string) ?? ''
     if (!ROL_PAGO.includes(rol)) return NextResponse.json({ error: 'Solo Mary puede cargar el pago' }, { status: 403 })
 
-    const { solicitudId, comprobanteUrl, numeroCotizacion, monto } = await req.json()
+    const { solicitudId, comprobanteUrl, numeroCotizacion, monto, correoAdicional } = await req.json()
     if (!solicitudId || !comprobanteUrl) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+    const correoExtra = typeof correoAdicional === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correoAdicional.trim())
+      ? correoAdicional.trim()
+      : null
     const montoNum = Number(monto)
     if (!(montoNum > 0)) return NextResponse.json({ error: 'Monto pagado inválido' }, { status: 400 })
     // La factura de Vehimotors es en USD; se fija USD para no perder el monto en reportes.
@@ -44,7 +47,7 @@ export async function POST(req: NextRequest) {
     await enviarConfirmacionPago({
       numero: sol.numero, solicitudId, tokenPago: sol.token_pago,
       comprobanteUrl, items, retencionUrl: sol.retencion_url ?? null,
-      numeroCotizacion: cotiz,
+      numeroCotizacion: cotiz, correoAdicional: correoExtra,
     })
 
     // Auto-egreso: registrar el pago a Vehimotors como egreso (no duplica si ya existe)

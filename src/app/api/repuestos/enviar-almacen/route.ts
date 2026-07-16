@@ -12,11 +12,19 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { solicitudId, correosAlmacen, numeroCotizacion, userEmail } = await req.json()
+    const { solicitudId, correosAlmacen, numeroCotizacion, userEmail, correoAdicional } = await req.json()
 
     if (!solicitudId || !correosAlmacen?.length || !numeroCotizacion) {
       return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 })
     }
+
+    // Correo adicional libre (opcional) — se suma a los destinatarios
+    const correoExtra = typeof correoAdicional === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correoAdicional.trim())
+      ? correoAdicional.trim()
+      : null
+    const destinatarios: string[] = correoExtra && !correosAlmacen.includes(correoExtra)
+      ? [...correosAlmacen, correoExtra]
+      : correosAlmacen
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
@@ -26,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (!sol) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
     const tokenAlmacen = randomUUID()
-    const correosStr   = correosAlmacen.join(',')
+    const correosStr   = destinatarios.join(',')
 
     const { error: updateErr } = await supabase.from('solicitudes_repuestos').update({
       estado: 'enviado_almacen',
@@ -50,7 +58,7 @@ export async function POST(req: NextRequest) {
       solicitudId,
       tokenAlmacen,
       numeroCotizacion,
-      correosAlmacen,
+      correosAlmacen: destinatarios,
     })
 
     revalidatePath('/repuestos')
