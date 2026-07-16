@@ -168,9 +168,15 @@ export default function ShowroomClient({
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
                         {v.marca}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est.bg} ${est.color}`}>
-                        {est.label}
-                      </span>
+                      {v.transferido_a ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                          Transferido → {v.transferido_a}
+                        </span>
+                      ) : (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est.bg} ${est.color}`}>
+                          {est.label}
+                        </span>
+                      )}
                     </div>
                     {v.pdi_hecho && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
@@ -226,7 +232,14 @@ export default function ShowroomClient({
                     </div>
                   )}
 
-                  {v.estado === 'vendido' && (
+                  {v.transferido_a ? (
+                    <div className="mt-3 rounded-lg px-3 py-2 bg-blue-50 border border-blue-200">
+                      <p className="text-[11px] font-semibold text-blue-800 flex items-center gap-1">
+                        <Tag size={10} /> Transferido a {v.transferido_a}
+                        {v.transferido_at && <span className="text-blue-600 font-normal">· {new Date(v.transferido_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
+                      </p>
+                    </div>
+                  ) : v.estado === 'vendido' && (
                     <div className="mt-3 rounded-lg px-3 py-2 bg-gray-50 border border-gray-200">
                       <p className="text-[11px] font-semibold text-gray-500 flex items-center gap-1">
                         <Tag size={10} /> Vendido · ciclo cerrado

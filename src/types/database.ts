@@ -211,6 +211,13 @@ export interface VehiculoShowroom {
   vehiculo_id: string | null
   created_at: string
   updated_at: string
+  proforma_vehimotors: string | null
+  transferido_a: string | null
+  transferido_at: string | null
+  vendido_por_aliado: string | null
+  vendido_por_aliado_at: string | null
+  vendedora_venta: string | null
+  fecha_venta: string | null
 }
 
 export interface Auditoria {

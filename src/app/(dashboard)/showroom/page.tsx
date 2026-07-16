@@ -7,11 +7,12 @@ import ShowroomClient from './ShowroomClient'
 import type { VehiculoShowroom } from '@/types/database'
 
 const TABS = [
-  { key: 'todos',      label: 'Todos' },
-  { key: 'en_agencia', label: 'Disponibles' },
-  { key: 'reservado',  label: 'Reservados' },
-  { key: 'en_taller',  label: 'En taller' },
-  { key: 'vendido',    label: 'Vendidos' },
+  { key: 'todos',       label: 'Todos' },
+  { key: 'en_agencia',  label: 'Disponibles' },
+  { key: 'reservado',   label: 'Reservados' },
+  { key: 'en_taller',   label: 'En taller' },
+  { key: 'vendido',     label: 'Vendidos' },
+  { key: 'transferido', label: 'Transferidos' },
 ] as const
 
 export default async function ShowroomPage({
@@ -33,16 +34,24 @@ export default async function ShowroomPage({
     .select('*')
     .order('created_at', { ascending: false })
 
-  if (tab !== 'todos') {
+  if (tab === 'transferido') {
+    // Transferidos a otro concesionario (aunque su estado interno sea "vendido")
+    query = query.not('transferido_a', 'is', null)
+  } else if (tab === 'vendido') {
+    // Vendidos "de verdad" — se excluyen los transferidos
+    query = query.eq('estado', 'vendido').is('transferido_a', null)
+  } else if (tab !== 'todos') {
     query = query.eq('estado', tab)
   }
 
   const { data: vehiculos } = await query
   const lista = (vehiculos ?? []) as VehiculoShowroom[]
 
-  const { data: todos } = await supabase.from('vehiculos_showroom').select('estado')
+  const { data: todos } = await supabase.from('vehiculos_showroom').select('estado, transferido_a')
   const conteos: Record<string, number> = {}
+  let transferidoCount = 0
   ;(todos ?? []).forEach((v: any) => {
+    if (v.transferido_a) { transferidoCount += 1; return }
     conteos[v.estado] = (conteos[v.estado] ?? 0) + 1
   })
 
@@ -71,7 +80,9 @@ export default async function ShowroomPage({
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
         {TABS.map(t => {
-          const count = t.key === 'todos' ? (todos?.length ?? 0) : (conteos[t.key] ?? 0)
+          const count = t.key === 'todos' ? (todos?.length ?? 0)
+            : t.key === 'transferido' ? transferidoCount
+            : (conteos[t.key] ?? 0)
           return (
             <Link
               key={t.key}
