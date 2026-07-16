@@ -77,7 +77,7 @@ const SECTIONS: NavSection[] = [
     title: 'Inventario y Repuestos',
     icon: Boxes,
     links: [
-      { href: '/repuestos',  label: 'Repuestos',          icon: Package, sub: [
+      { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package, sub: [
         { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
       ] },
       { href: '/materiales', label: 'Materiales e insumos', icon: Boxes,     roles: DIR },
@@ -253,7 +253,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
           const tallerNav = [
             { href: '/dashboard',  label: 'Dashboard',          icon: LayoutDashboard },
             { href: '/showroom',   label: 'Vehículo Showroom',  icon: Store },
-            { href: '/repuestos',  label: 'Repuestos',          icon: Package },
+            { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package },
             { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
           ]
           return tallerNav.map(({ href, label, icon: Icon }) => {

@@ -11,9 +11,13 @@ interface Props {
   solicitudId: string
   numero: string
   items?: ItemPlaza[]
+  // Cuando la selección ya se hizo afuera (lista con checkboxes), no mostramos
+  // el checklist interno y se compran exactamente los ítems recibidos.
+  hideChecklist?: boolean
+  label?: string
 }
 
-export default function ComprarEnPlazaButton({ solicitudId, numero, items = [] }: Props) {
+export default function ComprarEnPlazaButton({ solicitudId, numero, items = [], hideChecklist = false, label }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -38,7 +42,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [] }
     const montoNum = parseFloat(monto.replace(',', '.'))
     if (!proveedor) { setError('Selecciona o crea el proveedor'); return }
     if (isNaN(montoNum) || montoNum <= 0) { setError('Monto inválido'); return }
-    if (items.length > 0 && sel.size === 0) { setError('Selecciona al menos un repuesto para comprar en plaza'); return }
+    if (items.length > 0 && !hideChecklist && sel.size === 0) { setError('Selecciona al menos un repuesto para comprar en plaza'); return }
     setLoading(true)
     try {
       const res = await fetch(`/api/repuestos/${solicitudId}/comprar-plaza`, {
@@ -53,7 +57,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [] }
           referencia: referencia || null,
           bancoOrigen: bancoOrigen || null,
           notas: notas || null,
-          itemIds: items.length > 0 ? Array.from(sel) : undefined,
+          itemIds: items.length > 0 ? (hideChecklist ? items.map(i => i.id) : Array.from(sel)) : undefined,
         }),
       })
       const j = await res.json()
@@ -77,7 +81,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [] }
         onClick={() => setOpen(true)}
         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors"
       >
-        <ShoppingBag size={15} /> Comprar en plaza
+        <ShoppingBag size={15} /> {label ?? 'Comprar en plaza'}
       </button>
 
       {open && (
@@ -103,7 +107,7 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [] }
               Al confirmar se crea un <strong>egreso</strong> vinculado (categoría "cr_plaza") y la solicitud queda en el grupo <strong>Compra en plaza</strong>.
             </div>
 
-            {items.length > 0 && (
+            {items.length > 0 && !hideChecklist && (
               <div className="mb-4">
                 <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">Repuestos a comprar en plaza</label>
                 <div className="space-y-1.5">
