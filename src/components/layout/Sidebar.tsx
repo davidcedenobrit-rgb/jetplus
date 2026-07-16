@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink
 } from 'lucide-react'
 
 // ── Roles auxiliares ────────────────────────────────────────────────
@@ -27,6 +27,7 @@ interface NavLink {
   badge?: BadgeKey
   sub?: NavLink[]
   exact?: boolean       // activo solo con coincidencia exacta de ruta
+  external?: boolean    // enlace a otro dominio (abre en pestaña nueva)
 }
 
 interface NavSection {
@@ -111,6 +112,8 @@ const SECTIONS: NavSection[] = [
     title: 'Sistema CDM',
     icon: Shield,
     links: [
+      { href: 'https://centrodemandokiauto.laoriental.co', label: 'Ir a Ki Auto', icon: Building2, roles: ['director', 'admin', 'jose'], external: true },
+      { href: '/capital-motors', label: 'Capital Motors', icon: Building2, roles: ['director', 'admin', 'jose'] },
       { href: '/importar',  label: 'Importar datos',   icon: Upload,     roles: DIR },
       { href: '/auditoria', label: 'Auditoría',        icon: Shield,     roles: DIR_CORE },
       { href: '/logs',      label: 'Logs del sistema', icon: ScrollText, roles: DIR_CORE },
@@ -189,6 +192,18 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             </span>
           )}
         </Link>
+      )
+    }
+    if (link.external) {
+      return (
+        <div key={link.href}>
+          <a href={link.href} target="_blank" rel="noopener noreferrer" onClick={onClose}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-gray-400 hover:bg-gray-800/60 hover:text-white">
+            <Icon size={18} />
+            <span className="flex-1">{link.label}</span>
+            <ExternalLink size={13} className="text-gray-500" />
+          </a>
+        </div>
       )
     }
     return (
