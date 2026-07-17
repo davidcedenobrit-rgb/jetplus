@@ -71,6 +71,7 @@ const SECTIONS: NavSection[] = [
       { href: '/pagos-portal', label: 'Pagos del portal',   icon: Inbox,        roles: DIR, badge: 'portal' },
       { href: '/balance',      label: 'Balance',            icon: Scale,        roles: DIR },
       { href: '/movimientos',  label: 'Movimientos y conciliación', icon: Wallet, roles: DIR },
+      { href: '/libro-iva',    label: 'Libro de IVA',       icon: Scale,        roles: DIR },
       { href: '/cuentas',      label: 'Por pagar / cobrar', icon: Coins,        roles: DIR },
       { href: '/pagos-fijos',  label: 'Pago Fijo',          icon: Repeat,       roles: DIR },
       { href: '/tasas',        label: 'Tasas',              icon: ArrowLeftRight, hideFor: ['arianna', 'almacen'] },
