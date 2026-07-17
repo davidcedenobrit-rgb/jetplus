@@ -133,6 +133,7 @@ export interface Ingreso {
   vehimotors_at: string | null
   updated_at: string
   centro_costo_id: string | null
+  titular_fondos: 'propio' | 'vehimotors' | 'tercero'
   anulacion_solicitada_por: string | null
   anulacion_solicitada_at: string | null
   anulacion_motivo: string | null

@@ -112,6 +112,7 @@ function NuevoIngresoPageInner() {
   const [ivaTasa, setIvaTasa] = useState('16')
   const [centros, setCentros] = useState<{ id: string; nombre: string }[]>([])
   const [centroCosto, setCentroCosto] = useState('')
+  const [titularFondos, setTitularFondos] = useState<'propio' | 'vehimotors' | 'tercero'>('propio')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [rolUsuario, setRolUsuario] = useState<string>('')
   const [acuerdoInicialId, setAcuerdoInicialId] = useState<string | null>(null)
@@ -574,6 +575,7 @@ function NuevoIngresoPageInner() {
       iva_aplica:        ivaAplica,
       iva_tasa:          ivaAplica ? (parseFloat(ivaTasa) || 0) : null,
       centro_costo_id:   centroCosto || null,
+      titular_fondos:    titularFondos,
       cuotas:            cuotasPayload,
       comprobantes,
     })
@@ -1063,6 +1065,24 @@ function NuevoIngresoPageInner() {
                 <option value="">— Sin asignar —</option>
                 {centros.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">¿De quién es este dinero?</label>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { v: 'propio', label: 'Propio (La Oriental)' },
+                  { v: 'vehimotors', label: 'Vehimotors (custodia)' },
+                  { v: 'tercero', label: 'Otro tercero' },
+                ] as const).map(o => (
+                  <button key={o.v} type="button" onClick={() => setTitularFondos(o.v)}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${titularFondos === o.v ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              {titularFondos !== 'propio' && (
+                <p className="text-[11px] text-amber-600 mt-1.5">Este dinero no cuenta como ingreso propio: es custodia por entregar.</p>
+              )}
             </div>
             <div>
               <label className="label">Moneda *</label>

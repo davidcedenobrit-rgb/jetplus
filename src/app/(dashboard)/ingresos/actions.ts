@@ -34,6 +34,7 @@ export type CrearIngresoPayload = {
   iva_aplica?: boolean
   iva_tasa?: number | null
   centro_costo_id?: string | null
+  titular_fondos?: string | null
   // Cuotas ya calculadas por el cliente
   cuotas: CuotaPayload[]
   // Comprobantes ya subidos al storage
@@ -110,6 +111,9 @@ export async function crearIngreso(payload: CrearIngresoPayload) {
     updates.iva_monto = iva
   }
   if (payload.centro_costo_id) updates.centro_costo_id = payload.centro_costo_id
+  if (payload.titular_fondos && ['propio', 'vehimotors', 'tercero'].includes(payload.titular_fondos)) {
+    updates.titular_fondos = payload.titular_fondos
+  }
   if (Object.keys(updates).length > 0) {
     await admin.from('ingresos').update(updates).eq('id', ingresoId)
   }
