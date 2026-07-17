@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
+import { permitido } from '@/lib/rate-limit'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -14,6 +15,11 @@ export async function POST(req: Request) {
     const authClient = await createClient()
     const { data: { user: authUser } } = await authClient.auth.getUser()
     if (!authUser) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    // Rate limit: máx. 20 cotizaciones por minuto por usuario (genera PDF + envía correo)
+    if (!(await permitido(`cotizacion:${authUser.id}`, 20, 60))) {
+      return NextResponse.json({ error: 'Demasiadas cotizaciones seguidas. Espera un momento.' }, { status: 429 })
+    }
 
     const body = await req.json()
     const {

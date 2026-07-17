@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { IngresoSchema } from '@/lib/validations'
 import { desglosarIva, IVA_TASA_DEFAULT } from '@/lib/iva'
+import { permitido } from '@/lib/rate-limit'
 
 export type CuotaPayload = {
   id: string
@@ -46,6 +47,11 @@ export async function crearIngreso(payload: CrearIngresoPayload) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autorizado' }
+
+  // Rate limit: máx. 40 ingresos por minuto por usuario (evita doble-envío/abuso)
+  if (!(await permitido(`crear_ingreso:${user.id}`, 40, 60))) {
+    return { error: 'Demasiadas solicitudes seguidas. Espera unos segundos e intenta de nuevo.' }
+  }
 
   // 2. Validar campos del ingreso con Zod server-side
   const parsed = IngresoSchema.safeParse({

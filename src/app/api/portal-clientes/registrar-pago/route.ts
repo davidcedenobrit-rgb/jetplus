@@ -4,6 +4,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarNotificacionPagoCliente } from '@/lib/email-portal'
+import { permitido } from '@/lib/rate-limit'
 
 const METODOS_VALIDOS = [
   'Efectivo USD', 'Efectivo VES', 'Transferencia bancaria',
@@ -16,6 +17,11 @@ export async function POST(req: Request) {
   const { data: { user } } = await auth.auth.getUser()
   if (!user || user.app_metadata?.rol !== 'cliente') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  // Rate limit: máx. 15 reportes de pago por minuto por cliente (endpoint externo)
+  if (!(await permitido(`portal_pago:${user.id}`, 15, 60))) {
+    return NextResponse.json({ error: 'Demasiados intentos seguidos. Espera un momento e intenta de nuevo.' }, { status: 429 })
   }
 
   const supabase = await createAdminClient()

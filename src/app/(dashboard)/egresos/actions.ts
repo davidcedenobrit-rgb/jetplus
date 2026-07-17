@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { EgresoSchema } from '@/lib/validations'
+import { permitido } from '@/lib/rate-limit'
 import { desglosarIva, IVA_TASA_DEFAULT } from '@/lib/iva'
 
 export type CrearEgresoPayload = {
@@ -44,6 +45,11 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autorizado' }
+
+  // Rate limit: máx. 40 egresos por minuto por usuario (evita doble-envío/abuso)
+  if (!(await permitido(`crear_egreso:${user.id}`, 40, 60))) {
+    return { error: 'Demasiadas solicitudes seguidas. Espera unos segundos e intenta de nuevo.' }
+  }
 
   // 2. Validar con Zod server-side
   const parsed = EgresoSchema.safeParse({
