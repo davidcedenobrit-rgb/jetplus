@@ -69,6 +69,7 @@ const SECTIONS: NavSection[] = [
       { href: '/ingresos',     label: 'Ingresos',           icon: TrendingUp,   hideFor: ['arianna', 'almacen'] },
       { href: '/egresos',      label: 'Egresos',            icon: TrendingDown, hideFor: ['almacen'] },
       { href: '/pagos-portal', label: 'Pagos del portal',   icon: Inbox,        roles: DIR, badge: 'portal' },
+      { href: '/ejecutivo',    label: 'Panel ejecutivo',    icon: LayoutDashboard, roles: DIR_CORE },
       { href: '/balance',      label: 'Balance',            icon: Scale,        roles: DIR },
       { href: '/estado-resultados', label: 'Estado de resultados', icon: FileBarChart2, roles: DIR },
       { href: '/movimientos',  label: 'Movimientos y conciliación', icon: Wallet, roles: DIR },
