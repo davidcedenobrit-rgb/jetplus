@@ -9,6 +9,7 @@ import DesvincularVentaButton from './DesvincularVentaButton'
 import EtiquetaExpedienteButton from './EtiquetaExpedienteButton'
 import EtiquetaVentaButton from './EtiquetaVentaButton'
 import SalidaAlternativaButtons from './SalidaAlternativaButtons'
+import InspeccionesVehiculo from './InspeccionesVehiculo'
 
 const PASOS = [
   { key: 'llegada',        label: 'Recibido',         desc: 'Vehículo llegó a La Oriental' },
@@ -97,6 +98,7 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
     .limit(20)
 
   const esJose = ['jose', 'admin', 'director'].includes(rol)
+  const puedeInspeccionar = ['jose', 'admin', 'director', 'arianna', 'taller', 'almacen', 'almacenista'].includes(rol)
   const hoy = new Date()
   const reservaVencida = v.reserva_vence ? new Date(v.reserva_vence) < hoy : false
 
@@ -221,6 +223,9 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
 
           {/* Documentos preventa */}
           <ShowroomDocumentos showroomId={id} archivosIniciales={(archivos ?? []) as any} />
+
+          {/* Inspecciones: recepción, chequeo, PDI */}
+          <InspeccionesVehiculo showroomId={id} puedeGestionar={puedeInspeccionar} />
 
           {/* Historial de estados */}
           {(historial ?? []).length > 0 && (
