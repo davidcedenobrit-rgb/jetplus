@@ -12,6 +12,37 @@ function getAdmin() {
   )
 }
 
+// Recalcula el monto_pagado de un acuerdo como la suma (en USD) de sus ingresos
+// NO anulados/rechazados. Evita que un pago anulado siga contando como pagado.
+async function recomputarAcuerdo(admin: ReturnType<typeof getAdmin>, acuerdoId: string) {
+  const { data: ac } = await admin
+    .from('acuerdos_inicial')
+    .select('monto_acordado, estado')
+    .eq('id', acuerdoId)
+    .single()
+  if (!ac) return
+
+  const { data: ings } = await admin
+    .from('ingresos')
+    .select('monto, moneda, tasa_cambio, estado')
+    .eq('acuerdo_inicial_id', acuerdoId)
+
+  const pagado = (ings ?? [])
+    .filter((i: any) => i.estado !== 'anulado' && i.estado !== 'rechazado')
+    .reduce((s: number, i: any) => {
+      const usd = i.moneda === 'VES' && Number(i.tasa_cambio) > 0 ? Number(i.monto) / Number(i.tasa_cambio) : Number(i.monto)
+      return s + usd
+    }, 0)
+  const pagadoRound = Math.round(pagado * 100) / 100
+  const acordado = Number(ac.monto_acordado)
+
+  let estado = ac.estado
+  if (pagadoRound >= acordado - 0.01) estado = 'completado'
+  else if (ac.estado === 'completado') estado = 'pendiente'
+
+  await admin.from('acuerdos_inicial').update({ monto_pagado: pagadoRound, estado }).eq('id', acuerdoId)
+}
+
 export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -104,6 +135,11 @@ export async function POST(req: Request) {
       anulacion_resuelta_por: resolverPor,
       anulacion_resuelta_at: new Date().toISOString(),
     }).eq('id', ingresoId)
+
+    // 3. Si el ingreso estaba aplicado a un acuerdo de pago, recalcular su pagado
+    if (ingreso.acuerdo_inicial_id) {
+      await recomputarAcuerdo(admin, ingreso.acuerdo_inicial_id)
+    }
 
   } else {
     // Rechazar: restaurar estado previo
