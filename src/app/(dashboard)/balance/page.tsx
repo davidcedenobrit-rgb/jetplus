@@ -6,11 +6,15 @@ import { CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
 import { ArrowLeft, TrendingUp, TrendingDown, Scale, Building2, Printer } from 'lucide-react'
 import Link from 'next/link'
 
-type MovIngreso = { monto: number; moneda: string; tasa_cambio: number | null; monto_bs: number | null; fecha_pago: string; estado: string }
+type MovIngreso = {
+  monto: number; moneda: string; tasa_cambio: number | null; monto_bs: number | null; fecha_pago: string; estado: string
+  titular_fondos: string | null; iva_aplica: boolean | null; base_imponible: number | null
+}
 type MovEgreso = {
   monto: number; moneda: string; tasa_cambio: number | null; monto_bs: number | null
   fecha_egreso: string; estado: string; categoria: string
   centro_costo_id: string | null; area_responsable: string | null; tipo_movimiento: string | null
+  iva_aplica: boolean | null; base_imponible: number | null
 }
 type CentroCosto = { id: string; nombre: string }
 
@@ -69,12 +73,12 @@ export default function BalancePage() {
     const [ing, egr] = await Promise.all([
       fetchAll<MovIngreso>((from, to) => supabase
         .from('ingresos')
-        .select('monto, moneda, tasa_cambio, monto_bs, fecha_pago, estado')
+        .select('monto, moneda, tasa_cambio, monto_bs, fecha_pago, estado, titular_fondos, iva_aplica, base_imponible')
         .gte('fecha_pago', fechaDesde).lte('fecha_pago', fechaHasta)
         .range(from, to)),
       fetchAll<MovEgreso>((from, to) => supabase
         .from('egresos')
-        .select('monto, moneda, tasa_cambio, monto_bs, fecha_egreso, estado, categoria, centro_costo_id, area_responsable, tipo_movimiento')
+        .select('monto, moneda, tasa_cambio, monto_bs, fecha_egreso, estado, categoria, centro_costo_id, area_responsable, tipo_movimiento, iva_aplica, base_imponible')
         .gte('fecha_egreso', fechaDesde).lte('fecha_egreso', fechaHasta)
         .range(from, to)),
     ])
@@ -85,11 +89,21 @@ export default function BalancePage() {
 
   useEffect(() => { cargar() }, [cargar])
 
-  // ── Totales ────────────────────────────────────────────────────────────────
-  const totalIngresos = ingresos.reduce((s, i) => s + usd(i.monto, i.moneda, i.tasa_cambio), 0)
-  const totalEgresos = egresos.reduce((s, e) => s + usd(e.monto, e.moneda, e.tasa_cambio), 0)
-  const totalGasto = egresos.filter(e => e.tipo_movimiento !== 'inversion').reduce((s, e) => s + usd(e.monto, e.moneda, e.tasa_cambio), 0)
-  const totalInversion = egresos.filter(e => e.tipo_movimiento === 'inversion').reduce((s, e) => s + usd(e.monto, e.moneda, e.tasa_cambio), 0)
+  // ── Bases: ingreso propio neto de IVA (excluye fondos de terceros); egresos netos de IVA ──
+  const esPropio = (i: MovIngreso): boolean => (i.titular_fondos ?? 'propio') === 'propio'
+  // Monto neto de IVA: cuando el registro lleva IVA se usa la base imponible; si no, el monto.
+  const netoIng = (i: MovIngreso): number => usd(i.iva_aplica && i.base_imponible ? Number(i.base_imponible) : i.monto, i.moneda, i.tasa_cambio)
+  const netoEgr = (e: MovEgreso): number => usd(e.iva_aplica && e.base_imponible ? Number(e.base_imponible) : e.monto, e.moneda, e.tasa_cambio)
+
+  // Ingreso propio (lo que de verdad es de La Oriental), neto de IVA débito.
+  const ingresoPropio = ingresos.filter(esPropio).reduce((s, i) => s + netoIng(i), 0)
+  // Fondos de terceros en custodia (NO es ingreso) — se muestra aparte.
+  const fondosCustodia = ingresos.filter(i => !esPropio(i)).reduce((s, i) => s + usd(i.monto, i.moneda, i.tasa_cambio), 0)
+
+  const totalIngresos = ingresoPropio
+  const totalEgresos = egresos.reduce((s, e) => s + netoEgr(e), 0)
+  const totalGasto = egresos.filter(e => e.tipo_movimiento !== 'inversion').reduce((s, e) => s + netoEgr(e), 0)
+  const totalInversion = egresos.filter(e => e.tipo_movimiento === 'inversion').reduce((s, e) => s + netoEgr(e), 0)
   const resultado = totalIngresos - totalEgresos
 
   const centroNombre = (e: MovEgreso): string => {
@@ -102,7 +116,7 @@ export default function BalancePage() {
   for (const e of egresos) {
     const k = centroNombre(e)
     if (!porCentro[k]) porCentro[k] = { total: 0, gasto: 0, inversion: 0 }
-    const m = usd(e.monto, e.moneda, e.tasa_cambio)
+    const m = netoEgr(e)
     porCentro[k].total += m
     if (e.tipo_movimiento === 'inversion') porCentro[k].inversion += m
     else porCentro[k].gasto += m
@@ -112,14 +126,15 @@ export default function BalancePage() {
   // ── Por mes (ingresos vs egresos) ─────────────────────────────────────────
   const porMes: Record<string, { ing: number; egr: number }> = {}
   for (const i of ingresos) {
+    if (!esPropio(i)) continue // la custodia de terceros no es ingreso
     const k = i.fecha_pago.slice(0, 7)
     if (!porMes[k]) porMes[k] = { ing: 0, egr: 0 }
-    porMes[k].ing += usd(i.monto, i.moneda, i.tasa_cambio)
+    porMes[k].ing += netoIng(i)
   }
   for (const e of egresos) {
     const k = e.fecha_egreso.slice(0, 7)
     if (!porMes[k]) porMes[k] = { ing: 0, egr: 0 }
-    porMes[k].egr += usd(e.monto, e.moneda, e.tasa_cambio)
+    porMes[k].egr += netoEgr(e)
   }
   const mesesOrden = Object.entries(porMes).sort((a, b) => a[0].localeCompare(b[0]))
 
@@ -172,10 +187,13 @@ export default function BalancePage() {
             <div className="card p-5">
               <div className="flex items-center gap-2 text-green-700 mb-1">
                 <TrendingUp size={16} />
-                <p className="text-xs uppercase tracking-wider font-semibold">Ingresos</p>
+                <p className="text-xs uppercase tracking-wider font-semibold">Ingreso propio</p>
               </div>
               <p className="text-2xl font-bold text-oriental-black">${fmt(totalIngresos)}</p>
-              <p className="text-[11px] text-oriental-gray mt-1">{ingresos.length} movimientos</p>
+              <p className="text-[11px] text-oriental-gray mt-1">
+                Neto de IVA · solo La Oriental
+                {fondosCustodia > 0 && <span className="block text-amber-700 font-semibold">+ ${fmt(fondosCustodia)} en custodia (no es ingreso)</span>}
+              </p>
             </div>
             <div className="card p-5">
               <div className="flex items-center gap-2 text-oriental-red mb-1">
@@ -195,7 +213,7 @@ export default function BalancePage() {
               <p className={`text-2xl font-bold ${resultado >= 0 ? 'text-green-800' : 'text-oriental-red'}`}>
                 {resultado < 0 ? '-' : ''}${fmt(Math.abs(resultado))}
               </p>
-              <p className="text-[11px] text-oriental-gray mt-1">Ingresos − Egresos</p>
+              <p className="text-[11px] text-oriental-gray mt-1">Ingreso propio − Egresos (neto de IVA)</p>
             </div>
           </div>
 
