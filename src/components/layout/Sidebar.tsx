@@ -73,6 +73,7 @@ const SECTIONS: NavSection[] = [
       { href: '/balance',      label: 'Balance',            icon: Scale,        roles: DIR },
       { href: '/estado-resultados', label: 'Estado de resultados', icon: FileBarChart2, roles: DIR },
       { href: '/flujo-caja',   label: 'Flujo de caja',      icon: Coins,        roles: DIR },
+      { href: '/posicion-financiera', label: 'Posición financiera', icon: Scale, roles: DIR },
       { href: '/movimientos',  label: 'Movimientos y conciliación', icon: Wallet, roles: DIR },
       { href: '/libro-iva',    label: 'Libro de IVA',       icon: Scale,        roles: DIR },
       { href: '/cobranza',     label: 'Cartera de cobranza', icon: Coins,       roles: DIR },
