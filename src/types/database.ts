@@ -132,6 +132,7 @@ export interface Ingreso {
   deposito_at: string | null
   vehimotors_at: string | null
   updated_at: string
+  centro_costo_id: string | null
   anulacion_solicitada_por: string | null
   anulacion_solicitada_at: string | null
   anulacion_motivo: string | null

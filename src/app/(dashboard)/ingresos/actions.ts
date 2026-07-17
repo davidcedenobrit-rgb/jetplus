@@ -33,6 +33,7 @@ export type CrearIngresoPayload = {
   acuerdo_acordado: number
   iva_aplica?: boolean
   iva_tasa?: number | null
+  centro_costo_id?: string | null
   // Cuotas ya calculadas por el cliente
   cuotas: CuotaPayload[]
   // Comprobantes ya subidos al storage
@@ -97,17 +98,20 @@ export async function crearIngreso(payload: CrearIngresoPayload) {
 
   const ingresoId = result.ingreso_id as string
 
-  // 4b. IVA (monto es el total; si aplica se desglosa base + IVA). Se guarda con
-  // un update posterior para no modificar la función atómica registrar_ingreso.
+  // 4b. Campos que se guardan con un update posterior para no modificar la
+  // función atómica registrar_ingreso: IVA (desglose base + IVA) y centro de costo.
+  const updates: Record<string, unknown> = {}
   if (payload.iva_aplica) {
     const tasa = payload.iva_tasa ?? IVA_TASA_DEFAULT
     const { base, iva } = desglosarIva(parsed.data.monto, tasa)
-    await admin.from('ingresos').update({
-      iva_aplica: true,
-      iva_tasa: tasa,
-      base_imponible: base,
-      iva_monto: iva,
-    }).eq('id', ingresoId)
+    updates.iva_aplica = true
+    updates.iva_tasa = tasa
+    updates.base_imponible = base
+    updates.iva_monto = iva
+  }
+  if (payload.centro_costo_id) updates.centro_costo_id = payload.centro_costo_id
+  if (Object.keys(updates).length > 0) {
+    await admin.from('ingresos').update(updates).eq('id', ingresoId)
   }
 
   // 5. Registrar comprobantes (fuera de la transacción — ya subidos al storage)

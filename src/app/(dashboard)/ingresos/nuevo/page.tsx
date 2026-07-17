@@ -110,6 +110,8 @@ function NuevoIngresoPageInner() {
   const [montoBs, setMontoBs] = useState('')
   const [ivaAplica, setIvaAplica] = useState(false)
   const [ivaTasa, setIvaTasa] = useState('16')
+  const [centros, setCentros] = useState<{ id: string; nombre: string }[]>([])
+  const [centroCosto, setCentroCosto] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [rolUsuario, setRolUsuario] = useState<string>('')
   const [acuerdoInicialId, setAcuerdoInicialId] = useState<string | null>(null)
@@ -120,6 +122,12 @@ function NuevoIngresoPageInner() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setRolUsuario((user?.app_metadata?.rol as string) ?? 'editor')
     })
+  }, [])
+
+  // Cargar centros de costo (catálogo)
+  useEffect(() => {
+    supabase.from('centros_costo').select('id, nombre').eq('activo', true).order('orden')
+      .then(({ data }) => setCentros((data as { id: string; nombre: string }[]) ?? []))
   }, [])
 
   // ── Auto-carga desde query params (cuando llega desde el botón "Registrar pago" del crédito) ──
@@ -565,6 +573,7 @@ function NuevoIngresoPageInner() {
       acuerdo_acordado:  acuerdoInfo?.monto_acordado ?? 0,
       iva_aplica:        ivaAplica,
       iva_tasa:          ivaAplica ? (parseFloat(ivaTasa) || 0) : null,
+      centro_costo_id:   centroCosto || null,
       cuotas:            cuotasPayload,
       comprobantes,
     })
@@ -1047,6 +1056,13 @@ function NuevoIngresoPageInner() {
             <div className="md:col-span-2">
               <label className="label">IVA</label>
               <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">Centro de costo <span className="text-oriental-gray font-normal">(opcional)</span></label>
+              <select className="select" value={centroCosto} onChange={e => setCentroCosto(e.target.value)}>
+                <option value="">— Sin asignar —</option>
+                {centros.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
             </div>
             <div>
               <label className="label">Moneda *</label>
