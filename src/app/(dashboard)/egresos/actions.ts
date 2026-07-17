@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { EgresoSchema } from '@/lib/validations'
+import { desglosarIva, IVA_TASA_DEFAULT } from '@/lib/iva'
 
 export type CrearEgresoPayload = {
   categoria: string
@@ -23,6 +24,8 @@ export type CrearEgresoPayload = {
   origen_capital: string | null
   tipo_movimiento: string | null
   proveedor_id: string | null
+  iva_aplica?: boolean
+  iva_tasa?: number | null
   comprobantes: { url: string; nombre: string }[]
 }
 
@@ -70,6 +73,13 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
   const centroCostoId = payload.centro_costo_id?.trim() || null
   const proveedorId = payload.proveedor_id?.trim() || null
 
+  // IVA: monto es el total; si aplica, se desglosa base + IVA con la alícuota dada.
+  const ivaAplica = !!payload.iva_aplica
+  const ivaTasa = ivaAplica ? (payload.iva_tasa ?? IVA_TASA_DEFAULT) : null
+  const { base: baseImponible, iva: ivaMonto } = ivaAplica && ivaTasa
+    ? desglosarIva(parsed.data.monto, ivaTasa)
+    : { base: null as number | null, iva: null as number | null }
+
   // 3. Generar número de egreso y persistir (admin client — SECURITY DEFINER equivalente)
   const admin = await createAdminClient()
 
@@ -105,6 +115,10 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       monto_bs:         (parsed.data.tasa_cambio && parsed.data.moneda !== 'VES')
                           ? Math.round(parsed.data.monto * parsed.data.tasa_cambio * 100) / 100
                           : null,
+      iva_aplica:       ivaAplica,
+      iva_tasa:         ivaTasa,
+      base_imponible:   baseImponible,
+      iva_monto:        ivaMonto,
       estado:           'pendiente_aprobacion',
       registrado_por:   user.id,
     })

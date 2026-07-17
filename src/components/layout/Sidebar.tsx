@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
 
@@ -120,6 +120,7 @@ const SECTIONS: NavSection[] = [
     links: [
       { href: 'https://centrodemandokiauto.laoriental.co', label: 'Ir a Ki Auto', icon: Building2, emails: SUPER_ADMIN_EMAILS, external: true },
       { href: '/capital-motors', label: 'Capital Motors', icon: Building2, emails: SUPER_ADMIN_EMAILS },
+      { href: '/contabilidad', label: 'Contabilidad', icon: BookOpenCheck, emails: SUPER_ADMIN_EMAILS },
       { href: '/importar',  label: 'Importar datos',   icon: Upload,     roles: DIR },
       { href: '/auditoria', label: 'Auditoría',        icon: Shield,     roles: DIR_CORE },
       { href: '/logs',      label: 'Logs del sistema', icon: ScrollText, roles: DIR_CORE },

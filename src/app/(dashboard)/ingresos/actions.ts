@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { IngresoSchema } from '@/lib/validations'
+import { desglosarIva, IVA_TASA_DEFAULT } from '@/lib/iva'
 
 export type CuotaPayload = {
   id: string
@@ -30,6 +31,8 @@ export type CrearIngresoPayload = {
   acuerdo_id: string | null
   acuerdo_pagado: number
   acuerdo_acordado: number
+  iva_aplica?: boolean
+  iva_tasa?: number | null
   // Cuotas ya calculadas por el cliente
   cuotas: CuotaPayload[]
   // Comprobantes ya subidos al storage
@@ -93,6 +96,19 @@ export async function crearIngreso(payload: CrearIngresoPayload) {
   if (!result?.ok) return { error: result?.error ?? 'Error interno' }
 
   const ingresoId = result.ingreso_id as string
+
+  // 4b. IVA (monto es el total; si aplica se desglosa base + IVA). Se guarda con
+  // un update posterior para no modificar la función atómica registrar_ingreso.
+  if (payload.iva_aplica) {
+    const tasa = payload.iva_tasa ?? IVA_TASA_DEFAULT
+    const { base, iva } = desglosarIva(parsed.data.monto, tasa)
+    await admin.from('ingresos').update({
+      iva_aplica: true,
+      iva_tasa: tasa,
+      base_imponible: base,
+      iva_monto: iva,
+    }).eq('id', ingresoId)
+  }
 
   // 5. Registrar comprobantes (fuera de la transacción — ya subidos al storage)
   if (payload.comprobantes.length > 0) {

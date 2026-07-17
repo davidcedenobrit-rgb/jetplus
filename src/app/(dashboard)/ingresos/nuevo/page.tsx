@@ -8,6 +8,7 @@ import { crearIngreso } from '../actions'
 import { ArrowLeft, Save, Search, X, Car, Hash, Check, CreditCard, AlertCircle, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
+import IvaBloque from '@/components/IvaBloque'
 import type { Cliente, Vehiculo } from '@/types/database'
 
 const CONCEPTOS = [
@@ -107,6 +108,8 @@ function NuevoIngresoPageInner() {
   const [observaciones, setObservaciones] = useState('')
   const [tasaCambio, setTasaCambio] = useState('')
   const [montoBs, setMontoBs] = useState('')
+  const [ivaAplica, setIvaAplica] = useState(false)
+  const [ivaTasa, setIvaTasa] = useState('16')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [rolUsuario, setRolUsuario] = useState<string>('')
   const [acuerdoInicialId, setAcuerdoInicialId] = useState<string | null>(null)
@@ -560,6 +563,8 @@ function NuevoIngresoPageInner() {
       acuerdo_id:        acuerdoInicialId ?? null,
       acuerdo_pagado:    acuerdoInfo?.monto_pagado ?? 0,
       acuerdo_acordado:  acuerdoInfo?.monto_acordado ?? 0,
+      iva_aplica:        ivaAplica,
+      iva_tasa:          ivaAplica ? (parseFloat(ivaTasa) || 0) : null,
       cuotas:            cuotasPayload,
       comprobantes,
     })
@@ -1038,6 +1043,10 @@ function NuevoIngresoPageInner() {
               </label>
               <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
                 placeholder="0.00" value={monto} onChange={e => setMonto(e.target.value)} required />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">IVA</label>
+              <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} />
             </div>
             <div>
               <label className="label">Moneda *</label>

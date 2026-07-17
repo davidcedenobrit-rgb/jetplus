@@ -120,6 +120,10 @@ export interface Ingreso {
   estado: EstadoRecibo
   observaciones: string | null
   tasa_cambio: number | null
+  iva_aplica: boolean
+  iva_tasa: number | null
+  base_imponible: number | null
+  iva_monto: number | null
   registrado_por: string
   aprobado_por: string | null
   fecha_registro: string
@@ -162,6 +166,10 @@ export interface Egreso {
   centro_costo_id: string | null
   origen_capital: string | null
   tipo_movimiento: string | null
+  iva_aplica: boolean
+  iva_tasa: number | null
+  base_imponible: number | null
+  iva_monto: number | null
   registrado_por: string
   aprobado_por: string | null
   fecha_egreso: string

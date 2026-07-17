@@ -8,6 +8,7 @@ import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
 import { crearEgreso, type Proveedor } from '../actions'
+import IvaBloque from '@/components/IvaBloque'
 import ProveedorPicker from './ProveedorPicker'
 
 type CentroCosto = { id: string; nombre: string }
@@ -36,6 +37,8 @@ export default function NuevoEgresoPage() {
   const [fechaEgreso, setFechaEgreso] = useState(new Date().toISOString().split('T')[0])
   const [observaciones, setObservaciones] = useState('')
   const [numeroSa, setNumeroSa] = useState('')
+  const [ivaAplica, setIvaAplica] = useState(false)
+  const [ivaTasa, setIvaTasa] = useState('16')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
 
   useEffect(() => {
@@ -83,6 +86,8 @@ export default function NuevoEgresoPage() {
       origen_capital: origenCapital.trim() || null,
       tipo_movimiento: tipoMovimiento,
       proveedor_id: proveedor?.id ?? null,
+      iva_aplica: ivaAplica,
+      iva_tasa: ivaAplica ? (parseFloat(ivaTasa) || 0) : null,
       comprobantes,
     })
 
@@ -234,6 +239,10 @@ export default function NuevoEgresoPage() {
                   = Bs {(parseFloat(monto) * parseFloat(tasaCambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(parseFloat(monto) * parseFloat(tasaCambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}
                 </p>
               )}
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">IVA</label>
+              <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} />
             </div>
             <div>
               <label className="label">Método de pago</label>
