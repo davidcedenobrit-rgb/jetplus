@@ -3,19 +3,22 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
-import { ArrowLeft, FileBarChart2, Printer, FileDown } from 'lucide-react'
+import { ArrowLeft, FileBarChart2, Printer, FileDown, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
 type MovIngreso = {
-  monto: number; moneda: string; tasa_cambio: number | null; fecha_pago: string; estado: string
+  numero_recibo: string | null; monto: number; moneda: string; tasa_cambio: number | null; fecha_pago: string; estado: string
   concepto: string; titular_fondos: string | null; iva_aplica: boolean | null; base_imponible: number | null; centro_costo_id: string | null
 }
 type MovEgreso = {
+  numero_egreso: string | null; beneficiario: string | null
   monto: number; moneda: string; tasa_cambio: number | null; fecha_egreso: string; estado: string
   categoria: string; tipo_movimiento: string | null; centro_costo_id: string | null; area_responsable: string | null
   iva_aplica: boolean | null; base_imponible: number | null
 }
 type CentroCosto = { id: string; nombre: string }
+type Doc = { ref: string; fecha: string; detalle: string; monto: number }
+type Linea = { nombre: string; total: number; docs: Doc[] }
 
 const EXCL = new Set(['anulado', 'rechazado'])
 
@@ -60,10 +63,10 @@ export default function EstadoResultadosClient() {
     setLoading(true)
     const [ing, egr] = await Promise.all([
       fetchAll<MovIngreso>((f, t) => supabase.from('ingresos')
-        .select('monto, moneda, tasa_cambio, fecha_pago, estado, concepto, titular_fondos, iva_aplica, base_imponible, centro_costo_id')
+        .select('numero_recibo, monto, moneda, tasa_cambio, fecha_pago, estado, concepto, titular_fondos, iva_aplica, base_imponible, centro_costo_id')
         .gte('fecha_pago', desde).lte('fecha_pago', hasta).range(f, t)),
       fetchAll<MovEgreso>((f, t) => supabase.from('egresos')
-        .select('monto, moneda, tasa_cambio, fecha_egreso, estado, categoria, tipo_movimiento, centro_costo_id, area_responsable, iva_aplica, base_imponible')
+        .select('numero_egreso, beneficiario, monto, moneda, tasa_cambio, fecha_egreso, estado, categoria, tipo_movimiento, centro_costo_id, area_responsable, iva_aplica, base_imponible')
         .gte('fecha_egreso', desde).lte('fecha_egreso', hasta).range(f, t)),
     ])
     setIngresos(ing.filter(i => !EXCL.has(i.estado)))
@@ -92,21 +95,27 @@ export default function EstadoResultadosClient() {
     const custodia = ingresos.filter(i => !esPropio(i)).reduce((s, i) => s + usd(i.monto, i.moneda, i.tasa_cambio), 0)
     const resultado = totalIngresos - totalGastos
 
-    // Ingresos por concepto
-    const ingPorConcepto: Record<string, number> = {}
+    // Ingresos por concepto (con detalle de documentos)
+    const ingPorConcepto: Record<string, Linea> = {}
     for (const i of propios) {
       const k = i.concepto?.trim() || 'Otros'
-      ingPorConcepto[k] = (ingPorConcepto[k] ?? 0) + netoIng(i)
+      const l = (ingPorConcepto[k] ??= { nombre: k, total: 0, docs: [] })
+      const m = netoIng(i)
+      l.total += m
+      l.docs.push({ ref: i.numero_recibo ?? '—', fecha: (i.fecha_pago ?? '').slice(0, 10), detalle: '', monto: m })
     }
-    const conceptos = Object.entries(ingPorConcepto).sort((a, b) => b[1] - a[1])
+    const conceptos = Object.values(ingPorConcepto).sort((a, b) => b.total - a.total)
 
-    // Gastos por categoría
-    const gastoPorCat: Record<string, number> = {}
+    // Gastos por categoría (con detalle de documentos)
+    const gastoPorCat: Record<string, Linea> = {}
     for (const e of gastosOp) {
       const k = CATEGORIAS_EGRESO_LABEL[e.categoria] ?? e.categoria ?? 'Otros'
-      gastoPorCat[k] = (gastoPorCat[k] ?? 0) + netoEgr(e)
+      const l = (gastoPorCat[k] ??= { nombre: k, total: 0, docs: [] })
+      const m = netoEgr(e)
+      l.total += m
+      l.docs.push({ ref: e.numero_egreso ?? '—', fecha: (e.fecha_egreso ?? '').slice(0, 10), detalle: e.beneficiario ?? '', monto: m })
     }
-    const categorias = Object.entries(gastoPorCat).sort((a, b) => b[1] - a[1])
+    const categorias = Object.values(gastoPorCat).sort((a, b) => b.total - a.total)
 
     // Resultado por centro de costo
     const porCentro: Record<string, { ing: number; gasto: number }> = {}
@@ -128,9 +137,9 @@ export default function EstadoResultadosClient() {
   function exportarCsv() {
     const rows: (string | number)[][] = [['ESTADO DE RESULTADOS', `${desde} a ${hasta}`], []]
     rows.push(['Ingresos operativos (propios, neto IVA)', data.totalIngresos.toFixed(2)])
-    data.conceptos.forEach(([c, v]) => rows.push([`  ${c}`, v.toFixed(2)]))
+    data.conceptos.forEach(l => rows.push([`  ${l.nombre}`, l.total.toFixed(2)]))
     rows.push(['Gastos operativos', data.totalGastos.toFixed(2)])
-    data.categorias.forEach(([c, v]) => rows.push([`  ${c}`, v.toFixed(2)]))
+    data.categorias.forEach(l => rows.push([`  ${l.nombre}`, l.total.toFixed(2)]))
     rows.push(['RESULTADO OPERATIVO', data.resultado.toFixed(2)], [])
     rows.push(['Memo — Inversiones (no afecta resultado)', data.totalInversion.toFixed(2)])
     rows.push(['Memo — Fondos de terceros en custodia', data.custodia.toFixed(2)], [])
@@ -233,7 +242,8 @@ export default function EstadoResultadosClient() {
   )
 }
 
-function Seccion({ titulo, total, tono, filas, signo }: { titulo: string; total: number; tono: 'pos' | 'neg'; filas: [string, number][]; signo?: string }) {
+function Seccion({ titulo, total, tono, filas, signo }: { titulo: string; total: number; tono: 'pos' | 'neg'; filas: Linea[]; signo?: string }) {
+  const [abierto, setAbierto] = useState<string | null>(null)
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between py-2 border-b border-gray-200">
@@ -243,12 +253,30 @@ function Seccion({ titulo, total, tono, filas, signo }: { titulo: string; total:
       <div className="pl-2">
         {filas.length === 0 ? (
           <p className="py-2 text-xs text-oriental-gray">Sin movimientos</p>
-        ) : filas.map(([c, v]) => (
-          <div key={c} className="flex items-center justify-between py-1.5 text-sm border-b border-gray-50">
-            <span className="text-oriental-gray">{c}</span>
-            <span className="tabular-nums text-oriental-black">${fmt(v)}</span>
-          </div>
-        ))}
+        ) : filas.map(l => {
+          const open = abierto === l.nombre
+          return (
+            <div key={l.nombre} className="border-b border-gray-50">
+              <button onClick={() => setAbierto(open ? null : l.nombre)} className="w-full flex items-center justify-between py-1.5 text-sm hover:bg-gray-50 rounded px-1 -mx-1">
+                <span className="text-oriental-gray flex items-center gap-1">
+                  <ChevronRight size={13} className={`text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} />
+                  {l.nombre} <span className="text-[10px] text-gray-400">({l.docs.length})</span>
+                </span>
+                <span className="tabular-nums text-oriental-black">${fmt(l.total)}</span>
+              </button>
+              {open && (
+                <div className="ml-5 mb-2 border-l-2 border-gray-100 pl-3">
+                  {l.docs.slice().sort((a, b) => b.fecha.localeCompare(a.fecha)).map((d, i) => (
+                    <div key={i} className="flex items-center justify-between py-1 text-xs text-oriental-gray">
+                      <span><span className="font-mono">{d.ref}</span> · {d.fecha}{d.detalle ? ` · ${d.detalle}` : ''}</span>
+                      <span className="tabular-nums">${fmt(d.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
