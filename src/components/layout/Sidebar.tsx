@@ -102,6 +102,7 @@ const SECTIONS: NavSection[] = [
       { href: '/vehimotors',              label: 'Reportes de pagos', icon: Building2, roles: DIR, exact: true },
       { href: '/vehimotors/reportar',     label: 'Reportar pagos',    icon: Zap,       roles: DIR },
       { href: '/vehimotors/conciliacion', label: 'Conciliación',      icon: Wallet,    roles: DIR },
+      { href: '/vehimotors/custodia',     label: 'Fondos en custodia', icon: Coins,    roles: DIR },
     ],
   },
   {
