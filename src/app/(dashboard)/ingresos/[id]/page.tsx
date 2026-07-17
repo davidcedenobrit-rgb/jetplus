@@ -34,7 +34,7 @@ export default async function IngresoDetallePage({
     .select(`
       id, numero_recibo, concepto, monto, moneda, monto_bs, tasa_cambio,
       metodo_pago, banco_emisor, banco_receptor, referencia, fecha_pago,
-      estado, observaciones, placa, registrado_por, aprobado_por,
+      estado, observaciones, placa, registrado_por, aprobado_por, titular_fondos,
       fecha_registro, fecha_aprobacion, enviado_carla_at, deposito_at,
       vehimotors_at, entregado_carla_at, confirmado_vehimotors_at,
       anulacion_motivo, anulacion_observaciones, anulacion_estado_previo,
@@ -244,6 +244,11 @@ export default async function IngresoDetallePage({
             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoColors[ingreso.estado] ?? 'bg-gray-100 text-gray-700'}`}>
               {ESTADOS_RECIBO_LABEL[ingreso.estado]}
             </span>
+            {(ingreso as any).titular_fondos && (ingreso as any).titular_fondos !== 'propio' && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                {(ingreso as any).titular_fondos === 'vehimotors' ? 'Vehimotors (custodia)' : 'Custodia tercero'}
+              </span>
+            )}
           </div>
           <p className="text-oriental-gray text-sm mt-0.5">Registrado el {formatDate(ingreso.fecha_registro)}</p>
         </div>

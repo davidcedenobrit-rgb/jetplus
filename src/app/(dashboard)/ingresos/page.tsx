@@ -119,6 +119,18 @@ export default async function IngresosPage({
         { estado: 'pendiente_anulacion', label: 'Pend. Anulación'  },
       ]
 
+  // Separación ingreso propio vs. fondos en custodia (Vehimotors / terceros)
+  const usdVal = (i: any): number => i.moneda === 'VES'
+    ? (i.tasa_cambio ? Number(i.monto) / Number(i.tasa_cambio) : 0)
+    : Number(i.monto)
+  const fmtUsd = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const totPropio = (ingresos ?? []).filter(i => ((i as any).titular_fondos ?? 'propio') === 'propio').reduce((s, i) => s + usdVal(i), 0)
+  const totCustodia = (ingresos ?? []).filter(i => ((i as any).titular_fondos ?? 'propio') !== 'propio').reduce((s, i) => s + usdVal(i), 0)
+  const titularBadge: Record<string, { label: string; cls: string }> = {
+    vehimotors: { label: 'Vehimotors (custodia)', cls: 'bg-amber-100 text-amber-800 border border-amber-200' },
+    tercero:    { label: 'Custodia tercero',      cls: 'bg-amber-100 text-amber-800 border border-amber-200' },
+  }
+
   return (
     <div className="p-4 lg:p-8">
       {/* Header */}
@@ -136,6 +148,20 @@ export default async function IngresosPage({
           </Link>
         </div>
       </div>
+
+      {/* Separación ingreso propio vs. custodia */}
+      {(totPropio > 0 || totCustodia > 0) && (
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 mb-5 max-w-xl">
+          <div className="card p-4">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-green-700">Ingreso propio (La Oriental)</p>
+            <p className="text-xl font-black text-oriental-black">${fmtUsd(totPropio)}</p>
+          </div>
+          <div className={`card p-4 ${totCustodia > 0 ? 'border-amber-200 bg-amber-50/40' : ''}`}>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-700">En custodia (por entregar)</p>
+            <p className="text-xl font-black text-oriental-black">${fmtUsd(totCustodia)}</p>
+          </div>
+        </div>
+      )}
 
       {/* Buscador de cliente */}
       <div className="mb-4 max-w-xl">
@@ -268,6 +294,11 @@ export default async function IngresosPage({
                             {badge.label}
                           </span>
                         )
+                      })()}
+                      {(() => {
+                        const tb = titularBadge[(ingreso as any).titular_fondos]
+                        if (!tb) return null
+                        return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${tb.cls}`}>{tb.label}</span>
                       })()}
                     </div>
                   </td>
