@@ -1,0 +1,255 @@
+'use client'
+
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
+import { ArrowLeft, FileBarChart2, Printer, FileDown } from 'lucide-react'
+import Link from 'next/link'
+
+type MovIngreso = {
+  monto: number; moneda: string; tasa_cambio: number | null; fecha_pago: string; estado: string
+  concepto: string; titular_fondos: string | null; iva_aplica: boolean | null; base_imponible: number | null; centro_costo_id: string | null
+}
+type MovEgreso = {
+  monto: number; moneda: string; tasa_cambio: number | null; fecha_egreso: string; estado: string
+  categoria: string; tipo_movimiento: string | null; centro_costo_id: string | null; area_responsable: string | null
+  iva_aplica: boolean | null; base_imponible: number | null
+}
+type CentroCosto = { id: string; nombre: string }
+
+const EXCL = new Set(['anulado', 'rechazado'])
+
+function usd(m: number, moneda: string, tasa: number | null): number {
+  if (moneda === 'VES') return tasa && tasa > 0 ? m / tasa : 0
+  return m
+}
+function fmt(n: number): string {
+  return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
+  const PAGE = 1000
+  let out: T[] = []
+  for (let i = 0; ; i++) {
+    const { data } = await build(i * PAGE, i * PAGE + PAGE - 1)
+    if (!data || data.length === 0) break
+    out = out.concat(data)
+    if (data.length < PAGE) break
+  }
+  return out
+}
+
+export default function EstadoResultadosClient() {
+  const supabase = createClient()
+  const hoy = new Date().toISOString().split('T')[0]
+  const inicioAnio = hoy.slice(0, 4) + '-01-01'
+
+  const [desde, setDesde] = useState(inicioAnio)
+  const [hasta, setHasta] = useState(hoy)
+  const [centros, setCentros] = useState<CentroCosto[]>([])
+  const [ingresos, setIngresos] = useState<MovIngreso[]>([])
+  const [egresos, setEgresos] = useState<MovEgreso[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.from('centros_costo').select('id, nombre').eq('activo', true).order('orden')
+      .then(({ data }) => setCentros((data as CentroCosto[]) ?? []))
+  }, [])
+
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    const [ing, egr] = await Promise.all([
+      fetchAll<MovIngreso>((f, t) => supabase.from('ingresos')
+        .select('monto, moneda, tasa_cambio, fecha_pago, estado, concepto, titular_fondos, iva_aplica, base_imponible, centro_costo_id')
+        .gte('fecha_pago', desde).lte('fecha_pago', hasta).range(f, t)),
+      fetchAll<MovEgreso>((f, t) => supabase.from('egresos')
+        .select('monto, moneda, tasa_cambio, fecha_egreso, estado, categoria, tipo_movimiento, centro_costo_id, area_responsable, iva_aplica, base_imponible')
+        .gte('fecha_egreso', desde).lte('fecha_egreso', hasta).range(f, t)),
+    ])
+    setIngresos(ing.filter(i => !EXCL.has(i.estado)))
+    setEgresos(egr.filter(e => !EXCL.has(e.estado)))
+    setLoading(false)
+  }, [desde, hasta])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  const esPropio = (i: MovIngreso) => (i.titular_fondos ?? 'propio') === 'propio'
+  const netoIng = (i: MovIngreso) => usd(i.iva_aplica && i.base_imponible ? Number(i.base_imponible) : i.monto, i.moneda, i.tasa_cambio)
+  const netoEgr = (e: MovEgreso) => usd(e.iva_aplica && e.base_imponible ? Number(e.base_imponible) : e.monto, e.moneda, e.tasa_cambio)
+  const centroNombre = useCallback((id: string | null, area?: string | null): string => {
+    if (id) return centros.find(c => c.id === id)?.nombre ?? id
+    return area?.trim() || 'Sin centro de costo'
+  }, [centros])
+
+  const data = useMemo(() => {
+    const propios = ingresos.filter(esPropio)
+    const gastosOp = egresos.filter(e => e.tipo_movimiento !== 'inversion')
+    const inversiones = egresos.filter(e => e.tipo_movimiento === 'inversion')
+
+    const totalIngresos = propios.reduce((s, i) => s + netoIng(i), 0)
+    const totalGastos = gastosOp.reduce((s, e) => s + netoEgr(e), 0)
+    const totalInversion = inversiones.reduce((s, e) => s + netoEgr(e), 0)
+    const custodia = ingresos.filter(i => !esPropio(i)).reduce((s, i) => s + usd(i.monto, i.moneda, i.tasa_cambio), 0)
+    const resultado = totalIngresos - totalGastos
+
+    // Ingresos por concepto
+    const ingPorConcepto: Record<string, number> = {}
+    for (const i of propios) {
+      const k = i.concepto?.trim() || 'Otros'
+      ingPorConcepto[k] = (ingPorConcepto[k] ?? 0) + netoIng(i)
+    }
+    const conceptos = Object.entries(ingPorConcepto).sort((a, b) => b[1] - a[1])
+
+    // Gastos por categoría
+    const gastoPorCat: Record<string, number> = {}
+    for (const e of gastosOp) {
+      const k = CATEGORIAS_EGRESO_LABEL[e.categoria] ?? e.categoria ?? 'Otros'
+      gastoPorCat[k] = (gastoPorCat[k] ?? 0) + netoEgr(e)
+    }
+    const categorias = Object.entries(gastoPorCat).sort((a, b) => b[1] - a[1])
+
+    // Resultado por centro de costo
+    const porCentro: Record<string, { ing: number; gasto: number }> = {}
+    for (const i of propios) {
+      const k = centroNombre(i.centro_costo_id)
+      ;(porCentro[k] ??= { ing: 0, gasto: 0 }).ing += netoIng(i)
+    }
+    for (const e of gastosOp) {
+      const k = centroNombre(e.centro_costo_id, e.area_responsable)
+      ;(porCentro[k] ??= { ing: 0, gasto: 0 }).gasto += netoEgr(e)
+    }
+    const centrosRows = Object.entries(porCentro)
+      .map(([centro, v]) => ({ centro, ing: v.ing, gasto: v.gasto, res: v.ing - v.gasto }))
+      .sort((a, b) => b.res - a.res)
+
+    return { totalIngresos, totalGastos, totalInversion, custodia, resultado, conceptos, categorias, centrosRows }
+  }, [ingresos, egresos, centroNombre])
+
+  function exportarCsv() {
+    const rows: (string | number)[][] = [['ESTADO DE RESULTADOS', `${desde} a ${hasta}`], []]
+    rows.push(['Ingresos operativos (propios, neto IVA)', data.totalIngresos.toFixed(2)])
+    data.conceptos.forEach(([c, v]) => rows.push([`  ${c}`, v.toFixed(2)]))
+    rows.push(['Gastos operativos', data.totalGastos.toFixed(2)])
+    data.categorias.forEach(([c, v]) => rows.push([`  ${c}`, v.toFixed(2)]))
+    rows.push(['RESULTADO OPERATIVO', data.resultado.toFixed(2)], [])
+    rows.push(['Memo — Inversiones (no afecta resultado)', data.totalInversion.toFixed(2)])
+    rows.push(['Memo — Fondos de terceros en custodia', data.custodia.toFixed(2)], [])
+    rows.push(['Por centro de costo', 'Ingresos', 'Gastos', 'Resultado'])
+    data.centrosRows.forEach(r => rows.push([r.centro, r.ing.toFixed(2), r.gasto.toFixed(2), r.res.toFixed(2)]))
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url; a.download = `estado-resultados-${desde}_${hasta}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="p-4 lg:p-8 max-w-4xl">
+      <style>{`@media print { .no-print { display: none !important; } }`}</style>
+
+      <div className="flex items-center gap-4 mb-6 no-print">
+        <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50"><ArrowLeft size={18} className="text-oriental-gray" /></Link>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="w-10 h-10 bg-oriental-red/10 rounded-xl flex items-center justify-center"><FileBarChart2 size={20} className="text-oriental-red" /></div>
+          <div>
+            <h1 className="text-2xl font-bold text-oriental-black">Estado de resultados</h1>
+            <p className="text-oriental-gray text-sm">Resultado operativo por período y por centro de costo (en USD)</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="card p-4 mb-6 flex flex-wrap items-end gap-3 no-print">
+        <div><label className="label">Desde</label><input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="input" /></div>
+        <div><label className="label">Hasta</label><input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="input" /></div>
+        <button onClick={() => { setDesde(hoy.slice(0, 7) + '-01'); setHasta(hoy) }} className="px-3 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-oriental-gray hover:bg-gray-50">Este mes</button>
+        <button onClick={() => { setDesde(inicioAnio); setHasta(hoy) }} className="px-3 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-oriental-gray hover:bg-gray-50">Este año</button>
+        <div className="ml-auto flex gap-2">
+          <button onClick={exportarCsv} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50"><FileDown size={15} /> CSV</button>
+          <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50"><Printer size={15} /> Imprimir</button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="card p-12 text-center text-oriental-gray text-sm">Cargando…</div>
+      ) : (
+        <div className="card p-6 lg:p-8">
+          <div className="text-center mb-6 pb-4 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-oriental-black">Estado de Resultados</h2>
+            <p className="text-xs text-oriental-gray">Del {desde} al {hasta} · valores en USD, netos de IVA</p>
+          </div>
+
+          {/* Ingresos */}
+          <Seccion titulo="Ingresos operativos" total={data.totalIngresos} tono="pos" filas={data.conceptos} />
+          {/* Gastos */}
+          <Seccion titulo="Gastos operativos" total={data.totalGastos} tono="neg" filas={data.categorias} signo="−" />
+
+          {/* Resultado */}
+          <div className={`flex items-center justify-between mt-4 py-3 px-4 rounded-lg ${data.resultado >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+            <span className="font-bold text-oriental-black">RESULTADO OPERATIVO</span>
+            <span className={`text-xl font-black ${data.resultado >= 0 ? 'text-green-800' : 'text-oriental-red'}`}>{data.resultado < 0 ? '−' : ''}${fmt(Math.abs(data.resultado))}</span>
+          </div>
+
+          {/* Memo */}
+          <div className="mt-5 pt-4 border-t border-gray-100 space-y-1.5 text-sm">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray mb-1">Partidas informativas (no afectan el resultado)</p>
+            <div className="flex justify-between"><span className="text-oriental-gray">Inversiones del período</span><span className="font-semibold text-oriental-black">${fmt(data.totalInversion)}</span></div>
+            <div className="flex justify-between"><span className="text-oriental-gray">Fondos de terceros en custodia</span><span className="font-semibold text-amber-700">${fmt(data.custodia)}</span></div>
+          </div>
+
+          {/* Por centro de costo */}
+          <div className="mt-6">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray mb-2">Resultado por centro de costo</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-gray-200">
+                  <tr>
+                    <th className="text-left py-2 font-medium text-oriental-gray text-xs">Centro</th>
+                    <th className="text-right py-2 font-medium text-oriental-gray text-xs">Ingresos</th>
+                    <th className="text-right py-2 font-medium text-oriental-gray text-xs">Gastos</th>
+                    <th className="text-right py-2 font-medium text-oriental-gray text-xs">Resultado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {data.centrosRows.map(r => (
+                    <tr key={r.centro}>
+                      <td className="py-2 font-semibold text-oriental-black">{r.centro}</td>
+                      <td className="py-2 text-right tabular-nums text-green-700">${fmt(r.ing)}</td>
+                      <td className="py-2 text-right tabular-nums text-oriental-red">${fmt(r.gasto)}</td>
+                      <td className={`py-2 text-right tabular-nums font-bold ${r.res >= 0 ? 'text-oriental-black' : 'text-oriental-red'}`}>{r.res < 0 ? '−' : ''}${fmt(Math.abs(r.res))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-oriental-gray mt-5">
+            Resultado operativo = ingreso propio (neto de IVA, excluye custodia de terceros) − gastos operativos (neto de IVA). Las inversiones no restan del resultado (son activo). VES convertido a USD con la tasa de cada registro.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Seccion({ titulo, total, tono, filas, signo }: { titulo: string; total: number; tono: 'pos' | 'neg'; filas: [string, number][]; signo?: string }) {
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between py-2 border-b border-gray-200">
+        <span className="font-bold text-oriental-black">{titulo}</span>
+        <span className={`font-bold ${tono === 'pos' ? 'text-green-700' : 'text-oriental-red'}`}>{signo ?? ''}${fmt(total)}</span>
+      </div>
+      <div className="pl-2">
+        {filas.length === 0 ? (
+          <p className="py-2 text-xs text-oriental-gray">Sin movimientos</p>
+        ) : filas.map(([c, v]) => (
+          <div key={c} className="flex items-center justify-between py-1.5 text-sm border-b border-gray-50">
+            <span className="text-oriental-gray">{c}</span>
+            <span className="tabular-nums text-oriental-black">${fmt(v)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

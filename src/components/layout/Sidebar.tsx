@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, FileBarChart2
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
 
@@ -70,6 +70,7 @@ const SECTIONS: NavSection[] = [
       { href: '/egresos',      label: 'Egresos',            icon: TrendingDown, hideFor: ['almacen'] },
       { href: '/pagos-portal', label: 'Pagos del portal',   icon: Inbox,        roles: DIR, badge: 'portal' },
       { href: '/balance',      label: 'Balance',            icon: Scale,        roles: DIR },
+      { href: '/estado-resultados', label: 'Estado de resultados', icon: FileBarChart2, roles: DIR },
       { href: '/movimientos',  label: 'Movimientos y conciliación', icon: Wallet, roles: DIR },
       { href: '/libro-iva',    label: 'Libro de IVA',       icon: Scale,        roles: DIR },
       { href: '/centros-costo', label: 'Centros de costo',  icon: BarChart2,    roles: DIR },
