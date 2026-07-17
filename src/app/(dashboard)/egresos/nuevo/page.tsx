@@ -40,6 +40,7 @@ export default function NuevoEgresoPage() {
   const [ivaAplica, setIvaAplica] = useState(false)
   const [ivaTasa, setIvaTasa] = useState('16')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
+  const [categorias, setCategorias] = useState<{ clave: string; nombre: string }[]>([])
 
   useEffect(() => {
     const supabase = createClient()
@@ -49,6 +50,12 @@ export default function NuevoEgresoPage() {
       .eq('activo', true)
       .order('orden')
       .then(({ data }) => { if (data) setCentros(data) })
+    supabase
+      .from('categorias_egreso')
+      .select('clave, nombre')
+      .eq('activo', true)
+      .order('orden')
+      .then(({ data }) => { if (data) setCategorias(data) })
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -130,7 +137,10 @@ export default function NuevoEgresoPage() {
               <label className="label">Categoría *</label>
               <select className="select" value={categoria} onChange={e => { setCategoria(e.target.value); setConcepto(''); setConceptoPersonalizado('') }} required>
                 <option value="">Seleccionar...</option>
-                {Object.entries(CATEGORIAS_EGRESO_LABEL).map(([k, v]) => (
+                {(categorias.length > 0
+                  ? categorias.map(c => [c.clave, c.nombre] as [string, string])
+                  : Object.entries(CATEGORIAS_EGRESO_LABEL)
+                ).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
               </select>
