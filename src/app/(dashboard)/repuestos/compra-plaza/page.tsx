@@ -9,10 +9,18 @@ export const dynamic = 'force-dynamic'
 
 const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem', 'almacen']
 
+function fmtNum(n: number) {
+  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(n)) * 100) % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })
+}
 function fmtMonto(n: number | null, moneda?: string | null) {
   if (n == null) return '—'
-  const s = Number(n).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(n)) * 100) % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })
-  return moneda === 'VES' ? `Bs. ${s}` : `$${s}`
+  return moneda === 'VES' ? `Bs. ${fmtNum(n)}` : `$${fmtNum(n)}`
+}
+// Equivalente en USD: los pagos en Bs se convierten con la tasa guardada de la compra.
+function equivUsd(n: number | null, moneda?: string | null, tasa?: number | null) {
+  if (n == null) return 0
+  if (moneda === 'VES') return tasa && tasa > 0 ? Number(n) / Number(tasa) : 0
+  return Number(n)
 }
 function fmtFecha(d: string | null) {
   if (!d) return '—'
@@ -27,14 +35,13 @@ export default async function CompraPlazaPage() {
 
   const compras = await fetchAllRows<any>((from, to) => supabase
     .from('solicitudes_repuestos')
-    .select('id, numero, proveedor_plaza, monto_plaza, moneda_pago, fecha_compra_plaza, notas_plaza, created_at, repuestos_items(id), clientes(nombre), para_la_oriental, cliente_externo')
+    .select('id, numero, proveedor_plaza, monto_plaza, moneda_plaza, tasa_plaza, fecha_compra_plaza, notas_plaza, created_at, repuestos_items(id), clientes(nombre), para_la_oriental, cliente_externo')
     .eq('estado', 'comprado_plaza')
     .order('fecha_compra_plaza', { ascending: false })
     .range(from, to))
 
-  const totalUSD = compras
-    .filter(c => (c.moneda_pago ?? 'USD') !== 'VES')
-    .reduce((s, c) => s + Number(c.monto_plaza ?? 0), 0)
+  // Total en dólares: las compras en Bs se convierten con su tasa guardada.
+  const totalUSD = compras.reduce((s, c) => s + equivUsd(c.monto_plaza, c.moneda_plaza, c.tasa_plaza), 0)
 
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
@@ -94,7 +101,14 @@ export default async function CompraPlazaPage() {
                       <td className="px-4 py-2.5 text-right text-oriental-gray text-xs">
                         <span className="inline-flex items-center gap-1"><Package size={11} /> {(c.repuestos_items ?? []).length}</span>
                       </td>
-                      <td className="px-4 py-2.5 text-right font-bold text-oriental-black whitespace-nowrap">{fmtMonto(c.monto_plaza, c.moneda_pago)}</td>
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        <span className="font-bold text-oriental-black">{fmtMonto(c.monto_plaza, c.moneda_plaza)}</span>
+                        {c.moneda_plaza === 'VES' && (
+                          <span className="block text-[11px] text-oriental-gray font-normal">
+                            ≈ ${fmtNum(equivUsd(c.monto_plaza, c.moneda_plaza, c.tasa_plaza))} {c.tasa_plaza ? `· tasa ${fmtNum(Number(c.tasa_plaza))}` : ''}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 text-oriental-gray text-xs whitespace-nowrap">{fmtFecha(c.fecha_compra_plaza)}</td>
                     </tr>
                   )

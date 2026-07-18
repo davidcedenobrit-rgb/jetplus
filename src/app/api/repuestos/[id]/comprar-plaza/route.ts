@@ -32,6 +32,8 @@ export async function POST(
     proveedor,
     proveedorId,
     monto,
+    moneda,
+    tasa,
     fechaCompra,
     metodoPago,
     referencia,
@@ -49,6 +51,14 @@ export async function POST(
   if (!Number.isFinite(montoNum) || montoNum <= 0) {
     return NextResponse.json({ error: 'Monto inválido' }, { status: 400 })
   }
+  // Moneda de la compra: USD por defecto. En bolívares se exige la tasa del día
+  // (Bs/$) para poder convertir a dólares en los reportes.
+  const monedaPlaza = moneda === 'VES' ? 'VES' : 'USD'
+  const tasaNum = Number(tasa)
+  if (monedaPlaza === 'VES' && !(tasaNum > 0)) {
+    return NextResponse.json({ error: 'Para pagos en Bs ingresa la tasa del día (Bs/$)' }, { status: 400 })
+  }
+  const tasaPlaza = monedaPlaza === 'VES' ? tasaNum : null
   const fechaValida = typeof fechaCompra === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaCompra)
     ? fechaCompra
     : new Date().toISOString().slice(0, 10)
@@ -85,7 +95,8 @@ export async function POST(
       concepto: conceptoEg,
       descripcion: notas ?? null,
       monto: montoNum,
-      moneda: 'USD',
+      moneda: monedaPlaza,
+      tasa_cambio: tasaPlaza,
       metodo_pago: metodoPago ?? null,
       banco_origen: bancoOrigen ?? null,
       beneficiario: proveedor.trim(),
@@ -118,6 +129,8 @@ export async function POST(
       proveedor_plaza: proveedor.trim(),
       proveedor_id: provId,
       monto_plaza: montoNum,
+      moneda_plaza: monedaPlaza,
+      tasa_plaza: tasaPlaza,
       fecha_compra_plaza: fechaValida,
       notas_plaza: notas ?? null,
       egreso_plaza_id: egreso.id,
@@ -143,7 +156,7 @@ export async function POST(
     solicitud_id: solicitudId,
     estado_nuevo: 'comprado_plaza',
     usuario_email: user.email ?? null,
-    notas: `Compra en plaza a ${proveedor.trim()} por USD ${montoNum.toFixed(2)}. Egreso: ${numeroEgreso}.`,
+    notas: `Compra en plaza a ${proveedor.trim()} por ${monedaPlaza === 'VES' ? `Bs. ${montoNum.toFixed(2)} (tasa ${tasaNum})` : `USD ${montoNum.toFixed(2)}`}. Egreso: ${numeroEgreso}.`,
   })
 
   return NextResponse.json({ ok: true, egresoId: egreso.id, numeroEgreso })

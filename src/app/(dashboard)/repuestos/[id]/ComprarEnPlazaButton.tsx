@@ -31,6 +31,8 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [], 
 
   const [proveedor, setProveedor] = useState<Proveedor | null>(null)
   const [monto, setMonto] = useState('')
+  const [moneda, setMoneda] = useState<'USD' | 'VES'>('USD')
+  const [tasa, setTasa] = useState('')
   const [fechaCompra, setFechaCompra] = useState(new Date().toISOString().slice(0, 10))
   const [metodoPago, setMetodoPago] = useState('')
   const [referencia, setReferencia] = useState('')
@@ -42,6 +44,8 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [], 
     const montoNum = parseFloat(monto.replace(',', '.'))
     if (!proveedor) { setError('Selecciona o crea el proveedor'); return }
     if (isNaN(montoNum) || montoNum <= 0) { setError('Monto inválido'); return }
+    const tasaNum = parseFloat(tasa.replace(',', '.'))
+    if (moneda === 'VES' && !(tasaNum > 0)) { setError('Para pagos en Bs ingresa la tasa del día (Bs/$)'); return }
     if (items.length > 0 && !hideChecklist && sel.size === 0) { setError('Selecciona al menos un repuesto para comprar en plaza'); return }
     setLoading(true)
     try {
@@ -52,6 +56,8 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [], 
           proveedor: proveedor.nombre,
           proveedorId: proveedor.id,
           monto: montoNum,
+          moneda,
+          tasa: moneda === 'VES' ? tasaNum : null,
           fechaCompra,
           metodoPago: metodoPago || null,
           referencia: referencia || null,
@@ -137,9 +143,21 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [], 
                 <ProveedorPicker proveedor={proveedor} onChange={setProveedor} />
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">Moneda del pago</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['USD', 'VES'] as const).map(m => (
+                    <button key={m} type="button" onClick={() => setMoneda(m)}
+                      className={`py-2 rounded-lg text-sm font-bold border transition-colors ${moneda === m ? 'bg-purple-600 text-white border-purple-600' : 'border-gray-200 text-oriental-gray hover:border-gray-300'}`}>
+                      {m === 'USD' ? 'Dólares ($)' : 'Bolívares (Bs.)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">Monto (USD) *</label>
+                  <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">Monto ({moneda === 'VES' ? 'Bs.' : 'USD'}) *</label>
                   <div className="relative">
                     <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -162,6 +180,26 @@ export default function ComprarEnPlazaButton({ solicitudId, numero, items = [], 
                   />
                 </div>
               </div>
+
+              {moneda === 'VES' && (
+                <div>
+                  <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">Tasa del día (Bs/$) *</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={tasa}
+                    onChange={e => setTasa(e.target.value)}
+                    placeholder="Ej: 40,00"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-500"
+                  />
+                  {(() => {
+                    const m = parseFloat(monto.replace(',', '.'))
+                    const t = parseFloat(tasa.replace(',', '.'))
+                    if (m > 0 && t > 0) return <p className="text-[11px] text-oriental-gray mt-1">≈ ${(m / t).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} a esta tasa</p>
+                    return null
+                  })()}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <div>

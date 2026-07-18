@@ -237,12 +237,18 @@ export default async function RepuestosPage({
                             <span className="text-oriental-black font-semibold">Proveedor:</span> {s.proveedor_plaza}
                           </p>
                         )}
-                        {s.monto_plaza != null && (
-                          <p className="text-[11px] text-oriental-gray">
-                            <span className="text-oriental-black font-semibold">Monto:</span>{' '}
-                            USD {Number(s.monto_plaza).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(s.monto_plaza))*100)%100===0?0:2, maximumFractionDigits: 2 })}
-                          </p>
-                        )}
+                        {s.monto_plaza != null && (() => {
+                          const esVes = s.moneda_plaza === 'VES'
+                          const fmt = (n: number) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(n))*100)%100===0?0:2, maximumFractionDigits: 2 })
+                          const equiv = esVes && s.tasa_plaza ? Number(s.monto_plaza) / Number(s.tasa_plaza) : null
+                          return (
+                            <p className="text-[11px] text-oriental-gray">
+                              <span className="text-oriental-black font-semibold">Monto:</span>{' '}
+                              {esVes ? `Bs. ${fmt(s.monto_plaza)}` : `USD ${fmt(s.monto_plaza)}`}
+                              {equiv != null && <span className="text-gray-400"> · ≈ ${fmt(equiv)}</span>}
+                            </p>
+                          )
+                        })()}
                       </div>
                     )}
                   </Link>

@@ -85,6 +85,8 @@ export async function crearCompraPlazaDirecta(input: NuevaCompraPlazaInput): Pro
       proveedor_id: input.proveedorId,
       proveedor_plaza: proveedorNombre,
       monto_plaza: montoNum,
+      moneda_plaza: moneda,
+      tasa_plaza: moneda === 'VES' ? tasa : null,
       fecha_compra_plaza: fecha,
       notas_plaza: input.notas?.trim() || null,
     })

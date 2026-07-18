@@ -148,9 +148,18 @@ export default async function RepuestoDetallePage({ params }: { params: Promise<
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-oriental-gray uppercase">Monto</p>
-                  <p className="font-semibold text-oriental-black">
-                    USD {Number(solicitud.monto_plaza ?? 0).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(solicitud.monto_plaza ?? 0))*100)%100===0?0:2, maximumFractionDigits: 2 })}
-                  </p>
+                  {(() => {
+                    const esVes = solicitud.moneda_plaza === 'VES'
+                    const fmt = (n: number) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(n))*100)%100===0?0:2, maximumFractionDigits: 2 })
+                    const monto = Number(solicitud.monto_plaza ?? 0)
+                    const equiv = esVes && solicitud.tasa_plaza ? monto / Number(solicitud.tasa_plaza) : null
+                    return (
+                      <p className="font-semibold text-oriental-black">
+                        {esVes ? `Bs. ${fmt(monto)}` : `USD ${fmt(monto)}`}
+                        {equiv != null && <span className="block text-[11px] text-oriental-gray font-normal">≈ ${fmt(equiv)} · tasa {fmt(Number(solicitud.tasa_plaza))}</span>}
+                      </p>
+                    )
+                  })()}
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-oriental-gray uppercase">Fecha</p>
