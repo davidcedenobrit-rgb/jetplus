@@ -8,6 +8,14 @@ import RepuestosActivasGrid from './RepuestosActivasGrid'
 import CatalogoRepuestos from './CatalogoRepuestos'
 
 const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem', 'almacen']
+const ROL_PLAZA = ['jose', 'admin', 'director', 'mary', 'leysdem', 'arianna']
+
+// Ítem que Vehimotors NO tiene (según la respuesta): va a la carta de Sin stock.
+function itemSinStock(item: { disponible?: boolean | null }, respuestaVM: string | null): boolean {
+  if (respuestaVM === 'no_hay') return true
+  if (respuestaVM === 'hay_todo') return false
+  return item.disponible === false
+}
 
 // Grupos del flujo de repuestos (segmentado por etapa)
 const GRUPO_KEYS = [
@@ -73,6 +81,7 @@ export default async function RepuestosPage({
   const rol = (user.app_metadata?.rol as string) ?? ''
   const puedeEliminar = ROL_ADMIN.includes(rol)
   const isAdmin = ROL_ADMIN.includes(rol)
+  const puedeComprarPlaza = ROL_PLAZA.includes(rol)
 
   const { grupo, todas } = await searchParams
   const grupoActivo: GrupoKey = (GRUPO_KEYS as readonly string[]).includes(grupo ?? '')
@@ -108,21 +117,60 @@ export default async function RepuestosPage({
     }
   }
 
+  // Las respuestas PARCIALES (VM tiene unos repuestos y otros no) también deben
+  // aparecer en "Sin stock" por sus ítems no disponibles, aunque la solicitud
+  // siga en "Cotización recibida" por los que sí hay.
+  const parcialesConItems = await fetchAllRows<{ id: string; repuestos_items: { disponible: boolean | null }[] }>((from, to) => supabase
+    .from('solicitudes_repuestos')
+    .select('id, repuestos_items(disponible)')
+    .eq('estado', 'cotizacion_recibida')
+    .eq('respuesta_vehimotors', 'parcial')
+    .range(from, to))
+  const idsParcialSinStock = (parcialesConItems ?? [])
+    .filter(s => (s.repuestos_items ?? []).some(i => i.disponible === false))
+    .map(s => s.id)
+  conteoPorGrupo.sin_stock += idsParcialSinStock.length
+
   // Query del grupo activo
   const estadosActivos = GRUPO_ESTADOS[grupoActivo]
-  let query = supabase
-    .from('solicitudes_repuestos')
-    .select('*, repuestos_items(id), clientes(id, nombre)', { count: 'exact' })
-    .in('estado', estadosActivos)
-    .order('created_at', { ascending: false })
-
   const gruposConLimite: GrupoKey[] = ['completadas', 'eliminadas', 'compra_plaza']
-  if (gruposConLimite.includes(grupoActivo) && !mostrarTodas) {
-    query = query.limit(COMPLETAS_LIMIT)
+
+  let solicitudes: any[] = []
+  let totalGrupo = 0
+
+  if (grupoActivo === 'sin_stock') {
+    // Sin stock = "no hay" completo + parciales con ítems no disponibles.
+    const selSinStock = '*, repuestos_items(id, descripcion, referencia, cantidad, disponible), clientes(id, nombre)'
+    const { data: fullSinStock } = await supabase
+      .from('solicitudes_repuestos')
+      .select(selSinStock)
+      .eq('estado', 'sin_stock')
+      .order('created_at', { ascending: false })
+    let parciales: any[] = []
+    if (idsParcialSinStock.length > 0) {
+      const { data } = await supabase
+        .from('solicitudes_repuestos')
+        .select(selSinStock)
+        .in('id', idsParcialSinStock)
+        .order('created_at', { ascending: false })
+      parciales = data ?? []
+    }
+    solicitudes = [...(fullSinStock ?? []), ...parciales]
+    totalGrupo = solicitudes.length
+  } else {
+    let query = supabase
+      .from('solicitudes_repuestos')
+      .select('*, repuestos_items(id), clientes(id, nombre)', { count: 'exact' })
+      .in('estado', estadosActivos)
+      .order('created_at', { ascending: false })
+    if (gruposConLimite.includes(grupoActivo) && !mostrarTodas) {
+      query = query.limit(COMPLETAS_LIMIT)
+    }
+    const { data: solicitudesData, count } = await query
+    solicitudes = solicitudesData ?? []
+    totalGrupo = count ?? 0
   }
 
-  const { data: solicitudesData, count: totalGrupo } = await query
-  const solicitudes = solicitudesData ?? []
   const hayMas = gruposConLimite.includes(grupoActivo)
     && !mostrarTodas
     && (totalGrupo ?? 0) > COMPLETAS_LIMIT
@@ -198,7 +246,7 @@ export default async function RepuestosPage({
           </p>
         </div>
       ) : GRUPOS_ACTIVOS.includes(grupoActivo) ? (
-        <RepuestosActivasGrid solicitudes={solicitudes as any} puedeEliminar={puedeEliminar} />
+        <RepuestosActivasGrid solicitudes={solicitudes as any} puedeEliminar={puedeEliminar} puedeComprarPlaza={puedeComprarPlaza} sinStock={grupoActivo === 'sin_stock'} />
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

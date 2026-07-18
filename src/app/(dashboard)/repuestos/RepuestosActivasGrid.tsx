@@ -7,6 +7,7 @@ import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import ReenviarCotizacionButton from './ReenviarCotizacionButton'
 import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 import CambiarDestinatarioModal from './CambiarDestinatarioModal'
+import ComprarEnPlazaButton from './[id]/ComprarEnPlazaButton'
 
 const ESTADOS: Record<string, { label: string; color: string; bg: string; step: number }> = {
   solicitado:           { label: 'Solicitado',         color: 'text-blue-700',   bg: 'bg-blue-100',   step: 1 },
@@ -42,7 +43,7 @@ type Solicitud = {
   created_at: string
   respuesta_vehimotors: string | null
   numero_cotizacion_vehimotors?: string | null
-  repuestos_items?: { id: string }[]
+  repuestos_items?: { id: string; descripcion?: string; referencia?: string | null; cantidad?: number; disponible?: boolean | null }[]
   resend_email_id?: string | null
   email_ultimo_estado?: string | null
   email_ultimo_evento_at?: string | null
@@ -55,6 +56,18 @@ type Solicitud = {
 interface Props {
   solicitudes: Solicitud[]
   puedeEliminar: boolean
+  puedeComprarPlaza?: boolean
+  sinStock?: boolean
+}
+
+// Ítems que Vehimotors NO tiene en esta solicitud (van a compra en plaza).
+function itemsSinStock(s: Solicitud) {
+  const items = s.repuestos_items ?? []
+  return items.filter(it => {
+    if (s.respuesta_vehimotors === 'no_hay') return true
+    if (s.respuesta_vehimotors === 'hay_todo') return false
+    return it.disponible === false
+  })
 }
 
 const FILTROS_ESTATUS: { value: string; label: string }[] = [
@@ -68,7 +81,7 @@ const FILTROS_ESTATUS: { value: string; label: string }[] = [
   { value: 'sin_stock',           label: 'Sin stock'          },
 ]
 
-export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Props) {
+export default function RepuestosActivasGrid({ solicitudes, puedeEliminar, puedeComprarPlaza = false, sinStock = false }: Props) {
   const [busqueda, setBusqueda] = useState('')
   const [estatus, setEstatus] = useState('')
   const [editarDestinatario, setEditarDestinatario] = useState<Solicitud | null>(null)
@@ -224,6 +237,20 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar }: Pro
                     <ReenviarCotizacionButton solicitudId={s.id} size="sm" />
                   </div>
                 )}
+                {sinStock && puedeComprarPlaza && (() => {
+                  const sinStockItems = itemsSinStock(s)
+                  if (sinStockItems.length === 0) return null
+                  return (
+                    <div className="px-5 pb-4 -mt-1">
+                      <ComprarEnPlazaButton
+                        solicitudId={s.id}
+                        numero={s.numero ?? s.numero_scr ?? ''}
+                        items={sinStockItems.map(it => ({ id: it.id, descripcion: it.descripcion ?? 'Repuesto', referencia: it.referencia ?? null, cantidad: it.cantidad ?? 1 }))}
+                        label={`Comprar en plaza (${sinStockItems.length})`}
+                      />
+                    </div>
+                  )
+                })()}
                 <div className="px-5 pb-5">
                   <ProgressBar estado={s.estado} />
                 </div>
