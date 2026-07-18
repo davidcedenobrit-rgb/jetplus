@@ -65,7 +65,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: 'Gastos inválidos' }, { status: 400 })
       if (!['contado', 'credito_24'].includes(modalidad))
         return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
-      if (!['vehimotors', 'banco_100', 'ac500'].includes(plan))
+      if (!['vehimotors', 'banco_100', 'ac500', 'personalizado'].includes(plan))
         return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
       if (!cliente_nombre?.trim() || !cliente_ci_rif?.trim() || !cliente_correo?.trim())
         return NextResponse.json({ error: 'Nombre, C.I./RIF y correo son obligatorios' }, { status: 400 })
@@ -101,6 +101,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         financiamiento_monto = cotActual.financiamiento_monto != null ? Number(cotActual.financiamiento_monto) : null
         cuota_mensual_final = cotActual.cuota_mensual != null ? Number(cotActual.cuota_mensual) : null
         costo_total = Number(cotActual.costo_total) || 0
+      } else if (plan === 'personalizado') {
+        // Recalcula con los parámetros guardados del plan personalizado.
+        const t = calcularTotalesCotizacion({
+          precioBase: precio_base,
+          modalidad: 'credito_24',
+          plan: 'personalizado',
+          gastos: gastos_monto,
+          personalizadoInicialPct: (Number(cotActual.personalizado_inicial_pct) || 40) / 100,
+          personalizadoMeses: Number(cotActual.personalizado_meses) || 24,
+          personalizadoTasaPct: Number(cotActual.personalizado_tasa_pct) || 0,
+        })
+        iva_monto = t.iva
+        total_inicial = t.totalInicial
+        financiamiento_monto = t.financiamientoMonto
+        cuota_mensual_final = t.cuotaMensual
+        costo_total = t.costoTotal
       } else {
         const mesesBanco = Math.max(1, Math.round(Number(cotActual.cuotas_banco) || 24))
         const t = calcularTotalesCotizacion({
@@ -218,6 +234,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             cuotaMensual: cuota_mensual_final,
             mesesBanco: plan === 'banco_100' ? (Number(cotActual.cuotas_banco) || 24) : undefined,
             costoTotal: costo_total,
+            inicialPct: plan === 'personalizado' ? (Number(cotActual.personalizado_inicial_pct) || 40) / 100 : undefined,
+            mesesCredito: plan === 'personalizado' ? (Number(cotActual.personalizado_meses) || 24) : undefined,
           }
           await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id)
           correoReenviado = true

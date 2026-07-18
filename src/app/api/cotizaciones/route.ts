@@ -41,7 +41,18 @@ export async function POST(req: Request) {
       cantidad,
       concesionarioId,
       promoVehiculoId,
+      // Plan Personalizado (lo arma Rojas al cotizar)
+      personalizadoInicialPct,
+      personalizadoMeses,
+      personalizadoTasaPct,
+      personalizadoDiferencial,
     } = body
+
+    // Parámetros del plan Personalizado (saneados)
+    const persIniPct = Math.min(100, Math.max(0, Number(personalizadoInicialPct)))
+    const persMeses = Math.max(1, Math.round(Number(personalizadoMeses) || 24))
+    const persTasaPct = Math.max(0, Number(personalizadoTasaPct) || 0)
+    const persDiferencial = personalizadoDiferencial === true || personalizadoDiferencial === 'true'
 
     // Las promociones especiales solo cotizan Contado o Crédito 24 (Vehimotors)
     let plan = planBody ?? 'vehimotors'
@@ -57,11 +68,20 @@ export async function POST(req: Request) {
     if (!['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
     }
-    if (!['vehimotors', 'banco_100', 'ac500'].includes(plan)) {
+    if (!['vehimotors', 'banco_100', 'ac500', 'personalizado'].includes(plan)) {
       return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
     }
     if (plan === 'ac500' && (!ac500PlanId || !ac500MesesBody)) {
       return NextResponse.json({ error: 'Plan AC500 incompleto' }, { status: 400 })
+    }
+    // El plan Personalizado es una modalidad a crédito (inicial + cuotas).
+    if (plan === 'personalizado') {
+      if (modalidad !== 'credito_24') {
+        return NextResponse.json({ error: 'El plan personalizado se cotiza a crédito' }, { status: 400 })
+      }
+      if (!(persIniPct >= 0 && persIniPct < 100)) {
+        return NextResponse.json({ error: 'Inicial del plan personalizado inválido' }, { status: 400 })
+      }
     }
     if (!/^[A-Za-z]\d{3}$/.test(String(codigo).trim())) {
       return NextResponse.json({ error: 'Código inválido' }, { status: 400 })
@@ -182,10 +202,12 @@ export async function POST(req: Request) {
     let totalVehiculoBanco = 0
 
     const difBancoOn   = plan === 'banco_100' && modalidad === 'credito_24' && vehiculo.diferencial_banco_activo !== false
-    const difContadoOn = plan !== 'banco_100' && plan !== 'ac500' && modalidad === 'contado' && vehiculo.diferencial_c_activo === true
-    const difCreditoOn = plan !== 'banco_100' && plan !== 'ac500' && modalidad === 'credito_24' && vehiculo.diferencial_cr_activo === true
+    const difContadoOn = plan === 'vehimotors' && modalidad === 'contado' && vehiculo.diferencial_c_activo === true
+    const difCreditoOn = plan === 'vehimotors' && modalidad === 'credito_24' && vehiculo.diferencial_cr_activo === true
+    // Personalizado: el diferencial es un interruptor por cotización (lo prende Rojas).
+    const difPersonalizadoOn = plan === 'personalizado' && persDiferencial
 
-    if (difBancoOn || difContadoOn || difCreditoOn) {
+    if (difBancoOn || difContadoOn || difCreditoOn || difPersonalizadoOn) {
       const { data: cfgTasas } = await supabase
         .from('config_cotizaciones')
         .select('clave, valor')
@@ -199,6 +221,9 @@ export async function POST(req: Request) {
         totalVehiculoBanco = precioBase + iva + placaMonto
         const financiamientoBanco = totalVehiculoBanco * 0.70
         diferencial = financiamientoBanco * difPct
+      } else if (difPersonalizadoOn) {
+        // Sobre el monto financiado del plan personalizado.
+        diferencial = precioBase * (1 - persIniPct / 100) * difPct
       } else {
         diferencial = precioBase * difPct
       }
@@ -246,6 +271,9 @@ export async function POST(req: Request) {
       ac500: (plan === 'ac500' && ac500Schedule)
         ? { reserva: ac500Schedule.reserva, total: ac500Schedule.total }
         : null,
+      personalizadoInicialPct: persIniPct / 100,
+      personalizadoMeses: persMeses,
+      personalizadoTasaPct: persTasaPct,
     })
     const totalInicial = totales.totalInicial
     const financiamientoMonto = totales.financiamientoMonto
@@ -302,6 +330,10 @@ export async function POST(req: Request) {
         ac500_meses: plan === 'ac500' ? ac500Meses : null,
         ac500_cuotas: plan === 'ac500' && ac500Schedule ? ac500Schedule.cuotas.map(c => c.monto) : null,
         cuotas_banco: plan === 'banco_100' ? mesesBanco : null,
+        personalizado_inicial_pct: plan === 'personalizado' ? persIniPct : null,
+        personalizado_meses: plan === 'personalizado' ? persMeses : null,
+        personalizado_tasa_pct: plan === 'personalizado' ? persTasaPct : null,
+        personalizado_diferencial: plan === 'personalizado' ? persDiferencial : false,
       }])
       .select()
       .single()
@@ -344,6 +376,8 @@ export async function POST(req: Request) {
       mesesBanco: plan === 'banco_100' ? mesesBanco : undefined,
       costoTotal,
       ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
+      inicialPct: plan === 'personalizado' ? persIniPct / 100 : undefined,
+      mesesCredito: plan === 'personalizado' ? persMeses : undefined,
     }
 
     // Enviar emails (ambos en paralelo, errores no bloqueantes)

@@ -199,11 +199,15 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
   const [savingNew, setSavingNew] = useState(false)
 
   // Quick cotización
-  type QModal = 'contado' | 'credito_24' | 'banco_100'
+  type QModal = 'contado' | 'credito_24' | 'banco_100' | 'personalizado'
   type QStep = 'preview' | 'email' | 'result'
   const [quickV, setQuickV] = useState<Vehiculo | null>(null)
   const [qStep, setQStep] = useState<QStep>('preview')
-  const [qForm, setQForm] = useState({ codigo: 'R000', nombre: '', correo: '', cirif: '', modalidad: 'contado' as QModal })
+  const [qForm, setQForm] = useState({
+    codigo: 'R000', nombre: '', correo: '', cirif: '', modalidad: 'contado' as QModal,
+    // Plan personalizado (lo arma Rojas)
+    persIni: '40', persMeses: '24', persTasa: '0', persDif: false,
+  })
   const [qSending, setQSending] = useState(false)
   const [qResult, setQResult] = useState<{ ok: boolean; msg: string } | null>(null)
   const captureRef = useRef<HTMLDivElement>(null)
@@ -232,8 +236,10 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       showToast('Completa todos los campos', false); return
     }
     setQSending(true)
-    const modalidadAPI = qForm.modalidad === 'banco_100' ? 'credito_24' : qForm.modalidad
-    const planAPI = qForm.modalidad === 'banco_100' ? 'banco_100' : 'vehimotors'
+    const modalidadAPI = (qForm.modalidad === 'banco_100' || qForm.modalidad === 'personalizado') ? 'credito_24' : qForm.modalidad
+    const planAPI = qForm.modalidad === 'banco_100' ? 'banco_100'
+      : qForm.modalidad === 'personalizado' ? 'personalizado'
+      : 'vehimotors'
     try {
       const res = await fetch('/api/cotizaciones', {
         method: 'POST',
@@ -246,6 +252,12 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
           clienteCiRif: qForm.cirif.trim(),
           modalidad: modalidadAPI,
           plan: planAPI,
+          ...(qForm.modalidad === 'personalizado' ? {
+            personalizadoInicialPct: parseFloat(qForm.persIni.replace(',', '.')) || 0,
+            personalizadoMeses: parseInt(qForm.persMeses) || 24,
+            personalizadoTasaPct: parseFloat(qForm.persTasa.replace(',', '.')) || 0,
+            personalizadoDiferencial: qForm.persDif,
+          } : {}),
         }),
       })
       const json = await res.json()
@@ -1242,11 +1254,12 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                   <div className="p-5 space-y-4">
                     <div>
                       <p className="text-xs font-semibold text-gray-500 mb-2">Modalidad a cotizar</p>
-                      <div className="grid grid-cols-3 gap-1.5">
+                      <div className="grid grid-cols-2 gap-1.5">
                         {([
                           { v: 'contado', label: 'Contado' },
                           { v: 'credito_24', label: 'Crédito 24m' },
                           { v: 'banco_100', label: '100% Banco' },
+                          { v: 'personalizado', label: 'Personalizado' },
                         ] as { v: QModal; label: string }[]).map(opt => (
                           <button key={opt.v} onClick={() => setQForm(p => ({ ...p, modalidad: opt.v }))}
                             className={`py-2 px-2 rounded-lg text-xs font-bold border transition-colors ${qForm.modalidad === opt.v ? 'bg-oriental-red text-white border-oriental-red' : 'border-gray-200 text-gray-600 bg-white hover:border-gray-400'}`}>
@@ -1254,6 +1267,51 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                           </button>
                         ))}
                       </div>
+                      {qForm.modalidad === 'personalizado' && (
+                        <div className="mt-3 border border-indigo-200 bg-indigo-50 rounded-xl p-3 space-y-3">
+                          <p className="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Condiciones del plan personalizado</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 mb-1">% Inicial</label>
+                              <input className={modalInputCls} inputMode="decimal" value={qForm.persIni} onChange={e => setQForm(p => ({ ...p, persIni: e.target.value }))} placeholder="40" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 mb-1">Meses</label>
+                              <input className={modalInputCls} inputMode="numeric" value={qForm.persMeses} onChange={e => setQForm(p => ({ ...p, persMeses: e.target.value }))} placeholder="24" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tasa % anual</label>
+                              <input className={modalInputCls} inputMode="decimal" value={qForm.persTasa} onChange={e => setQForm(p => ({ ...p, persTasa: e.target.value }))} placeholder="0" />
+                            </div>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
+                            <input type="checkbox" checked={qForm.persDif} onChange={e => setQForm(p => ({ ...p, persDif: e.target.checked }))} className="w-4 h-4" />
+                            Aplicar diferencial cambiario (interno)
+                          </label>
+                          {(() => {
+                            const precio = quickV.cash ?? 0
+                            const iva = precio * 0.16
+                            const iniPct = (parseFloat(qForm.persIni.replace(',', '.')) || 0) / 100
+                            const meses = parseInt(qForm.persMeses) || 24
+                            const tasa = (parseFloat(qForm.persTasa.replace(',', '.')) || 0) / 100 / 12
+                            const gcrBase = (quickV.gcr ?? 0)
+                            const financiado = precio * (1 - iniPct)
+                            const dif = qForm.persDif && difGlobalPct > 0 ? financiado * difGlobalPct : 0
+                            const gastos = gcrBase + dif
+                            const inicial = precio * iniPct + iva + gastos
+                            const cuota = tasa > 0 ? financiado * tasa * Math.pow(1 + tasa, meses) / (Math.pow(1 + tasa, meses) - 1) : financiado / meses
+                            if (precio <= 0) return null
+                            const f = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            return (
+                              <div className="bg-white border border-indigo-200 rounded-lg p-2.5 text-[11px] space-y-1">
+                                <div className="flex justify-between text-gray-600"><span>Inicial ({(iniPct*100).toFixed(0)}%) + IVA + gastos{dif > 0 ? ' + dif.' : ''}</span><span className="font-mono font-bold text-indigo-900">${f(inicial)}</span></div>
+                                <div className="flex justify-between text-gray-600"><span>Financiamiento {((1-iniPct)*100).toFixed(0)}%</span><span className="font-mono">${f(financiado)}</span></div>
+                                <div className="flex justify-between text-gray-600"><span>Cuota × {meses}</span><span className="font-mono font-bold text-oriental-red">${f(cuota)}/mes</span></div>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-3">
                       <div>

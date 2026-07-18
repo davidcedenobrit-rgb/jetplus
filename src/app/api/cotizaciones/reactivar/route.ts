@@ -128,11 +128,13 @@ export async function POST(req: Request) {
     let diferencial = 0
     let totalVehiculoBanco = 0
 
+    const persIniPctR = Number(original.personalizado_inicial_pct) || 40
     const difBancoOn   = plan === 'banco_100' && modalidad === 'credito_24' && vehiculo.diferencial_banco_activo !== false
-    const difContadoOn = plan !== 'banco_100' && plan !== 'ac500' && modalidad === 'contado' && vehiculo.diferencial_c_activo === true
-    const difCreditoOn = plan !== 'banco_100' && plan !== 'ac500' && modalidad === 'credito_24' && vehiculo.diferencial_cr_activo === true
+    const difContadoOn = plan === 'vehimotors' && modalidad === 'contado' && vehiculo.diferencial_c_activo === true
+    const difCreditoOn = plan === 'vehimotors' && modalidad === 'credito_24' && vehiculo.diferencial_cr_activo === true
+    const difPersonalizadoOn = plan === 'personalizado' && original.personalizado_diferencial === true
 
-    if (difBancoOn || difContadoOn || difCreditoOn) {
+    if (difBancoOn || difContadoOn || difCreditoOn || difPersonalizadoOn) {
       const { data: cfgTasas } = await supabase
         .from('config_cotizaciones')
         .select('clave, valor')
@@ -145,6 +147,8 @@ export async function POST(req: Request) {
         totalVehiculoBanco = precioBase + iva + placaMonto
         const financiamientoBanco = totalVehiculoBanco * 0.70
         diferencial = financiamientoBanco * difPct
+      } else if (difPersonalizadoOn) {
+        diferencial = precioBase * (1 - persIniPctR / 100) * difPct
       } else {
         diferencial = precioBase * difPct
       }
@@ -193,6 +197,9 @@ export async function POST(req: Request) {
       ac500: (plan === 'ac500' && ac500Schedule)
         ? { reserva: ac500Schedule.reserva, total: ac500Schedule.total }
         : null,
+      personalizadoInicialPct: persIniPctR / 100,
+      personalizadoMeses: Number(original.personalizado_meses) || 24,
+      personalizadoTasaPct: Number(original.personalizado_tasa_pct) || 0,
     })
     const totalInicial = totalesR.totalInicial
     const financiamientoMonto = totalesR.financiamientoMonto
@@ -264,6 +271,10 @@ export async function POST(req: Request) {
         ac500_meses: original.ac500_meses,
         ac500_cuotas: original.ac500_cuotas,
         cuotas_banco: plan === 'banco_100' ? Math.max(1, Math.round(Number(vehiculo.cuotas_banco) || 24)) : null,
+        personalizado_inicial_pct: plan === 'personalizado' ? persIniPctR : null,
+        personalizado_meses: plan === 'personalizado' ? (Number(original.personalizado_meses) || 24) : null,
+        personalizado_tasa_pct: plan === 'personalizado' ? (Number(original.personalizado_tasa_pct) || 0) : null,
+        personalizado_diferencial: plan === 'personalizado' ? (original.personalizado_diferencial === true) : false,
         reactivada_de: cotizacionOriginalId,
         comparativa,
       }])
@@ -315,6 +326,8 @@ export async function POST(req: Request) {
         cuotaMensual,
         costoTotal,
         ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
+        inicialPct: plan === 'personalizado' ? persIniPctR / 100 : undefined,
+        mesesCredito: plan === 'personalizado' ? (Number(original.personalizado_meses) || 24) : undefined,
       }
 
       const emailResults = await Promise.allSettled([

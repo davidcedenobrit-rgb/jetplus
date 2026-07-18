@@ -14,7 +14,7 @@
 // `gastos` entra YA resuelto (base por modalidad + diferencial cambiario si aplica).
 
 export type ModalidadCot = 'contado' | 'credito_24'
-export type PlanCot = 'vehimotors' | 'banco_100' | 'ac500'
+export type PlanCot = 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado'
 
 export const IVA_TASA = 0.16
 
@@ -30,6 +30,10 @@ export interface TotalesInput {
   inicialPctVehimotors?: number | null  // fracción 0..1 (default 0.4)
   mesesVehimotors?: number | null       // meses para el costo total (default 24)
   ac500?: { reserva: number; total: number } | null
+  // Plan Personalizado (crédito con todo libre; la cuota se calcula por amortización)
+  personalizadoInicialPct?: number | null  // fracción 0..1 (default 0.4)
+  personalizadoMeses?: number | null       // default 24
+  personalizadoTasaPct?: number | null     // % anual (default 0 = sin interés)
 }
 
 export interface TotalesResult {
@@ -99,6 +103,26 @@ export function calcularTotalesCotizacion(inp: TotalesInput): TotalesResult {
       cuotaMensual,
       costoTotal: totalInicial + cuotaMensual * mesesBanco,
       mesesBanco,
+    }
+  }
+
+  // Plan Personalizado: crédito con inicial, meses y tasa libres.
+  // La cuota se calcula por amortización (a diferencia de Vehimotors que trae
+  // la cuota ya fijada). El diferencial, si aplica, ya viene dentro de `gastos`.
+  if (inp.plan === 'personalizado') {
+    const iniPct = inp.personalizadoInicialPct != null ? Number(inp.personalizadoInicialPct) : 0.4
+    const meses = Math.max(1, Math.round(Number(inp.personalizadoMeses) || 24))
+    const totalInicial = precioBase * iniPct + iva + gastos
+    const financiamiento = precioBase * (1 - iniPct)
+    const cuotaMensual = cuotaAmortizada(financiamiento, Number(inp.personalizadoTasaPct) || 0, meses)
+    return {
+      iva, gastos,
+      totalVehiculoBanco: null,
+      totalInicial,
+      financiamientoMonto: financiamiento,
+      cuotaMensual,
+      costoTotal: totalInicial + cuotaMensual * meses,
+      mesesBanco: meses,
     }
   }
 

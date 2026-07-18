@@ -59,6 +59,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     cuotaMensual: cot.cuota_mensual != null ? Number(cot.cuota_mensual) : null,
     mesesBanco: cot.cuotas_banco != null ? Number(cot.cuotas_banco) : undefined,
     costoTotal: Number(cot.costo_total),
+    inicialPct: cot.plan === 'personalizado' && cot.personalizado_inicial_pct != null ? Number(cot.personalizado_inicial_pct) / 100 : undefined,
+    mesesCredito: cot.plan === 'personalizado' && cot.personalizado_meses != null ? Number(cot.personalizado_meses) : undefined,
   }
 
   const buffer = await renderToBuffer(

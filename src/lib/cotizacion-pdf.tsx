@@ -162,7 +162,7 @@ export interface CotizacionPDFData {
   cantidad?: number
   precioBase: number
   modalidad: 'contado' | 'credito_24'
-  plan?: 'vehimotors' | 'banco_100' | 'ac500'
+  plan?: 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado'
   ivaMonto: number
   gastosMonto: number
   totalVehiculo?: number
@@ -172,14 +172,23 @@ export interface CotizacionPDFData {
   mesesBanco?: number
   costoTotal: number
   ac500Schedule?: AC500ScheduleData
+  // Plan Personalizado: inicial en fracción (0..1) y meses del crédito
+  inicialPct?: number
+  mesesCredito?: number
 }
 
 export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const esAC500 = data.plan === 'ac500'
   const es24 = data.modalidad === 'credito_24'
   const esBanco = data.plan === 'banco_100'
+  const esPersonalizado = data.plan === 'personalizado'
   const cantidad = Math.max(1, Math.floor(data.cantidad ?? 1))
   const mesesBanco = Math.max(1, Math.round(data.mesesBanco ?? 24))
+  // Plan Personalizado: inicial, meses y % financiado dinámicos
+  const persIniFrac = data.inicialPct != null ? data.inicialPct : 0.4
+  const persIniPctLabel = Math.round(persIniFrac * 100)
+  const persFinPctLabel = Math.round((1 - persIniFrac) * 100)
+  const persMeses = Math.max(1, Math.round(data.mesesCredito ?? 24))
   const importeUnit = esAC500 ? (data.ac500Schedule?.total ?? 0) : data.precioBase
 
   // Si el llamador manda empresaNombre, es consciente del concesionario y se
@@ -197,7 +206,11 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const modalidadLabel = esAC500
     ? `ASEGÚRATE CON $500 — ${data.ac500Schedule?.meses ?? ''} MESES`
     : es24
-      ? (esBanco ? `CRÉDITO BANCARIO ${mesesBanco} MESES (30% INICIAL)` : 'CRÉDITO 24 MESES (40% INICIAL)')
+      ? (esBanco
+          ? `CRÉDITO BANCARIO ${mesesBanco} MESES (30% INICIAL)`
+          : esPersonalizado
+            ? `CRÉDITO ${persMeses} MESES (${persIniPctLabel}% INICIAL)`
+            : 'CRÉDITO 24 MESES (40% INICIAL)')
       : 'CONTADO'
 
   return (
@@ -348,8 +361,8 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 ) : es24 ? (
                   <>
                     <View style={s.calcRow}>
-                      <Text style={s.calcLabel}>40% Precio Base</Text>
-                      <Text style={s.calcVal}>{fmt(data.precioBase * 0.4)}</Text>
+                      <Text style={s.calcLabel}>{esPersonalizado ? `${persIniPctLabel}% Precio Base` : '40% Precio Base'}</Text>
+                      <Text style={s.calcVal}>{fmt(data.precioBase * (esPersonalizado ? persIniFrac : 0.4))}</Text>
                     </View>
                     <View style={s.calcRow}>
                       <Text style={s.calcLabel}>I.V.A. 16%</Text>
@@ -396,12 +409,12 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={s.finHeaderText}>PLAN DE FINANCIAMIENTO</Text>
                 </View>
                 <View style={s.finRow}>
-                  <Text style={s.finLabel}>{esBanco ? 'Financiamiento 70%' : 'Financiamiento 60%'}</Text>
+                  <Text style={s.finLabel}>{esBanco ? 'Financiamiento 70%' : esPersonalizado ? `Financiamiento ${persFinPctLabel}%` : 'Financiamiento 60%'}</Text>
                   <Text style={s.finVal}>${fmt(data.financiamientoMonto)}</Text>
                 </View>
                 <View style={s.finRow}>
                   <Text style={s.finLabel}>Cuotas mensuales</Text>
-                  <Text style={s.finVal}>{esBanco ? mesesBanco : 24}   ${fmt(data.cuotaMensual)}</Text>
+                  <Text style={s.finVal}>{esBanco ? mesesBanco : esPersonalizado ? persMeses : 24}   ${fmt(data.cuotaMensual)}</Text>
                 </View>
               </View>
             </View>
