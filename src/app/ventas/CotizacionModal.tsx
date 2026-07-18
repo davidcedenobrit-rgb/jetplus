@@ -23,8 +23,14 @@ interface Vehiculo {
   honorarios_banco?: number | null
   gastos_internos_banco?: number | null
   alfombras_banco?: number | null
+  transporte_banco?: number | null
+  accesorios_banco?: number | null
+  igtf_banco?: number | null
   diferencial_pct?: number | null
   tasa_banco_pct?: number | null
+  diferencial_c_activo?: boolean | null
+  diferencial_cr_activo?: boolean | null
+  diferencial_banco_activo?: boolean | null
 }
 
 type Step = 'pin' | 'form' | 'sending' | 'success' | 'error'
@@ -39,18 +45,20 @@ function fmt(n: number | null | undefined) {
 function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: { bcv: number; usdt: number }) {
   const precio = v.cash ?? 0
   const iva = precio * 0.16
+  // Diferencial cambiario = (USDT - BCV) / BCV. Se activa por vehículo (Rojas decide).
+  const difPct = (tasas.bcv > 0 && tasas.usdt > tasas.bcv) ? (tasas.usdt - tasas.bcv) / tasas.bcv : 0
   if (modalidad === 'contado') {
-    const gastos = v.gc ?? 0
+    // gc ya incluye los ítems manuales (transporte, accesorios, IGTF, etc.).
+    const diferencial = v.diferencial_c_activo ? precio * difPct : 0
+    const gastos = (v.gc ?? 0) + diferencial
     return { iva, gastos, totalVehiculo: null, inicialBanco: null, totalInicial: precio + iva + gastos, financiamiento: null, cuota: null, costoTotal: precio + iva + gastos }
   }
   if (plan === 'banco_100') {
     const placaMonto = v.placa_monto ?? 400
     const totalVehiculo = precio + iva + placaMonto
     const financiamientoBanco = totalVehiculo * 0.70
-    // Diferencial cambiario = (USDT - BCV) / BCV, sobre el monto financiado.
-    const difPct = (tasas.bcv > 0 && tasas.usdt > tasas.bcv) ? (tasas.usdt - tasas.bcv) / tasas.bcv : 0
-    const diferencial = financiamientoBanco * difPct
-    const gastosBanco = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
+    const diferencial = (v.diferencial_banco_activo !== false) ? financiamientoBanco * difPct : 0
+    const gastosBanco = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0) + (v.transporte_banco ?? 0) + (v.accesorios_banco ?? 0) + (v.igtf_banco ?? 0)
     const gastos = gastosBanco + diferencial
     const inicialBanco = totalVehiculo * 0.30
     const totalInicial = inicialBanco + gastos
@@ -60,7 +68,9 @@ function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: { bcv: n
     const cuota = financiamiento * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
     return { iva, gastos, totalVehiculo, inicialBanco, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
   }
-  const gastos = v.gcr ?? 0
+  // Crédito Vehimotors — gcr ya incluye los ítems manuales.
+  const diferencial = v.diferencial_cr_activo ? precio * difPct : 0
+  const gastos = (v.gcr ?? 0) + diferencial
   const totalInicial = precio * 0.4 + iva + gastos
   const financiamiento = precio * 0.6
   const cuota = v.tasa_credito ?? 0

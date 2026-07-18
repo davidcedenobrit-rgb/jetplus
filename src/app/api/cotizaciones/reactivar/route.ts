@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     // 3. Cargar precios ACTUALES del catálogo
     const { data: vehiculo } = await supabase
       .from('catalogo_ventas')
-      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, diferencial_pct, tasa_banco_pct, inicial_pct')
+      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, transporte_banco, accesorios_banco, igtf_banco, diferencial_pct, tasa_banco_pct, inicial_pct, diferencial_c_activo, diferencial_cr_activo, diferencial_banco_activo')
       .eq('id', original.vehiculo_id)
       .single()
 
@@ -121,10 +121,17 @@ export async function POST(req: Request) {
       }
     }
 
-    // Diferencial banco 100% — usa las tasas globales BCV/USDT (panel de Tasas)
+    // Diferencial cambiario — usa las tasas globales BCV/USDT (panel de Tasas).
+    // Disponible en las 3 modalidades; se activa por vehículo (Rojas decide).
+    //   · Banco: sobre el monto financiado (70%). · Contado/Crédito: sobre el precio base.
     let diferencial = 0
     let totalVehiculoBanco = 0
-    if (plan === 'banco_100' && modalidad === 'credito_24') {
+
+    const difBancoOn   = plan === 'banco_100' && modalidad === 'credito_24' && vehiculo.diferencial_banco_activo !== false
+    const difContadoOn = plan !== 'banco_100' && plan !== 'ac500' && modalidad === 'contado' && vehiculo.diferencial_c_activo === true
+    const difCreditoOn = plan !== 'banco_100' && plan !== 'ac500' && modalidad === 'credito_24' && vehiculo.diferencial_cr_activo === true
+
+    if (difBancoOn || difContadoOn || difCreditoOn) {
       const { data: cfgTasas } = await supabase
         .from('config_cotizaciones')
         .select('clave, valor')
@@ -132,10 +139,20 @@ export async function POST(req: Request) {
       const tasaBcv = Number(cfgTasas?.find(c => c.clave === 'tasa_bcv')?.valor) || 0
       const tasaUsdt = Number(cfgTasas?.find(c => c.clave === 'tasa_usdt')?.valor) || 0
       const difPct = (tasaBcv > 0 && tasaUsdt > tasaBcv) ? (tasaUsdt - tasaBcv) / tasaBcv : 0
+      if (difBancoOn) {
+        const placaMonto = Number(vehiculo.placa_monto) || 400
+        totalVehiculoBanco = precioBase + iva + placaMonto
+        const financiamientoBanco = totalVehiculoBanco * 0.70
+        diferencial = financiamientoBanco * difPct
+      } else {
+        diferencial = precioBase * difPct
+      }
+    }
+
+    // El plan banco necesita totalVehiculoBanco aunque el diferencial esté apagado.
+    if (plan === 'banco_100' && modalidad === 'credito_24' && totalVehiculoBanco === 0) {
       const placaMonto = Number(vehiculo.placa_monto) || 400
       totalVehiculoBanco = precioBase + iva + placaMonto
-      const financiamientoBanco = totalVehiculoBanco * 0.70
-      diferencial = financiamientoBanco * difPct
     }
 
     // Gastos según modalidad
@@ -146,7 +163,10 @@ export async function POST(req: Request) {
         (Number(vehiculo.poliza_vida_banco) || 0) +
         (Number(vehiculo.honorarios_banco) || 0) +
         (Number(vehiculo.gastos_internos_banco) || 0) +
-        (Number(vehiculo.alfombras_banco) || 0)
+        (Number(vehiculo.alfombras_banco) || 0) +
+        (Number(vehiculo.transporte_banco) || 0) +
+        (Number(vehiculo.accesorios_banco) || 0) +
+        (Number(vehiculo.igtf_banco) || 0)
     } else if (plan === 'ac500') {
       gastosBase = 0
     } else if (modalidad === 'contado') {

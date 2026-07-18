@@ -63,6 +63,10 @@ interface Vehiculo {
   honorarios_c: number | null
   gastos_int_c: number | null
   alfombras_c: number | null
+  transporte_c: number | null
+  accesorios_c: number | null
+  igtf_c: number | null
+  diferencial_c_activo: boolean | null
   // Gastos crédito (línea a línea)
   placa_cr: number | null
   poliza_vehiculo_cr: number | null
@@ -71,6 +75,10 @@ interface Vehiculo {
   honorarios_cr: number | null
   gastos_int_cr: number | null
   alfombras_cr: number | null
+  transporte_cr: number | null
+  accesorios_cr: number | null
+  igtf_cr: number | null
+  diferencial_cr_activo: boolean | null
   // Plan 100% banco
   placa_monto: number | null
   poliza_vehiculo_banco: number | null
@@ -78,6 +86,10 @@ interface Vehiculo {
   honorarios_banco: number | null
   gastos_internos_banco: number | null
   alfombras_banco: number | null
+  transporte_banco: number | null
+  accesorios_banco: number | null
+  igtf_banco: number | null
+  diferencial_banco_activo: boolean | null
   diferencial_pct: number | null
   tasa_banco_pct: number | null
   cuotas_banco: number | null
@@ -160,11 +172,14 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   ac500_visible: false, ac500_6m_cuota: null, ac500_9m_cuota: null, ac500_12m_cuota: null,
   placa_c: null, poliza_vehiculo_c: null, poliza_vida_c: null,
   gastos_vhm_c: null, honorarios_c: null, gastos_int_c: null, alfombras_c: null,
+  transporte_c: null, accesorios_c: null, igtf_c: null, diferencial_c_activo: false,
   placa_cr: null, poliza_vehiculo_cr: null, poliza_vida_cr: null,
   gastos_vhm_cr: null, honorarios_cr: null, gastos_int_cr: null, alfombras_cr: null,
+  transporte_cr: null, accesorios_cr: null, igtf_cr: null, diferencial_cr_activo: false,
   placa_monto: 400,
   poliza_vehiculo_banco: null, poliza_vida_banco: null, honorarios_banco: null,
   gastos_internos_banco: null, alfombras_banco: null,
+  transporte_banco: null, accesorios_banco: null, igtf_banco: null, diferencial_banco_activo: true,
   diferencial_pct: 30, tasa_banco_pct: 16, cuotas_banco: 24,
   tasa_vhm_pct: null, cuotas_vhm: 24,
   inicial_pct: 40,
@@ -335,9 +350,11 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
     if (!v) return
     setSaving(prev => ({ ...prev, [id]: true }))
     const gcCalc = (v.placa_c ?? 0) + (v.poliza_vehiculo_c ?? 0) + (v.poliza_vida_c ?? 0) +
-      (v.gastos_vhm_c ?? 0) + (v.honorarios_c ?? 0) + (v.gastos_int_c ?? 0) + (v.alfombras_c ?? 0)
+      (v.gastos_vhm_c ?? 0) + (v.honorarios_c ?? 0) + (v.gastos_int_c ?? 0) + (v.alfombras_c ?? 0) +
+      (v.transporte_c ?? 0) + (v.accesorios_c ?? 0) + (v.igtf_c ?? 0)
     const gcrCalc = (v.placa_cr ?? 0) + (v.poliza_vehiculo_cr ?? 0) + (v.poliza_vida_cr ?? 0) +
-      (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0)
+      (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0) +
+      (v.transporte_cr ?? 0) + (v.accesorios_cr ?? 0) + (v.igtf_cr ?? 0)
     const { error } = await supabase.from('catalogo_ventas').update({
       brand: v.brand, model: v.model, img_url: v.img_url,
       cash: v.cash,
@@ -350,13 +367,19 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       placa_c: v.placa_c, poliza_vehiculo_c: v.poliza_vehiculo_c, poliza_vida_c: v.poliza_vida_c,
       gastos_vhm_c: v.gastos_vhm_c, honorarios_c: v.honorarios_c,
       gastos_int_c: v.gastos_int_c, alfombras_c: v.alfombras_c,
+      transporte_c: v.transporte_c, accesorios_c: v.accesorios_c, igtf_c: v.igtf_c,
+      diferencial_c_activo: v.diferencial_c_activo ?? false,
       placa_cr: v.placa_cr, poliza_vehiculo_cr: v.poliza_vehiculo_cr, poliza_vida_cr: v.poliza_vida_cr,
       gastos_vhm_cr: v.gastos_vhm_cr, honorarios_cr: v.honorarios_cr,
       gastos_int_cr: v.gastos_int_cr, alfombras_cr: v.alfombras_cr,
+      transporte_cr: v.transporte_cr, accesorios_cr: v.accesorios_cr, igtf_cr: v.igtf_cr,
+      diferencial_cr_activo: v.diferencial_cr_activo ?? false,
       placa_monto: v.placa_monto,
       poliza_vehiculo_banco: v.poliza_vehiculo_banco, poliza_vida_banco: v.poliza_vida_banco,
       honorarios_banco: v.honorarios_banco, gastos_internos_banco: v.gastos_internos_banco,
       alfombras_banco: v.alfombras_banco,
+      transporte_banco: v.transporte_banco, accesorios_banco: v.accesorios_banco, igtf_banco: v.igtf_banco,
+      diferencial_banco_activo: v.diferencial_banco_activo ?? true,
       diferencial_pct: v.diferencial_pct, tasa_banco_pct: v.tasa_banco_pct,
       cuotas_banco: v.cuotas_banco ?? 24,
       tasa_vhm_pct: v.tasa_vhm_pct, cuotas_vhm: v.cuotas_vhm ?? 24,
@@ -696,9 +719,15 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                       const precio  = v.cash ?? 0
                       const iva     = precio * 0.16
                       const gcC = (v.placa_c ?? 0) + (v.poliza_vehiculo_c ?? 0) + (v.poliza_vida_c ?? 0) +
-                        (v.gastos_vhm_c ?? 0) + (v.honorarios_c ?? 0) + (v.gastos_int_c ?? 0) + (v.alfombras_c ?? 0)
+                        (v.gastos_vhm_c ?? 0) + (v.honorarios_c ?? 0) + (v.gastos_int_c ?? 0) + (v.alfombras_c ?? 0) +
+                        (v.transporte_c ?? 0) + (v.accesorios_c ?? 0) + (v.igtf_c ?? 0)
                       const gcCr = (v.placa_cr ?? 0) + (v.poliza_vehiculo_cr ?? 0) + (v.poliza_vida_cr ?? 0) +
-                        (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0)
+                        (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0) +
+                        (v.transporte_cr ?? 0) + (v.accesorios_cr ?? 0) + (v.igtf_cr ?? 0)
+                      // Diferencial cambiario opcional por modalidad (Rojas lo activa por caso).
+                      // El % sale de las tasas globales BCV/USDT y aplica sobre el precio base.
+                      const difC  = (v.diferencial_c_activo && difGlobalPct > 0) ? precio * difGlobalPct : 0
+                      const difCr = (v.diferencial_cr_activo && difGlobalPct > 0) ? precio * difGlobalPct : 0
                       const cuota   = v.tasa_credito ?? 0
                       const nCuotas = v.cuotas_vhm ?? 24
                       const fmtN    = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
@@ -743,9 +772,32 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                                 <span className={rowLbl}>Alfombras ($)</span>
                                 <NumField className={itemsCls} value={v.alfombras_c} placeholder="0" onCommit={n => update(v.id, 'alfombras_c', n)} />
                               </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Transporte ($)</span>
+                                <NumField className={itemsCls} value={v.transporte_c} placeholder="0" onCommit={n => update(v.id, 'transporte_c', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Accesorios ($)</span>
+                                <NumField className={itemsCls} value={v.accesorios_c} placeholder="0" onCommit={n => update(v.id, 'accesorios_c', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>IGTF ($)</span>
+                                <NumField className={itemsCls} value={v.igtf_c} placeholder="0" onCommit={n => update(v.id, 'igtf_c', n)} />
+                              </div>
+                              {/* Diferencial cambiario (opcional) */}
+                              <div className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                <div className="min-w-0">
+                                  <span className="text-xs font-semibold text-gray-600">Diferencial cambiario</span>
+                                  <p className="text-[10px] text-gray-400 leading-tight">
+                                    {difGlobalPct > 0 ? `${(difGlobalPct * 100).toFixed(2)}% s/ precio base` : 'Configura las tasas'}
+                                    {v.diferencial_c_activo ? ` · $${fmtN(difC)}` : ''}
+                                  </p>
+                                </div>
+                                <Toggle on={!!v.diferencial_c_activo} onClick={() => update(v.id, 'diferencial_c_activo', !v.diferencial_c_activo)} />
+                              </div>
                               <div className="flex justify-between items-center bg-amber-50 rounded-lg px-3 py-2 mt-1">
                                 <span className="text-xs font-bold text-amber-800">Total gastos contado</span>
-                                <span className="font-mono text-sm font-bold text-amber-800">${fmtN(gcC)}</span>
+                                <span className="font-mono text-sm font-bold text-amber-800">${fmtN(gcC + difC)}</span>
                               </div>
                             </div>
 
@@ -754,8 +806,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                                 <div className="flex justify-between text-gray-300"><span>100% Precio base</span><span className="font-mono">${fmtN(precio)}</span></div>
                                 <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmtN(iva)}</span></div>
                                 <div className="flex justify-between text-gray-400 text-[11px]"><span>Gastos (suma)</span><span className="font-mono">${fmtN(gcC)}</span></div>
+                                {difC > 0 && <div className="flex justify-between text-gray-400 text-[11px]"><span>Diferencial cambiario</span><span className="font-mono">${fmtN(difC)}</span></div>}
                                 <div className="flex justify-between text-yellow-400 font-bold border-t border-gray-600 pt-1.5">
-                                  <span>TOTAL A PAGAR</span><span className="font-mono">${fmtN(precio + iva + gcC)}</span>
+                                  <span>TOTAL A PAGAR</span><span className="font-mono">${fmtN(precio + iva + gcC + difC)}</span>
                                 </div>
                               </div>
                             )}
@@ -795,9 +848,32 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                                 <span className={rowLbl}>Alfombras ($)</span>
                                 <NumField className={itemsCls} value={v.alfombras_cr} placeholder="0" onCommit={n => update(v.id, 'alfombras_cr', n)} />
                               </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Transporte ($)</span>
+                                <NumField className={itemsCls} value={v.transporte_cr} placeholder="0" onCommit={n => update(v.id, 'transporte_cr', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>Accesorios ($)</span>
+                                <NumField className={itemsCls} value={v.accesorios_cr} placeholder="0" onCommit={n => update(v.id, 'accesorios_cr', n)} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 items-center">
+                                <span className={rowLbl}>IGTF ($)</span>
+                                <NumField className={itemsCls} value={v.igtf_cr} placeholder="0" onCommit={n => update(v.id, 'igtf_cr', n)} />
+                              </div>
+                              {/* Diferencial cambiario (opcional) */}
+                              <div className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                <div className="min-w-0">
+                                  <span className="text-xs font-semibold text-gray-600">Diferencial cambiario</span>
+                                  <p className="text-[10px] text-gray-400 leading-tight">
+                                    {difGlobalPct > 0 ? `${(difGlobalPct * 100).toFixed(2)}% s/ precio base` : 'Configura las tasas'}
+                                    {v.diferencial_cr_activo ? ` · $${fmtN(difCr)}` : ''}
+                                  </p>
+                                </div>
+                                <Toggle on={!!v.diferencial_cr_activo} onClick={() => update(v.id, 'diferencial_cr_activo', !v.diferencial_cr_activo)} />
+                              </div>
                               <div className="flex justify-between items-center bg-emerald-50 rounded-lg px-3 py-2 mt-1">
                                 <span className="text-xs font-bold text-emerald-800">Total gastos crédito</span>
-                                <span className="font-mono text-sm font-bold text-emerald-800">${fmtN(gcCr)}</span>
+                                <span className="font-mono text-sm font-bold text-emerald-800">${fmtN(gcCr + difCr)}</span>
                               </div>
                             </div>
 
@@ -809,8 +885,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                                 <div className="flex justify-between text-gray-300"><span>{(iniPct * 100).toFixed(0)}% Precio base</span><span className="font-mono">${fmtN(precio * iniPct)}</span></div>
                                 <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmtN(iva)}</span></div>
                                 <div className="flex justify-between text-gray-400 text-[11px]"><span>Gastos (suma)</span><span className="font-mono">${fmtN(gcCr)}</span></div>
+                                {difCr > 0 && <div className="flex justify-between text-gray-400 text-[11px]"><span>Diferencial cambiario</span><span className="font-mono">${fmtN(difCr)}</span></div>}
                                 <div className="flex justify-between text-emerald-400 font-bold border-t border-gray-600 pt-1.5">
-                                  <span>TOTAL INICIAL</span><span className="font-mono">${fmtN(precio * iniPct + iva + gcCr)}</span>
+                                  <span>TOTAL INICIAL</span><span className="font-mono">${fmtN(precio * iniPct + iva + gcCr + difCr)}</span>
                                 </div>
                                 <div className="flex justify-between text-gray-400 text-[11px]"><span>Financiamiento {(finPct * 100).toFixed(0)}%</span><span className="font-mono">${fmtN(precio * finPct)}</span></div>
                                 {v.tasa_vhm_pct && <div className="flex justify-between text-gray-400 text-[11px]"><span>Tasa interés</span><span className="font-mono">{v.tasa_vhm_pct}% anual</span></div>}
@@ -850,14 +927,22 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                       <Field label="Alfombras ($)">
                         <NumField className={inputCls} value={v.alfombras_banco} placeholder="0" onCommit={n => update(v.id, 'alfombras_banco', n)} />
                       </Field>
-                      <Field label="Diferencial cambiario (global)">
-                        <input
-                          className={`${inputCls} bg-gray-100 cursor-not-allowed`}
-                          type="text"
-                          readOnly
-                          value={difGlobalPct > 0 ? `${(difGlobalPct * 100).toFixed(2)}% (BCV/USDT)` : 'Configura las tasas'}
-                          title="El diferencial cambiario se calcula con las tasas BCV y USDT del panel de Tasas y aplica a todos los carros"
-                        />
+                      <Field label="Transporte ($)">
+                        <NumField className={inputCls} value={v.transporte_banco} placeholder="0" onCommit={n => update(v.id, 'transporte_banco', n)} />
+                      </Field>
+                      <Field label="Accesorios ($)">
+                        <NumField className={inputCls} value={v.accesorios_banco} placeholder="0" onCommit={n => update(v.id, 'accesorios_banco', n)} />
+                      </Field>
+                      <Field label="IGTF ($)">
+                        <NumField className={inputCls} value={v.igtf_banco} placeholder="0" onCommit={n => update(v.id, 'igtf_banco', n)} />
+                      </Field>
+                      <Field label="Diferencial cambiario (BCV/USDT)">
+                        <div className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 h-[38px]">
+                          <span className="text-xs font-semibold text-gray-600 truncate">
+                            {difGlobalPct > 0 ? `${(difGlobalPct * 100).toFixed(2)}% s/ financiamiento` : 'Configura las tasas'}
+                          </span>
+                          <Toggle on={v.diferencial_banco_activo !== false} onClick={() => update(v.id, 'diferencial_banco_activo', !(v.diferencial_banco_activo !== false))} />
+                        </div>
                       </Field>
                       <Field label="Tasa banco (% anual)">
                         <NumField className={inputCls} value={v.tasa_banco_pct} placeholder="16" onCommit={n => update(v.id, 'tasa_banco_pct', n)} />
@@ -872,8 +957,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                       const placa = v.placa_monto ?? 400
                       const totalVeh = precio + iva + placa
                       const financiamiento = totalVeh * 0.70
-                      const diferencial = financiamiento * difGlobalPct
-                      const gastosFijos = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0)
+                      const diferencial = (v.diferencial_banco_activo !== false) ? financiamiento * difGlobalPct : 0
+                      const gastosFijos = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0) +
+                        (v.transporte_banco ?? 0) + (v.accesorios_banco ?? 0) + (v.igtf_banco ?? 0)
                       const totalGastos = gastosFijos + diferencial
                       const inicial = totalVeh * 0.30
                       const totalInicial = inicial + totalGastos
@@ -995,8 +1081,12 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
         const hon_c         = quickV.honorarios_c ?? 0
         const gint_c        = quickV.gastos_int_c ?? 0
         const alfom_c       = quickV.alfombras_c ?? 0
-        const gcC           = placa_c + poliza_veh_c + poliza_vida_c + gvhm_c + hon_c + gint_c + alfom_c
-        const gc            = gcC > 0 ? gcC : (quickV.gc ?? 0)
+        const transp_c      = quickV.transporte_c ?? 0
+        const acces_c       = quickV.accesorios_c ?? 0
+        const igtf_c        = quickV.igtf_c ?? 0
+        const difC          = (quickV.diferencial_c_activo && difGlobalPct > 0) ? precio * difGlobalPct : 0
+        const gcC           = placa_c + poliza_veh_c + poliza_vida_c + gvhm_c + hon_c + gint_c + alfom_c + transp_c + acces_c + igtf_c
+        const gc            = (gcC > 0 ? gcC : (quickV.gc ?? 0)) + difC
         const totalC        = precio + iva + gc
 
         // Gastos crédito ítems
@@ -1007,8 +1097,12 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
         const hon_cr         = quickV.honorarios_cr ?? 0
         const gint_cr        = quickV.gastos_int_cr ?? 0
         const alfom_cr       = quickV.alfombras_cr ?? 0
-        const gcCr           = placa_cr + poliza_veh_cr + poliza_vida_cr + gvhm_cr + hon_cr + gint_cr + alfom_cr
-        const gcr            = gcCr > 0 ? gcCr : (quickV.gcr ?? 0)
+        const transp_cr      = quickV.transporte_cr ?? 0
+        const acces_cr       = quickV.accesorios_cr ?? 0
+        const igtf_cr        = quickV.igtf_cr ?? 0
+        const difCr          = (quickV.diferencial_cr_activo && difGlobalPct > 0) ? precio * difGlobalPct : 0
+        const gcCr           = placa_cr + poliza_veh_cr + poliza_vida_cr + gvhm_cr + hon_cr + gint_cr + alfom_cr + transp_cr + acces_cr + igtf_cr
+        const gcr            = (gcCr > 0 ? gcCr : (quickV.gcr ?? 0)) + difCr
         const ini40          = precio * 0.4
         const totalI         = ini40 + iva + gcr
         const fin60          = precio * 0.6
@@ -1050,6 +1144,10 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                         <div style={rowZero(hon_c)}><span style={lbl}>Hon. Profesionales:</span><span style={val}>${fmtQ(hon_c)}</span></div>
                         <div style={rowZero(gint_c)}><span style={lbl}>Gastos Internos:</span><span style={val}>${fmtQ(gint_c)}</span></div>
                         <div style={rowZero(alfom_c)}><span style={lbl}>Alfombras:</span><span style={val}>${fmtQ(alfom_c)}</span></div>
+                        <div style={rowZero(transp_c)}><span style={lbl}>Transporte:</span><span style={val}>${fmtQ(transp_c)}</span></div>
+                        <div style={rowZero(acces_c)}><span style={lbl}>Accesorios:</span><span style={val}>${fmtQ(acces_c)}</span></div>
+                        <div style={rowZero(igtf_c)}><span style={lbl}>IGTF:</span><span style={val}>${fmtQ(igtf_c)}</span></div>
+                        {difC > 0 && <div style={row}><span style={lbl}>Diferencial cambiario:</span><span style={val}>${fmtQ(difC)}</span></div>}
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 18px', background: '#fef3c7', borderBottom: '1px solid #f3f4f6' }}>
                           <span style={{ fontSize: 11, color: '#92400e', fontStyle: 'italic' }}>Póliza Seg. Vehículo, Traslado, Gastos, INTT, Gastos Notaría</span>
                           <span style={{ fontSize: 12, fontWeight: 700, color: '#92400e', fontFamily: 'monospace', flexShrink: 0, marginLeft: 8 }}>${fmtQ(gc)}</span>
@@ -1079,6 +1177,10 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                         <div style={rowZero(hon_cr)}><span style={lbl}>Hon. Profesionales:</span><span style={val}>${fmtQ(hon_cr)}</span></div>
                         <div style={rowZero(gint_cr)}><span style={lbl}>Gastos Internos:</span><span style={val}>${fmtQ(gint_cr)}</span></div>
                         <div style={rowZero(alfom_cr)}><span style={lbl}>Alfombras:</span><span style={val}>${fmtQ(alfom_cr)}</span></div>
+                        <div style={rowZero(transp_cr)}><span style={lbl}>Transporte:</span><span style={val}>${fmtQ(transp_cr)}</span></div>
+                        <div style={rowZero(acces_cr)}><span style={lbl}>Accesorios:</span><span style={val}>${fmtQ(acces_cr)}</span></div>
+                        <div style={rowZero(igtf_cr)}><span style={lbl}>IGTF:</span><span style={val}>${fmtQ(igtf_cr)}</span></div>
+                        {difCr > 0 && <div style={row}><span style={lbl}>Diferencial cambiario:</span><span style={val}>${fmtQ(difCr)}</span></div>}
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 18px', background: '#f0fdf4', borderBottom: '1px solid #f3f4f6' }}>
                           <span style={{ fontSize: 11, color: '#065f46', fontStyle: 'italic' }}>Póliza Seg. Vehículo, Traslado, Gastos, INTT, Gastos Notaría</span>
                           <span style={{ fontSize: 12, fontWeight: 700, color: '#065f46', fontFamily: 'monospace', flexShrink: 0, marginLeft: 8 }}>${fmtQ(gcr)}</span>
