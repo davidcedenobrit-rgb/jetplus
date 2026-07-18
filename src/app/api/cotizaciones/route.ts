@@ -5,6 +5,7 @@ import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-co
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 import { permitido } from '@/lib/rate-limit'
+import { calcularTotalesCotizacion } from '@/lib/cotizacion-calc'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -229,39 +230,27 @@ export async function POST(req: Request) {
     }
     const gastos = gastosBase + diferencial
 
-    let totalInicial: number
-    let financiamientoMonto: number | null = null
-    let cuotaMensual: number | null = null
-    let costoTotal: number
     // Meses del plan 100% Banco (editable por vehículo; por defecto 24)
     const mesesBanco = Math.max(1, Math.round(Number((vehiculo as { cuotas_banco?: number | null }).cuotas_banco) || 24))
 
-    if (plan === 'ac500' && ac500Schedule) {
-      totalInicial = ac500Schedule.reserva
-      costoTotal = ac500Schedule.total
-      financiamientoMonto = costoTotal - totalInicial
-      cuotaMensual = null
-    } else if (modalidad === 'contado') {
-      totalInicial = precioBase + iva + gastos
-      costoTotal = totalInicial
-    } else if (plan === 'banco_100') {
-      const inicialBanco = totalVehiculoBanco * 0.30
-      totalInicial = inicialBanco + gastos
-      financiamientoMonto = totalVehiculoBanco * 0.70
-      const tasaBanco = Number(vehiculo.tasa_banco_pct) || 16
-      const r = tasaBanco / 100 / 12
-      const financiamiento = totalVehiculoBanco * 0.70
-      cuotaMensual = r > 0
-        ? financiamiento * r * Math.pow(1 + r, mesesBanco) / (Math.pow(1 + r, mesesBanco) - 1)
-        : financiamiento / mesesBanco
-      costoTotal = totalInicial + cuotaMensual * mesesBanco
-    } else {
-      const inicial40 = precioBase * 0.4
-      totalInicial = inicial40 + iva + gastos
-      financiamientoMonto = precioBase * 0.6
-      cuotaMensual = Number(vehiculo.tasa_credito) || 0
-      costoTotal = totalInicial + cuotaMensual * 24
-    }
+    // Motor de cálculo único (mismo que usan editar y reactivar)
+    const totales = calcularTotalesCotizacion({
+      precioBase,
+      modalidad,
+      plan,
+      gastos,
+      placaMonto: Number(vehiculo.placa_monto) || 400,
+      tasaBancoPct: Number(vehiculo.tasa_banco_pct) || 16,
+      mesesBanco,
+      cuotaVehimotors: Number(vehiculo.tasa_credito) || 0,
+      ac500: (plan === 'ac500' && ac500Schedule)
+        ? { reserva: ac500Schedule.reserva, total: ac500Schedule.total }
+        : null,
+    })
+    const totalInicial = totales.totalInicial
+    const financiamientoMonto = totales.financiamientoMonto
+    const cuotaMensual = totales.cuotaMensual
+    const costoTotal = totales.costoTotal
 
     const hoy = new Date()
     const venc = new Date(hoy)

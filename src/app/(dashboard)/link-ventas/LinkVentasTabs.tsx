@@ -19,7 +19,7 @@ const TABS_VALIDOS: Tab[] = ['catalogo', 'ac500', 'vendedoras', 'cotizaciones', 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
 
-export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas }: { catalogo: any[]; ac500: any[]; showroomStock: ShowroomItem[]; tasas: { bcv: number; usdt: number } }) {
+export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas, puedeEditar = false }: { catalogo: any[]; ac500: any[]; showroomStock: ShowroomItem[]; tasas: { bcv: number; usdt: number }; puedeEditar?: boolean }) {
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams.get('tab') as Tab | null
   const initialTab: Tab = tabFromUrl && TABS_VALIDOS.includes(tabFromUrl) ? tabFromUrl : 'catalogo'
@@ -56,7 +56,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas }
       {tab === 'catalogo' && <VehiculosEditor initialVehiculos={catalogo} showroomStock={showroomStock} tasas={tasas} />}
       {tab === 'ac500' && <AC500Editor initial={ac500} />}
       {tab === 'vendedoras' && <VendedorasEditor />}
-      {tab === 'cotizaciones' && <CotizacionesTab />}
+      {tab === 'cotizaciones' && <CotizacionesTab puedeEditar={puedeEditar} />}
       {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} tasas={tasas} />}
       {tab === 'tasas' && <TasasEditor />}
       {tab === 'clientes' && <ClientesHistorialTab />}

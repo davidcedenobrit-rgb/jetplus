@@ -55,7 +55,7 @@ export default async function LinkVentasPage() {
         </a>
       </div>
 
-      <LinkVentasTabs catalogo={vehiculos ?? []} ac500={ac500 ?? []} showroomStock={showroomStock} tasas={tasas} />
+      <LinkVentasTabs catalogo={vehiculos ?? []} ac500={ac500 ?? []} showroomStock={showroomStock} tasas={tasas} puedeEditar={['jose', 'admin', 'director'].includes(rol)} />
     </div>
   )
 }

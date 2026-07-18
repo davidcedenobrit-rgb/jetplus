@@ -4,6 +4,20 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
+import { calcularTotalesCotizacion } from '@/lib/cotizacion-calc'
+
+// Editar/negociar montos de una cotización es potestad del director (Rojas).
+const ROLES_EDITAR = ['jose', 'admin', 'director']
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Acepta el rol de app_metadata (lo que usa el gating de las pantallas) o el de
+// la tabla usuarios, para que la UI y la API nunca se contradigan.
+async function puedeEditarCotizaciones(supabase: any, authUser: any): Promise<boolean> {
+  const rolMeta = (authUser?.app_metadata?.rol as string) ?? ''
+  if (ROLES_EDITAR.includes(rolMeta)) return true
+  const { data: usuario } = await supabase.from('usuarios').select('rol').eq('id', authUser.id).single()
+  return ROLES_EDITAR.includes(usuario?.rol ?? '')
+}
 
 function fmtDate(d: Date | string) {
   const date = typeof d === 'string' ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')) : d
@@ -23,6 +37,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // Editar cotización completa (todos los campos + reenvío opcional + auditoría)
     if (body.accion === 'editar_completa') {
+      // Solo el director (Rojas) puede editar/negociar montos.
+      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+        return NextResponse.json({ error: 'Solo el director puede editar cotizaciones' }, { status: 403 })
+      }
+
       const { data: cotActual } = await supabase
         .from('cotizaciones')
         .select('*')
@@ -46,34 +65,64 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: 'Gastos inválidos' }, { status: 400 })
       if (!['contado', 'credito_24'].includes(modalidad))
         return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
-      if (!['vehimotors', 'banco_100'].includes(plan))
+      if (!['vehimotors', 'banco_100', 'ac500'].includes(plan))
         return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
       if (!cliente_nombre?.trim() || !cliente_ci_rif?.trim() || !cliente_correo?.trim())
         return NextResponse.json({ error: 'Nombre, C.I./RIF y correo son obligatorios' }, { status: 400 })
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente_correo.trim()))
         return NextResponse.json({ error: 'Correo del cliente inválido' }, { status: 400 })
 
-      // Recalcular
-      const iva_monto = precio_base * 0.16
+      // Recalcular con el motor único. Para banco, la placa y la tasa del banco
+      // salen del catálogo (no se guardan en la fila); los meses del banco sí.
+      let placaMonto = 400
+      let tasaBancoPct = Number(cotActual.tasa_banco_pct) || 16
+      if (plan === 'banco_100' && cotActual.vehiculo_id) {
+        const { data: veh } = await supabase
+          .from('catalogo_ventas')
+          .select('placa_monto, tasa_banco_pct')
+          .eq('id', cotActual.vehiculo_id)
+          .maybeSingle()
+        if (veh) {
+          placaMonto = Number(veh.placa_monto) || 400
+          tasaBancoPct = Number(veh.tasa_banco_pct) || 16
+        }
+      }
+
+      let iva_monto: number
       let total_inicial: number
       let financiamiento_monto: number | null = null
       let cuota_mensual_final: number | null = null
       let costo_total: number
 
-      if (modalidad === 'contado') {
-        total_inicial = precio_base + iva_monto + gastos_monto
-        costo_total = total_inicial
-      } else if (plan === 'banco_100') {
-        const totalVeh = precio_base + iva_monto
-        total_inicial = totalVeh * 0.30 + gastos_monto
-        financiamiento_monto = totalVeh * 0.70
-        cuota_mensual_final = typeof cuota_mensual === 'number' ? cuota_mensual : null
-        costo_total = total_inicial + (cuota_mensual_final ?? 0) * 24
+      if (plan === 'ac500') {
+        // El esquema AC500 no depende de precio/gastos; se conservan los montos.
+        iva_monto = Number(cotActual.iva_monto) || 0
+        total_inicial = Number(cotActual.total_inicial) || 0
+        financiamiento_monto = cotActual.financiamiento_monto != null ? Number(cotActual.financiamiento_monto) : null
+        cuota_mensual_final = cotActual.cuota_mensual != null ? Number(cotActual.cuota_mensual) : null
+        costo_total = Number(cotActual.costo_total) || 0
       } else {
-        total_inicial = precio_base * 0.4 + iva_monto + gastos_monto
-        financiamiento_monto = precio_base * 0.6
-        cuota_mensual_final = typeof cuota_mensual === 'number' ? cuota_mensual : null
-        costo_total = total_inicial + (cuota_mensual_final ?? 0) * 24
+        const mesesBanco = Math.max(1, Math.round(Number(cotActual.cuotas_banco) || 24))
+        const t = calcularTotalesCotizacion({
+          precioBase: precio_base,
+          modalidad,
+          plan,
+          gastos: gastos_monto,
+          placaMonto,
+          tasaBancoPct,
+          mesesBanco,
+          cuotaVehimotors: typeof cuota_mensual === 'number' ? cuota_mensual : (Number(cotActual.cuota_mensual) || 0),
+        })
+        iva_monto = t.iva
+        total_inicial = t.totalInicial
+        financiamiento_monto = t.financiamientoMonto
+        cuota_mensual_final = t.cuotaMensual
+        costo_total = t.costoTotal
+        // Banco: Rojas puede fijar manualmente la cuota negociada (recalcula el costo con sus meses).
+        if (plan === 'banco_100' && typeof cuota_mensual === 'number') {
+          cuota_mensual_final = cuota_mensual
+          costo_total = total_inicial + cuota_mensual * (t.mesesBanco ?? mesesBanco)
+        }
       }
 
       // Re-vincular cliente_id si el CI/RIF ahora coincide con un cliente existente
@@ -163,7 +212,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             plan,
             ivaMonto: iva_monto,
             gastosMonto: gastos_monto,
-            totalVehiculo: plan === 'banco_100' ? precio_base + iva_monto : undefined,
+            totalVehiculo: plan === 'banco_100' ? precio_base + iva_monto + placaMonto : undefined,
             totalInicial: total_inicial,
             financiamientoMonto: financiamiento_monto,
             cuotaMensual: cuota_mensual_final,
@@ -188,6 +237,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // Editar montos (compatibilidad con la acción anterior)
     if (body.accion === 'editar_montos') {
+      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+        return NextResponse.json({ error: 'Solo el director puede editar cotizaciones' }, { status: 403 })
+      }
       const { precio_base, gastos_monto, cuota_mensual, modalidad, plan } = body
 
       if (typeof precio_base !== 'number' || precio_base <= 0)

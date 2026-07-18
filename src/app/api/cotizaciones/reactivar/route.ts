@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
+import { calcularTotalesCotizacion } from '@/lib/cotizacion-calc'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
     // 3. Cargar precios ACTUALES del catálogo
     const { data: vehiculo } = await supabase
       .from('catalogo_ventas')
-      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, transporte_banco, accesorios_banco, igtf_banco, diferencial_pct, tasa_banco_pct, inicial_pct, diferencial_c_activo, diferencial_cr_activo, diferencial_banco_activo')
+      .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, transporte_banco, accesorios_banco, igtf_banco, diferencial_pct, tasa_banco_pct, cuotas_banco, inicial_pct, diferencial_c_activo, diferencial_cr_activo, diferencial_banco_activo')
       .eq('id', original.vehiculo_id)
       .single()
 
@@ -176,36 +177,27 @@ export async function POST(req: Request) {
     }
     const gastos = gastosBase + diferencial
 
-    let totalInicial: number
-    let financiamientoMonto: number | null = null
-    let cuotaMensual: number | null = null
-    let costoTotal: number
     const iniPct = (Number(vehiculo.inicial_pct) || 40) / 100
 
-    if (plan === 'ac500' && ac500Schedule) {
-      totalInicial = ac500Schedule.reserva
-      costoTotal = ac500Schedule.total
-      financiamientoMonto = costoTotal - totalInicial
-      cuotaMensual = null
-    } else if (modalidad === 'contado') {
-      totalInicial = precioBase + iva + gastos
-      costoTotal = totalInicial
-    } else if (plan === 'banco_100') {
-      const inicialBanco = totalVehiculoBanco * 0.30
-      totalInicial = inicialBanco + gastos
-      financiamientoMonto = totalVehiculoBanco * 0.70
-      const tasaBanco = Number(vehiculo.tasa_banco_pct) || 16
-      const r = tasaBanco / 100 / 12
-      const financiamiento = totalVehiculoBanco * 0.70
-      cuotaMensual = financiamiento * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
-      costoTotal = totalInicial + cuotaMensual * 24
-    } else {
-      const inicial = precioBase * iniPct
-      totalInicial = inicial + iva + gastos
-      financiamientoMonto = precioBase * (1 - iniPct)
-      cuotaMensual = Number(vehiculo.tasa_credito) || 0
-      costoTotal = totalInicial + cuotaMensual * 24
-    }
+    // Motor de cálculo único (mismo que crear y editar)
+    const totalesR = calcularTotalesCotizacion({
+      precioBase,
+      modalidad,
+      plan,
+      gastos,
+      placaMonto: Number(vehiculo.placa_monto) || 400,
+      tasaBancoPct: Number(vehiculo.tasa_banco_pct) || 16,
+      mesesBanco: Math.max(1, Math.round(Number(vehiculo.cuotas_banco) || 24)),
+      cuotaVehimotors: Number(vehiculo.tasa_credito) || 0,
+      inicialPctVehimotors: iniPct,
+      ac500: (plan === 'ac500' && ac500Schedule)
+        ? { reserva: ac500Schedule.reserva, total: ac500Schedule.total }
+        : null,
+    })
+    const totalInicial = totalesR.totalInicial
+    const financiamientoMonto = totalesR.financiamientoMonto
+    const cuotaMensual = totalesR.cuotaMensual
+    const costoTotal = totalesR.costoTotal
 
     // 5. Calcular comparativa INTERNA (no se muestra en la cotización al cliente)
     const comparativa: Comparativa = {
@@ -271,6 +263,7 @@ export async function POST(req: Request) {
         ac500_vehiculo_id: original.ac500_vehiculo_id,
         ac500_meses: original.ac500_meses,
         ac500_cuotas: original.ac500_cuotas,
+        cuotas_banco: plan === 'banco_100' ? Math.max(1, Math.round(Number(vehiculo.cuotas_banco) || 24)) : null,
         reactivada_de: cotizacionOriginalId,
         comparativa,
       }])

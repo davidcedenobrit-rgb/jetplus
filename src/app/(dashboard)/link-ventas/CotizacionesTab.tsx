@@ -211,11 +211,12 @@ function MontoRow({ label, value, highlight }: { label: string; value: number | 
 }
 
 /* ── Detail Panel ── */
-function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange }: {
+function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange, puedeEditar }: {
   cot: Cotizacion
   onClose: () => void
   onEstadoChange: (id: string, estado: Estado, motivo: string | null) => void
   onMontosChange: (id: string, partial: Partial<Cotizacion>) => void
+  puedeEditar: boolean
 }) {
   const router = useRouter()
   const [cot, setCot] = useState(cotInicial)
@@ -405,10 +406,14 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange 
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Desglose económico</p>
-              <button onClick={() => { setEditando(e => !e); setEError(''); setESuccessMsg('') }}
-                className="text-[11px] font-bold text-oriental-red hover:underline">
-                {editando ? 'Cancelar edición' : 'Editar cotización'}
-              </button>
+              {puedeEditar ? (
+                <button onClick={() => { setEditando(e => !e); setEError(''); setESuccessMsg('') }}
+                  className="text-[11px] font-bold text-oriental-red hover:underline">
+                  {editando ? 'Cancelar edición' : 'Editar cotización'}
+                </button>
+              ) : (
+                <span className="text-[10px] text-gray-400" title="Solo José Rojas puede editar montos">Solo el director edita montos</span>
+              )}
             </div>
 
             {eSuccessMsg && !editando && (
@@ -660,7 +665,7 @@ function concesLabel(id: string | null | undefined, mapa: Record<string, string>
   return CONCES_CORTO[id] ?? mapa[id] ?? id
 }
 
-export default function CotizacionesTab() {
+export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?: boolean }) {
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<Filtro>('todas')
@@ -745,6 +750,7 @@ export default function CotizacionesTab() {
           onClose={() => setSelected(null)}
           onEstadoChange={handleEstadoChange}
           onMontosChange={handleMontosChange}
+          puedeEditar={puedeEditar}
         />
       )}
 
