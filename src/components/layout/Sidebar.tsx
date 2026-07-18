@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, FileBarChart2
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, FileBarChart2, Link2
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
 
@@ -105,6 +105,7 @@ const SECTIONS: NavSection[] = [
     icon: Building2,
     links: [
       { href: '/vehimotors',              label: 'Reportes de pagos', icon: Building2, roles: DIR, exact: true },
+      { href: '/vehimotors/asignaciones', label: 'Asignaciones y Ventas', icon: Link2, roles: DIR },
       { href: '/vehimotors/reportar',     label: 'Reportar pagos',    icon: Zap,       roles: DIR },
       { href: '/vehimotors/conciliacion', label: 'Conciliación',      icon: Wallet,    roles: DIR },
       { href: '/vehimotors/custodia',     label: 'Fondos en custodia', icon: Coins,    roles: DIR },

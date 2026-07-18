@@ -10,6 +10,7 @@ import VincularCliente from './VincularCliente'
 import EditarVehiculo from './EditarVehiculo'
 import ShowroomDocumentos from '../../showroom/[id]/ShowroomDocumentos'
 import ServiciosVehiculo from './ServiciosVehiculo'
+import AsignarClienteButton from './AsignarClienteButton'
 
 export default async function VehiculoDetallePage({
   params,
@@ -271,6 +272,7 @@ export default async function VehiculoDetallePage({
                 >
                   <CreditCard size={13} /> Crear crédito
                 </Link>
+                <AsignarClienteButton vehiculoId={id} tieneCliente={!!cliente} numeroSaActual={(vehiculo as any).numero_sa ?? null} />
                 <EditarVehiculo
                   vehiculoId={id}
                   vehiculo={{
