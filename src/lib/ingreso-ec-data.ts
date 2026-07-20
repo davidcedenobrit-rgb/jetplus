@@ -13,10 +13,35 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null, 
   // Cuotas aplicadas a este ingreso
   const { data: raw, error: rawErr } = await admin
     .from('cuota_ingresos')
-    .select('monto_aplicado, cuotas(numero_cuota, monto, fecha_vencimiento, credito_id, creditos(plan_tipo))')
+    .select('cuota_id, monto_aplicado, cuotas(id, numero_cuota, monto, monto_pagado, fecha_vencimiento, credito_id, creditos(plan_tipo))')
     .eq('ingreso_id', ingresoId)
 
   if (rawErr) console.error('[fetchECData] cuota_ingresos:', rawErr)
+
+  // Saldo de cada cuota AL MOMENTO de este recibo: se parte del saldo real de hoy
+  // (monto - monto_pagado, que incluye pagos hechos sin recibo, p.ej. al crear el
+  // crédito) y se le suman los pagos con recibo posteriores, para que un recibo
+  // reimpreso muestre el saldo que tenía en su momento.
+  const cuotaIds = (raw ?? []).map((ci: any) => ci.cuota_id).filter(Boolean)
+  const pagosPosterioresPorCuota: Record<string, number> = {}
+  if (cuotaIds.length > 0) {
+    const { data: ingActual } = await admin.from('ingresos').select('fecha_registro').eq('id', ingresoId).single()
+    const fechaActual = (ingActual as any)?.fecha_registro
+    if (fechaActual) {
+      const { data: hist } = await admin
+        .from('cuota_ingresos')
+        .select('cuota_id, monto_aplicado, ingresos!inner(id, fecha_registro, estado)')
+        .in('cuota_id', cuotaIds)
+      for (const p of (hist ?? []) as any[]) {
+        const est = p.ingresos?.estado
+        if (est === 'anulado' || est === 'rechazado') continue
+        if (p.ingresos?.id === ingresoId) continue
+        if (p.ingresos?.fecha_registro && p.ingresos.fecha_registro > fechaActual) {
+          pagosPosterioresPorCuota[p.cuota_id] = (pagosPosterioresPorCuota[p.cuota_id] ?? 0) + Number(p.monto_aplicado)
+        }
+      }
+    }
+  }
 
   const cuotasAplicadas = (raw ?? []).map((ci: any) => {
     const cuota = ci.cuotas
@@ -27,12 +52,16 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null, 
       : planTipo === 'asegurate_500' ? 'Asegúrate $500'
       : planTipo === 'credito_40_60' ? '40/60 Vehimotors'
       : 'Crédito'
+    const montoTotal = Number(cuota?.monto ?? 0)
+    const pagadoReal = Number(cuota?.monto_pagado ?? 0)
+    const posteriores = pagosPosterioresPorCuota[cuota?.id] ?? 0
     return {
       numeroCuota: cuota?.numero_cuota ?? 0,
       planNombre,
       fechaVencimiento: cuota?.fecha_vencimiento ?? null,
-      montoTotal: Number(cuota?.monto ?? 0),
+      montoTotal,
       montoAplicado: Number(ci.monto_aplicado),
+      saldoCuota: Math.max(0, montoTotal - pagadoReal + posteriores),
     }
   })
 

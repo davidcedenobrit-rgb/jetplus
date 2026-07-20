@@ -104,6 +104,7 @@ export interface ReciboPDFData {
     fechaVencimiento?: string | null
     montoTotal: number
     montoAplicado: number
+    saldoCuota?: number
   }>
   // Estado de cuenta
   ecTotalFinanciado?: number
@@ -275,7 +276,8 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
                 <Text style={[s.tableHeaderText, s.tableCellRight, { flex: 1 }]}>Pendiente</Text>
               </View>
               {data.cuotasAplicadas.map((ci, idx) => {
-                const pendiente = Math.max(0, ci.montoTotal - ci.montoAplicado)
+                // Saldo real de la cuota (incluye pagos sin recibo); fallback al cálculo simple.
+                const pendiente = ci.saldoCuota != null ? Math.max(0, ci.saldoCuota) : Math.max(0, ci.montoTotal - ci.montoAplicado)
                 return (
                   <View key={idx} style={s.tableRow}>
                     <Text style={[s.tableCell, { flex: 0.5, fontFamily: 'Helvetica-Bold' }]}>#{ci.numeroCuota}</Text>

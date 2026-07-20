@@ -75,24 +75,22 @@ export default async function IngresoDetallePage({
   const cuotaIdsAplicadas = (cuotasAplicadas ?? [])
     .map((ci: any) => ci.cuotas?.id)
     .filter(Boolean)
-  const pagosPreviosPorCuota: Record<string, number> = {}
+  // Pagos con recibo registrados DESPUÉS de este, para reconstruir el saldo AL
+  // MOMENTO de este recibo a partir de lo realmente pagado hoy (monto_pagado).
+  const pagosPosterioresPorCuota: Record<string, number> = {}
   if (cuotaIdsAplicadas.length > 0) {
-    // Traer todos los cuota_ingresos de estas cuotas, con la fecha de registro del ingreso asociado
     const { data: pagosHist } = await supabase
       .from('cuota_ingresos')
       .select('cuota_id, monto_aplicado, ingresos!inner(id, fecha_registro, estado)')
       .in('cuota_id', cuotaIdsAplicadas)
 
-    // Fecha del ingreso actual para comparar
     const fechaActual = ingreso.fecha_registro
     for (const p of (pagosHist ?? []) as any[]) {
-      // Ignorar ingresos anulados/rechazados
       const estIng = p.ingresos?.estado
       if (estIng === 'anulado' || estIng === 'rechazado') continue
-      // Solo sumar pagos APLICADOS EN INGRESOS ANTERIORES a este recibo
       if (p.ingresos?.id === id) continue // no cuentes este mismo
-      if (p.ingresos?.fecha_registro && p.ingresos.fecha_registro < fechaActual) {
-        pagosPreviosPorCuota[p.cuota_id] = (pagosPreviosPorCuota[p.cuota_id] ?? 0) + Number(p.monto_aplicado)
+      if (p.ingresos?.fecha_registro && p.ingresos.fecha_registro > fechaActual) {
+        pagosPosterioresPorCuota[p.cuota_id] = (pagosPosterioresPorCuota[p.cuota_id] ?? 0) + Number(p.monto_aplicado)
       }
     }
   }
@@ -463,9 +461,14 @@ export default async function IngresoDetallePage({
                             const placaCuota = vehCuota?.placa ?? cuota?.creditos?.placa ?? null
                             const montoTotal = Number(cuota?.monto ?? 0)
                             const aplicado = Number(ci.monto_aplicado)
-                            // Saldo AL MOMENTO del recibo = monto - (pagado antes de este recibo + este abono)
-                            const pagadoPrevio = pagosPreviosPorCuota[cuota?.id] ?? 0
-                            const saldoCuota = Math.max(0, montoTotal - pagadoPrevio - aplicado)
+                            // Saldo de la cuota AL MOMENTO del recibo. Parte del saldo real
+                            // de HOY (monto - monto_pagado, que incluye pagos hechos sin
+                            // recibo, p.ej. al crear el crédito) y le suma los pagos con
+                            // recibo posteriores, para que un recibo viejo reimpreso muestre
+                            // el saldo que tenía en su momento.
+                            const pagadoReal = Number(cuota?.monto_pagado ?? 0)
+                            const pagosPosteriores = pagosPosterioresPorCuota[cuota?.id] ?? 0
+                            const saldoCuota = Math.max(0, montoTotal - pagadoReal + pagosPosteriores)
                             return (
                               <tr key={idx} className="border-b border-gray-100 last:border-0">
                                 <td className="px-3 py-2 font-semibold text-oriental-black">#{cuota?.numero_cuota ?? '—'}</td>
