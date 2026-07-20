@@ -124,12 +124,23 @@ export async function POST(
         }
 
         // Arrastrar los documentos del carro (tabla archivos) al carro del destino.
+        // archivos.subido_por es obligatorio (FK a usuarios del destino), así que
+        // se atribuyen a un usuario del concesionario receptor.
         if (destVehId) {
           const { data: docs } = await admin
             .from('archivos')
             .select('tipo, url, nombre')
             .eq('showroom_vehiculo_id', showroomId)
           if (docs && docs.length) {
+            const { data: destUser } = await dest
+              .from('usuarios')
+              .select('id')
+              .in('rol', ['jose', 'admin', 'director'])
+              .limit(1)
+              .maybeSingle()
+            const subidoPor = destUser?.id
+              ?? (await dest.from('usuarios').select('id').limit(1).maybeSingle()).data?.id
+              ?? null
             const { data: yaHay } = await dest
               .from('archivos')
               .select('url')
@@ -139,9 +150,9 @@ export async function POST(
               .filter((d: any) => d.url && !urlsExistentes.has(d.url))
               .map((d: any) => ({
                 tipo: d.tipo, url: d.url, nombre: d.nombre ?? null,
-                showroom_vehiculo_id: destVehId, subido_por: null,
+                showroom_vehiculo_id: destVehId, subido_por: subidoPor,
               }))
-            if (nuevos.length) {
+            if (subidoPor && nuevos.length) {
               const { error: docErr } = await dest.from('archivos').insert(nuevos)
               if (docErr) console.error('[salida-alternativa] fallo copiando documentos:', docErr.message)
               else documentosCopiados = nuevos.length
