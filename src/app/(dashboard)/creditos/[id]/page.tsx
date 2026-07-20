@@ -254,9 +254,9 @@ export default async function CreditoDetallePage({
               entidadId={creditos.find((c: any) => c.plan_tipo === 'inicial_la_oriental')?.id ?? id}
             />
           )}
-          {vehiculo?.placa && (
+          {credito.cliente_id && (
             <Link
-              href={`/ingresos/nuevo?cliente=${credito.cliente_id}&vehiculo=${credito.vehiculo_id}&placa=${encodeURIComponent(vehiculo.placa)}`}
+              href={`/ingresos/nuevo?cliente=${credito.cliente_id}${credito.vehiculo_id ? `&vehiculo=${credito.vehiculo_id}` : ''}${vehiculo?.placa ? `&placa=${encodeURIComponent(vehiculo.placa)}` : ''}`}
               className="flex items-center gap-2 px-4 py-2 bg-oriental-red text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors"
             >
               <PlusCircle size={15} />
