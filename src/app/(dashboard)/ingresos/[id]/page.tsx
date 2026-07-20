@@ -160,17 +160,14 @@ export default async function IngresoDetallePage({
   if (ingreso.acuerdo_inicial_id) {
     const { data: acuerdo } = await supabase
       .from('acuerdos_inicial')
-      .select('monto_acordado, fecha_limite, estado')
+      .select('monto_acordado, monto_pagado, fecha_limite, estado')
       .eq('id', ingreso.acuerdo_inicial_id)
       .single()
     if (acuerdo) {
-      const { data: pagosDelAcuerdo } = await supabase
-        .from('ingresos')
-        .select('monto, estado')
-        .eq('acuerdo_inicial_id', ingreso.acuerdo_inicial_id)
-      const montoPagado = (pagosDelAcuerdo ?? [])
-        .filter((p: any) => p.estado !== 'anulado' && p.estado !== 'rechazado')
-        .reduce((s: number, p: any) => s + Number(p.monto ?? 0), 0)
+      // El "pagado" se toma del acuerdo (ya en USD: convierte los pagos en Bs a
+      // dólares). NO se re-suman los montos crudos, porque eso contaría los
+      // bolívares como si fueran dólares.
+      const montoPagado = Number(acuerdo.monto_pagado ?? 0)
       const montoAcordado = Number(acuerdo.monto_acordado ?? 0)
       const montoPendiente = Math.max(0, montoAcordado - montoPagado)
       const pct = montoAcordado > 0 ? Math.round((montoPagado / montoAcordado) * 100) : 0

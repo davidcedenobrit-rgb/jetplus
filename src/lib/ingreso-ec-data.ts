@@ -142,17 +142,13 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null, 
   if (acuerdoInicialId) {
     const { data: acuerdo } = await admin
       .from('acuerdos_inicial')
-      .select('monto_acordado, fecha_limite')
+      .select('monto_acordado, monto_pagado, fecha_limite')
       .eq('id', acuerdoInicialId)
       .single()
     if (acuerdo) {
-      const { data: pagosDelAcuerdo } = await admin
-        .from('ingresos')
-        .select('monto, estado')
-        .eq('acuerdo_inicial_id', acuerdoInicialId)
-      const montoPagado = (pagosDelAcuerdo ?? [])
-        .filter((p: any) => p.estado !== 'anulado' && p.estado !== 'rechazado')
-        .reduce((s: number, p: any) => s + Number(p.monto ?? 0), 0)
+      // El "pagado" se toma del acuerdo (ya en USD: convierte los pagos en Bs a
+      // dólares). Re-sumar los montos crudos contaría los bolívares como dólares.
+      const montoPagado = Number((acuerdo as any).monto_pagado ?? 0)
       const montoAcordado = Number(acuerdo.monto_acordado ?? 0)
       const montoPendiente = Math.max(0, montoAcordado - montoPagado)
       const pct = montoAcordado > 0 ? Math.round((montoPagado / montoAcordado) * 100) : 0
