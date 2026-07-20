@@ -1040,6 +1040,7 @@ function NuevoIngresoPageInner() {
             Detalle del pago
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 1. Concepto */}
             <div className="md:col-span-2">
               <label className="label">Concepto *</label>
               <select className="select" value={concepto} onChange={e => setConcepto(e.target.value)} required>
@@ -1047,7 +1048,30 @@ function NuevoIngresoPageInner() {
                 {CONCEPTOS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div>
+            {/* 2. Centro de costo */}
+            <div className="md:col-span-2">
+              <label className="label">Centro de costo <span className="text-oriental-gray font-normal">(opcional)</span></label>
+              <select className="select" value={centroCosto} onChange={e => setCentroCosto(e.target.value)}>
+                <option value="">— Sin asignar —</option>
+                {centros.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </div>
+            {/* 3. Moneda */}
+            <div className="md:col-span-2">
+              <label className="label">Moneda *</label>
+              <div className="flex gap-2">
+                {(['USD', 'VES', 'USDT'] as const).map(m => (
+                  <button key={m} type="button" onClick={() => setMoneda(m)}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+                      moneda === m ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
+                    }`}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* 4. Monto (+ Tasa del día al lado cuando es en bolívares) */}
+            <div className={moneda === 'VES' ? '' : 'md:col-span-2'}>
               <label className="label">
                 Monto *
                 {cuotasSeleccionadas.size > 0 && (
@@ -1057,17 +1081,26 @@ function NuevoIngresoPageInner() {
               <input type="number" step="0.01" min="0" className="input font-semibold text-lg"
                 placeholder="0.00" value={monto} onChange={e => setMonto(e.target.value)} required />
             </div>
-            <div className="md:col-span-2">
-              <label className="label">IVA</label>
-              <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} exento={montoExento} setExento={setMontoExento} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="label">Centro de costo <span className="text-oriental-gray font-normal">(opcional)</span></label>
-              <select className="select" value={centroCosto} onChange={e => setCentroCosto(e.target.value)}>
-                <option value="">— Sin asignar —</option>
-                {centros.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
-            </div>
+            {moneda === 'VES' && (
+              <div>
+                <label className="label">Tasa del día (Bs/$) *</label>
+                <input type="number" step="0.0001" min="0" className="input font-semibold text-lg"
+                  placeholder="Ej: 36.5012" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} required />
+              </div>
+            )}
+            {/* Equivalente en dólares (más grande) */}
+            {moneda === 'VES' && parseFloat(monto) > 0 && parseFloat(tasaCambio) > 0 && (
+              <div className="md:col-span-2 -mt-1">
+                <div className="inline-flex items-baseline gap-2.5 rounded-xl bg-green-50 border border-green-200 px-4 py-2.5">
+                  <span className="text-[11px] font-bold text-green-700 uppercase tracking-wide">Equivale a</span>
+                  <span className="text-2xl font-extrabold text-green-800 font-mono tabular-nums">
+                    ${(parseFloat(monto) / parseFloat(tasaCambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-sm font-bold text-green-700">USD</span>
+                </div>
+              </div>
+            )}
+            {/* ¿De quién es este dinero? */}
             <div className="md:col-span-2">
               <label className="label">¿De quién es este dinero?</label>
               <div className="flex flex-wrap gap-2">
@@ -1086,31 +1119,11 @@ function NuevoIngresoPageInner() {
                 <p className="text-[11px] text-amber-600 mt-1.5">Este dinero no cuenta como ingreso propio: es custodia por entregar.</p>
               )}
             </div>
-            <div>
-              <label className="label">Moneda *</label>
-              <div className="flex gap-2">
-                {(['USD', 'VES', 'USDT'] as const).map(m => (
-                  <button key={m} type="button" onClick={() => setMoneda(m)}
-                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
-                      moneda === m ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'
-                    }`}>
-                    {m}
-                  </button>
-                ))}
-              </div>
+            {/* IVA */}
+            <div className="md:col-span-2">
+              <label className="label">IVA</label>
+              <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} exento={montoExento} setExento={setMontoExento} />
             </div>
-            {moneda === 'VES' && (
-              <div>
-                <label className="label">Tasa del día (Bs/$) *</label>
-                <input type="number" step="0.0001" min="0" className="input font-semibold"
-                  placeholder="Ej: 36.5012" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} required />
-                {tasaCambio && parseFloat(monto) > 0 && (
-                  <p className="text-xs text-oriental-gray mt-1">
-                    Equivale a ~${(parseFloat(monto) / parseFloat(tasaCambio)).toFixed(2)} USD
-                  </p>
-                )}
-              </div>
-            )}
             {METODOS_BS.includes(metodoPago) && moneda !== 'VES' && (
               <>
                 <div>
