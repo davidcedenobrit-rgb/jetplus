@@ -216,11 +216,8 @@ export default function NuevoEgresoPage() {
               <label className="label">Descripción detallada</label>
               <textarea className="textarea" rows={2} placeholder="Detalles adicionales..." value={descripcion} onChange={e => setDescripcion(e.target.value)} />
             </div>
-            <div>
-              <label className="label">Monto *</label>
-              <input type="number" step="0.01" min="0" className="input font-semibold" placeholder="0.00" value={monto} onChange={e => setMonto(e.target.value)} required />
-            </div>
-            <div>
+            {/* Moneda */}
+            <div className="md:col-span-2">
               <label className="label">Moneda *</label>
               <div className="flex gap-2">
                 {(['USD', 'VES'] as const).map(m => (
@@ -233,24 +230,37 @@ export default function NuevoEgresoPage() {
                 ))}
               </div>
             </div>
+            {/* Monto (+ Tasa del día al lado) */}
+            <div>
+              <label className="label">Monto *</label>
+              <input type="number" step="0.01" min="0" className="input font-semibold text-lg" placeholder="0.00" value={monto} onChange={e => setMonto(e.target.value)} required />
+            </div>
+            <div>
+              <label className="label">Tasa del día (Bs/$)</label>
+              <input type="number" step="0.0001" min="0" className="input font-semibold text-lg"
+                placeholder="Ej: 98.50" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} />
+            </div>
+            {/* Equivalente (más grande) */}
+            {parseFloat(monto) > 0 && parseFloat(tasaCambio) > 0 && (
+              <div className="md:col-span-2 -mt-1">
+                {moneda === 'VES' ? (
+                  <div className="inline-flex items-baseline gap-2.5 rounded-xl bg-green-50 border border-green-200 px-4 py-2.5">
+                    <span className="text-[11px] font-bold text-green-700 uppercase tracking-wide">Equivale a</span>
+                    <span className="text-2xl font-extrabold text-green-800 font-mono tabular-nums">${(parseFloat(monto) / parseFloat(tasaCambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-sm font-bold text-green-700">USD</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-baseline gap-2.5 rounded-xl bg-gray-50 border border-gray-200 px-4 py-2.5">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Equivale a</span>
+                    <span className="text-2xl font-extrabold text-oriental-black font-mono tabular-nums">Bs {(parseFloat(monto) * parseFloat(tasaCambio)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Fecha del egreso */}
             <div>
               <label className="label">Fecha del egreso *</label>
               <input type="date" className="input" value={fechaEgreso} onChange={e => setFechaEgreso(e.target.value)} required />
-            </div>
-            <div>
-              <label className="label">Tasa Bs/$ al momento del pago</label>
-              <input
-                type="number" step="0.0001" min="0"
-                className="input font-mono"
-                placeholder="Ej: 98.50"
-                value={tasaCambio}
-                onChange={e => setTasaCambio(e.target.value)}
-              />
-              {tasaCambio && parseFloat(monto) > 0 && !isNaN(parseFloat(tasaCambio)) && (
-                <p className="text-[11px] text-gray-500 mt-1">
-                  = Bs {(parseFloat(monto) * parseFloat(tasaCambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(parseFloat(monto) * parseFloat(tasaCambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}
-                </p>
-              )}
             </div>
             <div className="md:col-span-2">
               <label className="label">IVA</label>
