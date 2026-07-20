@@ -110,6 +110,7 @@ function NuevoIngresoPageInner() {
   const [montoBs, setMontoBs] = useState('')
   const [ivaAplica, setIvaAplica] = useState(false)
   const [ivaTasa, setIvaTasa] = useState('16')
+  const [montoExento, setMontoExento] = useState('')
   const [centros, setCentros] = useState<{ id: string; nombre: string }[]>([])
   const [centroCosto, setCentroCosto] = useState('')
   const [titularFondos, setTitularFondos] = useState<'propio' | 'vehimotors' | 'tercero'>('propio')
@@ -574,6 +575,7 @@ function NuevoIngresoPageInner() {
       acuerdo_acordado:  acuerdoInfo?.monto_acordado ?? 0,
       iva_aplica:        ivaAplica,
       iva_tasa:          ivaAplica ? (parseFloat(ivaTasa) || 0) : null,
+      monto_exento:      ivaAplica ? (parseFloat(montoExento) || 0) : null,
       centro_costo_id:   centroCosto || null,
       titular_fondos:    titularFondos,
       cuotas:            cuotasPayload,
@@ -1057,7 +1059,7 @@ function NuevoIngresoPageInner() {
             </div>
             <div className="md:col-span-2">
               <label className="label">IVA</label>
-              <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} />
+              <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} exento={montoExento} setExento={setMontoExento} />
             </div>
             <div className="md:col-span-2">
               <label className="label">Centro de costo <span className="text-oriental-gray font-normal">(opcional)</span></label>

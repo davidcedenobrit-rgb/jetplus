@@ -39,6 +39,7 @@ export default function NuevoEgresoPage() {
   const [numeroSa, setNumeroSa] = useState('')
   const [ivaAplica, setIvaAplica] = useState(false)
   const [ivaTasa, setIvaTasa] = useState('16')
+  const [montoExento, setMontoExento] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [categorias, setCategorias] = useState<{ clave: string; nombre: string }[]>([])
 
@@ -95,6 +96,7 @@ export default function NuevoEgresoPage() {
       proveedor_id: proveedor?.id ?? null,
       iva_aplica: ivaAplica,
       iva_tasa: ivaAplica ? (parseFloat(ivaTasa) || 0) : null,
+      monto_exento: ivaAplica ? (parseFloat(montoExento) || 0) : null,
       comprobantes,
     })
 
@@ -252,7 +254,7 @@ export default function NuevoEgresoPage() {
             </div>
             <div className="md:col-span-2">
               <label className="label">IVA</label>
-              <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} />
+              <IvaBloque aplica={ivaAplica} setAplica={setIvaAplica} tasa={ivaTasa} setTasa={setIvaTasa} total={parseFloat(monto) || 0} moneda={moneda} exento={montoExento} setExento={setMontoExento} />
             </div>
             <div>
               <label className="label">Método de pago</label>

@@ -27,6 +27,7 @@ export type CrearEgresoPayload = {
   proveedor_id: string | null
   iva_aplica?: boolean
   iva_tasa?: number | null
+  monto_exento?: number | null
   comprobantes: { url: string; nombre: string }[]
 }
 
@@ -79,11 +80,15 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
   const centroCostoId = payload.centro_costo_id?.trim() || null
   const proveedorId = payload.proveedor_id?.trim() || null
 
-  // IVA: monto es el total; si aplica, se desglosa base + IVA con la alícuota dada.
+  // IVA: monto es el total. En facturas mixtas, `monto_exento` es la parte sin
+  // IVA; el IVA se calcula solo sobre (total - exento). total = base + iva + exento.
   const ivaAplica = !!payload.iva_aplica
   const ivaTasa = ivaAplica ? (payload.iva_tasa ?? IVA_TASA_DEFAULT) : null
+  const montoExento = ivaAplica
+    ? Math.max(0, Math.min(Number(payload.monto_exento) || 0, parsed.data.monto))
+    : null
   const { base: baseImponible, iva: ivaMonto } = ivaAplica && ivaTasa
-    ? desglosarIva(parsed.data.monto, ivaTasa)
+    ? desglosarIva(parsed.data.monto - (montoExento ?? 0), ivaTasa)
     : { base: null as number | null, iva: null as number | null }
 
   // 3. Generar número de egreso y persistir (admin client — SECURITY DEFINER equivalente)
@@ -125,6 +130,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       iva_tasa:         ivaTasa,
       base_imponible:   baseImponible,
       iva_monto:        ivaMonto,
+      monto_exento:     montoExento && montoExento > 0 ? montoExento : null,
       estado:           'pendiente_aprobacion',
       registrado_por:   user.id,
     })

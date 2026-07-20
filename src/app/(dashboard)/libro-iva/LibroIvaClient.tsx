@@ -13,6 +13,7 @@ type Fila = {
   contraparte: string
   base: number
   iva: number
+  exento: number
   tasa: number | null
   total: number
   moneda: string
@@ -61,12 +62,12 @@ export default function LibroIvaClient() {
 
     const [ing, egr] = await Promise.all([
       fetchAll<Record<string, unknown>>((f, t) => supabase.from('ingresos')
-        .select('id, numero_recibo, fecha_pago, concepto, base_imponible, iva_monto, iva_tasa, monto, moneda, clientes(nombre)')
+        .select('id, numero_recibo, fecha_pago, concepto, base_imponible, iva_monto, monto_exento, iva_tasa, monto, moneda, clientes(nombre)')
         .eq('iva_aplica', true).neq('estado', 'anulado')
         .gte('fecha_pago', desde).lte('fecha_pago', hasta)
         .order('fecha_pago', { ascending: true }).range(f, t)),
       fetchAll<Record<string, unknown>>((f, t) => supabase.from('egresos')
-        .select('id, numero_egreso, fecha_egreso, concepto, base_imponible, iva_monto, iva_tasa, monto, moneda, beneficiario')
+        .select('id, numero_egreso, fecha_egreso, concepto, base_imponible, iva_monto, monto_exento, iva_tasa, monto, moneda, beneficiario')
         .eq('iva_aplica', true).neq('estado', 'anulado')
         .gte('fecha_egreso', desde).lte('fecha_egreso', hasta)
         .order('fecha_egreso', { ascending: true }).range(f, t)),
@@ -75,13 +76,13 @@ export default function LibroIvaClient() {
     setDebito(ing.map(r => ({
       id: String(r.id), numero: String(r.numero_recibo ?? ''), fecha: String(r.fecha_pago ?? ''),
       concepto: String(r.concepto ?? ''), contraparte: primerNombre(r.clientes),
-      base: Number(r.base_imponible ?? 0), iva: Number(r.iva_monto ?? 0), tasa: r.iva_tasa != null ? Number(r.iva_tasa) : null,
+      base: Number(r.base_imponible ?? 0), iva: Number(r.iva_monto ?? 0), exento: Number(r.monto_exento ?? 0), tasa: r.iva_tasa != null ? Number(r.iva_tasa) : null,
       total: Number(r.monto ?? 0), moneda: String(r.moneda ?? 'USD'),
     })))
     setCredito(egr.map(r => ({
       id: String(r.id), numero: String(r.numero_egreso ?? ''), fecha: String(r.fecha_egreso ?? ''),
       concepto: String(r.concepto ?? ''), contraparte: String(r.beneficiario ?? '—'),
-      base: Number(r.base_imponible ?? 0), iva: Number(r.iva_monto ?? 0), tasa: r.iva_tasa != null ? Number(r.iva_tasa) : null,
+      base: Number(r.base_imponible ?? 0), iva: Number(r.iva_monto ?? 0), exento: Number(r.monto_exento ?? 0), tasa: r.iva_tasa != null ? Number(r.iva_tasa) : null,
       total: Number(r.monto ?? 0), moneda: String(r.moneda ?? 'USD'),
     })))
     setLoading(false)
@@ -107,8 +108,8 @@ export default function LibroIvaClient() {
   const filas = tab === 'debito' ? debito : credito
 
   function exportarCsv() {
-    const rows = filas.map(f => [f.fecha, f.numero, f.contraparte, f.concepto, f.moneda, f.base.toFixed(2), f.iva.toFixed(2), f.total.toFixed(2)])
-    const head = ['Fecha', 'Documento', tab === 'debito' ? 'Cliente' : 'Beneficiario', 'Concepto', 'Moneda', 'Base', 'IVA', 'Total']
+    const rows = filas.map(f => [f.fecha, f.numero, f.contraparte, f.concepto, f.moneda, f.base.toFixed(2), f.iva.toFixed(2), f.exento.toFixed(2), f.total.toFixed(2)])
+    const head = ['Fecha', 'Documento', tab === 'debito' ? 'Cliente' : 'Beneficiario', 'Concepto', 'Moneda', 'Base', 'IVA', 'Exento', 'Total']
     const csv = [head, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
@@ -184,12 +185,13 @@ export default function LibroIvaClient() {
                   <th className="text-left px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">{tab === 'debito' ? 'Cliente' : 'Beneficiario'}</th>
                   <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Base</th>
                   <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">IVA</th>
+                  <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Exento</th>
                   <th className="text-right px-3 py-2 font-semibold text-oriental-gray text-xs uppercase tracking-wider">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filas.length === 0 ? (
-                  <tr><td colSpan={6} className="px-3 py-8 text-center text-oriental-gray">Sin documentos con IVA en este período.</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-oriental-gray">Sin documentos con IVA en este período.</td></tr>
                 ) : filas.map(f => (
                   <tr key={f.id} className="hover:bg-gray-50">
                     <td className="px-3 py-2 text-oriental-gray whitespace-nowrap">{f.fecha}</td>
@@ -197,6 +199,7 @@ export default function LibroIvaClient() {
                     <td className="px-3 py-2 text-oriental-black">{f.contraparte}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{f.moneda} {fmt(f.base)}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold">{f.moneda} {fmt(f.iva)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-oriental-gray">{f.exento > 0 ? `${f.moneda} ${fmt(f.exento)}` : '—'}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-oriental-gray">{f.moneda} {fmt(f.total)}</td>
                   </tr>
                 ))}

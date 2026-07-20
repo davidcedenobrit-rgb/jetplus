@@ -34,6 +34,7 @@ export type CrearIngresoPayload = {
   acuerdo_acordado: number
   iva_aplica?: boolean
   iva_tasa?: number | null
+  monto_exento?: number | null
   centro_costo_id?: string | null
   titular_fondos?: string | null
   // Cuotas ya calculadas por el cliente
@@ -110,11 +111,14 @@ export async function crearIngreso(payload: CrearIngresoPayload) {
   const updates: Record<string, unknown> = {}
   if (payload.iva_aplica) {
     const tasa = payload.iva_tasa ?? IVA_TASA_DEFAULT
-    const { base, iva } = desglosarIva(parsed.data.monto, tasa)
+    // Factura mixta: parte exenta sin IVA. El IVA se calcula solo sobre (total - exento).
+    const exento = Math.max(0, Math.min(Number(payload.monto_exento) || 0, parsed.data.monto))
+    const { base, iva } = desglosarIva(parsed.data.monto - exento, tasa)
     updates.iva_aplica = true
     updates.iva_tasa = tasa
     updates.base_imponible = base
     updates.iva_monto = iva
+    updates.monto_exento = exento > 0 ? exento : null
   }
   if (payload.centro_costo_id) updates.centro_costo_id = payload.centro_costo_id
   if (payload.titular_fondos && ['propio', 'vehimotors', 'tercero'].includes(payload.titular_fondos)) {

@@ -4,9 +4,11 @@ import { desglosarIva } from '@/lib/iva'
 
 // Bloque de IVA para los formularios de Ingresos y Egresos.
 // `total` es el monto que ya escribe el usuario; al activar IVA se muestra el
-// desglose base + IVA calculado con la alícuota indicada.
+// desglose base + IVA calculado con la alícuota indicada. `exento` es la parte
+// del total que NO lleva IVA (facturas mixtas): el IVA se calcula solo sobre
+// (total - exento), y total = base + IVA + exento.
 export default function IvaBloque({
-  aplica, setAplica, tasa, setTasa, total, moneda,
+  aplica, setAplica, tasa, setTasa, total, moneda, exento = '', setExento,
 }: {
   aplica: boolean
   setAplica: (v: boolean) => void
@@ -14,9 +16,13 @@ export default function IvaBloque({
   setTasa: (v: string) => void
   total: number
   moneda: string
+  exento?: string
+  setExento?: (v: string) => void
 }) {
   const tasaNum = parseFloat(tasa)
-  const { base, iva } = aplica && total > 0 && tasaNum > 0 ? desglosarIva(total, tasaNum) : { base: 0, iva: 0 }
+  const exentoNum = Math.max(0, Math.min(parseFloat(exento) || 0, total))
+  const gravado = Math.max(0, total - exentoNum)
+  const { base, iva } = aplica && gravado > 0 && tasaNum > 0 ? desglosarIva(gravado, tasaNum) : { base: 0, iva: 0 }
   const fmt = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   return (
@@ -41,14 +47,32 @@ export default function IvaBloque({
             </div>
             <span className="text-[11px] text-oriental-gray">0% = exento</span>
           </div>
+
+          {setExento && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-oriental-gray whitespace-nowrap">Monto exento</label>
+              <div className="relative">
+                <input
+                  type="number" step="0.01" min="0"
+                  value={exento}
+                  onChange={e => setExento(e.target.value)}
+                  placeholder="0,00"
+                  className="input w-36 text-sm"
+                />
+              </div>
+              <span className="text-[11px] text-oriental-gray">parte de la factura sin IVA</span>
+            </div>
+          )}
+
           {total > 0 && tasaNum > 0 && (
-            <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className={`grid gap-2 text-sm ${exentoNum > 0 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
               <Celda label="Base imponible" value={`${moneda} ${fmt(base)}`} />
               <Celda label={`IVA (${tasaNum}%)`} value={`${moneda} ${fmt(iva)}`} />
+              {exentoNum > 0 && <Celda label="Exento" value={`${moneda} ${fmt(exentoNum)}`} />}
               <Celda label="Total" value={`${moneda} ${fmt(total)}`} fuerte />
             </div>
           )}
-          <p className="text-[11px] text-oriental-gray">El monto que registras es el <b>total</b>; el sistema separa base e IVA para el libro fiscal.</p>
+          <p className="text-[11px] text-oriental-gray">El monto que registras es el <b>total</b>; el sistema separa base, IVA{exentoNum > 0 ? ' y exento' : ''} para el libro fiscal.</p>
         </div>
       )}
     </div>
