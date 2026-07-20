@@ -83,8 +83,10 @@ export async function POST(
   })
 
   // Sincronización entre concesionarios: si se transfiere a otro concesionario
-  // con base propia (ej. Ki Auto), el carro se crea en su showroom automáticamente.
+  // con base propia (ej. Ki Auto), el carro se crea en su showroom automáticamente
+  // y se arrastran sus documentos (Documentos preventa).
   let sincronizado = false
+  let documentosCopiados = 0
   if (tipo === 'transferido') {
     const target = targetConcesionario(String(destinatario ?? ''))
     if (target) {
@@ -92,31 +94,58 @@ export async function POST(
         const dest = createServiceClient(target.url, target.key)
         const placa = (sr.placa ?? '').trim() || null
         const vin = (sr.vin ?? '').trim() || null
-        // Evitar duplicados si ya se cargó antes (por VIN o placa)
-        let existe = false
+        // Ubicar el carro en el destino (por VIN o placa) para no duplicarlo.
+        let destVehId: string | null = null
         if (vin || placa) {
           const filtro = [vin ? `vin.eq.${vin}` : null, placa ? `placa.eq.${placa}` : null].filter(Boolean).join(',')
           const { data: dup } = await dest.from('vehiculos_showroom').select('id').or(filtro).limit(1)
-          existe = !!(dup && dup.length)
+          if (dup && dup.length) destVehId = dup[0].id
         }
-        if (existe) {
+        if (destVehId) {
           // Ya estaba cargado en Ki Auto: se considera sincronizado.
           sincronizado = true
         } else {
-          const { error: insErr } = await dest.from('vehiculos_showroom').insert({
+          const { data: nuevoVeh, error: insErr } = await dest.from('vehiculos_showroom').insert({
             marca: sr.marca, modelo: sr.modelo, version: sr.version ?? null, anio: sr.anio ?? null,
             color: sr.color ?? null, placa, vin, serial_motor: (sr.serial_motor ?? '').trim() || null,
             proforma_vehimotors: sr.proforma_vehimotors ?? null,
             estado: 'en_agencia', ubicacion: 'showroom',
             fecha_llegada: new Date().toISOString().slice(0, 10),
             observaciones: 'Transferido desde La Oriental',
-          })
+          }).select('id').single()
           // .insert() no lanza excepción: devuelve { error }. Solo marcamos
           // sincronizado cuando la fila se creó realmente en el destino.
-          if (insErr) {
-            console.error('[salida-alternativa] fallo al crear el carro en Ki Auto:', insErr.message)
+          if (insErr || !nuevoVeh) {
+            console.error('[salida-alternativa] fallo al crear el carro en Ki Auto:', insErr?.message)
           } else {
+            destVehId = nuevoVeh.id
             sincronizado = true
+          }
+        }
+
+        // Arrastrar los documentos del carro (tabla archivos) al carro del destino.
+        if (destVehId) {
+          const { data: docs } = await admin
+            .from('archivos')
+            .select('tipo, url, nombre')
+            .eq('showroom_vehiculo_id', showroomId)
+          if (docs && docs.length) {
+            const { data: yaHay } = await dest
+              .from('archivos')
+              .select('url')
+              .eq('showroom_vehiculo_id', destVehId)
+            const urlsExistentes = new Set((yaHay ?? []).map((a: any) => a.url))
+            const nuevos = docs
+              .filter((d: any) => d.url && !urlsExistentes.has(d.url))
+              .map((d: any) => ({
+                tipo: d.tipo, url: d.url, nombre: d.nombre ?? null,
+                showroom_vehiculo_id: destVehId, subido_por: null,
+              }))
+            if (nuevos.length) {
+              const { error: docErr } = await dest.from('archivos').insert(nuevos)
+              if (docErr) console.error('[salida-alternativa] fallo copiando documentos:', docErr.message)
+              else documentosCopiados = nuevos.length
+            }
           }
         }
       } catch (e) {
@@ -125,5 +154,5 @@ export async function POST(
     }
   }
 
-  return NextResponse.json({ ok: true, sincronizado })
+  return NextResponse.json({ ok: true, sincronizado, documentosCopiados })
 }
