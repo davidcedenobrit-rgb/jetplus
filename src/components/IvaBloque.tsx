@@ -45,7 +45,7 @@ export default function IvaBloque({
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-oriental-gray">%</span>
             </div>
-            <span className="text-[11px] text-oriental-gray">0% = exento</span>
+            <span className="text-[11px] text-oriental-gray">de la parte gravada</span>
           </div>
 
           {setExento && (
