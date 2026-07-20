@@ -142,13 +142,27 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null, 
   if (acuerdoInicialId) {
     const { data: acuerdo } = await admin
       .from('acuerdos_inicial')
-      .select('monto_acordado, monto_pagado, fecha_limite')
+      .select('monto_acordado, fecha_limite')
       .eq('id', acuerdoInicialId)
       .single()
     if (acuerdo) {
-      // El "pagado" se toma del acuerdo (ya en USD: convierte los pagos en Bs a
-      // dólares). Re-sumar los montos crudos contaría los bolívares como dólares.
-      const montoPagado = Number((acuerdo as any).monto_pagado ?? 0)
+      // Pagado del acuerdo AL MOMENTO de este recibo: suma en USD de los pagos no
+      // anulados registrados hasta este recibo (los Bs se convierten con su tasa).
+      const { data: ingEste } = await admin.from('ingresos').select('fecha_registro').eq('id', ingresoId).single()
+      const fechaEste = (ingEste as any)?.fecha_registro
+      const { data: pagosAcuerdo } = await admin
+        .from('ingresos')
+        .select('id, monto, moneda, tasa_cambio, estado, fecha_registro')
+        .eq('acuerdo_inicial_id', acuerdoInicialId)
+      const usdDe = (p: any) => {
+        const m = Number(p.monto ?? 0)
+        if (p.moneda === 'VES') { const t = Number(p.tasa_cambio ?? 0); return t > 0 ? m / t : 0 }
+        return m
+      }
+      const montoPagado = (pagosAcuerdo ?? [])
+        .filter((p: any) => p.estado !== 'anulado' && p.estado !== 'rechazado')
+        .filter((p: any) => p.id === ingresoId || !fechaEste || (p.fecha_registro && p.fecha_registro <= fechaEste))
+        .reduce((s: number, p: any) => s + usdDe(p), 0)
       const montoAcordado = Number(acuerdo.monto_acordado ?? 0)
       const montoPendiente = Math.max(0, montoAcordado - montoPagado)
       const pct = montoAcordado > 0 ? Math.round((montoPagado / montoAcordado) * 100) : 0

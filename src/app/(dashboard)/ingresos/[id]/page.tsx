@@ -160,14 +160,28 @@ export default async function IngresoDetallePage({
   if (ingreso.acuerdo_inicial_id) {
     const { data: acuerdo } = await supabase
       .from('acuerdos_inicial')
-      .select('monto_acordado, monto_pagado, fecha_limite, estado')
+      .select('monto_acordado, fecha_limite, estado')
       .eq('id', ingreso.acuerdo_inicial_id)
       .single()
     if (acuerdo) {
-      // El "pagado" se toma del acuerdo (ya en USD: convierte los pagos en Bs a
-      // dólares). NO se re-suman los montos crudos, porque eso contaría los
-      // bolívares como si fueran dólares.
-      const montoPagado = Number(acuerdo.monto_pagado ?? 0)
+      // Pagado del acuerdo AL MOMENTO de este recibo: suma en USD de los pagos
+      // no anulados registrados hasta este recibo (los pagos en Bs se convierten
+      // con su tasa). Los pagos posteriores a este recibo no cuentan, para que
+      // cada recibo refleje el estado que tenía cuando se emitió.
+      const { data: pagosAcuerdo } = await supabase
+        .from('ingresos')
+        .select('id, monto, moneda, tasa_cambio, estado, fecha_registro')
+        .eq('acuerdo_inicial_id', ingreso.acuerdo_inicial_id)
+      const usdDe = (p: any) => {
+        const m = Number(p.monto ?? 0)
+        if (p.moneda === 'VES') { const t = Number(p.tasa_cambio ?? 0); return t > 0 ? m / t : 0 }
+        return m
+      }
+      const fechaEste = ingreso.fecha_registro
+      const montoPagado = (pagosAcuerdo ?? [])
+        .filter((p: any) => p.estado !== 'anulado' && p.estado !== 'rechazado')
+        .filter((p: any) => p.id === id || !fechaEste || (p.fecha_registro && p.fecha_registro <= fechaEste))
+        .reduce((s: number, p: any) => s + usdDe(p), 0)
       const montoAcordado = Number(acuerdo.monto_acordado ?? 0)
       const montoPendiente = Math.max(0, montoAcordado - montoPagado)
       const pct = montoAcordado > 0 ? Math.round((montoPagado / montoAcordado) * 100) : 0
