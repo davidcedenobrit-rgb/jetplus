@@ -376,16 +376,15 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
         </div>
 
         <div className="flex-1 px-5 py-4 space-y-5">
-          {/* Flujo de venta: la cotización aceptada se convierte en proforma
-              (documento previo a la venta). Solo cuando está aceptada. */}
-          {cot.estado === 'aceptada' && (
-            <ProformaPanel
-              cotId={cot.id}
-              numero={cot.numero}
-              correoCliente={cot.cliente_correo}
-              onDone={() => { onClose(); router.refresh() }}
-            />
-          )}
+          {/* Flujo de venta: convertir la cotización en proforma (documento previo
+              a la venta). Disponible en cualquier estado, porque muchos clientes
+              avisan que aceptan por teléfono y no por el botón del correo. */}
+          <ProformaPanel
+            cotId={cot.id}
+            numero={cot.numero}
+            correoCliente={cot.cliente_correo}
+            onDone={() => { onClose(); router.refresh() }}
+          />
 
           {/* Registrar venta */}
           <button
@@ -893,9 +892,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                         >
                           Ver PDF
                         </a>
-                        {c.estado === 'aceptada' && (
-                          <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} compact onDone={() => router.refresh()} />
-                        )}
+                        <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} compact onDone={() => router.refresh()} />
                       </div>
                     </td>
                   </tr>
@@ -931,11 +928,9 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                   <ModalidadBadge modalidad={c.modalidad} plan={c.plan} />
                   <p className="text-sm font-bold text-oriental-black">${fmt(c.total_inicial)}</p>
                 </div>
-                {c.estado === 'aceptada' && (
-                  <div className="mt-2 pt-2 border-t border-gray-100" onClick={e => e.stopPropagation()}>
-                    <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} compact onDone={() => router.refresh()} />
-                  </div>
-                )}
+                <div className="mt-2 pt-2 border-t border-gray-100" onClick={e => e.stopPropagation()}>
+                  <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} compact onDone={() => router.refresh()} />
+                </div>
               </div>
             ))}
           </div>
