@@ -1,10 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Search, ShoppingCart, ListChecks, ExternalLink, Calculator, X, Loader2 } from 'lucide-react'
+import { Search, ShoppingCart, ListChecks, ExternalLink, Calculator, X, Loader2, FileText, ClipboardList, FilePlus2, Percent, Users } from 'lucide-react'
 import ProformasTab from '../link-ventas/ProformasTab'
+import CotizacionesTab from '../link-ventas/CotizacionesTab'
+import CotizacionCDMTab from '../link-ventas/CotizacionCDMTab'
+import TasasEditor from '../link-ventas/TasasEditor'
+import ClientesHistorialTab from '../link-ventas/ClientesHistorialTab'
 
 type Venta = {
   id: string
@@ -53,10 +57,23 @@ const fmtFecha = (s: string | null) => {
 
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
-export default function VentasHub({ ventas: ventasIniciales }: { ventas: Venta[] }) {
+type Vista = 'registradas' | 'registrar' | 'cotizaciones' | 'proformas' | 'generar' | 'tasas' | 'historial' | 'division'
+const VISTAS_VALIDAS: Vista[] = ['registradas', 'registrar', 'cotizaciones', 'proformas', 'generar', 'tasas', 'historial', 'division']
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac500 = [], showroomStock = [], tasas = { bcv: 0, usdt: 0 }, puedeEditar = false }: {
+  ventas: Venta[]
+  catalogo?: any[]
+  ac500?: any[]
+  showroomStock?: { marca: string; modelo: string; unidades: number }[]
+  tasas?: { bcv: number; usdt: number }
+  puedeEditar?: boolean
+}) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabUrl = searchParams.get('tab') as Vista | null
   const [ventas, setVentas] = useState<Venta[]>(ventasIniciales)
-  const [vista, setVista] = useState<'registradas' | 'registrar' | 'division'>('registradas')
+  const [vista, setVista] = useState<Vista>(tabUrl && VISTAS_VALIDAS.includes(tabUrl) ? tabUrl : 'registradas')
   const [q, setQ] = useState('')
   const [etapa, setEtapa] = useState<string>('todas')
   const [editar, setEditar] = useState<Venta | null>(null)
@@ -119,7 +136,16 @@ export default function VentasHub({ ventas: ventasIniciales }: { ventas: Venta[]
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
-        {([['registradas', 'Ventas registradas', ListChecks], ['registrar', 'Registrar venta', ShoppingCart], ['division', 'División contable', Calculator]] as const).map(([k, label, Icon]) => (
+        {([
+          ['registradas', 'Ventas registradas', ListChecks],
+          ['registrar', 'Registrar venta', ShoppingCart],
+          ['cotizaciones', 'Cotizaciones', ClipboardList],
+          ['proformas', 'Proformas', FileText],
+          ['generar', 'Generar cotización', FilePlus2],
+          ['tasas', 'Tasas', Percent],
+          ['historial', 'Historial de clientes', Users],
+          ['division', 'División contable', Calculator],
+        ] as const).map(([k, label, Icon]) => (
           <button key={k} onClick={() => setVista(k)}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               vista === k ? 'border-oriental-red text-oriental-red' : 'border-transparent text-gray-500 hover:text-oriental-black'
@@ -180,11 +206,21 @@ export default function VentasHub({ ventas: ventasIniciales }: { ventas: Venta[]
             <p className="text-sm text-indigo-900 font-semibold mb-1">Registrar una venta</p>
             <p className="text-xs text-indigo-700 leading-relaxed">
               Toda venta parte de una <b>proforma</b>. Busca al cliente abajo y dale a <b>Registrar venta</b> en su proforma: se abre el registro con el vehículo y el plan ya cargados desde la cotización — ahí confirmas o creas el cliente al instante y completas el pago inicial y el crédito.{' '}
-              ¿Aún no tiene proforma? Genérala desde su cotización aceptada en <Link href="/link-ventas?tab=cotizaciones" className="font-bold underline">Cotizaciones</Link>.
+              ¿Aún no tiene proforma? Genérala desde su cotización aceptada en <button type="button" onClick={() => setVista('cotizaciones')} className="font-bold underline">Cotizaciones</button>.
             </p>
           </div>
           <ProformasTab />
         </div>
+      ) : vista === 'cotizaciones' ? (
+        <CotizacionesTab puedeEditar={puedeEditar} />
+      ) : vista === 'proformas' ? (
+        <ProformasTab />
+      ) : vista === 'generar' ? (
+        <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} tasas={tasas} />
+      ) : vista === 'tasas' ? (
+        <TasasEditor />
+      ) : vista === 'historial' ? (
+        <ClientesHistorialTab />
       ) : (
         /* División contable */
         <div>

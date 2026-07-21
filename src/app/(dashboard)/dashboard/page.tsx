@@ -123,7 +123,7 @@ export default async function DashboardPage() {
     { n: pendientesAprobacion?.length ?? 0, label: 'Ingresos por aprobar', href: '/ingresos?estado=pendiente_aprobacion' },
     { n: pendientesEgresos?.length ?? 0, label: 'Egresos por aprobar', href: '/egresos?estado=pendiente_aprobacion' },
     { n: moraCreditos.size, label: 'Créditos en mora', href: '/creditos?estado=mora' },
-    { n: sinRespuestaMes, label: 'Cotizaciones sin respuesta', href: '/link-ventas?tab=clientes' },
+    { n: sinRespuestaMes, label: 'Cotizaciones sin respuesta', href: '/gestion-ventas?tab=historial' },
     { n: swVencidasHoy.length, label: 'Reservas vencidas', href: '/showroom?tab=reservado' },
   ].filter(a => a.n > 0)
 
@@ -216,13 +216,13 @@ export default async function DashboardPage() {
           <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider flex items-center gap-2">
             <FileText size={15} className="text-oriental-red" /> Cotizaciones · {nombreMes}
           </h2>
-          <Link href="/link-ventas?tab=clientes" className="text-xs text-oriental-red font-semibold hover:underline flex items-center gap-1">
+          <Link href="/gestion-ventas?tab=historial" className="text-xs text-oriental-red font-semibold hover:underline flex items-center gap-1">
             Historial de clientes <ArrowRight size={12} />
           </Link>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <StatCard label="Generadas este mes" value={String(totalCotMes)} icon={FileText} color="text-oriental-black" bg="bg-gray-100" />
-          <StatCard label="Sin respuesta" value={String(sinRespuestaMes)} icon={Clock} color="text-amber-600" bg="bg-amber-50" href="/link-ventas?tab=clientes" />
+          <StatCard label="Sin respuesta" value={String(sinRespuestaMes)} icon={Clock} color="text-amber-600" bg="bg-amber-50" href="/gestion-ventas?tab=historial" />
           <StatCard label="Aceptadas" value={String(aceptadasMes)} icon={CheckCircle2} color="text-green-600" bg="bg-green-50" />
         </div>
       </div>
@@ -266,7 +266,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <QuickCard title="Registrar ingreso" desc="Nuevo pago de cliente" href="/ingresos/nuevo" color="bg-oriental-red" />
         <QuickCard title="Registrar egreso" desc="Nuevo gasto operativo" href="/egresos/nuevo" color="bg-oriental-black" />
-        <QuickCard title="Generar cotización" desc="Nueva cotización de venta" href="/link-ventas?tab=generar" color="bg-gray-700" />
+        <QuickCard title="Generar cotización" desc="Nueva cotización de venta" href="/gestion-ventas?tab=generar" color="bg-gray-700" />
       </div>
     </div>
   )

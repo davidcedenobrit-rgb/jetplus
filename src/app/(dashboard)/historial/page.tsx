@@ -107,7 +107,7 @@ export default async function HistorialPage({
           : c.plan === 'banco_100' ? 'Crédito Banco 24m'
           : 'Crédito Vehimotors 24m',
         pdfUrl: `/api/cotizaciones/${c.id}/pdf`,
-        detalleUrl: `/link-ventas?tab=cotizaciones`,
+        detalleUrl: `/gestion-ventas?tab=cotizaciones`,
         clienteNombre: c.cliente_nombre,
         clienteCiRif: c.cliente_ci_rif,
         monto: c.costo_total ? Number(c.costo_total) : null,

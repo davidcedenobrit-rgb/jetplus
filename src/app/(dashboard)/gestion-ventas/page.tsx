@@ -27,6 +27,27 @@ export default async function GestionVentasPage() {
   const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROLES.includes(rol)) redirect('/dashboard')
 
+  const [catalogo, ac500, showroomRaw, cfgTasas] = await Promise.all([
+    supabase.from('catalogo_ventas').select('*').order('orden'),
+    supabase.from('ac500_vehiculos').select('*').order('orden'),
+    supabase.from('vehiculos_showroom').select('marca, modelo').eq('estado', 'en_agencia'),
+    supabase.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt']),
+  ])
+  const tasas = {
+    bcv: Number(cfgTasas.data?.find((c: any) => c.clave === 'tasa_bcv')?.valor) || 0,
+    usdt: Number(cfgTasas.data?.find((c: any) => c.clave === 'tasa_usdt')?.valor) || 0,
+  }
+  const showroomMap: Record<string, number> = {}
+  for (const r of showroomRaw.data ?? []) {
+    const k = `${r.marca}||${r.modelo}`
+    showroomMap[k] = (showroomMap[k] ?? 0) + 1
+  }
+  const showroomStock = Object.entries(showroomMap).map(([k, unidades]) => {
+    const [marca, modelo] = k.split('||')
+    return { marca, modelo, unidades }
+  })
+  const puedeEditar = ['jose', 'admin', 'director'].includes(rol)
+
   const [vehiculos, creditos, acuerdos, proformas, divisiones] = await Promise.all([
     fetchAllRows<any>((from, to) => supabase
       .from('vehiculos')
@@ -96,5 +117,14 @@ export default async function GestionVentasPage() {
     }
   })
 
-  return <VentasHub ventas={ventas} />
+  return (
+    <VentasHub
+      ventas={ventas}
+      catalogo={catalogo.data ?? []}
+      ac500={ac500.data ?? []}
+      showroomStock={showroomStock}
+      tasas={tasas}
+      puedeEditar={puedeEditar}
+    />
+  )
 }

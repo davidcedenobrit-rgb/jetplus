@@ -13,7 +13,7 @@ const CARDS: { href: string; label: string; desc: string; icon: any; color: stri
   { href: '/proveedores', label: 'Proveedores', desc: 'Base de datos de proveedores', icon: Package, color: 'text-emerald-600 bg-emerald-50' },
   { href: '/materiales', label: 'Materiales e insumos', desc: 'Materiales e insumos de La Oriental', icon: Boxes, color: 'text-orange-600 bg-orange-50' },
   { href: '/obsequios', label: 'Obsequios a clientes', desc: 'Registro de obsequios entregados', icon: Gift, color: 'text-pink-600 bg-pink-50' },
-  { href: '/link-ventas?tab=concesionarios', label: 'Concesionarios', desc: 'Concesionarios, prefijos y logos', icon: Building2, color: 'text-slate-600 bg-slate-50' },
+  { href: '/base-datos/concesionarios', label: 'Concesionarios', desc: 'Concesionarios, prefijos y logos', icon: Building2, color: 'text-slate-600 bg-slate-50' },
   { href: '/eventos', label: 'Eventos', desc: 'Cronograma y calendario de eventos', icon: CalendarDays, color: 'text-purple-600 bg-purple-50' },
 ]
 
