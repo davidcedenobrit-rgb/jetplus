@@ -253,6 +253,103 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       })
     }
 
+    // Aplicar descuento: Rojas negocia editando la estructura de costos completa.
+    if (body.accion === 'aplicar_descuento') {
+      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+        return NextResponse.json({ error: 'Solo el director puede aplicar descuentos' }, { status: 403 })
+      }
+      const { data: cotActual } = await supabase.from('cotizaciones').select('*').eq('id', id).single()
+      if (!cotActual) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+
+      const est = body.estructura ?? {}
+      const L = est.lineas ?? {}
+      const num = (x: any) => Math.max(0, Number(x) || 0)
+      const precioBase = num(est.precioBase ?? cotActual.precio_base)
+      const modalidad = (est.modalidad ?? cotActual.modalidad) as 'contado' | 'credito_24'
+      const plan = (est.plan ?? cotActual.plan ?? 'vehimotors') as any
+      if (!['contado', 'credito_24'].includes(modalidad)) return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
+
+      const claves = ['placa', 'poliza_vehiculo', 'poliza_vida', 'gastos_vhm', 'honorarios', 'gastos_int', 'alfombras', 'transporte', 'accesorios', 'igtf', 'diferencial'] as const
+      const lineas: Record<string, number> = {}
+      for (const k of claves) lineas[k] = num(L[k])
+      const sumaLineas = claves.reduce((s, k) => s + lineas[k], 0)
+      // Para banco, la placa va en el total del vehículo, no en los gastos.
+      const gastosEngine = plan === 'banco_100' ? Math.max(0, sumaLineas - lineas.placa) : sumaLineas
+
+      const inicialPct = num(est.inicialPct)
+      const tasaPct = num(est.tasaPct)
+      const meses = Math.max(1, Math.round(num(est.meses) || 24))
+
+      const t = calcularTotalesCotizacion({
+        precioBase, modalidad, plan,
+        gastos: gastosEngine,
+        placaMonto: plan === 'banco_100' ? lineas.placa : undefined,
+        tasaBancoPct: tasaPct,
+        mesesBanco: meses,
+        cuotaVehimotors: num(est.cuotaVehimotors),
+        inicialPctVehimotors: inicialPct > 0 ? inicialPct / 100 : undefined,
+        mesesVehimotors: meses,
+        personalizadoInicialPct: inicialPct > 0 ? inicialPct / 100 : undefined,
+        personalizadoMeses: meses,
+        personalizadoTasaPct: tasaPct,
+      })
+
+      const estructuraGuardar = { precioBase, modalidad, plan, inicialPct, tasaPct, meses, cuotaVehimotors: num(est.cuotaVehimotors), lineas }
+      const nuevos = {
+        precio_base: precioBase,
+        iva_monto: t.iva,
+        gastos_monto: t.gastos,
+        diferencial_monto: lineas.diferencial > 0 ? lineas.diferencial : null,
+        total_inicial: t.totalInicial,
+        financiamiento_monto: t.financiamientoMonto,
+        cuota_mensual: t.cuotaMensual,
+        costo_total: t.costoTotal,
+        estructura_costos: estructuraGuardar,
+        descuento_solicitado: false,
+      }
+      const { error: updErr } = await supabase.from('cotizaciones').update(nuevos).eq('id', id)
+      if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
+
+      await supabase.from('cotizacion_ediciones').insert([{
+        cotizacion_id: id,
+        editado_por: authUser.id,
+        editado_por_email: authUser.email ?? null,
+        cambios: { descuento: { antes: Number(cotActual.total_inicial) || 0, despues: t.totalInicial } },
+        motivo: body.motivo?.trim() || 'Descuento aplicado',
+        reenvio_correo: !!body.reenviar_correo,
+      }])
+
+      let correoReenviado = false
+      if (body.reenviar_correo) {
+        try {
+          const conces = await getConcesionarioIdentity(supabase, cotActual.concesionario_id ?? null)
+          const pdfData: CotizacionPDFData = {
+            logoSrc: conces.logoSrc, empresaNombre: conces.nombre, empresaRif: conces.rif,
+            empresaDireccion: conces.direccion, empresaTelefono: conces.telefono, empresaCorreo: conces.correo,
+            numero: cotActual.numero, fecha: fmtDate(cotActual.fecha), vencimiento: fmtDate(cotActual.vencimiento),
+            clienteNombre: cotActual.cliente_nombre, clienteCiRif: cotActual.cliente_ci_rif,
+            clienteDireccion: cotActual.cliente_direccion, clienteCorreo: cotActual.cliente_correo,
+            clienteTelefono: cotActual.cliente_telefono, clienteCiudadEstado: cotActual.cliente_ciudad_estado,
+            clienteCodigoPostal: cotActual.cliente_codigo_postal, agenteRetencion: !!cotActual.agente_retencion,
+            marca: cotActual.marca, modelo: cotActual.modelo, cantidad: Number(cotActual.cantidad) || 1,
+            precioBase, modalidad, plan, ivaMonto: t.iva, gastosMonto: t.gastos,
+            totalVehiculo: plan === 'banco_100' ? (t.totalVehiculoBanco ?? undefined) : undefined,
+            totalInicial: t.totalInicial, financiamientoMonto: t.financiamientoMonto, cuotaMensual: t.cuotaMensual,
+            mesesBanco: plan === 'banco_100' ? meses : undefined,
+            inicialPct: plan === 'personalizado' ? inicialPct / 100 : undefined,
+            mesesCredito: plan === 'personalizado' ? meses : undefined,
+            costoTotal: t.costoTotal,
+          }
+          await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id)
+          correoReenviado = true
+        } catch (e: any) {
+          console.error('[aplicar_descuento] reenvio error:', e?.message)
+        }
+      }
+
+      return NextResponse.json({ ok: true, totalInicial: t.totalInicial, costoTotal: t.costoTotal, correoReenviado })
+    }
+
     // Editar montos (compatibilidad con la acción anterior)
     if (body.accion === 'editar_montos') {
       if (!(await puedeEditarCotizaciones(supabase, authUser))) {
