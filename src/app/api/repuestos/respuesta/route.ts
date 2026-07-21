@@ -108,13 +108,17 @@ export async function POST(req: NextRequest) {
           cotImpUrl = urlData.publicUrl
         }
       }
-      await supabase.from('solicitudes_repuestos').update({
+      const { error: updErr } = await supabase.from('solicitudes_repuestos').update({
         estado: 'sin_stock',
         respuesta_vehimotors: 'no_hay',
         cotizacion_importacion_url: cotImpUrl,
         cotizacion_importacion_obs: obs || null,
         updated_at: new Date().toISOString(),
       }).eq('id', id)
+      if (updErr) {
+        console.error('[repuestos/respuesta] no_hay update error:', updErr)
+        return NextResponse.json({ error: 'No se pudo registrar la respuesta. Intente de nuevo.' }, { status: 500 })
+      }
       await supabase.from('repuestos_historial').insert({
         solicitud_id: id, estado_nuevo: 'sin_stock',
         usuario_email: 'vehimotors@externo',
