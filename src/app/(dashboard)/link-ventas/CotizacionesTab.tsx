@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 import { waCotizacionUrl } from '@/lib/whatsapp-cotizacion'
 import DescuentoPanel from './DescuentoPanel'
+import ProformaPanel from './ProformaPanel'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -375,6 +376,17 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
         </div>
 
         <div className="flex-1 px-5 py-4 space-y-5">
+          {/* Flujo de venta: la cotización aceptada se convierte en proforma
+              (documento previo a la venta). Solo cuando está aceptada. */}
+          {cot.estado === 'aceptada' && (
+            <ProformaPanel
+              cotId={cot.id}
+              numero={cot.numero}
+              correoCliente={cot.cliente_correo}
+              onDone={() => { onClose(); router.refresh() }}
+            />
+          )}
+
           {/* Registrar venta */}
           <button
             onClick={() => { onClose(); router.push(`/vehiculos/nuevo?cotizacionId=${cot.id}`) }}
