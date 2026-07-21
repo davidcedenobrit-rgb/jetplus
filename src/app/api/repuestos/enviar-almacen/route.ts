@@ -12,19 +12,22 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { solicitudId, correosAlmacen, numeroCotizacion, userEmail, correoAdicional } = await req.json()
+    const { solicitudId, correosAlmacen, numeroCotizacion, userEmail, correoAdicional, correosAdicionales } = await req.json()
 
     if (!solicitudId || !correosAlmacen?.length || !numeroCotizacion) {
       return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 })
     }
 
-    // Correo adicional libre (opcional) — se suma a los destinatarios
-    const correoExtra = typeof correoAdicional === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correoAdicional.trim())
-      ? correoAdicional.trim()
-      : null
-    const destinatarios: string[] = correoExtra && !correosAlmacen.includes(correoExtra)
-      ? [...correosAlmacen, correoExtra]
-      : correosAlmacen
+    // Correos adicionales libres (opcional) — se suman a los destinatarios.
+    // Acepta un arreglo (correosAdicionales) o un solo correo (compat).
+    const valido = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e.trim())
+    const extras: string[] = [
+      ...(Array.isArray(correosAdicionales) ? correosAdicionales : []),
+      ...(typeof correoAdicional === 'string' ? [correoAdicional] : []),
+    ].map(e => String(e).trim().toLowerCase()).filter(valido)
+
+    const destinatarios: string[] = [...correosAlmacen]
+    for (const e of extras) if (!destinatarios.includes(e)) destinatarios.push(e)
 
     const { data: sol } = await supabase
       .from('solicitudes_repuestos')
