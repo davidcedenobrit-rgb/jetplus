@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, FileBarChart2, Link2
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, FileBarChart2, Link2, Database
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
 
@@ -50,6 +50,8 @@ const SECTIONS: NavSection[] = [
     title: 'Ventas y Clientes',
     icon: Users,
     links: [
+      { href: '/gestion-ventas', label: 'Ventas',        icon: ShoppingBag,   roles: DIR },
+      { href: '/base-datos', label: 'Base de datos',      icon: Database,      roles: DIR },
       { href: '/clientes',  label: 'Clientes',          icon: Users,         hideFor: ['arianna', 'almacen'] },
       { href: '/vehiculos', label: 'Vehículos',         icon: Car,           hideFor: ['arianna', 'almacen'] },
       { href: '/showroom',  label: 'Vehículo Showroom', icon: Store,         hideFor: ['almacen'], sub: [

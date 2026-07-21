@@ -56,6 +56,7 @@ export async function middleware(request: NextRequest) {
     '/aprobaciones', '/anulaciones', '/auditoria', '/logs', '/importar',
     '/vehimotors', '/carla', '/repuestos', '/documentos-empresa',
     '/link-ventas', '/pagos-portal', '/historial', '/corporativo', '/api/',
+    '/gestion-ventas', '/base-datos',
   ]
   const isProtected = pathname === '/' || protectedPaths.some(p => pathname.startsWith(p))
 
