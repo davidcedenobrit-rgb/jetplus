@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Save, Search, X, AlertCircle, Store, Car, CheckCircle2, MapPin } from 'lucide-react'
@@ -146,6 +146,10 @@ export default function NuevoVehiculoPage() {
   // Venta desde proforma (flujo nuevo): id + número para vincular al guardar.
   const [proformaId, setProformaId] = useState<string | null>(null)
   const [proformaNumero, setProformaNumero] = useState<string | null>(null)
+  // Modelo/marca de la cotización, para preseleccionar el carro en el showroom.
+  const [cotMarca, setCotMarca] = useState<string | null>(null)
+  const [cotModelo, setCotModelo] = useState<string | null>(null)
+  const autoSelHecha = useRef(false)
 
   const [marca, setMarca] = useState<'MG' | 'MAXUS'>('MG')
   const [modelo, setModelo] = useState('')
@@ -234,16 +238,31 @@ export default function NuevoVehiculoPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cot: any = await r.json()
       if (!cot || cot.error) return
-      if (cot.marca === 'MG' || cot.marca === 'MAXUS') setMarca(cot.marca)
-      if (cot.modelo) setModelo(cot.modelo)
+      if (cot.marca === 'MG' || cot.marca === 'MAXUS') { setMarca(cot.marca); setCotMarca(cot.marca) }
+      if (cot.modelo) { setModelo(cot.modelo); setCotModelo(cot.modelo) }
       if (cot.modalidad === 'contado') {
         setTipoCompra('contado')
       } else {
         setTipoCompra('financiado')
-        setPlan('personalizado')
-        if (cot.precio_base) setCalcBase(String(cot.precio_base))
-        if (cot.total_inicial) { setOrMonto(String(cot.total_inicial)); setOrCuotas('0') }
-        if (cot.financiamiento_monto) { setVhMonto(String(cot.financiamiento_monto)); setVhCuotas('24') }
+        const est = (cot.estructura_costos ?? {}) as any
+        if (cot.plan === 'ac500') {
+          // Asegúrate con $500: el plan AC500 se auto-empareja por modelo.
+          setPlan('asegurate_500')
+          const meses = Number(cot.ac500_meses) || Number(est.meses) || 6
+          setCuotasAsegurate((meses === 9 ? 9 : meses === 12 ? 12 : 6) as 6 | 9 | 12)
+        } else {
+          // Vehimotors / Personalizado / 100% banco → calculadora + bloques editables.
+          setPlan('personalizado')
+          if (cot.precio_base) setCalcBase(String(cot.precio_base))
+          const inicialPct = Number(cot.personalizado_inicial_pct) || Number(est.inicialPct) || 0
+          if (inicialPct) setCalcPctInicial(String(inicialPct))
+          const tasaPct = Number(cot.personalizado_tasa_pct) || Number(est.tasaPct) || 0
+          if (tasaPct) setCalcTasaAnual(String(tasaPct))
+          const meses = Number(cot.personalizado_meses) || Number(cot.cuotas_banco) || Number(est.meses) || 24
+          setCalcNumCuotasVh(String(meses))
+          if (cot.total_inicial) { setOrMonto(String(cot.total_inicial)); setOrCuotas('0') }
+          if (cot.financiamiento_monto) { setVhMonto(String(cot.financiamiento_monto)); setVhCuotas(String(meses)) }
+        }
       }
       setCotizacionInfo({
         numero: cot.numero,
@@ -322,6 +341,28 @@ export default function NuevoVehiculoPage() {
     seleccionarShowroom(v as VehiculoShowroom)
     setExternoSel({ origen: v.origen, externoId: v.id })
   }
+
+  // Coincidencia con el modelo de la cotización (para preseleccionar el carro).
+  const normTxt = (s: any) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+  const coincideCot = (v: any) => {
+    if (!cotModelo) return false
+    const a = normTxt(v.modelo), b = normTxt(cotModelo)
+    const modeloOk = !!a && !!b && (a === b || a.includes(b) || b.includes(a))
+    const marcaOk = !cotMarca || normTxt(v.marca) === normTxt(cotMarca)
+    return modeloOk && marcaOk
+  }
+  // Carros del showroom con los del modelo cotizado primero.
+  const showroomOrdenado = useMemo(() => {
+    if (!cotModelo) return vehiculosShowroom
+    return [...vehiculosShowroom].sort((x, y) => (coincideCot(y) ? 1 : 0) - (coincideCot(x) ? 1 : 0))
+  }, [vehiculosShowroom, cotModelo, cotMarca])
+
+  // Auto-seleccionar si hay exactamente un carro del modelo cotizado.
+  useEffect(() => {
+    if (autoSelHecha.current || showroomSeleccionado || externoSel || !cotModelo || vehiculosShowroom.length === 0) return
+    const matches = vehiculosShowroom.filter(coincideCot)
+    if (matches.length === 1) { seleccionarShowroom(matches[0]); autoSelHecha.current = true }
+  }, [vehiculosShowroom, cotModelo, cotMarca])
 
   useEffect(() => {
     if (clienteQuery.length < 2 || clienteSeleccionado) { setClientes([]); return }
@@ -1157,12 +1198,13 @@ export default function NuevoVehiculoPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-              {vehiculosShowroom.map(v => (
+              {showroomOrdenado.map(v => (
                 <button key={v.id} type="button" onClick={() => seleccionarShowroom(v)}
-                  className="rounded-xl border-2 border-gray-200 hover:border-orange-300 hover:bg-orange-50 p-3 text-left transition-all">
+                  className={`rounded-xl border-2 p-3 text-left transition-all ${coincideCot(v) ? 'border-orange-400 bg-orange-50/60 hover:border-orange-500' : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50'}`}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{v.marca}</span>
                     <div className="flex items-center gap-1">
+                      {coincideCot(v) && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white">Cotizado</span>}
                       {v.pdi_hecho && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">PDI ✓</span>}
                       {v.estado === 'reservado' && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">Reservado</span>}
                     </div>
