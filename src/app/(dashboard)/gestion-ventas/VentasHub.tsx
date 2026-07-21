@@ -213,10 +213,16 @@ export default function VentasHub({ ventas: ventasIniciales }: { ventas: Venta[]
                         </div>
                         <p className="text-gray-500 text-xs truncate">{v.cliente_nombre}{v.vendedora ? ` · Vendedora: ${v.vendedora}` : ''}</p>
                       </div>
-                      <button onClick={() => setEditar(v)}
-                        className="shrink-0 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50">
-                        Editar
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Link href={`/vehimotors/reportar?vehiculoId=${v.id}`}
+                          className="px-3 py-1.5 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 hover:bg-indigo-50">
+                          Reportar VM
+                        </Link>
+                        <button onClick={() => setEditar(v)}
+                          className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50">
+                          Editar
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                       <Celda label="Venta (X)" value={`$${fmt(v.precio_venta)}`} />

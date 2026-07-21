@@ -30,6 +30,7 @@ type IngresoPendiente = {
   referencia: string | null
   fechaPago: string
   placa: string | null
+  vehiculoId?: string | null
   yaReportado: number
   saldo: number
   cliente: Cliente | null
@@ -143,7 +144,7 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
       return {
         ingresoId: i.id,
         clienteReportadoId: i.cliente!.id,   // mismo cliente que pagó
-        vehiculoId: null,                     // sin vehículo específico (lote rápido)
+        vehiculoId: i.vehiculoId ?? null,     // carro del ingreso (si viene del módulo Ventas)
         placa: i.placa,
         proformaVehimotors: null,
         montoReportado: monto,

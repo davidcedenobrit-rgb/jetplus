@@ -7,7 +7,7 @@ import ReportarLoteClient from './ReportarLoteClient'
 
 const ROL_PERMITIDO = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
-export default async function ReportarPagosVMPage() {
+export default async function ReportarPagosVMPage({ searchParams }: { searchParams: Promise<{ vehiculoId?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -15,13 +15,26 @@ export default async function ReportarPagosVMPage() {
   const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
+  // Filtro opcional por carro (entrada desde el módulo Ventas).
+  const { vehiculoId } = await searchParams
+  let vehiculoFiltro: { id: string; label: string; placa: string | null } | null = null
+  if (vehiculoId) {
+    const { data: veh } = await supabase.from('vehiculos').select('id, marca, modelo, placa').eq('id', vehiculoId).maybeSingle()
+    if (veh) vehiculoFiltro = { id: veh.id, label: `${veh.marca} ${veh.modelo}`, placa: veh.placa }
+  }
+
   // Cargar ingresos con saldo por reportar: aprobados directos + los que ya
   // pasaron por el flujo de deposito (el dinero ya esta en cuenta VM/Oriental)
-  const { data: ingresosAprobados } = await supabase
+  let q = supabase
     .from('ingresos')
     .select('id, numero_recibo, concepto, monto, moneda, tasa_cambio, monto_bs, metodo_pago, banco_emisor, banco_receptor, referencia, fecha_pago, fecha_aprobacion, placa, cliente_id, vehiculo_id, estado, deposito_banco, deposito_referencia, acuerdo_inicial_id, clientes(nombre, cedula_rif)')
     .in('estado', ['aprobado', 'depositado', 'entregado_carla'])
-    .order('fecha_aprobacion', { ascending: false })
+  if (vehiculoFiltro) {
+    const ors = [`vehiculo_id.eq.${vehiculoFiltro.id}`]
+    if (vehiculoFiltro.placa) ors.push(`placa.eq.${vehiculoFiltro.placa}`)
+    q = q.or(ors.join(','))
+  }
+  const { data: ingresosAprobados } = await q.order('fecha_aprobacion', { ascending: false })
 
   // Cargar TODOS los reportes asociados para calcular saldos
   const ingresoIds = (ingresosAprobados ?? []).map(i => i.id)
@@ -92,8 +105,15 @@ export default async function ReportarPagosVMPage() {
             <Building2 size={20} className="text-indigo-700" />
             Reportar pagos a Vehimotors
           </h1>
-          <p className="text-oriental-gray text-xs mt-0.5">Ingresos aprobados con saldo pendiente de reportar</p>
+          <p className="text-oriental-gray text-xs mt-0.5">
+            {vehiculoFiltro
+              ? <>Pagos del vehículo <span className="font-bold text-oriental-black">{vehiculoFiltro.label}{vehiculoFiltro.placa ? ` · ${vehiculoFiltro.placa}` : ''}</span></>
+              : 'Ingresos aprobados con saldo pendiente de reportar'}
+          </p>
         </div>
+        {vehiculoFiltro && (
+          <Link href="/gestion-ventas" className="text-xs font-bold text-indigo-700 hover:underline shrink-0">← Volver a Ventas</Link>
+        )}
       </div>
 
       {/* Alerta directos */}
@@ -152,6 +172,7 @@ export default async function ReportarPagosVMPage() {
             referencia: i.referencia,
             fechaPago: i.fecha_pago,
             placa: i.placa,
+            vehiculoId: (i as any).vehiculo_id ?? null,
             yaReportado: i.yaReportado,
             saldo: i.saldo,
             estado: (i as any).estado ?? 'aprobado',
