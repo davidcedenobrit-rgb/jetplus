@@ -888,6 +888,18 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
         </a>
       )}
 
+      {cotIdCreada && (
+        <a
+          href={`/api/cotizaciones/${cotIdCreada}/pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors mb-3"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Ver PDF
+        </a>
+      )}
+
       <button onClick={reset} className="w-full py-2.5 bg-oriental-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-colors">
         Generar otra cotización
       </button>
