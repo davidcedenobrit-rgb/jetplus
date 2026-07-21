@@ -158,15 +158,15 @@ export async function enviarProformaCliente(opts: EnviarProformaOpts) {
 
   const tieneFinanciamiento = numeroCuotas > 0 && cuotaMensual > 0
 
-  const kicker = preVenta ? 'Proforma — propuesta de compra' : 'Proforma de compra financiada'
+  const kicker = preVenta ? 'Proforma — condiciones aceptadas' : 'Proforma de compra financiada'
   const intro = preVenta
-    ? `Adjunto encontrará su <b>Proforma N°&nbsp;${numero}</b> con las condiciones de compra propuestas para su vehículo. Este documento es <b>previo a la venta</b> y detalla la modalidad de pago acordada.`
+    ? `Adjunto encontrará su <b>Proforma N°&nbsp;${numero}</b> con las condiciones de compra de su vehículo, según lo aceptado. Detalla la modalidad de pago acordada.`
     : `Adjunto encontrará su <b>Proforma N°&nbsp;${numero}</b> del vehículo entregado bajo compromiso de pago financiado. Este documento formaliza el acuerdo de crédito y detalla el cronograma completo de cuotas.`
 
   const avisoBox = preVenta
     ? `<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:14px 18px;margin-bottom:18px">
       <p style="font-family:sans-serif;font-size:12px;color:#1e40af;margin:0;line-height:1.6">
-        <b>ⓘ Nota:</b> Esta proforma es <b>previa a la venta</b> y no constituye entrega del vehículo ni comprobante de pago. Los montos están sujetos a la disponibilidad de la unidad y a la tasa de cambio vigente a la fecha de la operación.
+        <b>ⓘ Nota:</b> Los montos indicados están sujetos a la disponibilidad de la unidad y a la tasa de cambio vigente a la fecha de la operación.
       </p>
     </div>`
     : `<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:14px 18px;margin-bottom:18px">
@@ -175,15 +175,16 @@ export async function enviarProformaCliente(opts: EnviarProformaOpts) {
       </p>
     </div>`
 
+  // En la proforma de aceptación (pre-venta) no se muestra el saldo financiado.
   const filaInicial = tieneFinanciamiento
     ? `${row('Inicial', `$${fmt(inicialPagada)}`)}
-        ${row('Saldo financiado', `$${fmt(saldoFinanciado)}`)}
+        ${preVenta ? '' : row('Saldo financiado', `$${fmt(saldoFinanciado)}`)}
         ${row('Cuotas mensuales', `${numeroCuotas} × $${fmt(cuotaMensual)}`)}`
     : ''
 
   const cierre = preVenta
     ? (tieneFinanciamiento
-        ? 'Al formalizarse la venta, las cuotas deberán pagarse entre el <b>1° y el 5° día</b> de cada mes. Estamos a su orden para concretar la operación.'
+        ? 'Las cuotas deberán pagarse entre el <b>1° y el 5° día</b> de cada mes. Estamos a su orden para concretar la operación.'
         : 'Estamos a su orden para concretar la operación.')
     : 'Por favor conserve este documento para cualquier trámite futuro. Le recordamos que las cuotas deben pagarse entre el <b>1° y el 5° día</b> de cada mes.'
 
