@@ -133,6 +133,10 @@ export default function NuevoVehiculoPage() {
   const [vehiculosShowroom, setVehiculosShowroom] = useState<VehiculoShowroom[]>([])
   const [showroomSeleccionado, setShowroomSeleccionado] = useState<VehiculoShowroom | null>(null)
   const [loadingShowroom, setLoadingShowroom] = useState(true)
+  // Inventario de aliados (Ki Auto) que se puede vender desde aquí; al guardar,
+  // el carro se transfiere a La Oriental automáticamente.
+  const [externos, setExternos] = useState<any[]>([])
+  const [externoSel, setExternoSel] = useState<{ origen: string; externoId: string } | null>(null)
 
   // Prefill desde cotización
   const [cotizacionInfo, setCotizacionInfo] = useState<{
@@ -289,10 +293,17 @@ export default function NuevoVehiculoPage() {
       supabase.from('vehiculos_showroom').select('*').eq('id', sid).single()
         .then(({ data }) => { if (data) seleccionarShowroom(data as VehiculoShowroom) })
     }
+
+    // Inventario de aliados (Ki Auto). Vacío si no hay aliado configurado.
+    fetch('/api/showroom/externos')
+      .then(r => r.json())
+      .then((d) => { if (Array.isArray(d)) setExternos(d) })
+      .catch(() => {})
   }, [])
 
   function seleccionarShowroom(v: VehiculoShowroom | null) {
     setShowroomSeleccionado(v)
+    setExternoSel(null) // limpiar origen externo al elegir uno local o deseleccionar
     if (v) {
       setMarca(v.marca as 'MG' | 'MAXUS')
       setModelo(v.modelo)
@@ -303,6 +314,13 @@ export default function NuevoVehiculoPage() {
       setSerialMotor(v.serial_motor ?? '')
       setProforma((v as any).proforma_vehimotors ?? '')
     }
+  }
+
+  // Seleccionar un carro que está en un aliado (Ki Auto). Se prellenar igual,
+  // pero se marca el origen para transferirlo a La Oriental al guardar.
+  function seleccionarExterno(v: any) {
+    seleccionarShowroom(v as VehiculoShowroom)
+    setExternoSel({ origen: v.origen, externoId: v.id })
   }
 
   useEffect(() => {
@@ -669,6 +687,25 @@ export default function NuevoVehiculoPage() {
     setLoading(true)
     setError('')
 
+    // Si el carro venía de un aliado (Ki Auto), traerlo a La Oriental primero.
+    // Se resuelve el id del showroom LOCAL para vincular la venta a esa unidad.
+    let showroomLocalId: string | null = externoSel ? null : (showroomSeleccionado?.id ?? null)
+    if (externoSel) {
+      try {
+        const rt = await fetch('/api/showroom/transferir-entrada', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(externoSel),
+        })
+        const jt = await rt.json()
+        if (!rt.ok || !jt.showroomLocalId) {
+          setError(jt.error ?? 'No se pudo traer el vehículo del aliado'); setLoading(false); return
+        }
+        showroomLocalId = jt.showroomLocalId
+      } catch {
+        setError('No se pudo transferir el vehículo del aliado'); setLoading(false); return
+      }
+    }
+
     const upsertData = {
       cliente_id: clienteSeleccionado.id,
       ...parsed.data,
@@ -693,14 +730,14 @@ export default function NuevoVehiculoPage() {
       }).eq('id', proformaId)
     }
 
-    // Vincular showroom si se seleccionó uno
-    if (showroomSeleccionado) {
+    // Vincular showroom (local, o el ya transferido desde el aliado) a la venta
+    if (showroomLocalId) {
       await supabase.from('vehiculos_showroom').update({
         estado: 'vendido',
         cliente_id: clienteSeleccionado.id,
         vehiculo_id: vehiculo.id,
         updated_at: new Date().toISOString(),
-      }).eq('id', showroomSeleccionado.id)
+      }).eq('id', showroomLocalId)
     }
 
     // ── MODO ACUERDO DE PAGO ──────────────────────────────────────────────────
@@ -1085,23 +1122,25 @@ export default function NuevoVehiculoPage() {
 
           {loadingShowroom ? (
             <p className="text-sm text-oriental-gray">Cargando showroom…</p>
-          ) : vehiculosShowroom.length === 0 ? (
+          ) : (vehiculosShowroom.length === 0 && externos.length === 0) ? (
             <div className="rounded-xl border-2 border-dashed border-gray-200 p-4 text-center">
               <Store size={22} className="text-gray-300 mx-auto mb-2" />
               <p className="text-sm text-oriental-gray">No hay vehículos disponibles en showroom</p>
             </div>
           ) : showroomSeleccionado ? (
-            <div className="rounded-xl border-2 border-orange-200 bg-orange-50 p-4 flex items-center justify-between">
+            <div className={`rounded-xl border-2 p-4 flex items-center justify-between ${externoSel ? 'border-indigo-200 bg-indigo-50' : 'border-orange-200 bg-orange-50'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Car size={18} className="text-orange-600" />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${externoSel ? 'bg-indigo-100' : 'bg-orange-100'}`}>
+                  <Car size={18} className={externoSel ? 'text-indigo-600' : 'text-orange-600'} />
                 </div>
                 <div>
                   <p className="font-bold text-oriental-black">{showroomSeleccionado.marca} {showroomSeleccionado.modelo}</p>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                     {showroomSeleccionado.placa && <span className="font-mono font-bold text-xs text-oriental-gray">{showroomSeleccionado.placa}</span>}
                     {showroomSeleccionado.color && <span className="text-xs text-oriental-gray">{showroomSeleccionado.color}</span>}
-                    {showroomSeleccionado.ubicacion && (
+                    {externoSel ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">En Ki Auto · se transferirá al guardar</span>
+                    ) : showroomSeleccionado.ubicacion && (
                       <span className="text-xs text-orange-600 flex items-center gap-1">
                         <MapPin size={10} /> {showroomSeleccionado.ubicacion === 'otro' ? showroomSeleccionado.ubicacion_descripcion : showroomSeleccionado.ubicacion}
                       </span>
@@ -1109,11 +1148,11 @@ export default function NuevoVehiculoPage() {
                     {showroomSeleccionado.pdi_hecho && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">PDI ✓</span>}
                   </div>
                 </div>
-                <CheckCircle2 size={20} className="text-orange-500 flex-shrink-0" />
+                <CheckCircle2 size={20} className={`flex-shrink-0 ${externoSel ? 'text-indigo-500' : 'text-orange-500'}`} />
               </div>
               <button type="button" onClick={() => seleccionarShowroom(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-orange-100 transition-colors flex-shrink-0">
-                <X size={16} className="text-orange-600" />
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 transition-colors flex-shrink-0">
+                <X size={16} className={externoSel ? 'text-indigo-600' : 'text-orange-600'} />
               </button>
             </div>
           ) : (
@@ -1145,6 +1184,34 @@ export default function NuevoVehiculoPage() {
                   </div>
                 </button>
               ))}
+
+              {/* Inventario de aliados (Ki Auto): se transfiere a La Oriental al guardar */}
+              {externos.length > 0 && (
+                <>
+                  <div className="col-span-full mt-1 mb-0.5 flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">En otros concesionarios</span>
+                    <span className="text-[10px] text-gray-400">se transfiere al vender</span>
+                  </div>
+                  {externos.map(v => (
+                    <button key={`ext-${v.id}`} type="button" onClick={() => seleccionarExterno(v)}
+                      className="rounded-xl border-2 border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50 p-3 text-left transition-all">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.marca === 'MG' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{v.marca}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{v.origen_label}</span>
+                      </div>
+                      <p className="font-bold text-oriental-black text-sm">{v.modelo}</p>
+                      <div className="mt-1 space-y-0.5">
+                        <p className="text-xs text-oriental-gray flex items-center gap-1.5">
+                          {v.placa && <span className="font-mono font-bold text-oriental-black">{v.placa}</span>}
+                          {v.color && <span>· {v.color}</span>}
+                          {v.anio && <span>· {v.anio}</span>}
+                        </p>
+                        {v.vin && <p className="text-[10px] font-mono text-oriental-gray truncate">VIN: {v.vin}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
