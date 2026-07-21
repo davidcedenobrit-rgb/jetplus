@@ -27,7 +27,7 @@ export default async function GestionVentasPage() {
   const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROLES.includes(rol)) redirect('/dashboard')
 
-  const [vehiculos, creditos, acuerdos, proformas] = await Promise.all([
+  const [vehiculos, creditos, acuerdos, proformas, divisiones] = await Promise.all([
     fetchAllRows<any>((from, to) => supabase
       .from('vehiculos')
       .select('id, marca, modelo, placa, tipo_compra, estado, precio_total, created_at, cliente_id, clientes(nombre, cedula_rif)')
@@ -45,8 +45,12 @@ export default async function GestionVentasPage() {
       .range(from, to)),
     fetchAllRows<any>((from, to) => supabase
       .from('proformas')
-      .select('vehiculo_id, numero')
+      .select('id, vehiculo_id, numero, precio_vehiculo, cotizacion_id, cliente_id')
       .not('vehiculo_id', 'is', null)
+      .range(from, to)),
+    fetchAllRows<any>((from, to) => supabase
+      .from('ventas_division_contable')
+      .select('*')
       .range(from, to)),
   ])
 
@@ -54,11 +58,16 @@ export default async function GestionVentasPage() {
   for (const c of creditos ?? []) { if (c.vehiculo_id && !credMap[c.vehiculo_id]) credMap[c.vehiculo_id] = c }
   const acuMap: Record<string, any> = {}
   for (const a of acuerdos ?? []) { if (a.vehiculo_id && !acuMap[a.vehiculo_id]) acuMap[a.vehiculo_id] = a }
-  const proMap: Record<string, string> = {}
-  for (const p of proformas ?? []) { if (p.vehiculo_id && !proMap[p.vehiculo_id]) proMap[p.vehiculo_id] = p.numero }
+  const proMap: Record<string, any> = {}
+  for (const p of proformas ?? []) { if (p.vehiculo_id && !proMap[p.vehiculo_id]) proMap[p.vehiculo_id] = p }
+  const divMap: Record<string, any> = {}
+  for (const d of divisiones ?? []) { if (d.vehiculo_id) divMap[d.vehiculo_id] = d }
 
   const ventas = (vehiculos ?? []).map((v: any) => {
     const etapa = calcularEtapa(v, credMap[v.id], acuMap[v.id])
+    const pro = proMap[v.id]
+    const div = divMap[v.id]
+    const precioBaseVenta = Number(div?.precio_venta ?? pro?.precio_vehiculo ?? v.precio_total ?? 0)
     return {
       id: v.id,
       marca: v.marca,
@@ -69,9 +78,21 @@ export default async function GestionVentasPage() {
       created_at: v.created_at,
       cliente_nombre: v.clientes?.nombre ?? '—',
       cliente_ci: v.clientes?.cedula_rif ?? '',
-      proforma_numero: proMap[v.id] ?? null,
+      proforma_numero: pro?.numero ?? null,
+      proforma_id: pro?.id ?? null,
+      cotizacion_id: pro?.cotizacion_id ?? null,
+      cliente_id: v.cliente_id ?? pro?.cliente_id ?? null,
       etapa_key: etapa.key,
       etapa_label: etapa.label,
+      // División contable
+      div_definida: !!div,
+      precio_venta: precioBaseVenta,
+      pago_vehimotors: Number(div?.pago_vehimotors ?? 0),
+      comision_pct: Number(div?.comision_pct ?? 0),
+      comision_monto: Number(div?.comision_monto ?? 0),
+      vendedora: div?.vendedora ?? '',
+      reportado_vm: !!div?.reportado_vm,
+      div_notas: div?.notas ?? '',
     }
   })
 
