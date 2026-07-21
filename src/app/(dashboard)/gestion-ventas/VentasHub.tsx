@@ -137,11 +137,11 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
 
       <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
         {([
-          ['registradas', 'Ventas registradas', ListChecks],
-          ['registrar', 'Registrar venta', ShoppingCart],
+          ['generar', 'Generar cotización', FilePlus2],
           ['cotizaciones', 'Cotizaciones', ClipboardList],
           ['proformas', 'Proformas', FileText],
-          ['generar', 'Generar cotización', FilePlus2],
+          ['registrar', 'Registrar venta', ShoppingCart],
+          ['registradas', 'Ventas registradas', ListChecks],
           ['tasas', 'Tasas', Percent],
           ['historial', 'Historial de clientes', Users],
           ['division', 'División contable', Calculator],
