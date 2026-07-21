@@ -80,6 +80,8 @@ export interface EnviarProformaOpts {
   cuotaMensual: number
   numeroCuotas: number
   planLabel: string
+  // Proforma previa a la venta (sin entrega aún): cambia el texto del correo.
+  preVenta?: boolean
 }
 
 async function fetchPdfBuffer(proformaId: string): Promise<Buffer> {
@@ -148,22 +150,49 @@ export async function enviarProformaCliente(opts: EnviarProformaOpts) {
     proformaId, numero, fecha, correoDestino,
     clienteNombre, marca, modelo, placa,
     precioVehiculo, inicialPagada, saldoFinanciado,
-    cuotaMensual, numeroCuotas, planLabel,
+    cuotaMensual, numeroCuotas, planLabel, preVenta,
   } = opts
 
   const resend = getResend()
   const pdfBuffer = await fetchPdfBuffer(proformaId)
 
-  const body = `
-    <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">Proforma de compra financiada</p>
-    <h1 style="font-family:sans-serif;font-size:20px;font-weight:800;color:#111;margin:0 0 4px">Estimado/a ${clienteNombre}</h1>
-    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 22px">Adjunto encontrará su <b>Proforma N°&nbsp;${numero}</b> del vehículo entregado bajo compromiso de pago financiado. Este documento formaliza el acuerdo de crédito y detalla el cronograma completo de cuotas.</p>
+  const tieneFinanciamiento = numeroCuotas > 0 && cuotaMensual > 0
 
-    <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:14px 18px;margin-bottom:18px">
+  const kicker = preVenta ? 'Proforma — propuesta de compra' : 'Proforma de compra financiada'
+  const intro = preVenta
+    ? `Adjunto encontrará su <b>Proforma N°&nbsp;${numero}</b> con las condiciones de compra propuestas para su vehículo. Este documento es <b>previo a la venta</b> y detalla la modalidad de pago acordada.`
+    : `Adjunto encontrará su <b>Proforma N°&nbsp;${numero}</b> del vehículo entregado bajo compromiso de pago financiado. Este documento formaliza el acuerdo de crédito y detalla el cronograma completo de cuotas.`
+
+  const avisoBox = preVenta
+    ? `<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:14px 18px;margin-bottom:18px">
+      <p style="font-family:sans-serif;font-size:12px;color:#1e40af;margin:0;line-height:1.6">
+        <b>ⓘ Nota:</b> Esta proforma es <b>previa a la venta</b> y no constituye entrega del vehículo ni comprobante de pago. Los montos están sujetos a la disponibilidad de la unidad y a la tasa de cambio vigente a la fecha de la operación.
+      </p>
+    </div>`
+    : `<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:14px 18px;margin-bottom:18px">
       <p style="font-family:sans-serif;font-size:12px;color:#92400e;margin:0;line-height:1.6">
         <b>⚠ Aviso importante:</b> Este vehículo <b>no ha sido pagado en su totalidad</b>. Su cumplimiento con las cuotas del cronograma es requisito para conservar la propiedad del bien.
       </p>
-    </div>
+    </div>`
+
+  const filaInicial = tieneFinanciamiento
+    ? `${row('Inicial', `$${fmt(inicialPagada)}`)}
+        ${row('Saldo financiado', `$${fmt(saldoFinanciado)}`)}
+        ${row('Cuotas mensuales', `${numeroCuotas} × $${fmt(cuotaMensual)}`)}`
+    : ''
+
+  const cierre = preVenta
+    ? (tieneFinanciamiento
+        ? 'Al formalizarse la venta, las cuotas deberán pagarse entre el <b>1° y el 5° día</b> de cada mes. Estamos a su orden para concretar la operación.'
+        : 'Estamos a su orden para concretar la operación.')
+    : 'Por favor conserve este documento para cualquier trámite futuro. Le recordamos que las cuotas deben pagarse entre el <b>1° y el 5° día</b> de cada mes.'
+
+  const body = `
+    <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">${kicker}</p>
+    <h1 style="font-family:sans-serif;font-size:20px;font-weight:800;color:#111;margin:0 0 4px">Estimado/a ${clienteNombre}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 22px">${intro}</p>
+
+    ${avisoBox}
 
     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;margin-bottom:18px">
       <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px">Resumen de la proforma</p>
@@ -173,14 +202,12 @@ export async function enviarProformaCliente(opts: EnviarProformaOpts) {
         ${row('Vehículo', `${marca} ${modelo}${placa ? ` · ${placa}` : ''}`)}
         ${row('Modalidad', planLabel)}
         ${row('Precio del vehículo', `$${fmt(precioVehiculo)}`)}
-        ${row('Inicial pagada', `$${fmt(inicialPagada)}`)}
-        ${row('Saldo financiado', `$${fmt(saldoFinanciado)}`)}
-        ${row('Cuotas mensuales', `${numeroCuotas} × $${fmt(cuotaMensual)}`)}
+        ${filaInicial}
       </table>
     </div>
 
     <p style="font-family:sans-serif;font-size:13px;color:#374151;margin:0 0 8px;line-height:1.6">
-      Por favor conserve este documento para cualquier trámite futuro. Le recordamos que las cuotas deben pagarse entre el <b>1° y el 5° día</b> de cada mes.
+      ${cierre}
     </p>
 
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;margin:24px 0 0;line-height:1.5">

@@ -190,10 +190,15 @@ export interface ProformaPDFData {
   cronograma: CuotaCronogramaItem[]
   vendedor?: string | null
   acuerdoInicial?: AcuerdoInicialInfo | null
+  // Proforma PREVIA a la venta (nace de una cotización, sin entrega aún). Cambia
+  // el texto legal: propuesta de condiciones, no entrega bajo compromiso.
+  preVenta?: boolean
 }
 
 export function ProformaPDF({ data }: { data: ProformaPDFData }) {
   const totalCronograma = data.cronograma.reduce((s, c) => s + Number(c.monto), 0)
+  const preVenta = !!data.preVenta
+  const tieneFinanciamiento = data.cronograma.length > 0 && data.cuotaMensual > 0
 
   return (
     <Document title={`Proforma ${data.numero}`} author="La Oriental Automotors">
@@ -217,7 +222,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
 
           <View style={s.documentTitleWrap}>
             <Text style={s.documentTitle}>PROFORMA</Text>
-            <Text style={s.documentSubtitle}>DOCUMENTO DE VENTA CON FINANCIAMIENTO OTORGADO</Text>
+            <Text style={s.documentSubtitle}>{preVenta ? 'PROPUESTA DE CONDICIONES DE COMPRA — PREVIA A LA VENTA' : 'DOCUMENTO DE VENTA CON FINANCIAMIENTO OTORGADO'}</Text>
           </View>
 
           {/* Cliente + Número Proforma */}
@@ -301,6 +306,25 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
 
           {/* Bloque de compromiso formal */}
           <View style={s.compromisoBox}>
+            {preVenta ? (
+              <Text style={s.compromisoText}>
+                <Text style={s.compromisoBold}>CONDICIONES PROPUESTAS: </Text>
+                El cliente <Text style={s.compromisoBold}>{data.clienteNombre}</Text>, C.I./RIF: <Text style={s.compromisoBold}>{data.clienteCiRif}</Text>,{' '}
+                {tieneFinanciamiento ? (
+                  <>
+                    podrá adquirir el vehículo bajo la modalidad <Text style={s.compromisoBold}>{data.planLabel}</Text>, con una{' '}
+                    <Text style={s.compromisoBold}>inicial de ${fmt(data.inicialPagada)}</Text> y{' '}
+                    <Text style={s.compromisoBold}>{data.numeroCuotas} cuotas mensuales de ${fmt(data.cuotaMensual)}</Text> por un total financiado de{' '}
+                    <Text style={s.compromisoBold}>${fmt(data.saldoFinanciado)}</Text>. Estas condiciones son previas a la venta y quedarán en firme al formalizarse la operación.
+                  </>
+                ) : (
+                  <>
+                    podrá adquirir el vehículo <Text style={s.compromisoBold}>de contado</Text> por un total de{' '}
+                    <Text style={s.compromisoBold}>${fmt(data.totalVehiculo)}</Text>. Estas condiciones son previas a la venta y quedarán en firme al formalizarse la operación.
+                  </>
+                )}
+              </Text>
+            ) : (
             <Text style={s.compromisoText}>
               <Text style={s.compromisoBold}>COMPROMISO DEL CLIENTE: </Text>
               El cliente <Text style={s.compromisoBold}>{data.clienteNombre}</Text>, C.I./RIF: <Text style={s.compromisoBold}>{data.clienteCiRif}</Text>,{' '}
@@ -319,21 +343,30 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                 </>
               )}
             </Text>
+            )}
           </View>
 
-          {/* Bloque de crédito otorgado */}
+          {/* Bloque de crédito / financiamiento (solo si hay cuotas) */}
+          {tieneFinanciamiento && (
           <View style={s.creditoWrap}>
             <View style={s.creditoBox}>
               <View style={s.creditoHeader}>
-                <Text style={s.creditoHeaderTitle}>COMPROMISO DE PAGO — CRÉDITO OTORGADO</Text>
+                <Text style={s.creditoHeaderTitle}>{preVenta ? 'CONDICIONES DE FINANCIAMIENTO PROPUESTAS' : 'COMPROMISO DE PAGO — CRÉDITO OTORGADO'}</Text>
                 <Text style={s.creditoHeaderSub}>Plan: {data.planLabel}</Text>
               </View>
 
               <View style={s.creditoAvisoBox}>
-                <Text style={s.creditoAvisoText}>
-                  <Text style={s.creditoAvisoBold}>⚠ AVISO IMPORTANTE: </Text>
-                  Este vehículo <Text style={s.creditoAvisoBold}>NO ha sido pagado en su totalidad</Text>. El cliente {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, ha recibido el vehículo bajo compromiso de pago financiado según el cronograma que se detalla a continuación.
-                </Text>
+                {preVenta ? (
+                  <Text style={s.creditoAvisoText}>
+                    <Text style={s.creditoAvisoBold}>ⓘ NOTA: </Text>
+                    Este documento detalla las <Text style={s.creditoAvisoBold}>condiciones de financiamiento propuestas</Text> para el cliente {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}. La entrega del vehículo se realizará una vez formalizada la venta, según el cronograma que se detalla a continuación.
+                  </Text>
+                ) : (
+                  <Text style={s.creditoAvisoText}>
+                    <Text style={s.creditoAvisoBold}>⚠ AVISO IMPORTANTE: </Text>
+                    Este vehículo <Text style={s.creditoAvisoBold}>NO ha sido pagado en su totalidad</Text>. El cliente {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, ha recibido el vehículo bajo compromiso de pago financiado según el cronograma que se detalla a continuación.
+                  </Text>
+                )}
               </View>
 
               <View style={s.creditoResumen}>
@@ -392,9 +425,18 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               </View>
             </View>
           </View>
+          )}
 
           {/* Texto legal */}
           <View style={s.legalBox}>
+            {preVenta ? (
+              <Text style={s.legalText}>
+                <Text style={s.legalBold}>DOCUMENTO PREVIO A LA VENTA. </Text>
+                Esta proforma refleja las condiciones de compra propuestas al cliente {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, para el vehículo MARCA: {data.marca}, MODELO: {data.modelo}. <Text style={s.legalBold}>No constituye entrega del vehículo ni comprobante de pago.</Text> La venta quedará formalizada al suscribirse el contrato correspondiente y cumplirse las condiciones de pago aquí descritas.{'\n\n'}
+                Las condiciones y montos indicados están sujetos a la aprobación de LA ORIENTAL AUTOMOTORS, C.A.; RIF: J-505692143, a la disponibilidad de la unidad y a la vigencia de la tasa de cambio aplicable a la fecha de la operación.{'\n\n'}
+                <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>
+              </Text>
+            ) : (
             <Text style={s.legalText}>
               <Text style={s.legalBold}>VEHÍCULO NO HA SIDO PAGADO EN SU TOTALIDAD POR PARTE DEL CLIENTE: </Text>
               {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, SIN EMBARGO SE PROCEDE A ENTREGAR EL VEHÍCULO MARCA: {data.marca}, MODELO: {data.modelo}{data.placa ? `, PLACA: ${data.placa}` : ''}, CON SU RESPECTIVA PÓLIZA DE SEGURO VEHICULAR, PREVIA APROBACIÓN DE LA EMPRESA: LA ORIENTAL AUTOMOTORS, C.A.; RIF: J-505692143.{'\n\n'}
@@ -403,6 +445,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
               FIRMÓ, ACEPTÓ, ESTOY DE ACUERDO Y ASUMO EL COMPROMISO EN LO DESCRITO ANTERIORMENTE.
             </Text>
+            )}
           </View>
 
           {/* Firmas */}
@@ -429,7 +472,11 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
 
           <Text style={s.condTitle}>CONDICIONES:</Text>
           <Text style={s.condText}>
-            El comprador acepta y reconoce que el vehículo objeto de esta proforma es entregado bajo un compromiso de pago con financiamiento aprobado. Los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que La Oriental Automotors, C.A. indique. Esta proforma constituye documento formal de compromiso y podrá ser presentada ante autoridades competentes en caso de incumplimiento.
+            {preVenta
+              ? (tieneFinanciamiento
+                  ? 'El cliente reconoce que esta proforma es previa a la venta y refleja las condiciones de financiamiento propuestas. De formalizarse la operación, los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que La Oriental Automotors, C.A. indique. Los montos están sujetos a la disponibilidad de la unidad y a la tasa de cambio vigente a la fecha de la venta.'
+                  : 'El cliente reconoce que esta proforma es previa a la venta y refleja las condiciones de compra de contado propuestas. Los montos están sujetos a la disponibilidad de la unidad y a la tasa de cambio vigente a la fecha de la venta.')
+              : 'El comprador acepta y reconoce que el vehículo objeto de esta proforma es entregado bajo un compromiso de pago con financiamiento aprobado. Los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que La Oriental Automotors, C.A. indique. Esta proforma constituye documento formal de compromiso y podrá ser presentada ante autoridades competentes en caso de incumplimiento.'}
           </Text>
         </View>
 

@@ -160,6 +160,7 @@ export async function POST(req: Request) {
         cuotaMensual,
         numeroCuotas: meses,
         planLabel: planLbl,
+        preVenta: true,
       })
       await supabase.from('proformas').update({ correo_enviado_at: new Date().toISOString() }).eq('id', proforma.id)
       correoEnviado = true

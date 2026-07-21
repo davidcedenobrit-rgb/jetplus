@@ -28,6 +28,7 @@ const planLabel: Record<string, string> = {
   cuota_especial: 'Cuota Especial Vehimotors',
   asegurate_500: 'Asegúrate $500',
   credito_40_60: '40/60 Vehimotors',
+  contado: 'Contado',
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -69,6 +70,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     numeroCuotas: Number(pro.num_cuotas ?? cronograma.length),
     planTipo: credito.plan_tipo ?? '',
     planLabel: planLabel[credito.plan_tipo] ?? 'Crédito',
+    // Proforma previa a la venta: nació de una cotización y aún no hay crédito.
+    preVenta: !pro.credito_id && !!pro.cotizacion_id,
     cronograma,
     acuerdoInicial: credito.acuerdo_inicial ? {
       monto_acordado: Number(credito.acuerdo_inicial.monto_acordado ?? 0),
