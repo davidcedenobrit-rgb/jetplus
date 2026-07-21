@@ -139,6 +139,10 @@ export default function NuevoVehiculoPage() {
     numero: string; cliente_nombre: string; cliente_ci_rif: string; modalidad: string; cuota_mensual: number | null
   } | null>(null)
 
+  // Venta desde proforma (flujo nuevo): id + número para vincular al guardar.
+  const [proformaId, setProformaId] = useState<string | null>(null)
+  const [proformaNumero, setProformaNumero] = useState<string | null>(null)
+
   const [marca, setMarca] = useState<'MG' | 'MAXUS'>('MG')
   const [modelo, setModelo] = useState('')
   const [version, setVersion] = useState('')
@@ -219,33 +223,59 @@ export default function NuevoVehiculoPage() {
     }
   }, [])
 
+  // Prellenar desde una cotización (usado por el flujo directo y por proforma).
+  async function prefillDesdeCotizacion(cotId: string) {
+    try {
+      const r = await fetch(`/api/cotizaciones/${cotId}`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cot: any = await r.json()
+      if (!cot || cot.error) return
+      if (cot.marca === 'MG' || cot.marca === 'MAXUS') setMarca(cot.marca)
+      if (cot.modelo) setModelo(cot.modelo)
+      if (cot.modalidad === 'contado') {
+        setTipoCompra('contado')
+      } else {
+        setTipoCompra('financiado')
+        setPlan('personalizado')
+        if (cot.precio_base) setCalcBase(String(cot.precio_base))
+        if (cot.total_inicial) { setOrMonto(String(cot.total_inicial)); setOrCuotas('0') }
+        if (cot.financiamiento_monto) { setVhMonto(String(cot.financiamiento_monto)); setVhCuotas('24') }
+      }
+      setCotizacionInfo({
+        numero: cot.numero,
+        cliente_nombre: cot.cliente_nombre,
+        cliente_ci_rif: cot.cliente_ci_rif,
+        modalidad: cot.modalidad,
+        cuota_mensual: cot.cuota_mensual,
+      })
+    } catch { /* prellenado best-effort */ }
+  }
+
   useEffect(() => {
     const cotId = searchParams.get('cotizacionId')
-    if (!cotId) return
-    fetch(`/api/cotizaciones/${cotId}`)
-      .then(r => r.json())
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((cot: any) => {
-        if (!cot || cot.error) return
-        if (cot.marca === 'MG' || cot.marca === 'MAXUS') setMarca(cot.marca)
-        if (cot.modelo) setModelo(cot.modelo)
-        if (cot.modalidad === 'contado') {
-          setTipoCompra('contado')
-        } else {
-          setTipoCompra('financiado')
-          setPlan('personalizado')
-          if (cot.precio_base) setCalcBase(String(cot.precio_base))
-          if (cot.total_inicial) { setOrMonto(String(cot.total_inicial)); setOrCuotas('0') }
-          if (cot.financiamiento_monto) { setVhMonto(String(cot.financiamiento_monto)); setVhCuotas('24') }
-        }
-        setCotizacionInfo({
-          numero: cot.numero,
-          cliente_nombre: cot.cliente_nombre,
-          cliente_ci_rif: cot.cliente_ci_rif,
-          modalidad: cot.modalidad,
-          cuota_mensual: cot.cuota_mensual,
-        })
-      })
+    if (cotId) prefillDesdeCotizacion(cotId)
+  }, [])
+
+  // Venta desde una PROFORMA (flujo nuevo: no hay venta sin proforma).
+  // Resuelve la cotización de la proforma, prellenar, autoselecciona el cliente
+  // y guarda el id para vincular la proforma a la venta al guardar.
+  useEffect(() => {
+    const proId = searchParams.get('proformaId')
+    if (!proId) return
+    ;(async () => {
+      const { data: pro } = await supabase
+        .from('proformas')
+        .select('id, numero, cliente_id, cotizacion_id')
+        .eq('id', proId).single()
+      if (!pro) return
+      setProformaId(pro.id)
+      setProformaNumero(pro.numero)
+      if (pro.cliente_id) {
+        const { data: cli } = await supabase.from('clientes').select('*').eq('id', pro.cliente_id).single()
+        if (cli) { setClienteSeleccionado(cli); setClienteQuery(cli.nombre) }
+      }
+      if (pro.cotizacion_id) await prefillDesdeCotizacion(pro.cotizacion_id)
+    })()
   }, [])
 
   useEffect(() => {
@@ -653,6 +683,16 @@ export default function NuevoVehiculoPage() {
       .single()
     if (upsertError || !vehiculo) { setError(upsertError?.message ?? 'Error al guardar'); setLoading(false); return }
 
+    // Vincular la proforma a esta venta (flujo nuevo). Se hace apenas existe el
+    // vehículo para cubrir todos los caminos (acuerdo, contado, financiado).
+    if (proformaId) {
+      await supabase.from('proformas').update({
+        vehiculo_id: vehiculo.id,
+        ...(clienteSeleccionado.id ? { cliente_id: clienteSeleccionado.id } : {}),
+        updated_at: new Date().toISOString(),
+      }).eq('id', proformaId)
+    }
+
     // Vincular showroom si se seleccionó uno
     if (showroomSeleccionado) {
       await supabase.from('vehiculos_showroom').update({
@@ -916,6 +956,13 @@ export default function NuevoVehiculoPage() {
             <div className="w-1 h-4 bg-oriental-red rounded-full" />
             Propietario
           </h2>
+
+          {proformaNumero && (
+            <div className="mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center gap-2">
+              <span className="text-indigo-800 text-xs font-bold uppercase tracking-wider">Venta desde proforma {proformaNumero}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">Proforma → Venta</span>
+            </div>
+          )}
 
           {cotizacionInfo && (
             <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4">

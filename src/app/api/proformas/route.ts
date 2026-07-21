@@ -252,7 +252,7 @@ export async function GET(req: Request) {
   const supabase = await createAdminClient()
   let query = supabase
     .from('proformas')
-    .select('id, numero, fecha_emision, cliente_id, credito_id, vehiculo_id, precio_vehiculo, monto_inicial, monto_financiado, num_cuotas, correo_destino, correo_enviado_at, created_at')
+    .select('id, numero, fecha_emision, cliente_id, credito_id, vehiculo_id, cotizacion_id, cliente_snapshot, vehiculo_snapshot, precio_vehiculo, monto_inicial, monto_financiado, num_cuotas, correo_destino, correo_enviado_at, created_at')
     .order('created_at', { ascending: false })
     .limit(limit)
 

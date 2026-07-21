@@ -6,15 +6,16 @@ import VehiculosEditor from './VehiculosEditor'
 import AC500Editor from './AC500Editor'
 import VendedorasEditor from './VendedorasEditor'
 import CotizacionesTab from './CotizacionesTab'
+import ProformasTab from './ProformasTab'
 import CotizacionCDMTab from './CotizacionCDMTab'
 import TasasEditor from './TasasEditor'
 import ClientesHistorialTab from './ClientesHistorialTab'
 import PromocionesTab from './PromocionesTab'
 import ConcesionariosTab from './ConcesionariosTab'
 
-type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'generar' | 'tasas' | 'clientes' | 'promociones' | 'concesionarios'
+type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'cotizaciones' | 'proformas' | 'generar' | 'tasas' | 'clientes' | 'promociones' | 'concesionarios'
 
-const TABS_VALIDOS: Tab[] = ['catalogo', 'ac500', 'vendedoras', 'cotizaciones', 'generar', 'tasas', 'clientes', 'promociones', 'concesionarios']
+const TABS_VALIDOS: Tab[] = ['catalogo', 'ac500', 'vendedoras', 'cotizaciones', 'proformas', 'generar', 'tasas', 'clientes', 'promociones', 'concesionarios']
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
@@ -30,6 +31,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas, 
     { key: 'ac500', label: 'Asegúrate con $500' },
     { key: 'vendedoras', label: 'Vendedoras' },
     { key: 'cotizaciones', label: 'Cotizaciones' },
+    { key: 'proformas', label: 'Proformas' },
     { key: 'generar', label: 'Generar cotización' },
     { key: 'tasas', label: 'Tasas' },
     { key: 'clientes', label: 'Historial de clientes' },
@@ -57,6 +59,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas, 
       {tab === 'ac500' && <AC500Editor initial={ac500} />}
       {tab === 'vendedoras' && <VendedorasEditor />}
       {tab === 'cotizaciones' && <CotizacionesTab puedeEditar={puedeEditar} />}
+      {tab === 'proformas' && <ProformasTab />}
       {tab === 'generar' && <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} tasas={tasas} />}
       {tab === 'tasas' && <TasasEditor />}
       {tab === 'clientes' && <ClientesHistorialTab />}
