@@ -682,6 +682,7 @@ function concesLabel(id: string | null | undefined, mapa: Record<string, string>
 }
 
 export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?: boolean }) {
+  const router = useRouter()
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<Filtro>('todas')
@@ -884,13 +885,18 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                       )}
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      <a
-                        href={`/api/cotizaciones/${c.id}/pdf`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 hover:bg-oriental-red hover:text-white text-gray-600 rounded-lg text-[11px] font-bold transition-colors whitespace-nowrap"
-                      >
-                        Ver PDF
-                      </a>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <a
+                          href={`/api/cotizaciones/${c.id}/pdf`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 hover:bg-oriental-red hover:text-white text-gray-600 rounded-lg text-[11px] font-bold transition-colors whitespace-nowrap"
+                        >
+                          Ver PDF
+                        </a>
+                        {c.estado === 'aceptada' && (
+                          <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} compact onDone={() => router.refresh()} />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -925,6 +931,11 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                   <ModalidadBadge modalidad={c.modalidad} plan={c.plan} />
                   <p className="text-sm font-bold text-oriental-black">${fmt(c.total_inicial)}</p>
                 </div>
+                {c.estado === 'aceptada' && (
+                  <div className="mt-2 pt-2 border-t border-gray-100" onClick={e => e.stopPropagation()}>
+                    <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} compact onDone={() => router.refresh()} />
+                  </div>
+                )}
               </div>
             ))}
           </div>

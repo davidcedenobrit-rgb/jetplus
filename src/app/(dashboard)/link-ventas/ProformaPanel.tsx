@@ -7,12 +7,13 @@ import { FileText, X, Loader2, ExternalLink } from 'lucide-react'
 // cotización → aprobación → PROFORMA → venta). La proforma es la cotización
 // negociada + las condiciones de pago para ese cliente.
 export default function ProformaPanel({
-  cotId, numero, correoCliente, onDone,
+  cotId, numero, correoCliente, onDone, compact = false,
 }: {
   cotId: string
   numero: string
   correoCliente?: string | null
   onDone: () => void
+  compact?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -57,10 +58,17 @@ export default function ProformaPanel({
 
   return (
     <>
-      <button onClick={abrir}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-xl text-sm transition-colors">
-        <FileText size={15} /> Generar proforma
-      </button>
+      {compact ? (
+        <button onClick={abrir}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors">
+          <FileText size={12} /> Convertir en proforma
+        </button>
+      ) : (
+        <button onClick={abrir}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-xl text-sm transition-colors">
+          <FileText size={15} /> Generar proforma
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
