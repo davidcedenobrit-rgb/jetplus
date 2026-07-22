@@ -26,6 +26,8 @@ type Venta = {
   cliente_id: string | null
   etapa_key: string
   etapa_label: string
+  es_ac500: boolean
+  es_showroom: boolean
   div_definida: boolean
   precio_venta: number
   pago_vehimotors: number
@@ -185,7 +187,9 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
         ) : (
           <div className="space-y-2">
             <p className="text-xs text-gray-400">{filtradas.length} de {ventas.length} ventas</p>
-            {filtradas.map(v => (
+            {filtradas.map(v => {
+              const utilidad = Number(v.precio_venta || 0) - Number(v.pago_vehimotors || 0)
+              return (
               <Link key={v.id} href={`/vehiculos/${v.id}`}
                 className="flex flex-col sm:flex-row sm:items-center gap-2 border border-gray-200 rounded-xl p-4 hover:border-oriental-red hover:bg-red-50/30 transition-colors">
                 <div className="flex-1 min-w-0">
@@ -193,17 +197,30 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
                     <span className="font-semibold text-oriental-black text-sm truncate">{v.marca} {v.modelo}</span>
                     {v.placa && <span className="font-mono text-[11px] text-gray-400">{v.placa}</span>}
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${ETAPA_CFG[v.etapa_key] ?? 'bg-gray-100 text-gray-600'}`}>{v.etapa_label}</span>
+                    {v.es_showroom && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700">🏬 Showroom</span>}
+                    {v.es_ac500 && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">🛡 AC500</span>}
                     {v.proforma_numero && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700">{v.proforma_numero}</span>}
                   </div>
                   <p className="text-gray-500 text-xs truncate">{v.cliente_nombre} {v.cliente_ci && <span className="text-gray-400">· {v.cliente_ci}</span>}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-bold text-oriental-black">${fmt(v.precio_total)}</p>
-                  <p className="text-[10px] text-gray-400">{fmtFecha(v.created_at)}</p>
+                  <p className="text-[10px] text-gray-400 mb-1">Precio base · {fmtFecha(v.created_at)}</p>
+                  {v.div_definida ? (
+                    <p className="text-[11px] font-bold text-green-700">Utilidad: ${fmt(utilidad)}</p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setVista('division'); setEditar(v) }}
+                      className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                      Definir utilidad
+                    </button>
+                  )}
                 </div>
                 <ExternalLink size={14} className="text-gray-300 shrink-0 hidden sm:block" />
               </Link>
-            ))}
+              )
+            })}
           </div>
         )
       ) : vista === 'registrar' ? (

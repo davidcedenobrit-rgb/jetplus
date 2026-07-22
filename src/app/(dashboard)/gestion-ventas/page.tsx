@@ -48,7 +48,7 @@ export default async function GestionVentasPage() {
   })
   const puedeEditar = ['jose', 'admin', 'director'].includes(rol)
 
-  const [vehiculos, creditos, acuerdos, proformas, divisiones] = await Promise.all([
+  const [vehiculos, creditos, acuerdos, proformas, divisiones, showroomVend] = await Promise.all([
     fetchAllRows<any>((from, to) => supabase
       .from('vehiculos')
       .select('id, marca, modelo, placa, tipo_compra, estado, precio_total, created_at, cliente_id, clientes(nombre, cedula_rif)')
@@ -73,6 +73,12 @@ export default async function GestionVentasPage() {
       .from('ventas_division_contable')
       .select('*')
       .range(from, to)),
+    // Vehículos del showroom ya vendidos: su vehiculo_id apunta a la venta.
+    fetchAllRows<any>((from, to) => supabase
+      .from('vehiculos_showroom')
+      .select('vehiculo_id')
+      .not('vehiculo_id', 'is', null)
+      .range(from, to)),
   ])
 
   const credMap: Record<string, any> = {}
@@ -83,13 +89,17 @@ export default async function GestionVentasPage() {
   for (const p of proformas ?? []) { if (p.vehiculo_id && !proMap[p.vehiculo_id]) proMap[p.vehiculo_id] = p }
   const divMap: Record<string, any> = {}
   for (const d of divisiones ?? []) { if (d.vehiculo_id) divMap[d.vehiculo_id] = d }
+  const showroomSet = new Set<string>((showroomVend ?? []).map((s: any) => s.vehiculo_id).filter(Boolean))
 
   const ventas = (vehiculos ?? []).map((v: any) => {
-    const etapa = calcularEtapa(v, credMap[v.id], acuMap[v.id])
+    const cred = credMap[v.id]
+    const etapa = calcularEtapa(v, cred, acuMap[v.id])
     const pro = proMap[v.id]
     const div = divMap[v.id]
     const precioBaseVenta = Number(div?.precio_venta ?? pro?.precio_vehiculo ?? v.precio_total ?? 0)
     return {
+      es_ac500: cred?.plan_tipo === 'asegurate_500',
+      es_showroom: showroomSet.has(v.id),
       id: v.id,
       marca: v.marca,
       modelo: v.modelo,
