@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag, FileCheck, Receipt, DollarSign, Truck, FilePlus } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import RepuestosActivasGrid from './RepuestosActivasGrid'
-import CatalogoRepuestos from './CatalogoRepuestos'
 
 const ROL_ADMIN = ['jose', 'arianna', 'director', 'admin', 'mary', 'leysdem', 'almacen']
 const ROL_PLAZA = ['jose', 'admin', 'director', 'mary', 'leysdem', 'arianna']
@@ -80,7 +79,6 @@ export default async function RepuestosPage({
 
   const rol = (user.app_metadata?.rol as string) ?? ''
   const puedeEliminar = ROL_ADMIN.includes(rol)
-  const isAdmin = ROL_ADMIN.includes(rol)
   const puedeComprarPlaza = ROL_PLAZA.includes(rol)
 
   const { grupo, todas } = await searchParams
@@ -325,8 +323,6 @@ export default async function RepuestosPage({
           )}
         </>
       )}
-
-      <CatalogoRepuestos isAdmin={isAdmin} />
     </div>
   )
 }

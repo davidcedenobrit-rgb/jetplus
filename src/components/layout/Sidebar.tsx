@@ -97,6 +97,7 @@ const SECTIONS: NavSection[] = [
     links: [
       { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package, sub: [
         { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
+        { href: '/repuestos/catalogo', label: 'Catálogo repuestos VM', icon: BookOpenCheck },
       ] },
       { href: '/materiales', label: 'Materiales e insumos', icon: Boxes,     roles: DIR },
     ],
