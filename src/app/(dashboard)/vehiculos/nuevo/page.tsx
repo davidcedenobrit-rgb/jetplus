@@ -72,7 +72,7 @@ function ac500ToPlan(v: AC500Vehiculo, meses: 6 | 9 | 12): PlanAC500 {
 }
 
 interface PagoInicial {
-  id: string; monto: string; metodo: string; referencia: string
+  id: string; moneda: 'USD' | 'VES' | 'USDT'; monto: string; metodo: string; referencia: string
   bancoEmisor: string; bancoReceptor: string
   montoBs: string; tasaCambio: string; observaciones: string
 }
@@ -126,7 +126,7 @@ export default function NuevoVehiculoPage() {
   const [registrarIngresoInicial, setRegistrarIngresoInicial] = useState(false)
   const [ingresoInicialFecha, setIngresoInicialFecha] = useState(new Date().toISOString().split('T')[0])
   const [pagosIniciales, setPagosIniciales] = useState<PagoInicial[]>([
-    { id: '1', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }
+    { id: '1', moneda: 'USD', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }
   ])
 
   // Showroom
@@ -607,24 +607,28 @@ export default function NuevoVehiculoPage() {
     // registrado_por es OBLIGATORIO; sin él el ingreso no se guarda.
     const { data: { user } } = await supabase.auth.getUser()
     for (const pago of pagosValidos) {
-      const montoBs = parseFloat(pago.montoBs) || null
-      const tasaCambio = parseFloat(pago.tasaCambio) || null
+      const esVes = pago.moneda === 'VES'
+      const bs = parseFloat(pago.montoBs) || 0
+      const tasa = parseFloat(pago.tasaCambio) || 0
+      // En Bs se guarda el monto en bolívares + su tasa; en USD/USDT el monto es directo.
+      if (esVes && tasa <= 0) { setError('Un pago en bolívares requiere la tasa del día.'); setLoading(false); throw new Error('VES sin tasa') }
+      const montoStored = esVes ? bs : (parseFloat(pago.monto) || 0)
       // El número de recibo lo asigna el trigger de la base (correlativo único).
       const { error: insErr } = await supabase.from('ingresos').insert({
         cliente_id: clienteId,
         vehiculo_id: vehiculoId,
         placa: placa || null,
         concepto: `Pago de inicial — ${vehiculoDesc}`,
-        monto: parseFloat(pago.monto),
-        moneda: 'USD',
+        monto: montoStored,
+        moneda: pago.moneda,
         metodo_pago: pago.metodo,
         referencia: pago.referencia || null,
         banco_emisor: pago.bancoEmisor || null,
         banco_receptor: pago.bancoReceptor || null,
         fecha_pago: ingresoInicialFecha,
-        estado: 'registrado',
-        monto_bs: montoBs,
-        tasa_cambio: tasaCambio,
+        estado: 'pendiente_aprobacion',
+        monto_bs: esVes ? bs : null,
+        tasa_cambio: esVes ? tasa : null,
         observaciones: pago.observaciones || null,
         acuerdo_inicial_id: acuerdoId ?? null,
         registrado_por: user?.id ?? null,
@@ -652,11 +656,95 @@ export default function NuevoVehiculoPage() {
     }))
   }
   function addPago() {
-    setPagosIniciales(prev => [...prev, { id: String(Date.now()), monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }])
+    setPagosIniciales(prev => [...prev, { id: String(Date.now()), moneda: 'USD', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }])
   }
   function removePago(id: string) {
     if (pagosIniciales.length <= 1) return
     setPagosIniciales(prev => prev.filter(p => p.id !== id))
+  }
+  function setPagoMoneda(id: string, moneda: 'USD' | 'VES' | 'USDT') {
+    setPagosIniciales(prev => prev.map(p => p.id === id ? { ...p, moneda } : p))
+  }
+
+  // Campos de un pago inicial — mismo orden/campos que el formulario de Ingresos.
+  function renderPagoCampos(pago: PagoInicial) {
+    const esVes = pago.moneda === 'VES'
+    const usdEquiv = esVes ? ((parseFloat(pago.montoBs) || 0) / (parseFloat(pago.tasaCambio) || 1)) : (parseFloat(pago.monto) || 0)
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="md:col-span-2">
+          <label className="label">Moneda *</label>
+          <div className="flex gap-2">
+            {([['USD', 'Dólares $'], ['VES', 'Bolívares Bs'], ['USDT', 'USDT']] as const).map(([m, lbl]) => (
+              <button key={m} type="button" onClick={() => setPagoMoneda(pago.id, m)}
+                className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-bold transition-all ${pago.moneda === m ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+        </div>
+        {esVes ? (
+          <>
+            <div>
+              <label className="label">Monto en Bs. *</label>
+              <input type="number" step="0.01" min="0" className="input font-semibold" placeholder="0.00"
+                value={pago.montoBs} onChange={e => updatePago(pago.id, 'montoBs', e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Tasa Bs./USD *</label>
+              <input type="number" step="0.0001" min="0" className="input" placeholder="40.0012"
+                value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
+            </div>
+            <div className="md:col-span-2">
+              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center justify-between text-sm">
+                <span className="text-green-700 text-xs font-semibold">Equivalente en $:</span>
+                <span className="font-extrabold text-green-800">{formatUSD(usdEquiv)}</span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div>
+            <label className="label">Monto ({pago.moneda}) *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
+              <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg" placeholder="0.00"
+                value={pago.monto} onChange={e => updatePago(pago.id, 'monto', e.target.value)} />
+            </div>
+          </div>
+        )}
+        <div>
+          <label className="label">Método *</label>
+          <select className="select" value={pago.metodo} onChange={e => updatePago(pago.id, 'metodo', e.target.value)}>
+            <option value="">Seleccionar...</option>
+            {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">N° Referencia</label>
+          <input type="text" className="input" placeholder="Número de referencia"
+            value={pago.referencia} onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />
+        </div>
+        <div>
+          <label className="label">Banco emisor</label>
+          <select className="select" value={pago.bancoEmisor} onChange={e => updatePago(pago.id, 'bancoEmisor', e.target.value)}>
+            <option value="">—</option>
+            {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Banco receptor</label>
+          <select className="select" value={pago.bancoReceptor} onChange={e => updatePago(pago.id, 'bancoReceptor', e.target.value)}>
+            <option value="">—</option>
+            {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <label className="label">Observaciones del pago</label>
+          <input type="text" className="input" placeholder="Ej: Pago parcial acordado del lunes"
+            value={pago.observaciones} onChange={e => updatePago(pago.id, 'observaciones', e.target.value)} />
+        </div>
+      </div>
+    )
   }
 
 
@@ -1742,72 +1830,7 @@ export default function NuevoVehiculoPage() {
                                 className="text-xs text-red-400 hover:text-red-600 font-semibold">Eliminar</button>
                             )}
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <label className="label">Monto (USD) *</label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
-                                <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
-                                  placeholder="0.00" value={pago.monto} onChange={e => updatePago(pago.id, 'monto', e.target.value)} />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="label">Método *</label>
-                              <select className="select" value={pago.metodo} onChange={e => updatePago(pago.id, 'metodo', e.target.value)}>
-                                <option value="">Seleccionar...</option>
-                                {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="label">N° Referencia</label>
-                              <input type="text" className="input" placeholder="Número de referencia"
-                                value={pago.referencia} onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />
-                            </div>
-                            <div>
-                              <label className="label">Banco emisor</label>
-                              <select className="select" value={pago.bancoEmisor} onChange={e => updatePago(pago.id, 'bancoEmisor', e.target.value)}>
-                                <option value="">—</option>
-                                {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="label">Banco receptor</label>
-                              <select className="select" value={pago.bancoReceptor} onChange={e => updatePago(pago.id, 'bancoReceptor', e.target.value)}>
-                                <option value="">—</option>
-                                {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="label">Observaciones del pago</label>
-                              <input type="text" className="input" placeholder="Ej: Pago parcial acordado del lunes"
-                                value={pago.observaciones} onChange={e => updatePago(pago.id, 'observaciones', e.target.value)} />
-                            </div>
-                            {METODOS_BS.includes(pago.metodo) && (<>
-                              <div className="md:col-span-2 pt-1 border-t border-orange-100">
-                                <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Detalle en Bolívares</p>
-                              </div>
-                              <div>
-                                <label className="label">Monto en Bs.</label>
-                                <input type="number" step="0.01" min="0" className="input"
-                                  placeholder="0.00" value={pago.montoBs} onChange={e => updatePago(pago.id, 'montoBs', e.target.value)} />
-                              </div>
-                              <div>
-                                <label className="label">Tasa Bs./USD</label>
-                                <input type="number" step="0.0001" min="0" className="input"
-                                  placeholder="40.0012" value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
-                              </div>
-                              {pago.montoBs && pago.tasaCambio && (
-                                <div className="md:col-span-2">
-                                  <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 flex items-center justify-between text-sm">
-                                    <span className="text-orange-700 text-xs font-semibold">≈ Equivalente USD:</span>
-                                    <span className="font-extrabold text-orange-900">
-                                      {formatUSD((parseFloat(pago.montoBs) || 0) / (parseFloat(pago.tasaCambio) || 1))}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </>)}
-                          </div>
+                          {renderPagoCampos(pago)}
                         </div>
                       ))}
                       <button type="button" onClick={addPago}
@@ -2341,67 +2364,7 @@ export default function NuevoVehiculoPage() {
                           className="text-xs text-red-400 hover:text-red-600 font-semibold">Eliminar</button>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="label">Monto (USD) *</label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray font-bold">$</span>
-                          <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
-                            placeholder="0.00" value={pago.monto} onChange={e => updatePago(pago.id, 'monto', e.target.value)} />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="label">Método *</label>
-                        <select className="select" value={pago.metodo} onChange={e => updatePago(pago.id, 'metodo', e.target.value)}>
-                          <option value="">Seleccionar...</option>
-                          {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="label">N° Referencia</label>
-                        <input type="text" className="input" placeholder="Número de referencia"
-                          value={pago.referencia} onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="label">Banco emisor</label>
-                        <select className="select" value={pago.bancoEmisor} onChange={e => updatePago(pago.id, 'bancoEmisor', e.target.value)}>
-                          <option value="">—</option>
-                          {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
-                        </select>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="label">Banco receptor</label>
-                        <select className="select" value={pago.bancoReceptor} onChange={e => updatePago(pago.id, 'bancoReceptor', e.target.value)}>
-                          <option value="">—</option>
-                          {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
-                        </select>
-                      </div>
-                      {METODOS_BS.includes(pago.metodo) && (<>
-                        <div className="md:col-span-2 pt-1 border-t border-orange-100">
-                          <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Detalle en Bolívares</p>
-                        </div>
-                        <div>
-                          <label className="label">Monto en Bs.</label>
-                          <input type="number" step="0.01" min="0" className="input"
-                            placeholder="0.00" value={pago.montoBs} onChange={e => updatePago(pago.id, 'montoBs', e.target.value)} />
-                        </div>
-                        <div>
-                          <label className="label">Tasa Bs./USD</label>
-                          <input type="number" step="0.0001" min="0" className="input"
-                            placeholder="40.0012" value={pago.tasaCambio} onChange={e => updatePago(pago.id, 'tasaCambio', e.target.value)} />
-                        </div>
-                        {pago.montoBs && pago.tasaCambio && (
-                          <div className="md:col-span-2">
-                            <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 flex items-center justify-between text-sm">
-                              <span className="text-orange-700 text-xs font-semibold">≈ Equivalente USD:</span>
-                              <span className="font-extrabold text-orange-900">
-                                {formatUSD((parseFloat(pago.montoBs) || 0) / (parseFloat(pago.tasaCambio) || 1))}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </>)}
-                    </div>
+                    {renderPagoCampos(pago)}
                   </div>
                 ))}
                 <button type="button" onClick={addPago}
