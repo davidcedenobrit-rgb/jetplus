@@ -10,6 +10,7 @@ import {
 import ActionButtons from './ActionButtons'
 import ClienteContactButtons from './ClienteContactButtons'
 import ComprobantesGallery from '@/components/ComprobantesGallery'
+import SubirComprobante from './SubirComprobante'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -980,6 +981,12 @@ export default async function IngresoDetallePage({
           </div>
 
           <ComprobantesGallery archivos={(archivos ?? []).filter((a: any) => a.tipo !== 'comprobante_deposito')} />
+          {rol !== 'cliente' && (
+            <SubirComprobante
+              ingresoId={ingreso.id}
+              tieneComprobantes={(archivos ?? []).some((a: any) => a.tipo !== 'comprobante_deposito')}
+            />
+          )}
         </div>
       </div>
     </div>

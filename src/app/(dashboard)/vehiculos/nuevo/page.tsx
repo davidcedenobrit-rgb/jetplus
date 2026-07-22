@@ -618,7 +618,7 @@ export default function NuevoVehiculoPage() {
         cliente_id: clienteId,
         vehiculo_id: vehiculoId,
         placa: placa || null,
-        concepto: `Pago de inicial — ${vehiculoDesc}`,
+        concepto: plan === 'asegurate_500' ? `Reserva Asegúrate $500 — ${vehiculoDesc}` : `Pago de inicial — ${vehiculoDesc}`,
         monto: montoStored,
         moneda: pago.moneda,
         metodo_pago: pago.metodo,
