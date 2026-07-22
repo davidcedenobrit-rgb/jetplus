@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
+import FileUpload from '@/components/FileUpload'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Save, Search, X, AlertCircle, Store, Car, CheckCircle2, MapPin } from 'lucide-react'
@@ -75,6 +76,7 @@ interface PagoInicial {
   id: string; moneda: 'USD' | 'VES' | 'USDT'; monto: string; metodo: string; referencia: string
   bancoEmisor: string; bancoReceptor: string
   montoBs: string; tasaCambio: string; observaciones: string
+  comprobantes: { url: string; nombre: string }[]
 }
 
 const METODOS_BS = ['Transferencia bancaria', 'Pago móvil', 'Depósito bancario', 'Efectivo VES', 'Cheque',
@@ -126,7 +128,7 @@ export default function NuevoVehiculoPage() {
   const [registrarIngresoInicial, setRegistrarIngresoInicial] = useState(false)
   const [ingresoInicialFecha, setIngresoInicialFecha] = useState(new Date().toISOString().split('T')[0])
   const [pagosIniciales, setPagosIniciales] = useState<PagoInicial[]>([
-    { id: '1', moneda: 'USD', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }
+    { id: '1', moneda: 'USD', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '', comprobantes: [] }
   ])
 
   // Showroom
@@ -614,7 +616,7 @@ export default function NuevoVehiculoPage() {
       if (esVes && tasa <= 0) { setError('Un pago en bolívares requiere la tasa del día.'); setLoading(false); throw new Error('VES sin tasa') }
       const montoStored = esVes ? bs : (parseFloat(pago.monto) || 0)
       // El número de recibo lo asigna el trigger de la base (correlativo único).
-      const { error: insErr } = await supabase.from('ingresos').insert({
+      const { data: ingresoCreado, error: insErr } = await supabase.from('ingresos').insert({
         cliente_id: clienteId,
         vehiculo_id: vehiculoId,
         placa: placa || null,
@@ -632,8 +634,14 @@ export default function NuevoVehiculoPage() {
         observaciones: pago.observaciones || null,
         acuerdo_inicial_id: acuerdoId ?? null,
         registrado_por: user?.id ?? null,
-      })
-      if (insErr) { setError(`No se pudo registrar el pago inicial: ${insErr.message}`); setLoading(false); throw insErr }
+      }).select('id').single()
+      if (insErr || !ingresoCreado) { setError(`No se pudo registrar el pago inicial: ${insErr?.message ?? ''}`); setLoading(false); throw (insErr ?? new Error('ingreso')) }
+      // Comprobantes del pago (si se cargaron) — se ligan al recibo creado.
+      if (pago.comprobantes.length > 0) {
+        await supabase.from('archivos').insert(
+          pago.comprobantes.map(c => ({ tipo: 'comprobante', url: c.url, nombre: c.nombre, ingreso_id: ingresoCreado.id, subido_por: user?.id ?? null }))
+        )
+      }
     }
     if (acuerdoId && pagosValidos.length > 0) {
       const totalPagado = pagosValidos.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0)
@@ -656,7 +664,7 @@ export default function NuevoVehiculoPage() {
     }))
   }
   function addPago() {
-    setPagosIniciales(prev => [...prev, { id: String(Date.now()), moneda: 'USD', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '' }])
+    setPagosIniciales(prev => [...prev, { id: String(Date.now()), moneda: 'USD', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '', comprobantes: [] }])
   }
   function removePago(id: string) {
     if (pagosIniciales.length <= 1) return
@@ -664,6 +672,9 @@ export default function NuevoVehiculoPage() {
   }
   function setPagoMoneda(id: string, moneda: 'USD' | 'VES' | 'USDT') {
     setPagosIniciales(prev => prev.map(p => p.id === id ? { ...p, moneda } : p))
+  }
+  function setPagoComprobantes(id: string, comprobantes: { url: string; nombre: string }[]) {
+    setPagosIniciales(prev => prev.map(p => p.id === id ? { ...p, comprobantes } : p))
   }
 
   // Campos de un pago inicial — mismo orden/campos que el formulario de Ingresos.
@@ -742,6 +753,10 @@ export default function NuevoVehiculoPage() {
           <label className="label">Observaciones del pago</label>
           <input type="text" className="input" placeholder="Ej: Pago parcial acordado del lunes"
             value={pago.observaciones} onChange={e => updatePago(pago.id, 'observaciones', e.target.value)} />
+        </div>
+        <div className="md:col-span-2">
+          <label className="label">Comprobante del pago <span className="text-oriental-gray font-normal">(opcional)</span></label>
+          <FileUpload files={pago.comprobantes} onFilesChange={files => setPagoComprobantes(pago.id, files)} maxFiles={5} />
         </div>
       </div>
     )
