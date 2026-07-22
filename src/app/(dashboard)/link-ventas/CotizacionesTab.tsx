@@ -420,7 +420,9 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Desglose económico</p>
               {puedeEditar ? (
                 <div className="flex items-center gap-3">
-                  <DescuentoPanel cotId={cot.id} numero={cot.numero} onDone={() => { onClose(); router.refresh() }} />
+                  {cot.plan !== 'ac500' && (
+                    <DescuentoPanel cotId={cot.id} numero={cot.numero} onDone={() => { onClose(); router.refresh() }} />
+                  )}
                   <button onClick={() => { setEditando(e => !e); setEError(''); setESuccessMsg('') }}
                     className="text-[11px] font-bold text-oriental-red hover:underline">
                     {editando ? 'Cancelar edición' : 'Editar cotización'}

@@ -4,7 +4,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { createAdminClient } from '@/lib/supabase/server'
 import { CotizacionPDF } from '@/lib/cotizacion-pdf'
-import type { CotizacionPDFData } from '@/lib/cotizacion-pdf'
+import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 function fmtDate(s: string) {
@@ -26,6 +26,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (error || !cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
 
   const conces = await getConcesionarioIdentity(supabase, cot.concesionario_id ?? null)
+
+  // Reconstruir el cuadro del AC500 (reserva + cuotas) para que el PDF a demanda
+  // se vea igual que el enviado por correo.
+  let ac500Schedule: AC500ScheduleData | undefined
+  if (cot.plan === 'ac500' && cot.ac500_meses && cot.ac500_cuotas) {
+    const meses = Number(cot.ac500_meses)
+    const montos = cot.ac500_cuotas as number[]
+    const cuotas: AC500CuotaItem[] = montos.map((monto: number, i: number) => ({
+      label: i + 1 === meses ? `Cuota ${i + 1} (Entrega)` : `Cuota ${i + 1}`,
+      monto,
+    }))
+    ac500Schedule = { reserva: Number(cot.total_inicial), meses, modelo: cot.modelo, cuotas, total: Number(cot.costo_total) }
+  }
 
   const pdfData: CotizacionPDFData = {
     logoSrc: conces.logoSrc,
@@ -61,6 +74,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     costoTotal: Number(cot.costo_total),
     inicialPct: cot.plan === 'personalizado' && cot.personalizado_inicial_pct != null ? Number(cot.personalizado_inicial_pct) / 100 : undefined,
     mesesCredito: cot.plan === 'personalizado' && cot.personalizado_meses != null ? Number(cot.personalizado_meses) : undefined,
+    ac500Schedule,
   }
 
   const buffer = await renderToBuffer(

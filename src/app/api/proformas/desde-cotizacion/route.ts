@@ -61,17 +61,32 @@ export async function POST(req: Request) {
         || 24
       ))
 
-  // Cronograma derivado (para crédito): N cuotas mensuales, todas pendientes.
+  // Cronograma derivado. AC500 tiene cuotas variables (arreglo ac500_cuotas);
+  // el resto usa N cuotas mensuales iguales.
   const hoy = new Date()
-  const cronogramaSnapshot = (modalidad === 'contado' || cuotaMensual <= 0)
-    ? []
-    : Array.from({ length: meses }, (_, i) => ({
-        numero: i + 1,
-        fecha_vencimiento: fechaCuota(hoy, i + 1),
-        monto: cuotaMensual,
-        estado: 'pendiente',
-        monto_pagado: 0,
-      }))
+  const ac500Cuotas = Array.isArray(cot.ac500_cuotas) ? (cot.ac500_cuotas as number[]) : []
+  let cronogramaSnapshot: any[]
+  if (plan === 'ac500' && ac500Cuotas.length > 0) {
+    cronogramaSnapshot = ac500Cuotas.map((monto, i) => ({
+      numero: i + 1,
+      fecha_vencimiento: fechaCuota(hoy, i + 1),
+      monto: Number(monto) || 0,
+      estado: 'pendiente',
+      monto_pagado: 0,
+    }))
+  } else if (modalidad === 'contado' || cuotaMensual <= 0) {
+    cronogramaSnapshot = []
+  } else {
+    cronogramaSnapshot = Array.from({ length: meses }, (_, i) => ({
+      numero: i + 1,
+      fecha_vencimiento: fechaCuota(hoy, i + 1),
+      monto: cuotaMensual,
+      estado: 'pendiente',
+      monto_pagado: 0,
+    }))
+  }
+  // Para AC500, la "cuota mensual" de referencia (correo/PDF) es la primera cuota.
+  const cuotaRef = plan === 'ac500' && ac500Cuotas.length > 0 ? Number(ac500Cuotas[0]) || 0 : cuotaMensual
 
   const clienteSnapshot = {
     id: cot.cliente_id ?? null,
@@ -157,7 +172,7 @@ export async function POST(req: Request) {
         precioVehiculo: precioBase,
         inicialPagada: inicial,
         saldoFinanciado: financiado,
-        cuotaMensual,
+        cuotaMensual: cuotaRef,
         numeroCuotas: meses,
         planLabel: planLbl,
         preVenta: true,

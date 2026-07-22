@@ -268,6 +268,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const modalidad = (est.modalidad ?? cotActual.modalidad) as 'contado' | 'credito_24'
       const plan = (est.plan ?? cotActual.plan ?? 'vehimotors') as any
       if (!['contado', 'credito_24'].includes(modalidad)) return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
+      // AC500: sus montos vienen del plan (reserva + cuotas), no de líneas de costo.
+      // Aplicar un descuento por estructura corrompería las cifras, así que se bloquea.
+      if (plan === 'ac500' || cotActual.plan === 'ac500') {
+        return NextResponse.json({ error: 'Los descuentos no aplican a cotizaciones Asegúrate con $500. Usa "Editar cotización" o ajusta el plan.' }, { status: 400 })
+      }
 
       const claves = ['placa', 'poliza_vehiculo', 'poliza_vida', 'gastos_vhm', 'honorarios', 'gastos_int', 'alfombras', 'transporte', 'accesorios', 'igtf', 'diferencial'] as const
       const lineas: Record<string, number> = {}

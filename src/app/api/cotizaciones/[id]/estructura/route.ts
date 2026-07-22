@@ -20,6 +20,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .single()
   if (!cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
 
+  // AC500 no tiene estructura de líneas editable (sus montos vienen del plan).
+  if (cot.plan === 'ac500') {
+    return NextResponse.json({ error: 'Los descuentos no aplican a cotizaciones Asegúrate con $500' }, { status: 400 })
+  }
+
   // Ya negociada: devolver lo guardado.
   if (cot.estructura_costos) {
     return NextResponse.json({ estructura: cot.estructura_costos, origen: 'guardada' })
