@@ -41,6 +41,7 @@ interface Cotizacion {
   motivo_rechazo: string | null
   descuento_solicitado: boolean
   motivo_descuento: string | null
+  condiciones_personalizadas: string | null
   created_at: string
 }
 
@@ -250,6 +251,28 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
   const [eError, setEError] = useState('')
   const [eSaving, setESaving] = useState(false)
   const [eSuccessMsg, setESuccessMsg] = useState('')
+
+  // Propuesta de condiciones de pago personalizada (popup)
+  const [condModal, setCondModal] = useState(false)
+  const [condTexto, setCondTexto] = useState(cot.condiciones_personalizadas ?? '')
+  const [condSaving, setCondSaving] = useState(false)
+  const [condError, setCondError] = useState('')
+
+  async function guardarCondiciones() {
+    setCondSaving(true); setCondError('')
+    try {
+      const res = await fetch(`/api/cotizaciones/${cot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'guardar_condiciones', condiciones: condTexto }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setCondError(j.error ?? 'No se pudo guardar'); setCondSaving(false); return }
+      setCot(prev => ({ ...prev, condiciones_personalizadas: j.condiciones_personalizadas }))
+      onMontosChange(cot.id, { condiciones_personalizadas: j.condiciones_personalizadas })
+      setCondSaving(false); setCondModal(false)
+    } catch { setCondError('Error de conexión'); setCondSaving(false) }
+  }
 
   // Reenviar
   const [reenviarMsg, setReenviarMsg] = useState('')
@@ -556,6 +579,57 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
               </div>
             )}
           </div>
+
+          {/* Propuesta de condiciones de pago personalizada. Rojas escribe una
+              condición de venta libre; si el cliente acepta, ese texto será la
+              modalidad/observación de la proforma. */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Condiciones de pago personalizadas</p>
+              {puedeEditar && (
+                <button onClick={() => { setCondTexto(cot.condiciones_personalizadas ?? ''); setCondError(''); setCondModal(true) }}
+                  className="text-[11px] font-bold text-indigo-700 hover:underline">
+                  {cot.condiciones_personalizadas ? 'Editar propuesta' : 'Proponer condiciones'}
+                </button>
+              )}
+            </div>
+            {cot.condiciones_personalizadas ? (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3">
+                <p className="text-xs text-indigo-900 whitespace-pre-wrap leading-relaxed">{cot.condiciones_personalizadas}</p>
+                <p className="text-[10px] text-indigo-500 mt-2">Si el cliente acepta, esta será la modalidad de la proforma.</p>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">Sin condiciones especiales.{puedeEditar ? ' Puedes proponer una condición de pago libre.' : ''}</p>
+            )}
+          </div>
+
+          {condModal && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => !condSaving && setCondModal(false)}>
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+                  <div>
+                    <h2 className="font-bold text-oriental-black text-base">Propuesta de condiciones de pago</h2>
+                    <p className="text-xs text-oriental-gray font-mono">{cot.numero}</p>
+                  </div>
+                  <button onClick={() => !condSaving && setCondModal(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                </div>
+                <div className="p-5 space-y-3">
+                  <p className="text-xs text-gray-500">Escribe la condición de venta personalizada para este cliente. Si acepta la cotización, este texto será la modalidad/observación de la proforma.</p>
+                  <textarea autoFocus rows={6} value={condTexto} onChange={e => setCondTexto(e.target.value)}
+                    placeholder="Ej: Inicial de $8.000 al reservar, saldo de $12.641,80 en 3 pagos quincenales sin intereses; entrega al completar el 50%."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red resize-none" />
+                  {condError && <p className="text-xs text-red-600">{condError}</p>}
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => setCondModal(false)} disabled={condSaving} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+                    <button onClick={guardarCondiciones} disabled={condSaving} className="flex-1 py-2.5 rounded-lg bg-oriental-red text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50">
+                      {condSaving ? 'Guardando…' : 'Guardar propuesta'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Cliente */}
           <div>

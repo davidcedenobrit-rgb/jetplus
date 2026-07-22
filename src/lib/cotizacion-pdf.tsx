@@ -175,6 +175,8 @@ export interface CotizacionPDFData {
   // Plan Personalizado: inicial en fracción (0..1) y meses del crédito
   inicialPct?: number
   mesesCredito?: number
+  // Propuesta de condiciones de pago personalizada (texto libre de Rojas).
+  condicionesPersonalizadas?: string | null
 }
 
 export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
@@ -481,6 +483,14 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
               </Text>
             </View>
           )}
+
+          {/* Condiciones de pago personalizadas (propuesta libre de la dirección) */}
+          {data.condicionesPersonalizadas ? (
+            <View style={{ marginTop: 12, backgroundColor: '#eef2ff', border: '1pt solid #6366f1', borderRadius: 6, padding: '10pt 14pt' }}>
+              <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#3730a3', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Condiciones de pago propuestas</Text>
+              <Text style={{ fontSize: 8.5, color: '#312e81', lineHeight: 1.55 }}>{data.condicionesPersonalizadas}</Text>
+            </View>
+          ) : null}
 
           {/* ── Firmas ── */}
           <View style={s.sigRow}>

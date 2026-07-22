@@ -89,6 +89,7 @@ export interface EnviarProformaOpts {
   cuotaMensual: number
   numeroCuotas: number
   planLabel: string
+  condicionesPersonalizadas?: string | null
   // Proforma previa a la venta (sin entrega aún): cambia el texto del correo.
   preVenta?: boolean
 }
@@ -139,6 +140,7 @@ async function fetchPdfBuffer(proformaId: string): Promise<Buffer> {
     numeroCuotas: Number(pro.num_cuotas ?? cronograma.length),
     planTipo: credito.plan_tipo ?? '',
     planLabel: planLabelMap[credito.plan_tipo] ?? 'Crédito',
+    condicionesPersonalizadas: pro.condiciones_personalizadas ?? null,
     cronograma,
     acuerdoInicial: credito.acuerdo_inicial ? {
       monto_acordado: Number(credito.acuerdo_inicial.monto_acordado ?? 0),
@@ -160,7 +162,7 @@ export async function enviarProformaCliente(opts: EnviarProformaOpts) {
     proformaId, numero, fecha, correoDestino,
     clienteNombre, marca, modelo, placa,
     precioVehiculo, inicialPagada, saldoFinanciado,
-    cuotaMensual, numeroCuotas, planLabel, preVenta,
+    cuotaMensual, numeroCuotas, planLabel, condicionesPersonalizadas, preVenta,
   } = opts
 
   const resend = getResend()
@@ -211,11 +213,16 @@ export async function enviarProformaCliente(opts: EnviarProformaOpts) {
         ${row('Número de proforma', numero)}
         ${row('Fecha de emisión', fecha)}
         ${row('Vehículo', `${marca} ${modelo}${placa ? ` · ${placa}` : ''}`)}
-        ${row('Modalidad', planLabel)}
+        ${row('Modalidad', condicionesPersonalizadas ? 'Condiciones personalizadas' : planLabel)}
         ${row('Precio del vehículo', `$${fmt(precioVehiculo)}`)}
         ${filaInicial}
       </table>
     </div>
+
+    ${condicionesPersonalizadas ? `<div style="background:#eef2ff;border:1px solid #6366f1;border-radius:10px;padding:14px 18px;margin-bottom:18px">
+      <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#3730a3;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px">Condiciones de pago acordadas</p>
+      <p style="font-family:sans-serif;font-size:13px;color:#312e81;margin:0;line-height:1.6;white-space:pre-wrap">${condicionesPersonalizadas.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+    </div>` : ''}
 
     <p style="font-family:sans-serif;font-size:13px;color:#374151;margin:0 0 8px;line-height:1.6">
       ${cierre}

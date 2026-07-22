@@ -74,6 +74,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     costoTotal: Number(cot.costo_total),
     inicialPct: cot.plan === 'personalizado' && cot.personalizado_inicial_pct != null ? Number(cot.personalizado_inicial_pct) / 100 : undefined,
     mesesCredito: cot.plan === 'personalizado' && cot.personalizado_meses != null ? Number(cot.personalizado_meses) : undefined,
+    condicionesPersonalizadas: cot.condiciones_personalizadas ?? null,
     ac500Schedule,
   }
 

@@ -127,6 +127,15 @@ export async function POST(req: Request) {
   const fmtMoney = (n: number) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   let bancaNacionalData: any = null
   let observacionesFinal = observaciones?.trim() || null
+
+  // Condiciones de pago personalizadas propuestas en la cotización: si el cliente
+  // aceptó, se convierten en la modalidad/observación de la proforma.
+  const condPersonalizadas = (cot.condiciones_personalizadas ?? '').trim() || null
+  if (condPersonalizadas) {
+    const resumenCond = `Condiciones de pago acordadas: ${condPersonalizadas}`
+    observacionesFinal = observacionesFinal ? `${resumenCond}\n${observacionesFinal}` : resumenCond
+  }
+
   if (plan === 'banca_nacional' && bancaNacional && Number(bancaNacional.aprobado_banco) > 0) {
     const aprobado = Number(bancaNacional.aprobado_banco) || 0
     const restante = Math.max(0, Number(bancaNacional.restante ?? (inicial - aprobado)))
@@ -159,6 +168,7 @@ export async function POST(req: Request) {
       primera_cuota_fecha: cronogramaSnapshot[0]?.fecha_vencimiento ?? null,
       ultima_cuota_fecha: cronogramaSnapshot[cronogramaSnapshot.length - 1]?.fecha_vencimiento ?? null,
       observaciones: observacionesFinal,
+      condiciones_personalizadas: condPersonalizadas,
       correo_destino: enviarCorreo ? String(correoDestino ?? cot.cliente_correo ?? '').trim().toLowerCase() : null,
       emitida_por: user.id,
     }])
@@ -190,6 +200,7 @@ export async function POST(req: Request) {
         cuotaMensual: cuotaRef,
         numeroCuotas: meses,
         planLabel: planLbl,
+        condicionesPersonalizadas: condPersonalizadas,
         preVenta: true,
       })
       await supabase.from('proformas').update({ correo_enviado_at: new Date().toISOString() }).eq('id', proforma.id)

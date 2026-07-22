@@ -77,6 +77,11 @@ const s = StyleSheet.create({
   compromisoText: { fontSize: 8.5, color: '#78350f', lineHeight: 1.55 },
   compromisoBold: { fontFamily: 'Helvetica-Bold', color: '#78350f' },
 
+  // Condiciones de pago personalizadas (modalidad libre acordada con el cliente)
+  condProBox: { marginTop: 12, backgroundColor: '#eef2ff', border: `1pt solid #6366f1`, borderRadius: 6, padding: '10pt 14pt' },
+  condProLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#3730a3', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  condProText: { fontSize: 8.5, color: '#312e81', lineHeight: 1.55 },
+
   // Bloque crédito
   creditoWrap: { marginTop: 14 },
   creditoBox: { border: `1pt solid ${GOLD}`, borderRadius: 6, overflow: 'hidden' },
@@ -195,6 +200,9 @@ export interface ProformaPDFData {
   numeroCuotas: number
   planTipo: string
   planLabel: string
+  // Condiciones de pago personalizadas propuestas y aceptadas: se muestran como
+  // la modalidad de la proforma y en un bloque destacado.
+  condicionesPersonalizadas?: string | null
   cronograma: CuotaCronogramaItem[]
   vendedor?: string | null
   acuerdoInicial?: AcuerdoInicialInfo | null
@@ -260,7 +268,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               </View>
               <View style={s.proRow}>
                 <Text style={s.proKey}>Modalidad:</Text>
-                <Text style={s.proVal}>{data.planLabel}</Text>
+                <Text style={s.proVal}>{data.condicionesPersonalizadas ? 'Condiciones personalizadas' : data.planLabel}</Text>
               </View>
               {data.vendedor && (
                 <View style={s.proRow}>
@@ -354,6 +362,14 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             </Text>
             )}
           </View>
+
+          {/* Condiciones de pago personalizadas: modalidad libre acordada. */}
+          {data.condicionesPersonalizadas ? (
+            <View style={s.condProBox}>
+              <Text style={s.condProLabel}>Condiciones de pago acordadas</Text>
+              <Text style={s.condProText}>{data.condicionesPersonalizadas}</Text>
+            </View>
+          ) : null}
 
           {/* Bloque de crédito / financiamiento (solo si hay cuotas) */}
           {tieneFinanciamiento && (

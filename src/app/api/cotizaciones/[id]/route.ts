@@ -249,6 +249,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             costoTotal: costo_total,
             inicialPct: plan === 'personalizado' ? (Number(cotActual.personalizado_inicial_pct) || 40) / 100 : undefined,
             mesesCredito: plan === 'personalizado' ? (Number(cotActual.personalizado_meses) || 24) : undefined,
+            condicionesPersonalizadas: cotActual.condiciones_personalizadas ?? null,
           }
           await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id)
           correoReenviado = true
@@ -264,6 +265,32 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         correoReenviado,
         correoError,
       })
+    }
+
+    // Propuesta de condiciones de pago personalizada: Rojas escribe una condición
+    // de venta libre. Si el cliente acepta la cotización, ese texto pasa a ser la
+    // modalidad/observación de la proforma.
+    if (body.accion === 'guardar_condiciones') {
+      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+        return NextResponse.json({ error: 'Solo el director puede definir condiciones de pago' }, { status: 403 })
+      }
+      const texto = String(body.condiciones ?? '').trim()
+      const { error: updErr } = await supabase
+        .from('cotizaciones')
+        .update({ condiciones_personalizadas: texto || null })
+        .eq('id', id)
+      if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
+
+      await supabase.from('cotizacion_ediciones').insert([{
+        cotizacion_id: id,
+        editado_por: authUser.id,
+        editado_por_email: authUser.email ?? null,
+        cambios: { condiciones_personalizadas: { antes: null, despues: texto || null } },
+        motivo: 'Propuesta de condiciones de pago personalizada',
+        reenvio_correo: false,
+      }])
+
+      return NextResponse.json({ ok: true, condiciones_personalizadas: texto || null })
     }
 
     // Aplicar descuento: Rojas negocia editando la estructura de costos completa.
@@ -369,6 +396,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             inicialPct: plan === 'personalizado' ? inicialPct / 100 : undefined,
             mesesCredito: plan === 'personalizado' ? meses : undefined,
             costoTotal: t.costoTotal,
+            condicionesPersonalizadas: cotActual.condiciones_personalizadas ?? null,
           }
           await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id)
           correoReenviado = true

@@ -79,6 +79,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       ac500Schedule,
       inicialPct: cot.plan === 'personalizado' && cot.personalizado_inicial_pct != null ? Number(cot.personalizado_inicial_pct) / 100 : undefined,
       mesesCredito: cot.plan === 'personalizado' && cot.personalizado_meses != null ? Number(cot.personalizado_meses) : undefined,
+      condicionesPersonalizadas: cot.condiciones_personalizadas ?? null,
     }
 
     await enviarCotizacionCliente(pdfData, cot.token_respuesta, id)
