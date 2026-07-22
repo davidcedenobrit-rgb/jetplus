@@ -39,6 +39,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   let inicialPct = modalidad === 'contado' ? 100 : 40
   let tasaPct = 0
   let meses = modalidad === 'contado' ? 0 : 24
+  let cuotaCatalogo = 0
 
   if (cot.vehiculo_id) {
     const { data: v } = await supabase
@@ -83,6 +84,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           igtf: n(v.igtf_cr), diferencial: Number(cot.diferencial_monto ?? 0),
         }
         inicialPct = n(v.inicial_pct) || 40; tasaPct = n(v.tasa_vhm_pct) || 0; meses = n(v.cuotas_vhm) || 24
+        // Un crédito Vehimotors sin cuota guardada hereda la del catálogo.
+        if (plan === 'vehimotors' && !(Number(cot.cuota_mensual) > 0) && n(v.tasa_credito) > 0) {
+          cuotaCatalogo = n(v.tasa_credito)
+        }
       }
     }
   }
@@ -91,7 +96,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     precioBase: Number(cot.precio_base ?? 0),
     modalidad, plan,
     inicialPct, tasaPct, meses,
-    cuotaVehimotors: Number(cot.cuota_mensual ?? 0),
+    cuotaVehimotors: Number(cot.cuota_mensual) > 0 ? Number(cot.cuota_mensual) : cuotaCatalogo,
     lineas,
   }
   return NextResponse.json({ estructura, origen: 'catalogo' })

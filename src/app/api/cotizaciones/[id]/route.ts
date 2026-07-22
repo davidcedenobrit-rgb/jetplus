@@ -119,6 +119,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         costo_total = t.costoTotal
       } else {
         const mesesBanco = Math.max(1, Math.round(Number(cotActual.cuotas_banco) || 24))
+        // Cuota mensual del crédito Vehimotors: la fija Rojas o, si no la escribe,
+        // se hereda la ya guardada. Si sigue en 0 (p. ej. la cotización nació como
+        // Contado y ahora se pasa a crédito), se toma la del catálogo (tasa_credito)
+        // para que un crédito Vehimotors nunca quede con cuota $0.
+        let cuotaVhm = typeof cuota_mensual === 'number' ? cuota_mensual : (Number(cotActual.cuota_mensual) || 0)
+        if (plan === 'vehimotors' && modalidad === 'credito_24' && cuotaVhm <= 0 && cotActual.vehiculo_id) {
+          const { data: vehCat } = await supabase
+            .from('catalogo_ventas')
+            .select('tasa_credito')
+            .eq('id', cotActual.vehiculo_id)
+            .maybeSingle()
+          cuotaVhm = Number(vehCat?.tasa_credito) || 0
+        }
         const t = calcularTotalesCotizacion({
           precioBase: precio_base,
           modalidad,
@@ -127,7 +140,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           placaMonto,
           tasaBancoPct,
           mesesBanco,
-          cuotaVehimotors: typeof cuota_mensual === 'number' ? cuota_mensual : (Number(cotActual.cuota_mensual) || 0),
+          cuotaVehimotors: cuotaVhm,
         })
         iva_monto = t.iva
         total_inicial = t.totalInicial
@@ -285,13 +298,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const tasaPct = num(est.tasaPct)
       const meses = Math.max(1, Math.round(num(est.meses) || 24))
 
+      // Un crédito Vehimotors nunca debe quedar con cuota $0: si no viene en la
+      // estructura, se hereda del catálogo (tasa_credito).
+      let cuotaVhmDesc = num(est.cuotaVehimotors)
+      if (plan === 'vehimotors' && modalidad === 'credito_24' && cuotaVhmDesc <= 0 && cotActual.vehiculo_id) {
+        const { data: vehCat } = await supabase
+          .from('catalogo_ventas')
+          .select('tasa_credito')
+          .eq('id', cotActual.vehiculo_id)
+          .maybeSingle()
+        cuotaVhmDesc = Number(vehCat?.tasa_credito) || 0
+      }
+
       const t = calcularTotalesCotizacion({
         precioBase, modalidad, plan,
         gastos: gastosEngine,
         placaMonto: plan === 'banco_100' ? lineas.placa : undefined,
         tasaBancoPct: tasaPct,
         mesesBanco: meses,
-        cuotaVehimotors: num(est.cuotaVehimotors),
+        cuotaVehimotors: cuotaVhmDesc,
         inicialPctVehimotors: inicialPct > 0 ? inicialPct / 100 : undefined,
         mesesVehimotors: meses,
         personalizadoInicialPct: inicialPct > 0 ? inicialPct / 100 : undefined,
@@ -299,7 +324,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         personalizadoTasaPct: tasaPct,
       })
 
-      const estructuraGuardar = { precioBase, modalidad, plan, inicialPct, tasaPct, meses, cuotaVehimotors: num(est.cuotaVehimotors), lineas }
+      const estructuraGuardar = { precioBase, modalidad, plan, inicialPct, tasaPct, meses, cuotaVehimotors: cuotaVhmDesc, lineas }
       const nuevos = {
         precio_base: precioBase,
         iva_monto: t.iva,
