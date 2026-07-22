@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     if (!['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
     }
-    if (!['vehimotors', 'banco_100', 'ac500', 'personalizado'].includes(plan)) {
+    if (!['vehimotors', 'banco_100', 'ac500', 'personalizado', 'banca_nacional'].includes(plan)) {
       return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
     }
     if (plan === 'ac500' && (!ac500PlanId || !ac500MesesBody)) {

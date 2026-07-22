@@ -14,7 +14,9 @@
 // `gastos` entra YA resuelto (base por modalidad + diferencial cambiario si aplica).
 
 export type ModalidadCot = 'contado' | 'credito_24'
-export type PlanCot = 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado'
+// 'banca_nacional' se calcula igual que contado (total a pagar); el banco aprueba
+// un % y el cliente cubre el resto (eso se define al pasar a proforma).
+export type PlanCot = 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado' | 'banca_nacional'
 
 export const IVA_TASA = 0.16
 

@@ -10,6 +10,7 @@ function fmtDate(d: string | Date) {
 
 // Etiqueta de plan para la proforma según la cotización.
 function planLabelCotizacion(modalidad: string, plan: string): { key: string; label: string } {
+  if (plan === 'banca_nacional') return { key: 'banca_nacional', label: 'Banca Nacional' }
   if (modalidad === 'contado') return { key: 'contado', label: 'Contado' }
   if (plan === 'banco_100') return { key: 'credito_40_60', label: 'Crédito 100% Banco' }
   if (plan === 'ac500') return { key: 'asegurate_500', label: 'Asegúrate con $500' }

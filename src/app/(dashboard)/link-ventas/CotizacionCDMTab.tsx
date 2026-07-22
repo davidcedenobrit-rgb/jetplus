@@ -70,7 +70,7 @@ interface PlanAC500 {
 
 type Step = 'vehiculo' | 'form' | 'sending' | 'success'
 type Modalidad = 'contado' | 'credito_24'
-type Plan = 'vehimotors' | 'banco_100' | 'ac500'
+type Plan = 'vehimotors' | 'banco_100' | 'ac500' | 'banca_nacional'
 type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
 type Concesionario = { id: string; nombre: string; prefijo: string; es_principal: boolean; activo: boolean; orden: number }
 
@@ -136,6 +136,14 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     }
     return [...conStock, ...sinStock]
   }, [catalogo, showroomStock])
+
+  // Buscador de vehículos (Paso 1).
+  const [busqVeh, setBusqVeh] = useState('')
+  const disponiblesFiltrados = useMemo(() => {
+    const q = busqVeh.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    if (!q) return disponibles
+    return disponibles.filter(v => `${v.brand} ${v.model}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q))
+  }, [disponibles, busqVeh])
 
   const [step, setStep] = useState<Step>('vehiculo')
   const [vehiculoSel, setVehiculoSel] = useState<Vehiculo | null>(null)
@@ -300,15 +308,29 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           </p>
         </div>
 
+        <div className="mb-4 relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+          <input
+            value={busqVeh}
+            onChange={e => setBusqVeh(e.target.value)}
+            placeholder="Buscar carro por marca o modelo…"
+            className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-oriental-red"
+          />
+        </div>
+
         {disponibles.length === 0 ? (
           <div className="card p-12 text-center text-oriental-gray">
             <p className="text-2xl mb-3">🚗</p>
             <p className="font-semibold">No hay vehículos en el catálogo.</p>
             <p className="text-sm mt-1">Agrégalos desde la pestaña Catálogo de vehículos.</p>
           </div>
+        ) : disponiblesFiltrados.length === 0 ? (
+          <div className="card p-8 text-center text-oriental-gray">
+            <p className="text-sm">No hay modelos que coincidan con “{busqVeh}”.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {disponibles.map(v => {
+            {disponiblesFiltrados.map(v => {
               const unidades = unidadesEnShowroom(v.brand, v.model, showroomStock)
               const enShowroom = unidades > 0
               return (
@@ -388,7 +410,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           <div className="flex gap-2 flex-wrap">
             {([['contado', 'Contado'], ['credito_24', 'Crédito 24 meses']] as [Modalidad, string][]).map(([val, lbl]) => (
               <button key={val} onClick={() => { setModalidad(val); if (val === 'contado') setPlan('vehimotors') }}
-                className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${modalidad === val && plan !== 'ac500' ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${modalidad === val && plan !== 'ac500' && plan !== 'banca_nacional' ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
                 {lbl}
               </button>
             ))}
@@ -397,6 +419,14 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
               className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${plan === 'ac500' ? 'border-blue-800 bg-blue-800 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
             >
               🛡 Asegúrate $500
+            </button>
+            {/* Banca nacional: mismo formato que Contado (total a pagar). El banco
+                aprueba un % y el cliente cubre el resto (se define al pasar a proforma). */}
+            <button
+              onClick={() => { setModalidad('contado'); setPlan('banca_nacional') }}
+              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${plan === 'banca_nacional' ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+            >
+              🏦 Banca nacional
             </button>
           </div>
 

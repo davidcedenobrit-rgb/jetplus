@@ -162,7 +162,7 @@ export interface CotizacionPDFData {
   cantidad?: number
   precioBase: number
   modalidad: 'contado' | 'credito_24'
-  plan?: 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado'
+  plan?: 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado' | 'banca_nacional'
   ivaMonto: number
   gastosMonto: number
   totalVehiculo?: number
@@ -182,6 +182,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const es24 = data.modalidad === 'credito_24'
   const esBanco = data.plan === 'banco_100'
   const esPersonalizado = data.plan === 'personalizado'
+  const esBancaNacional = data.plan === 'banca_nacional'
   const cantidad = Math.max(1, Math.floor(data.cantidad ?? 1))
   const mesesBanco = Math.max(1, Math.round(data.mesesBanco ?? 24))
   // Plan Personalizado: inicial, meses y % financiado dinámicos
@@ -211,7 +212,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           : esPersonalizado
             ? `CRÉDITO ${persMeses} MESES (${persIniPctLabel}% INICIAL)`
             : 'CRÉDITO 24 MESES (40% INICIAL)')
-      : 'CONTADO'
+      : esBancaNacional ? 'BANCA NACIONAL' : 'CONTADO'
 
   return (
     <Document title={`Cotización ${data.numero}`} author="La Oriental Automotors">

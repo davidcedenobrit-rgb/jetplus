@@ -75,6 +75,7 @@ function EstadoBadge({ estado }: { estado: Estado }) {
 
 function ModalidadBadge({ modalidad, plan }: { modalidad: string; plan: string }) {
   if (modalidad === 'ac500') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-900 text-white">Asegúrate $500</span>
+  if (plan === 'banca_nacional') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">Banca nacional</span>
   if (modalidad === 'contado') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700">Contado</span>
   if (plan === 'banco_100') return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700">100% Banco</span>
   return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-50 text-yellow-700">Crédito 24m</span>
