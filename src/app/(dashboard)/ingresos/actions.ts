@@ -37,6 +37,7 @@ export type CrearIngresoPayload = {
   monto_exento?: number | null
   centro_costo_id?: string | null
   titular_fondos?: string | null
+  banco_nacional?: string | null
   // Cuotas ya calculadas por el cliente
   cuotas: CuotaPayload[]
   // Comprobantes ya subidos al storage
@@ -124,6 +125,7 @@ export async function crearIngreso(payload: CrearIngresoPayload) {
   if (payload.titular_fondos && ['propio', 'vehimotors', 'tercero'].includes(payload.titular_fondos)) {
     updates.titular_fondos = payload.titular_fondos
   }
+  if (payload.banco_nacional) updates.banco_nacional = String(payload.banco_nacional).slice(0, 120)
   if (Object.keys(updates).length > 0) {
     await admin.from('ingresos').update(updates).eq('id', ingresoId)
   }

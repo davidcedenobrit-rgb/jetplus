@@ -118,6 +118,9 @@ function NuevoIngresoPageInner() {
   const [rolUsuario, setRolUsuario] = useState<string>('')
   const [acuerdoInicialId, setAcuerdoInicialId] = useState<string | null>(null)
   const [acuerdoInfo, setAcuerdoInfo] = useState<{ monto_acordado: number; monto_pagado: number } | null>(null)
+  // Banca nacional: si la venta del vehículo es de banca nacional, se pide el banco.
+  const [esVentaBancaNacional, setEsVentaBancaNacional] = useState(false)
+  const [bancoNacional, setBancoNacional] = useState('')
 
   // Cargar rol del usuario para mostrar advertencia si aplica
   useEffect(() => {
@@ -476,6 +479,20 @@ function NuevoIngresoPageInner() {
     return placas.size === 1 ? (Array.from(placas)[0] as string) : null
   }, [cuotasParaAplicar, vehiculoContexto])
 
+  // ¿La venta de este vehículo es de Banca nacional? (para pedir el banco)
+  useEffect(() => {
+    if (!vehiculoIdParaIngreso) { setEsVentaBancaNacional(false); return }
+    let cancel = false
+    supabase.from('proformas')
+      .select('banca_nacional')
+      .eq('vehiculo_id', vehiculoIdParaIngreso)
+      .not('banca_nacional', 'is', null)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (!cancel) setEsVentaBancaNacional(!!data) })
+    return () => { cancel = true }
+  }, [vehiculoIdParaIngreso])
+
   function resetBusqueda() {
     setClienteSeleccionado(null)
     setVehiculoContexto(null)
@@ -565,6 +582,7 @@ function NuevoIngresoPageInner() {
       metodo_pago:       metodoPago,
       banco_emisor:      bancoEmisor || null,
       banco_receptor:    bancoReceptor || null,
+      banco_nacional:    esVentaBancaNacional ? (bancoNacional || null) : null,
       referencia:        referencia || null,
       fecha_pago:        fechaPago,
       observaciones:     observaciones || null,
@@ -1150,6 +1168,17 @@ function NuevoIngresoPageInner() {
                 {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
+            {esVentaBancaNacional && (
+              <div className="md:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                <label className="label text-emerald-800">🏦 Banco nacional *</label>
+                <p className="text-[11px] text-emerald-700 mb-1.5">Venta por banca nacional — indica de qué banco proviene el dinero aprobado.</p>
+                <select className="select" value={bancoNacional} onChange={e => setBancoNacional(e.target.value)}>
+                  <option value="">Seleccionar banco...</option>
+                  {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+            )}
             <div>
               <label className="label">Fecha de pago *</label>
               <input type="date" className="input" value={fechaPago} onChange={e => setFechaPago(e.target.value)} required />
