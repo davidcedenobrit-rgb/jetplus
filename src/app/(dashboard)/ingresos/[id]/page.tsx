@@ -40,7 +40,7 @@ export default async function IngresoDetallePage({
       anulacion_motivo, anulacion_observaciones, anulacion_estado_previo,
       anulacion_solicitada_por, anulacion_solicitada_at, anulacion_rechazada_motivo,
       anulacion_resuelta_por, anulacion_resuelta_at,
-      cliente_id, vehiculo_id, cuota_id, acuerdo_inicial_id,
+      cliente_id, vehiculo_id, cuota_id, acuerdo_inicial_id, centro_costo_id,
       clientes(nombre, cedula_rif, telefono, correo, direccion, ciudad)
     `)
     .eq('id', id)
@@ -731,6 +731,7 @@ export default async function IngresoDetallePage({
             metodoPago={ingreso.metodo_pago}
             clienteOriginal={cliente ? { id: ingreso.cliente_id, nombre: cliente.nombre, cedula_rif: cliente.cedula_rif ?? null } : null}
             totalYaReportadoVM={totalReportadoVM}
+            centroCostoActual={(ingreso as any).centro_costo_id ?? null}
           />
 
           {/* ── Enviar al cliente ────────────────────────────────── */}

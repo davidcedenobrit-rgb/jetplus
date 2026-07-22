@@ -45,6 +45,7 @@ interface Props {
   metodoPago?: string | null
   clienteOriginal?: { id: string; nombre: string; cedula_rif: string | null } | null
   totalYaReportadoVM?: number
+  centroCostoActual?: string | null
 }
 
 // ─── Modal: Solicitar anulación (mary/leysdem) ────────────────────────────────
@@ -616,7 +617,7 @@ function ModalAprobarIngreso({
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ActionButtons({
   ingresoId, estado, monto, moneda, numeroRecibo, rol = 'editor',
-  metodoPago = null, clienteOriginal = null, totalYaReportadoVM = 0,
+  metodoPago = null, clienteOriginal = null, totalYaReportadoVM = 0, centroCostoActual = null,
 }: Props) {
   const router = useRouter()
   const supabase = createClient()
@@ -627,7 +628,9 @@ export default function ActionButtons({
   const [showModalRechazarAnulacion, setShowModalRechazarAnulacion] = useState(false)
   const [showModalReporteVM, setShowModalReporteVM] = useState(false)
   const [showModalAprobar, setShowModalAprobar] = useState(false)
+  const [showModalRecalificar, setShowModalRecalificar] = useState(false)
   const [custodios, setCustodios] = useState<Array<{ id: string; nombre: string; rol: string }>>([])
+  const [centros, setCentros] = useState<Array<{ id: string; nombre: string }>>([])
   const [anulacionError, setAnulacionError] = useState('')
 
   const esDirector = ROL_DIRECTOR.includes(rol)
@@ -637,7 +640,18 @@ export default function ActionButtons({
       .select('id, nombre, rol')
       .in('rol', ['jose', 'carla', 'mary', 'leysdem'])
       .then(({ data }) => setCustodios((data ?? []) as any))
+    supabase.from('centros_costo')
+      .select('id, nombre').eq('activo', true).order('orden')
+      .then(({ data }) => setCentros((data ?? []) as any))
   }, [supabase])
+
+  async function handleRecalificar(centroId: string) {
+    setLoading('recalificar')
+    await supabase.from('ingresos').update({ centro_costo_id: centroId || null, updated_at: new Date().toISOString() }).eq('id', ingresoId)
+    setLoading('')
+    setShowModalRecalificar(false)
+    router.refresh()
+  }
 
   async function handleAprobarConCanal(canal: string, custodioId: string | null, custodioExterno: string | null) {
     setLoading('aprobado')
@@ -867,8 +881,10 @@ export default function ActionButtons({
   const showEnviarDeposito = esDirector && ['aprobado', 'enviado_carla'].includes(estado)
   const showConfirmarDeposito = estado === 'enviado_deposito'
   const showReportarVehimotors = esDirector && ['aprobado', 'depositado', 'enviado_deposito', 'entregado_carla'].includes(estado)
+  // Recalificar centro de costo: disponible una vez aprobado el recibo (dirección).
+  const showRecalificar = esDirector && ['aprobado', 'enviado_carla', 'entregado_carla', 'depositado', 'enviado_deposito', 'reportado_vehimotors'].includes(estado)
 
-  const hayAcciones = visibleActions.length > 0 || showEnviarDeposito || showConfirmarDeposito || showReportarVehimotors
+  const hayAcciones = visibleActions.length > 0 || showEnviarDeposito || showConfirmarDeposito || showReportarVehimotors || showRecalificar
 
   return (
     <>
@@ -931,6 +947,18 @@ export default function ActionButtons({
               >
                 <Building2 size={16} />
                 Reportar a Vehimotors
+              </button>
+            )}
+
+            {/* Recalificar centro de costo (una vez aprobado) */}
+            {showRecalificar && (
+              <button
+                onClick={() => setShowModalRecalificar(true)}
+                disabled={loading !== ''}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-300 text-oriental-black hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <Wallet size={16} />
+                Recalificar centro de costo
               </button>
             )}
           </div>
@@ -1060,6 +1088,54 @@ export default function ActionButtons({
           loading={loading === 'aprobado'}
         />
       )}
+
+      {showModalRecalificar && (
+        <ModalRecalificar
+          centros={centros}
+          actual={centroCostoActual}
+          onClose={() => setShowModalRecalificar(false)}
+          onConfirm={handleRecalificar}
+          loading={loading === 'recalificar'}
+        />
+      )}
     </>
+  )
+}
+
+// ─── Modal: Recalificar centro de costo ───────────────────────────────────────
+function ModalRecalificar({
+  centros, actual, onClose, onConfirm, loading,
+}: {
+  centros: Array<{ id: string; nombre: string }>
+  actual: string | null
+  onClose: () => void
+  onConfirm: (centroId: string) => Promise<void>
+  loading: boolean
+}) {
+  const [centro, setCentro] = useState(actual ?? '')
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !loading && onClose()} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+          <h2 className="font-bold text-oriental-black text-base flex items-center gap-2"><Wallet size={16} className="text-oriental-red" /> Recalificar centro de costo</h2>
+          <button onClick={() => !loading && onClose()} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <p className="text-xs text-gray-500">Reasigna este recibo al centro de costo que corresponde.</p>
+          <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red bg-white"
+            value={centro} onChange={e => setCentro(e.target.value)}>
+            <option value="">— Sin centro de costo —</option>
+            {centros.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose} disabled={loading} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+            <button onClick={() => onConfirm(centro)} disabled={loading} className="flex-1 py-2.5 rounded-lg bg-oriental-red text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2">
+              {loading && <Loader2 size={14} className="animate-spin" />} Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
