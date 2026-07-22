@@ -257,6 +257,7 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
   const [condTexto, setCondTexto] = useState(cot.condiciones_personalizadas ?? '')
   const [condSaving, setCondSaving] = useState(false)
   const [condError, setCondError] = useState('')
+  const [condReenviar, setCondReenviar] = useState(false)
 
   async function guardarCondiciones() {
     setCondSaving(true); setCondError('')
@@ -270,7 +271,20 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
       if (!res.ok) { setCondError(j.error ?? 'No se pudo guardar'); setCondSaving(false); return }
       setCot(prev => ({ ...prev, condiciones_personalizadas: j.condiciones_personalizadas }))
       onMontosChange(cot.id, { condiciones_personalizadas: j.condiciones_personalizadas })
-      setCondSaving(false); setCondModal(false)
+
+      // Reenviar la cotización actualizada (con las nuevas condiciones) al cliente.
+      let reenvioOk = true
+      if (condReenviar) {
+        try {
+          const r2 = await fetch(`/api/cotizaciones/${cot.id}/reenviar`, { method: 'POST' })
+          if (!r2.ok) { const j2 = await r2.json().catch(() => ({})); reenvioOk = false; setCondError(`Guardado, pero no se pudo reenviar${j2.error ? `: ${j2.error}` : ''}`) }
+        } catch { reenvioOk = false; setCondError('Guardado, pero falló el reenvío del correo') }
+      }
+      setCondSaving(false)
+      if (reenvioOk) {
+        setCondModal(false)
+        if (condReenviar) { setESuccessMsg('✓ Condiciones guardadas y cotización reenviada al cliente.') }
+      }
     } catch { setCondError('Error de conexión'); setCondSaving(false) }
   }
 
@@ -619,11 +633,21 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
                   <textarea autoFocus rows={6} value={condTexto} onChange={e => setCondTexto(e.target.value)}
                     placeholder="Ej: Inicial de $8.000 al reservar, saldo de $12.641,80 en 3 pagos quincenales sin intereses; entrega al completar el 50%."
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red resize-none" />
+
+                  <label className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${cot.cliente_correo ? 'border-gray-200 cursor-pointer' : 'border-gray-100 opacity-60'}`}>
+                    <input type="checkbox" checked={condReenviar} disabled={!cot.cliente_correo}
+                      onChange={e => setCondReenviar(e.target.checked)} className="w-4 h-4" />
+                    <span className="text-xs font-medium text-oriental-black">
+                      Reenviar la cotización actualizada al cliente por correo
+                      {cot.cliente_correo ? <span className="text-gray-400"> · {cot.cliente_correo}</span> : <span className="text-gray-400"> · sin correo registrado</span>}
+                    </span>
+                  </label>
+
                   {condError && <p className="text-xs text-red-600">{condError}</p>}
                   <div className="flex gap-2 pt-1">
                     <button onClick={() => setCondModal(false)} disabled={condSaving} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
                     <button onClick={guardarCondiciones} disabled={condSaving} className="flex-1 py-2.5 rounded-lg bg-oriental-red text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50">
-                      {condSaving ? 'Guardando…' : 'Guardar propuesta'}
+                      {condSaving ? (condReenviar ? 'Guardando y enviando…' : 'Guardando…') : (condReenviar ? 'Guardar y reenviar' : 'Guardar propuesta')}
                     </button>
                   </div>
                 </div>
