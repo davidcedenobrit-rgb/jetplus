@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import Sidebar from './Sidebar'
 import { BRANDING } from '@/lib/branding'
@@ -25,6 +26,25 @@ export default function ClientLayout({
   pagosPortalPendientes = 0,
 }: ClientLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // El contenido scrollea dentro de <main> (no la ventana), así que el navegador
+  // no restaura la posición al dar "atrás". Guardamos y restauramos el scroll de
+  // <main> por ruta para volver justo donde estabas.
+  const mainRef = useRef<HTMLElement>(null)
+  const pathname = usePathname()
+  const posRef = useRef<Map<string, number>>(new Map())
+
+  useEffect(() => {
+    const main = mainRef.current
+    if (!main) return
+    const saved = posRef.current.get(pathname) ?? 0
+    const restore = () => main.scrollTo(0, saved)
+    restore()
+    const raf = requestAnimationFrame(restore) // reintento tras pintar el contenido
+    const onScroll = () => { posRef.current.set(pathname, main.scrollTop) }
+    main.addEventListener('scroll', onScroll, { passive: true })
+    return () => { cancelAnimationFrame(raf); main.removeEventListener('scroll', onScroll) }
+  }, [pathname])
 
   return (
     <div className="flex h-screen bg-oriental-bg overflow-hidden">
@@ -74,7 +94,7 @@ export default function ClientLayout({
           </div>
         </div>
 
-        <main className="flex-1 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
