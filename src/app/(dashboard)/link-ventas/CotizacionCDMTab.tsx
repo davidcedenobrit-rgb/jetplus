@@ -654,7 +654,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           </button>
           <button onClick={enviar} disabled={isSending}
             className="flex-1 py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50">
-            {isSending ? 'Generando cotización...' : '📄 Generar y enviar'}
+            {isSending ? 'Guardando…' : '💾 Guardar cotización'}
           </button>
         </div>
       </div>
@@ -878,7 +878,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                   Volver a editar
                 </button>
                 <button onClick={() => { setShowPreview(false); enviar() }} className="flex-1 py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors">
-                  📄 Enviar cotización
+                  💾 Guardar cotización
                 </button>
               </div>
             </div>

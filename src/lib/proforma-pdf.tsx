@@ -13,7 +13,14 @@ const AMBER_LIGHT = '#fef3c7'
 const AMBER_DARK = '#92400e'
 
 const s = StyleSheet.create({
-  page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 40 },
+  page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 108 },
+  // Firma + sello fijos: aparecen en TODAS las páginas de la proforma.
+  firmaFooter: { position: 'absolute', bottom: 30, left: 28, right: 28, flexDirection: 'row', gap: 20 },
+  firmaFooterBlock: { flex: 1, alignItems: 'center' },
+  firmaFooterLine: { width: '100%', borderBottom: `1pt solid ${DARK}`, height: 34, marginBottom: 4 },
+  firmaFooterLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: DARK },
+  firmaFooterSub: { fontSize: 6.5, color: GRAY },
+  selloImg: { width: 46, height: 46, objectFit: 'contain', marginBottom: 2 },
 
   header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '12pt 28pt 10pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoWrap: { flexShrink: 0 },
@@ -167,6 +174,7 @@ export interface AcuerdoInicialInfo {
 
 export interface ProformaPDFData {
   logoSrc?: string
+  selloSrc?: string
   numero: string
   fecha: string
   clienteNombre: string
@@ -290,7 +298,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                 <Text style={s.montosVal}>${fmt(data.totalVehiculo)}</Text>
               </View>
               <View style={s.montosRow2}>
-                <Text style={s.montosLabel}>Inicial pagada</Text>
+                <Text style={s.montosLabel}>{preVenta ? 'Inicial a pagar' : 'Inicial pagada'}</Text>
                 <Text style={s.montosVal}>${fmt(data.inicialPagada)}</Text>
               </View>
               {!preVenta && (
@@ -315,7 +323,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                 {tieneFinanciamiento ? (
                   <>
                     adquiere el vehículo bajo la modalidad <Text style={s.compromisoBold}>{data.planLabel}</Text>, con una{' '}
-                    <Text style={s.compromisoBold}>inicial de ${fmt(data.inicialPagada)}</Text> y{' '}
+                    <Text style={s.compromisoBold}>inicial a pagar de ${fmt(data.inicialPagada)}</Text> y{' '}
                     <Text style={s.compromisoBold}>{data.numeroCuotas} cuotas mensuales de ${fmt(data.cuotaMensual)}</Text>, y acepta las condiciones de pago aquí descritas.
                   </>
                 ) : (
@@ -372,7 +380,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
 
               <View style={s.creditoResumen}>
                 <View style={s.creditoResumenItem}>
-                  <Text style={s.creditoResumenLabel}>Inicial pagada</Text>
+                  <Text style={s.creditoResumenLabel}>{preVenta ? 'Inicial a pagar' : 'Inicial pagada'}</Text>
                   <Text style={s.creditoResumenVal}>${fmt(data.inicialPagada)}</Text>
                 </View>
                 {!preVenta && (
@@ -451,28 +459,6 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             )}
           </View>
 
-          {/* Firmas */}
-          <View style={s.sigRow}>
-            <View style={s.sigBlock}>
-              <View style={s.sigSpaceBox} />
-              <Text style={s.sigLabel}>COMPRADOR / CLIENTE</Text>
-              <Text style={s.sigSub}>{data.clienteNombre}</Text>
-              <Text style={s.sigSub}>C.I./RIF: {data.clienteCiRif}</Text>
-            </View>
-
-            <View style={s.sigBlock}>
-              <View style={s.selloBox}>
-                <View style={s.selloInner}>
-                  <Text style={s.selloText}>SELLO</Text>
-                  <Text style={s.selloSubText}>LA ORIENTAL{'\n'}AUTOMOTORS</Text>
-                </View>
-              </View>
-              <View style={s.sigLineOnly} />
-              <Text style={s.sigLabel}>REPRESENTANTE LA ORIENTAL</Text>
-              <Text style={s.sigSub}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
-            </View>
-          </View>
-
           <Text style={s.condTitle}>CONDICIONES:</Text>
           <Text style={s.condText}>
             {preVenta
@@ -481,6 +467,22 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                   : 'El cliente acepta las condiciones de compra de contado de esta proforma. Los montos están sujetos a la disponibilidad de la unidad y a la tasa de cambio vigente a la fecha de la operación.')
               : 'El comprador acepta y reconoce que el vehículo objeto de esta proforma es entregado bajo un compromiso de pago con financiamiento aprobado. Los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que La Oriental Automotors, C.A. indique. Esta proforma constituye documento formal de compromiso y podrá ser presentada ante autoridades competentes en caso de incumplimiento.'}
           </Text>
+        </View>
+
+        {/* Firma + sello — fijos en TODAS las páginas de la proforma */}
+        <View style={s.firmaFooter} fixed>
+          <View style={s.firmaFooterBlock}>
+            <View style={s.firmaFooterLine} />
+            <Text style={s.firmaFooterLabel}>COMPRADOR / CLIENTE</Text>
+            <Text style={s.firmaFooterSub}>{data.clienteNombre}</Text>
+            <Text style={s.firmaFooterSub}>C.I./RIF: {data.clienteCiRif}</Text>
+          </View>
+          <View style={s.firmaFooterBlock}>
+            {data.selloSrc ? <Image src={data.selloSrc} style={s.selloImg} /> : <View style={{ height: 46 }} />}
+            <View style={{ width: '100%', borderBottom: `1pt solid ${DARK}`, marginBottom: 4 }} />
+            <Text style={s.firmaFooterLabel}>REPRESENTANTE LA ORIENTAL</Text>
+            <Text style={s.firmaFooterSub}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
+          </View>
         </View>
 
         {/* Footer */}

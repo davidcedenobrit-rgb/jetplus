@@ -21,6 +21,15 @@ function getLogoBase64(): string {
   }
 }
 
+function getSelloBase64(): string | undefined {
+  try {
+    const buf = readFileSync(join(process.cwd(), 'public', 'sello-la-oriental.jpeg'))
+    return `data:image/jpeg;base64,${buf.toString('base64')}`
+  } catch {
+    return undefined
+  }
+}
+
 function fmt(n: number | null | undefined) {
   if (n == null) return '0,00'
   return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
@@ -109,6 +118,7 @@ async function fetchPdfBuffer(proformaId: string): Promise<Buffer> {
 
   const pdfData: ProformaPDFData = {
     logoSrc: getLogoBase64(),
+    selloSrc: getSelloBase64(),
     numero: pro.numero,
     fecha: new Date(pro.fecha_emision + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
     clienteNombre: cliente.nombre ?? '',
