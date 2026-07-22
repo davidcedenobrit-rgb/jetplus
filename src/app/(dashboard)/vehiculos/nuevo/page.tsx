@@ -604,24 +604,13 @@ export default function NuevoVehiculoPage() {
     if (!registrarIngresoInicial) return
     const pagosValidos = pagosIniciales.filter(p => parseFloat(p.monto) > 0 && p.metodo)
     if (pagosValidos.length === 0) return
-    const year = new Date().getFullYear()
-    const { data: ultimoRecibo } = await supabase.from('ingresos')
-      .select('numero_recibo')
-      .like('numero_recibo', `LOA-REC-${year}-%`)
-      .order('numero_recibo', { ascending: false })
-      .limit(1).single()
-    let nextNum = 1
-    if ((ultimoRecibo as any)?.numero_recibo) {
-      const partes = (ultimoRecibo as any).numero_recibo.split('-')
-      nextNum = (parseInt(partes[partes.length - 1]) || 0) + 1
-    }
+    // registrado_por es OBLIGATORIO; sin él el ingreso no se guarda.
+    const { data: { user } } = await supabase.auth.getUser()
     for (const pago of pagosValidos) {
-      const numero_recibo = `LOA-REC-${year}-${String(nextNum).padStart(5, '0')}`
-      nextNum++
       const montoBs = parseFloat(pago.montoBs) || null
       const tasaCambio = parseFloat(pago.tasaCambio) || null
-      await supabase.from('ingresos').insert({
-        numero_recibo,
+      // El número de recibo lo asigna el trigger de la base (correlativo único).
+      const { error: insErr } = await supabase.from('ingresos').insert({
         cliente_id: clienteId,
         vehiculo_id: vehiculoId,
         placa: placa || null,
@@ -638,7 +627,9 @@ export default function NuevoVehiculoPage() {
         tasa_cambio: tasaCambio,
         observaciones: pago.observaciones || null,
         acuerdo_inicial_id: acuerdoId ?? null,
+        registrado_por: user?.id ?? null,
       })
+      if (insErr) { setError(`No se pudo registrar el pago inicial: ${insErr.message}`); setLoading(false); throw insErr }
     }
     if (acuerdoId && pagosValidos.length > 0) {
       const totalPagado = pagosValidos.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0)
