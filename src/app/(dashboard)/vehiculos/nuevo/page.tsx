@@ -231,6 +231,11 @@ export default function NuevoVehiculoPage() {
         if (data) { setClienteSeleccionado(data); setClienteQuery(data.nombre) }
       })
     }
+    // Acceso directo "Registrar venta AC500": arranca en modo Asegúrate $500.
+    if (searchParams.get('plan') === 'ac500') {
+      setTipoCompra('financiado')
+      setPlan('asegurate_500')
+    }
   }, [])
 
   // Prellenar desde una cotización (usado por el flujo directo y por proforma).

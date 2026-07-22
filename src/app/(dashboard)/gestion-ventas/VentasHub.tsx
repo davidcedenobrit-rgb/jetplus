@@ -130,9 +130,15 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
           <h1 className="text-2xl font-bold text-oriental-black">Ventas</h1>
           <p className="text-oriental-gray text-sm mt-1">Todo lo vendido y en qué parte del proceso va cada venta</p>
         </div>
-        <button onClick={() => setVista('registrar')} className="btn-primary flex items-center gap-2 shrink-0">
-          <ShoppingCart size={16} /> Registrar venta
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => router.push('/vehiculos/nuevo?plan=ac500')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-800 hover:bg-blue-900 text-white text-sm font-bold transition-colors">
+            🛡 Registrar venta AC500
+          </button>
+          <button onClick={() => setVista('registrar')} className="btn-primary flex items-center gap-2">
+            <ShoppingCart size={16} /> Registrar venta
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
