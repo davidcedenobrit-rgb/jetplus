@@ -204,6 +204,17 @@ export default async function CreditoDetallePage({
   const cuotasPorCobrar  = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento >= hoyStr && c.fecha_vencimiento <= en7Str).length
   const cuotasAlDia      = cuotasEnriquecidas.filter(c => c.estado === 'pendiente' && c.fecha_vencimiento >  en7Str).length
 
+  // Montos por categoría (suma de los dos créditos). Pagadas = lo abonado;
+  // el resto = lo que falta por pagar (monto − abonado).
+  const sumMonto = (pred: (c: any) => boolean) => cuotasEnriquecidas.filter(pred).reduce((s: number, c: any) => s + Number(c.monto ?? 0), 0)
+  const sumFaltante = (pred: (c: any) => boolean) => cuotasEnriquecidas.filter(pred).reduce((s: number, c: any) => s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0)
+  const montoPagadas   = cuotasEnriquecidas.filter(c => c.estado === 'pagada').reduce((s: number, c: any) => s + Number(c.monto_pagado ?? c.monto ?? 0), 0)
+  const montoVencidas  = sumFaltante(c => c.estado === 'vencida' || (c.estado === 'pendiente' && c.fecha_vencimiento < hoyStr) || (c.estado === 'abono_parcial' && c.fecha_vencimiento < hoyStr))
+  const montoPorCobrar = sumMonto(c => c.estado === 'pendiente' && c.fecha_vencimiento >= hoyStr && c.fecha_vencimiento <= en7Str)
+  const montoAlDia     = sumMonto(c => c.estado === 'pendiente' && c.fecha_vencimiento > en7Str)
+  const montoAbono     = sumFaltante(c => c.estado === 'abono_parcial')
+  const fmtUsd = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
   // Estado general del vehículo (si alguno en mora → mora, si todos pagados → pagado)
   const estadoGeneral = creditos.some((c: any) => c.estado === 'mora') ? 'mora'
     : creditos.every((c: any) => c.estado === 'pagado') ? 'pagado'
@@ -313,18 +324,22 @@ export default async function CreditoDetallePage({
               <div className="bg-green-50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-green-700">{cuotasPagadas}</p>
                 <p className="text-[10px] text-green-600">Pagadas</p>
+                <p className="text-[11px] font-bold text-green-700">{fmtUsd(montoPagadas)}</p>
               </div>
               <div className="bg-red-50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-red-700">{cuotasVencidas + cuotasVencidasVisual + cuotasAbonoVencido}</p>
                 <p className="text-[10px] text-red-600">Vencidas</p>
+                <p className="text-[11px] font-bold text-red-700">{fmtUsd(montoVencidas)}</p>
               </div>
               <div className="bg-yellow-50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-yellow-700">{cuotasPorCobrar}</p>
                 <p className="text-[10px] text-yellow-600">Por cobrar</p>
+                <p className="text-[11px] font-bold text-yellow-700">{fmtUsd(montoPorCobrar)}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-gray-500">{cuotasAlDia}</p>
                 <p className="text-[10px] text-gray-400">Al día</p>
+                <p className="text-[11px] font-bold text-gray-500">{fmtUsd(montoAlDia)}</p>
               </div>
               {(cuotasAbono + cuotasAbonoVencido) > 0 && (
                 <div className="bg-orange-50 rounded-lg p-2 text-center col-span-2">
@@ -333,6 +348,7 @@ export default async function CreditoDetallePage({
                     Abono parcial
                     {cuotasAbonoVencido > 0 && <span className="text-red-600 font-bold"> · {cuotasAbonoVencido} vencido{cuotasAbonoVencido > 1 ? 's' : ''}</span>}
                   </p>
+                  <p className="text-[11px] font-bold text-orange-700">{fmtUsd(montoAbono)}</p>
                 </div>
               )}
             </div>
@@ -875,15 +891,16 @@ export default async function CreditoDetallePage({
         {/* Contadores cuotas */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
           {[
-            { count: cuotasPagadas,                                          label: 'Pagadas',       bg: '#f0fdf4', color: '#15803d', border: '#d1fae5' },
-            { count: cuotasVencidas + cuotasVencidasVisual + cuotasAbonoVencido, label: 'Vencidas',  bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
-            { count: cuotasPorCobrar,                                        label: 'Por cobrar',    bg: '#fefce8', color: '#a16207', border: '#fef08a' },
-            { count: cuotasAlDia,                                            label: 'Al día',        bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb' },
-            { count: cuotasAbono + cuotasAbonoVencido,                       label: 'Abono parcial', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+            { count: cuotasPagadas,                                          monto: montoPagadas,   label: 'Pagadas',       bg: '#f0fdf4', color: '#15803d', border: '#d1fae5' },
+            { count: cuotasVencidas + cuotasVencidasVisual + cuotasAbonoVencido, monto: montoVencidas, label: 'Vencidas',  bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
+            { count: cuotasPorCobrar,                                        monto: montoPorCobrar, label: 'Por cobrar',    bg: '#fefce8', color: '#a16207', border: '#fef08a' },
+            { count: cuotasAlDia,                                            monto: montoAlDia,     label: 'Al día',        bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb' },
+            { count: cuotasAbono + cuotasAbonoVencido,                       monto: montoAbono,     label: 'Abono parcial', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
           ].filter(item => item.count > 0 || item.label === 'Pagadas' || item.label === 'Vencidas').map(item => (
-            <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.border}`, borderRadius: '8px', padding: '8px 14px', minWidth: '90px', textAlign: 'center' }}>
+            <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.border}`, borderRadius: '8px', padding: '8px 14px', minWidth: '110px', textAlign: 'center' }}>
               <p style={{ fontSize: '18px', fontWeight: '800', color: item.color }}>{item.count}</p>
               <p style={{ fontSize: '9px', color: item.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</p>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: item.color, marginTop: '2px' }}>{fmtUsd(item.monto)}</p>
             </div>
           ))}
         </div>
