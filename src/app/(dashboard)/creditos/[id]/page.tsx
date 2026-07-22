@@ -212,7 +212,8 @@ export default async function CreditoDetallePage({
   const montoVencidas  = sumFaltante(c => c.estado === 'vencida' || (c.estado === 'pendiente' && c.fecha_vencimiento < hoyStr) || (c.estado === 'abono_parcial' && c.fecha_vencimiento < hoyStr))
   const montoPorCobrar = sumMonto(c => c.estado === 'pendiente' && c.fecha_vencimiento >= hoyStr && c.fecha_vencimiento <= en7Str)
   const montoAlDia     = sumMonto(c => c.estado === 'pendiente' && c.fecha_vencimiento > en7Str)
-  const montoAbono     = sumFaltante(c => c.estado === 'abono_parcial')
+  // Abono parcial: lo que el cliente YA abonó en esas cuotas (no lo que falta).
+  const montoAbono     = cuotasEnriquecidas.filter(c => c.estado === 'abono_parcial').reduce((s: number, c: any) => s + Number(c.monto_pagado ?? 0), 0)
   const fmtUsd = (n: number) => 'USD ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   // Estado general del vehículo (si alguno en mora → mora, si todos pagados → pagado)
