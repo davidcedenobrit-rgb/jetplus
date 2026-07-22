@@ -125,6 +125,34 @@ function buildCuotasPreview(p: PlanAC500): { label: string; monto: number }[] {
 const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red bg-white'
 const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1'
 
+// Rojas Personalizada: líneas de la estructura de costos del carro (editables).
+const CLAVES_ROJAS: { k: string; label: string }[] = [
+  { k: 'placa', label: 'Placa' },
+  { k: 'poliza_vehiculo', label: 'Póliza vehículo' },
+  { k: 'poliza_vida', label: 'Póliza vida' },
+  { k: 'gastos_vhm', label: 'Gastos Vehimotor' },
+  { k: 'honorarios', label: 'Honorarios' },
+  { k: 'gastos_int', label: 'Gastos internos' },
+  { k: 'alfombras', label: 'Alfombras' },
+  { k: 'transporte', label: 'Transporte' },
+  { k: 'accesorios', label: 'Accesorios' },
+  { k: 'igtf', label: 'IGTF' },
+]
+
+// Siembra la estructura de gastos desde el catálogo del carro según la base
+// (contado = sufijo _c, crédito = sufijo _cr), tal como lo hace el panel de descuento.
+function seedRojasLineas(v: any, base: Modalidad): Record<string, string> {
+  const suf = base === 'contado' ? '_c' : '_cr'
+  const out: Record<string, string> = {}
+  for (const { k } of CLAVES_ROJAS) {
+    const val = Number(v?.[`${k}${suf}`] ?? 0)
+    out[k] = val ? String(val) : ''
+  }
+  return out
+}
+
+const num = (s: string | undefined) => parseFloat(String(s ?? '').replace(',', '.')) || 0
+
 export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }: { catalogo: any[]; showroomStock?: ShowroomItem[]; tasas: { bcv: number; usdt: number } }) {
   // Priorizar los que están en showroom (con stock) sobre los que son por encargo
   const disponibles: Vehiculo[] = useMemo(() => {
@@ -163,6 +191,49 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
 
   // Cantidad de vehículos (independiente del stock de showroom)
   const [cantidad, setCantidad] = useState(1)
+
+  // ── Rojas Personalizada ──
+  // Modalidad especial: Rojas edita la estructura de costos del carro y adjunta
+  // una propuesta de condiciones libre. Base contado o crédito (cuota amortizada).
+  const [rojasMode, setRojasMode] = useState(false)
+  const [rojasBase, setRojasBase] = useState<Modalidad>('contado')
+  const [rojasPrecio, setRojasPrecio] = useState('')
+  const [rojasLineas, setRojasLineas] = useState<Record<string, string>>({})
+  const [rojasIniPct, setRojasIniPct] = useState('40')
+  const [rojasMeses, setRojasMeses] = useState('24')
+  const [rojasTasa, setRojasTasa] = useState('0')
+  const [rojasCond, setRojasCond] = useState('')
+
+  function activarRojas() {
+    const base: Modalidad = modalidad === 'credito_24' ? 'credito_24' : 'contado'
+    setRojasMode(true)
+    setPlan('vehimotors')
+    setRojasBase(base)
+    setRojasPrecio(vehiculoSel?.cash ? String(vehiculoSel.cash) : '')
+    setRojasLineas(seedRojasLineas(vehiculoSel as any, base))
+    setRojasIniPct('40'); setRojasMeses('24'); setRojasTasa('0')
+  }
+  function cambiarRojasBase(base: Modalidad) {
+    setRojasBase(base)
+    setRojasLineas(seedRojasLineas(vehiculoSel as any, base))
+  }
+
+  const rojasCalc = useMemo(() => {
+    const precio = num(rojasPrecio)
+    const iva = precio * 0.16
+    const gastos = CLAVES_ROJAS.reduce((s, { k }) => s + num(rojasLineas[k]), 0)
+    if (rojasBase === 'contado') {
+      return { precio, iva, gastos, inicial: precio + iva + gastos, financiamiento: 0, cuota: 0, meses: 0, costoTotal: precio + iva + gastos }
+    }
+    const iniPct = Math.min(100, Math.max(0, num(rojasIniPct))) / 100
+    const meses = Math.max(1, Math.round(num(rojasMeses) || 24))
+    const tasa = Math.max(0, num(rojasTasa))
+    const inicial = precio * iniPct + iva + gastos
+    const financiamiento = precio * (1 - iniPct)
+    const r = tasa / 100 / 12
+    const cuota = r > 0 ? (financiamiento * r * Math.pow(1 + r, meses)) / (Math.pow(1 + r, meses) - 1) : financiamiento / meses
+    return { precio, iva, gastos, inicial, financiamiento, cuota, meses, costoTotal: inicial + cuota * meses }
+  }, [rojasPrecio, rojasLineas, rojasBase, rojasIniPct, rojasMeses, rojasTasa])
 
   // Concesionario (encabezado de la cotización)
   const [concesionarios, setConcesionarios] = useState<Concesionario[]>([])
@@ -240,6 +311,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setModalidad('contado')
     setPlan('vehimotors')
     setPlanAC500Sel(null)
+    setRojasMode(false)
     setStep('form')
   }
 
@@ -247,8 +319,25 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     if (!vehiculoSel) return
     if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) { setErrorMsg('Nombre y C.I./RIF son obligatorios.'); return }
     if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
-    if (plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
+    if (rojasMode && rojasCalc.precio <= 0) { setErrorMsg('Indica el precio base para la cotización personalizada.'); return }
+    if (!rojasMode && plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
     setStep('sending'); setErrorMsg('')
+
+    // En Rojas Personalizada la modalidad/plan salen de la base elegida y se
+    // envían el precio, los gastos y la propuesta editados por Rojas.
+    const modalidadEnvio = rojasMode ? rojasBase : modalidad
+    const planEnvio = rojasMode ? (rojasBase === 'credito_24' ? 'personalizado' : 'vehimotors') : plan
+    const rojasPayload = rojasMode ? {
+      precioBaseOverride: rojasCalc.precio,
+      gastosOverride: rojasCalc.gastos,
+      condicionesPersonalizadas: rojasCond.trim() || null,
+      ...(rojasBase === 'credito_24' ? {
+        personalizadoInicialPct: num(rojasIniPct),
+        personalizadoMeses: Math.max(1, Math.round(num(rojasMeses) || 24)),
+        personalizadoTasaPct: num(rojasTasa),
+      } : {}),
+    } : {}
+
     try {
       const r = await fetch('/api/cotizaciones', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -258,11 +347,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           clienteCorreo: form.clienteCorreo, clienteTelefono: form.clienteTelefono || null,
           clienteDireccion: form.clienteDireccion || null, clienteCiudadEstado: form.clienteCiudadEstado || null,
           clienteCodigoPostal: form.clienteCodigoPostal || null, agenteRetencion: form.agenteRetencion,
-          modalidad,
-          plan,
+          modalidad: modalidadEnvio,
+          plan: planEnvio,
           cantidad,
           concesionarioId,
-          ...(plan === 'ac500' && planAC500Sel ? { ac500PlanId: planAC500Sel.id, ac500Meses } : {}),
+          ...(!rojasMode && plan === 'ac500' && planAC500Sel ? { ac500PlanId: planAC500Sel.id, ac500Meses } : {}),
+          ...rojasPayload,
         }),
       })
       const json = await r.json()
@@ -278,13 +368,15 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setPlanAC500Sel(null); setPlanesAC500([])
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
     setCantidad(1)
+    setRojasMode(false); setRojasCond(''); setRojasLineas({}); setRojasPrecio('')
   }
 
   function handleVistaPrevia() {
     if (!vehiculoSel) return
     if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) { setErrorMsg('Nombre y C.I./RIF son obligatorios para la vista previa.'); return }
     if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
-    if (plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
+    if (rojasMode && rojasCalc.precio <= 0) { setErrorMsg('Indica el precio base para la cotización personalizada.'); return }
+    if (!rojasMode && plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
     setErrorMsg('')
     setShowPreview(true)
   }
@@ -409,24 +501,31 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           <p className={labelCls}>Modalidad de venta</p>
           <div className="flex gap-2 flex-wrap">
             {([['contado', 'Contado'], ['credito_24', 'Crédito 24 meses']] as [Modalidad, string][]).map(([val, lbl]) => (
-              <button key={val} onClick={() => { setModalidad(val); if (val === 'contado') setPlan('vehimotors') }}
-                className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${modalidad === val && plan !== 'ac500' && plan !== 'banca_nacional' ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+              <button key={val} onClick={() => { setRojasMode(false); setModalidad(val); if (val === 'contado') setPlan('vehimotors') }}
+                className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${!rojasMode && modalidad === val && plan !== 'ac500' && plan !== 'banca_nacional' ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
                 {lbl}
               </button>
             ))}
             <button
-              onClick={() => { setModalidad('credito_24'); setPlan('ac500') }}
-              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${plan === 'ac500' ? 'border-blue-800 bg-blue-800 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+              onClick={() => { setRojasMode(false); setModalidad('credito_24'); setPlan('ac500') }}
+              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${!rojasMode && plan === 'ac500' ? 'border-blue-800 bg-blue-800 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
             >
               🛡 Asegúrate $500
             </button>
             {/* Banca nacional: mismo formato que Contado (total a pagar). El banco
                 aprueba un % y el cliente cubre el resto (se define al pasar a proforma). */}
             <button
-              onClick={() => { setModalidad('contado'); setPlan('banca_nacional') }}
-              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${plan === 'banca_nacional' ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+              onClick={() => { setRojasMode(false); setModalidad('contado'); setPlan('banca_nacional') }}
+              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${!rojasMode && plan === 'banca_nacional' ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
             >
               🏦 Banca nacional
+            </button>
+            {/* Rojas Personalizada: estructura de costos editable + propuesta libre. */}
+            <button
+              onClick={activarRojas}
+              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${rojasMode ? 'border-purple-700 bg-purple-700 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+            >
+              ⚙ Rojas personalizada
             </button>
           </div>
 
@@ -446,7 +545,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           </div>
 
           {/* Sub-plan para crédito 24 */}
-          {modalidad === 'credito_24' && plan !== 'ac500' && (
+          {!rojasMode && modalidad === 'credito_24' && plan !== 'ac500' && (
             <div className="mt-3">
               <p className={labelCls}>Plan de financiamiento</p>
               <div className="flex gap-2">
@@ -461,7 +560,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           )}
 
           {/* AC500 — selector de meses y plan */}
-          {plan === 'ac500' && (
+          {!rojasMode && plan === 'ac500' && (
             <div className="mt-3 space-y-3">
               <div>
                 <p className={labelCls}>Plazo</p>
@@ -521,8 +620,25 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
             </div>
           )}
 
+          {/* Resumen Rojas Personalizada */}
+          {rojasMode && (
+            <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <p className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-2">Resumen — Rojas personalizada ({rojasBase === 'contado' ? 'Contado' : 'Crédito'})</p>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">{rojasBase === 'contado' ? 'TOTAL A PAGAR' : 'INICIAL A PAGAR'}</span>
+                <span className="text-sm font-bold text-purple-900">${fmt(rojasCalc.inicial)}</span>
+              </div>
+              {rojasBase === 'credito_24' && rojasCalc.cuota > 0 && (
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-xs text-gray-600">Cuota mensual × {rojasCalc.meses}</span>
+                  <span className="text-sm font-bold text-purple-700">${fmt(rojasCalc.cuota)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Resumen financiero (non-AC500) */}
-          {resumen && plan !== 'ac500' && (
+          {!rojasMode && resumen && plan !== 'ac500' && (
             <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-2">Resumen estimado</p>
               <div className="flex justify-between items-center">
@@ -545,7 +661,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           )}
 
           {/* Resumen AC500 — inicial */}
-          {plan === 'ac500' && resumen && (
+          {!rojasMode && plan === 'ac500' && resumen && (
             <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-600">{resumen.label}</span>
@@ -638,6 +754,82 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           </div>
         </div>
 
+        {/* ── Rojas Personalizada: estructura de costos del carro + propuesta ── */}
+        {rojasMode && vehiculoSel && (
+          <div className="card p-4 mb-4 border-2 border-purple-200">
+            <p className="text-xs font-bold text-purple-800 uppercase tracking-wider mb-3">⚙ Rojas personalizada — {vehiculoSel.brand} {vehiculoSel.model}</p>
+
+            <p className={labelCls}>Base de cálculo</p>
+            <div className="flex gap-2 mb-3">
+              {([['contado', 'Contado'], ['credito_24', 'Crédito (cuotas)']] as [Modalidad, string][]).map(([val, lbl]) => (
+                <button key={val} type="button" onClick={() => cambiarRojasBase(val)}
+                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${rojasBase === val ? 'border-purple-700 bg-purple-700 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-3">
+              <label className={labelCls}>Precio base ($)</label>
+              <input className={inputCls} inputMode="decimal" value={rojasPrecio} onChange={e => setRojasPrecio(e.target.value)} placeholder="30000" />
+            </div>
+
+            <p className={labelCls}>Estructura de costos ($) — editable</p>
+            <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 mb-3">
+              {CLAVES_ROJAS.map(({ k, label }) => (
+                <div key={k} className="flex items-center justify-between px-3 py-1.5">
+                  <span className="text-sm text-gray-600">{label}</span>
+                  <input className="w-28 px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-oriental-red"
+                    inputMode="decimal" value={rojasLineas[k] ?? ''} onChange={e => setRojasLineas(p => ({ ...p, [k]: e.target.value }))} />
+                </div>
+              ))}
+              <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
+                <span className="text-xs font-bold text-gray-600 uppercase">Gastos totales</span>
+                <span className="text-sm font-bold text-oriental-black">${fmt(rojasCalc.gastos)}</span>
+              </div>
+            </div>
+
+            {rojasBase === 'credito_24' && (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div>
+                  <label className={labelCls}>% Inicial</label>
+                  <input className={inputCls} inputMode="decimal" value={rojasIniPct} onChange={e => setRojasIniPct(e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelCls}>Meses</label>
+                  <input className={inputCls} inputMode="numeric" value={rojasMeses} onChange={e => setRojasMeses(e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelCls}>Tasa % anual</label>
+                  <input className={inputCls} inputMode="decimal" value={rojasTasa} onChange={e => setRojasTasa(e.target.value)} />
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-xl bg-gray-900 p-4 text-white space-y-1.5 text-sm mb-3">
+              <div className="flex justify-between text-gray-300"><span>Precio base</span><span className="font-mono">${fmt(rojasCalc.precio)}</span></div>
+              <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmt(rojasCalc.iva)}</span></div>
+              <div className="flex justify-between text-gray-300"><span>Gastos</span><span className="font-mono">${fmt(rojasCalc.gastos)}</span></div>
+              <div className="flex justify-between font-bold text-yellow-400 border-t border-gray-700 pt-1.5">
+                <span>{rojasBase === 'contado' ? 'TOTAL A PAGAR' : 'INICIAL A PAGAR'}</span>
+                <span className="font-mono">${fmt(rojasCalc.inicial)}</span>
+              </div>
+              {rojasBase === 'credito_24' && (
+                <>
+                  <div className="flex justify-between text-gray-300"><span>Financiamiento</span><span className="font-mono">${fmt(rojasCalc.financiamiento)}</span></div>
+                  <div className="flex justify-between text-emerald-300"><span>{rojasCalc.meses} cuotas de</span><span className="font-mono">${fmt(rojasCalc.cuota)}</span></div>
+                </>
+              )}
+            </div>
+
+            <label className={labelCls}>Propuesta de condiciones especiales</label>
+            <textarea rows={4} value={rojasCond} onChange={e => setRojasCond(e.target.value)}
+              placeholder="Ej: Inicial de $8.000 al reservar, saldo en 3 pagos quincenales; acepta parte de pago con vehículo usado…"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red resize-none" />
+            <p className="text-[11px] text-gray-400 mt-1">Este texto viaja en la cotización y, si el cliente acepta, será la modalidad de la proforma.</p>
+          </div>
+        )}
+
         {errorMsg && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
             <p className="text-sm text-red-600 font-semibold">{errorMsg}</p>
@@ -676,7 +868,21 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
         let financiamiento: number | null = null
         let costoTotal: number | null = null
 
-        if (plan === 'ac500') {
+        if (rojasMode) {
+          const iniPctLbl = Math.round(Math.min(100, Math.max(0, num(rojasIniPct))))
+          if (rojasBase === 'contado') {
+            rows = [['100% Precio Base', rojasCalc.precio], ['I.V.A. 16%', rojasCalc.iva], ['Gastos (estructura editada)', rojasCalc.gastos]]
+            totalInicial = rojasCalc.inicial
+            labelInicial = 'TOTAL A PAGAR'
+          } else {
+            rows = [[`${iniPctLbl}% Precio Base`, rojasCalc.precio * (iniPctLbl / 100)], ['I.V.A. 16%', rojasCalc.iva], ['Gastos (estructura editada)', rojasCalc.gastos]]
+            totalInicial = rojasCalc.inicial
+            financiamiento = rojasCalc.financiamiento
+            cuotaMensual = rojasCalc.cuota
+            costoTotal = rojasCalc.costoTotal
+            labelInicial = 'INICIAL A PAGAR'
+          }
+        } else if (plan === 'ac500') {
           // handled in AC500 block
         } else if (modalidad === 'contado') {
           const gastos = prev.gc ?? 0
@@ -708,7 +914,9 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           labelInicial = 'INICIAL A PAGAR'
         }
 
-        const planBadge = plan === 'ac500' ? '🛡 Asegúrate $500' : modalidad === 'contado' ? 'Contado' : plan === 'banco_100' ? 'Crédito 100% Banco' : 'Crédito 24m — Vehimotors'
+        const planBadge = rojasMode
+          ? `⚙ Rojas personalizada · ${rojasBase === 'contado' ? 'Contado' : 'Crédito'}`
+          : plan === 'ac500' ? '🛡 Asegúrate $500' : modalidad === 'contado' ? 'Contado' : plan === 'banco_100' ? 'Crédito 100% Banco' : 'Crédito 24m — Vehimotors'
 
         return (
           <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
@@ -776,11 +984,11 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                     {financiamiento != null && cuotaMensual != null && (
                       <>
                         <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
-                          <span className="text-xs text-gray-500">{plan === 'banco_100' ? 'Financiamiento 70%' : 'Financiamiento 60%'}</span>
+                          <span className="text-xs text-gray-500">{rojasMode ? 'Financiamiento' : plan === 'banco_100' ? 'Financiamiento 70%' : 'Financiamiento 60%'}</span>
                           <span className="text-xs font-semibold text-oriental-black">${fmt(financiamiento)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
-                          <span className="text-xs text-gray-500">24 cuotas mensuales</span>
+                          <span className="text-xs text-gray-500">{rojasMode ? rojasCalc.meses : 24} cuotas mensuales</span>
                           <span className="text-xs font-semibold text-oriental-black">${fmt(cuotaMensual)} c/u</span>
                         </div>
                         {costoTotal != null && (
@@ -820,6 +1028,14 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                     </div>
                   )
                 })()}
+
+                {/* Propuesta de condiciones (Rojas personalizada) */}
+                {rojasMode && rojasCond.trim() && (
+                  <div className="border border-purple-200 bg-purple-50 rounded-xl p-3">
+                    <p className="text-[10px] font-bold text-purple-800 uppercase tracking-wider mb-1">Condiciones de pago propuestas</p>
+                    <p className="text-xs text-purple-900 whitespace-pre-wrap leading-relaxed">{rojasCond}</p>
+                  </div>
+                )}
 
                 {/* Total por N unidades */}
                 {cantidad > 1 && (

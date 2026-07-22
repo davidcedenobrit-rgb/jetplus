@@ -46,7 +46,16 @@ export async function POST(req: Request) {
       personalizadoMeses,
       personalizadoTasaPct,
       personalizadoDiferencial,
+      // Rojas Personalizada: Rojas edita el precio base y la estructura de gastos
+      // del carro seleccionado y adjunta una propuesta de condiciones libre.
+      precioBaseOverride,
+      gastosOverride,
+      condicionesPersonalizadas,
     } = body
+
+    const condPersonalizadas = String(condicionesPersonalizadas ?? '').trim() || null
+    const precioOverride = precioBaseOverride != null ? Number(precioBaseOverride) : null
+    const gastosOverrideNum = gastosOverride != null ? Number(gastosOverride) : null
 
     // Parámetros del plan Personalizado (saneados)
     const persIniPct = Math.min(100, Math.max(0, Number(personalizadoInicialPct)))
@@ -160,7 +169,8 @@ export async function POST(req: Request) {
       vehiculo = v
     }
 
-    const precioBase = Number(vehiculo.cash) || 0
+    // Precio base: normalmente del catálogo; Rojas Personalizada puede sobreescribirlo.
+    const precioBase = (precioOverride != null && precioOverride > 0) ? precioOverride : (Number(vehiculo.cash) || 0)
     const iva = precioBase * 0.16
 
     // AC500 plan lookup
@@ -254,7 +264,9 @@ export async function POST(req: Request) {
     } else {
       gastosBase = Number(vehiculo.gcr) || 0
     }
-    const gastos = gastosBase + diferencial
+    // Gastos: normalmente base por modalidad + diferencial; Rojas Personalizada
+    // envía el total ya editado (que puede incluir su propio diferencial).
+    const gastos = (gastosOverrideNum != null && gastosOverrideNum >= 0) ? gastosOverrideNum : (gastosBase + diferencial)
 
     // Meses del plan 100% Banco (editable por vehículo; por defecto 24)
     const mesesBanco = Math.max(1, Math.round(Number((vehiculo as { cuotas_banco?: number | null }).cuotas_banco) || 24))
@@ -335,6 +347,7 @@ export async function POST(req: Request) {
         personalizado_meses: plan === 'personalizado' ? persMeses : null,
         personalizado_tasa_pct: plan === 'personalizado' ? persTasaPct : null,
         personalizado_diferencial: plan === 'personalizado' ? persDiferencial : false,
+        condiciones_personalizadas: condPersonalizadas,
       }])
       .select()
       .single()
@@ -379,6 +392,7 @@ export async function POST(req: Request) {
       ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
       inicialPct: plan === 'personalizado' ? persIniPct / 100 : undefined,
       mesesCredito: plan === 'personalizado' ? persMeses : undefined,
+      condicionesPersonalizadas: condPersonalizadas,
     }
 
     // Enviar emails (ambos en paralelo, errores no bloqueantes).
