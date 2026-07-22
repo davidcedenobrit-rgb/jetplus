@@ -384,6 +384,8 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
             cotId={cot.id}
             numero={cot.numero}
             correoCliente={cot.cliente_correo}
+            plan={cot.plan}
+            total={cot.total_inicial}
             onDone={() => { onClose(); router.refresh() }}
           />
 
@@ -895,7 +897,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                         >
                           Ver PDF
                         </a>
-                        <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} compact onDone={() => router.refresh()} />
+                        <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} compact onDone={() => router.refresh()} />
                       </div>
                     </td>
                   </tr>
@@ -932,7 +934,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                   <p className="text-sm font-bold text-oriental-black">${fmt(c.total_inicial)}</p>
                 </div>
                 <div className="mt-2 pt-2 border-t border-gray-100" onClick={e => e.stopPropagation()}>
-                  <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} compact onDone={() => router.refresh()} />
+                  <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} compact onDone={() => router.refresh()} />
                 </div>
               </div>
             ))}

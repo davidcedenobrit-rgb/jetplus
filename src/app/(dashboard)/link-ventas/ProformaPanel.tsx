@@ -3,33 +3,47 @@
 import { useState } from 'react'
 import { FileText, X, Loader2, ExternalLink } from 'lucide-react'
 
+const fmt = (n: number) => Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
 // Genera una PROFORMA a partir de una cotización aceptada (flujo nuevo:
 // cotización → aprobación → PROFORMA → venta). La proforma es la cotización
 // negociada + las condiciones de pago para ese cliente.
 export default function ProformaPanel({
-  cotId, numero, correoCliente, onDone, compact = false,
+  cotId, numero, correoCliente, onDone, compact = false, plan, total = 0,
 }: {
   cotId: string
   numero: string
   correoCliente?: string | null
   onDone: () => void
   compact?: boolean
+  plan?: string
+  total?: number
 }) {
+  const esBancaNacional = plan === 'banca_nacional'
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [enviarCorreo, setEnviarCorreo] = useState(false)
   const [correo, setCorreo] = useState(correoCliente ?? '')
   const [observaciones, setObservaciones] = useState('')
+  const [aprobadoBanco, setAprobadoBanco] = useState('')
+  const [restanteMetodo, setRestanteMetodo] = useState<'contado' | 'acuerdo'>('contado')
   const [resultado, setResultado] = useState<{ proformaId: string; numero: string; correoEnviado: boolean } | null>(null)
   const [yaExiste, setYaExiste] = useState<{ proformaId: string; numero: string } | null>(null)
+
+  const aprobadoNum = parseFloat(aprobadoBanco.replace(',', '.')) || 0
+  const restante = Math.max(0, Number(total) - aprobadoNum)
+  const pctBanco = Number(total) > 0 ? Math.round((aprobadoNum / Number(total)) * 100) : 0
 
   function abrir() {
     setOpen(true); setError(''); setResultado(null); setYaExiste(null)
     setEnviarCorreo(false); setCorreo(correoCliente ?? ''); setObservaciones('')
+    setAprobadoBanco(''); setRestanteMetodo('contado')
   }
 
   async function generar() {
+    if (esBancaNacional && aprobadoNum <= 0) { setError('Indica el monto que aprobó el banco'); return }
+    if (esBancaNacional && aprobadoNum > Number(total)) { setError('Lo aprobado por el banco no puede superar el total'); return }
     setSaving(true); setError('')
     try {
       const r = await fetch('/api/proformas/desde-cotizacion', {
@@ -40,6 +54,7 @@ export default function ProformaPanel({
           enviarCorreo,
           correoDestino: enviarCorreo ? correo.trim() : null,
           observaciones: observaciones.trim() || null,
+          ...(esBancaNacional ? { bancaNacional: { aprobado_banco: aprobadoNum, restante, restante_metodo: restanteMetodo } } : {}),
         }),
       })
       const j = await r.json()
@@ -113,6 +128,34 @@ export default function ProformaPanel({
                   <p className="text-xs text-gray-500 leading-relaxed">
                     Se creará la proforma con la estructura negociada de la cotización y el cronograma de pago del cliente. Sirve como el documento previo a la venta.
                   </p>
+
+                  {esBancaNacional && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-3">
+                      <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">🏦 Banca nacional — reparto del pago</p>
+                      <p className="text-[11px] text-emerald-700">Total del vehículo: <b>${fmt(Number(total))}</b></p>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-600 mb-1">Monto que aprobó el banco ($)</label>
+                        <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-emerald-600"
+                          inputMode="decimal" value={aprobadoBanco} onChange={e => setAprobadoBanco(e.target.value)} placeholder="0,00" />
+                        {aprobadoNum > 0 && <p className="text-[10px] text-emerald-700 mt-1">Equivale al <b>{pctBanco}%</b> del total.</p>}
+                      </div>
+                      <div className="rounded-lg bg-white border border-emerald-200 p-2.5 text-sm">
+                        <div className="flex justify-between text-gray-600"><span>Aprobado por el banco</span><span className="font-mono font-bold text-emerald-700">${fmt(aprobadoNum)}</span></div>
+                        <div className="flex justify-between text-gray-600 mt-0.5"><span>Restante (cliente)</span><span className="font-mono font-bold text-oriental-black">${fmt(restante)}</span></div>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-600 mb-1">El restante lo paga:</label>
+                        <div className="flex gap-2">
+                          {([['contado', 'De contado'], ['acuerdo', 'Acuerdo de pago']] as const).map(([v, l]) => (
+                            <button key={v} type="button" onClick={() => setRestanteMetodo(v)}
+                              className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-bold transition-all ${restanteMetodo === v ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-200 text-gray-500'}`}>
+                              {l}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-500 mb-1">Observaciones / condiciones de pago (opcional)</label>

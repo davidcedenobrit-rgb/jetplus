@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const { cotizacionId, enviarCorreo, correoDestino, observaciones } = body ?? {}
+  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional } = body ?? {}
   if (!cotizacionId) return NextResponse.json({ error: 'Falta la cotización' }, { status: 400 })
 
   const supabase = await createAdminClient()
@@ -123,12 +123,26 @@ export async function POST(req: Request) {
     acuerdo_inicial: null,
   }
 
+  // Banca nacional: reparto banco/cliente. Se guarda y se resume en observaciones.
+  const fmtMoney = (n: number) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  let bancaNacionalData: any = null
+  let observacionesFinal = observaciones?.trim() || null
+  if (plan === 'banca_nacional' && bancaNacional && Number(bancaNacional.aprobado_banco) > 0) {
+    const aprobado = Number(bancaNacional.aprobado_banco) || 0
+    const restante = Math.max(0, Number(bancaNacional.restante ?? (inicial - aprobado)))
+    const metodo = bancaNacional.restante_metodo === 'acuerdo' ? 'acuerdo' : 'contado'
+    bancaNacionalData = { aprobado_banco: aprobado, restante, restante_metodo: metodo, banco: null }
+    const resumen = `Banca Nacional — Banco aprueba $${fmtMoney(aprobado)} · Cliente $${fmtMoney(restante)} (${metodo === 'acuerdo' ? 'acuerdo de pago' : 'de contado'}).`
+    observacionesFinal = observacionesFinal ? `${resumen}\n${observacionesFinal}` : resumen
+  }
+
   const { data: proforma, error: insertErr } = await supabase
     .from('proformas')
     .insert([{
       cotizacion_id: cotizacionId,
       credito_id: null,
       cliente_id: cot.cliente_id ?? null,
+      banca_nacional: bancaNacionalData,
       // vehiculo_id FK apunta a `vehiculos` (carro físico). En pre-venta aún no
       // hay unidad asignada; el modelo/precio viaja en vehiculo_snapshot. Se
       // asigna el carro físico al registrar la venta (fase venta).
@@ -144,7 +158,7 @@ export async function POST(req: Request) {
       num_cuotas: meses,
       primera_cuota_fecha: cronogramaSnapshot[0]?.fecha_vencimiento ?? null,
       ultima_cuota_fecha: cronogramaSnapshot[cronogramaSnapshot.length - 1]?.fecha_vencimiento ?? null,
-      observaciones: observaciones?.trim() || null,
+      observaciones: observacionesFinal,
       correo_destino: enviarCorreo ? String(correoDestino ?? cot.cliente_correo ?? '').trim().toLowerCase() : null,
       emitida_por: user.id,
     }])
