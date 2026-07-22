@@ -292,7 +292,12 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
   const [reenviarMsg, setReenviarMsg] = useState('')
   const [reenviarLoading, setReenviarLoading] = useState(false)
 
+  // Solo se puede reenviar si el cliente tiene un correo con formato válido
+  // (evita mandar a direcciones de relleno como "xxxxx@xxxx.com").
+  const correoValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((cot.cliente_correo ?? '').trim())
+
   async function reenviarCotizacion() {
+    if (!correoValido) { setReenviarMsg('El cliente no tiene un correo válido registrado.'); return }
     setReenviarLoading(true); setReenviarMsg('')
     try {
       const res = await fetch(`/api/cotizaciones/${cot.id}/reenviar`, { method: 'POST' })
@@ -702,10 +707,11 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
               )}
               <button
                 onClick={reenviarCotizacion}
-                disabled={reenviarLoading}
-                className="w-full py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+                disabled={reenviarLoading || !correoValido}
+                title={!correoValido ? 'El cliente no tiene un correo válido registrado' : ''}
+                className="w-full py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {reenviarLoading ? 'Reenviando...' : '📤 Reenviar cotización actualizada al cliente'}
+                {reenviarLoading ? 'Reenviando...' : correoValido ? '📤 Reenviar cotización actualizada al cliente' : 'Sin correo del cliente'}
               </button>
               {reenviarMsg && (
                 <p className={`text-xs font-semibold ${reenviarMsg.startsWith('✓') ? 'text-green-700' : 'text-red-600'}`}>{reenviarMsg}</p>
@@ -719,11 +725,15 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Reenviar cotización</p>
               <button
                 onClick={reenviarCotizacion}
-                disabled={reenviarLoading}
-                className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                disabled={reenviarLoading || !correoValido}
+                title={!correoValido ? 'El cliente no tiene un correo válido registrado' : ''}
+                className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {reenviarLoading ? 'Reenviando...' : '📤 Reenviar PDF al cliente'}
+                {reenviarLoading ? 'Reenviando...' : correoValido ? '📤 Reenviar PDF al cliente' : 'Sin correo — no se puede reenviar'}
               </button>
+              {!correoValido && (
+                <p className="text-[11px] text-gray-400 mt-2">Agrega un correo válido en “Editar cotización” para poder reenviar. El PDF sigue disponible por “Ver PDF” y WhatsApp.</p>
+              )}
               {reenviarMsg && (
                 <p className={`text-xs font-semibold mt-2 ${reenviarMsg.startsWith('✓') ? 'text-green-700' : 'text-red-600'}`}>{reenviarMsg}</p>
               )}

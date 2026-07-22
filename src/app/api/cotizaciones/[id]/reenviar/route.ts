@@ -23,6 +23,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     if (!cot) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
 
+    // No enviar a correos vacíos o de relleno (evita rebotes a direcciones inventadas).
+    const correoCliente = (cot.cliente_correo ?? '').trim()
+    if (!correoCliente || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoCliente)) {
+      return NextResponse.json({ error: 'El cliente no tiene un correo válido registrado' }, { status: 400 })
+    }
+
     let ac500Schedule: AC500ScheduleData | undefined
     if (cot.plan === 'ac500' && cot.ac500_meses && cot.ac500_cuotas) {
       const meses = Number(cot.ac500_meses)
