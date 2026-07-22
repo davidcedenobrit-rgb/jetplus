@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Send, Upload, Loader2, CheckCircle2, X, ExternalLink, FileText, Truck, Settings } from 'lucide-react'
@@ -50,21 +50,35 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   const [showRechazo, setShowRechazo] = useState(false)
   const [uploading, setUploading] = useState<string | null>(null)
 
-  // Enviar a almacén
-  const CORREOS_ALMACEN = ['jrodriguez@saicve.com', 'armando.eminca@gmail.com']
+  // Enviar a almacén — destinatarios persistentes (tildables).
   const [showAlmacen, setShowAlmacen] = useState(false)
-  const [correosAlmacen, setCorreosAlmacen] = useState<boolean[]>([true, true])
+  const [destinatariosAlmacen, setDestinatariosAlmacen] = useState<{ email: string; checked: boolean }[]>([])
   const [numCotizacion, setNumCotizacion] = useState('')
-  const [correosAdicionalesAlmacen, setCorreosAdicionalesAlmacen] = useState<string[]>([])
   const [nuevoCorreoAlmacen, setNuevoCorreoAlmacen] = useState('')
   const [enviandoAlmacen, setEnviandoAlmacen] = useState(false)
 
   const emailValido = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e.trim())
-  function agregarCorreoAlmacen() {
+
+  // Cargar los destinatarios guardados (todos tildados por defecto).
+  useEffect(() => {
+    fetch('/api/repuestos/almacen-destinatarios')
+      .then(r => r.json())
+      .then((d) => { if (Array.isArray(d)) setDestinatariosAlmacen(d.map((email: string) => ({ email, checked: true }))) })
+      .catch(() => {})
+  }, [])
+
+  // Agrega un correo, lo guarda (queda tildable en futuras solicitudes) y lo tilda.
+  async function agregarCorreoAlmacen() {
     const e = nuevoCorreoAlmacen.trim().toLowerCase()
     if (!emailValido(e)) { setError('Correo inválido'); return }
-    if (correosAdicionalesAlmacen.includes(e) || CORREOS_ALMACEN.includes(e)) { setNuevoCorreoAlmacen(''); return }
-    setCorreosAdicionalesAlmacen(prev => [...prev, e]); setNuevoCorreoAlmacen(''); setError('')
+    if (destinatariosAlmacen.some(d => d.email === e)) { setNuevoCorreoAlmacen(''); return }
+    try {
+      await fetch('/api/repuestos/almacen-destinatarios', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: e }),
+      })
+    } catch { /* si falla el guardado, igual se usa en este envío */ }
+    setDestinatariosAlmacen(prev => [...prev, { email: e, checked: true }])
+    setNuevoCorreoAlmacen(''); setError('')
   }
 
   // Novedad de recepción
@@ -173,18 +187,17 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
   }
 
   async function handleEnviarAlmacen() {
-    const emails = CORREOS_ALMACEN.filter((_, i) => correosAlmacen[i])
+    const emails = destinatariosAlmacen.filter(d => d.checked).map(d => d.email)
+    // Incluir un correo escrito que no se agregó con el botón.
+    const pend = nuevoCorreoAlmacen.trim().toLowerCase()
+    if (pend && emailValido(pend) && !emails.includes(pend)) { emails.push(pend); agregarCorreoAlmacen() }
     if (!emails.length || !numCotizacion.trim()) {
       setError('Selecciona al menos un correo e ingresa el número de cotización'); return
     }
-    // Incluir un correo que quedó escrito pero no se agregó con el botón.
-    const extras = [...correosAdicionalesAlmacen]
-    const pend = nuevoCorreoAlmacen.trim().toLowerCase()
-    if (pend && emailValido(pend) && !extras.includes(pend)) extras.push(pend)
     setEnviandoAlmacen(true); setError('')
     const res = await fetch('/api/repuestos/enviar-almacen', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solicitudId: solicitud.id, correosAlmacen: emails, numeroCotizacion: numCotizacion.trim(), userEmail, correosAdicionales: extras }),
+      body: JSON.stringify({ solicitudId: solicitud.id, correosAlmacen: emails, numeroCotizacion: numCotizacion.trim(), userEmail }),
     })
     if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); setEnviandoAlmacen(false); return }
     setShowAlmacen(false); router.refresh()
@@ -435,18 +448,32 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
               <div className="mb-3">
                 <label className="label">Destinatarios *</label>
                 <div className="space-y-2">
-                  {CORREOS_ALMACEN.map((email, i) => (
-                    <label key={email} className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                  {destinatariosAlmacen.map((d, i) => (
+                    <label key={d.email} className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors">
                       <input
                         type="checkbox"
-                        checked={correosAlmacen[i]}
-                        onChange={e => setCorreosAlmacen(prev => prev.map((v, idx) => idx === i ? e.target.checked : v))}
+                        checked={d.checked}
+                        onChange={e => setDestinatariosAlmacen(prev => prev.map((x, idx) => idx === i ? { ...x, checked: e.target.checked } : x))}
                         className="w-4 h-4 accent-blue-600 cursor-pointer"
                       />
-                      <span className="text-sm font-medium text-oriental-black">{email}</span>
+                      <span className="text-sm font-medium text-oriental-black">{d.email}</span>
                     </label>
                   ))}
+                  {destinatariosAlmacen.length === 0 && (
+                    <p className="text-xs text-oriental-gray">Agrega un correo abajo para empezar.</p>
+                  )}
                 </div>
+                {/* Agregar y GUARDAR un correo nuevo (queda tildable en futuras solicitudes) */}
+                <div className="flex gap-2 mt-2">
+                  <input className="input text-sm flex-1" type="email"
+                    placeholder="Agregar correo…"
+                    value={nuevoCorreoAlmacen}
+                    onChange={e => setNuevoCorreoAlmacen(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarCorreoAlmacen() } }} />
+                  <button type="button" onClick={agregarCorreoAlmacen}
+                    className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold text-oriental-red hover:bg-red-50 whitespace-nowrap">+ Agregar</button>
+                </div>
+                <p className="text-[11px] text-oriental-gray mt-1">El correo que agregues queda guardado y podrás tildarlo/destildarlo aquí y en próximas solicitudes.</p>
               </div>
               <div className="mb-4">
                 <label className="label">Número de cotización (código Vehimotors) *</label>
@@ -454,37 +481,13 @@ export default function RepuestosAcciones({ solicitud, items, rol, userId, userE
                   placeholder="Ej: COT-2026-00123"
                   value={numCotizacion} onChange={e => setNumCotizacion(e.target.value)} />
               </div>
-              <div className="mb-4">
-                <label className="label">Correos adicionales <span className="text-oriental-gray font-normal">(opcional)</span></label>
-                <div className="flex gap-2">
-                  <input className="input text-sm flex-1" type="email"
-                    placeholder="correo@ejemplo.com"
-                    value={nuevoCorreoAlmacen}
-                    onChange={e => setNuevoCorreoAlmacen(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarCorreoAlmacen() } }} />
-                  <button type="button" onClick={agregarCorreoAlmacen}
-                    className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold text-oriental-red hover:bg-red-50 whitespace-nowrap">+ Agregar</button>
-                </div>
-                {correosAdicionalesAlmacen.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {correosAdicionalesAlmacen.map(email => (
-                      <span key={email} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-medium text-blue-800">
-                        {email}
-                        <button type="button" onClick={() => setCorreosAdicionalesAlmacen(prev => prev.filter(x => x !== email))}
-                          className="text-blue-400 hover:text-blue-700">✕</button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <p className="text-[11px] text-oriental-gray mt-1">Se agregan como destinatarios junto a los correos de Vehimotors marcados. Escribe y pulsa Enter o “+ Agregar”.</p>
-              </div>
               <div className="flex gap-2">
                 <button onClick={handleEnviarAlmacen} disabled={enviandoAlmacen}
                   className="flex-1 btn-primary flex items-center justify-center gap-2 py-2.5 disabled:opacity-60">
                   {enviandoAlmacen ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                   Enviar email
                 </button>
-                <button onClick={() => { setShowAlmacen(false); setCorreosAlmacen([true, true]); setNumCotizacion(''); setCorreosAdicionalesAlmacen([]); setNuevoCorreoAlmacen(''); setError('') }}
+                <button onClick={() => { setShowAlmacen(false); setDestinatariosAlmacen(prev => prev.map(d => ({ ...d, checked: true }))); setNumCotizacion(''); setNuevoCorreoAlmacen(''); setError('') }}
                   className="flex-1 btn-secondary py-2.5 text-sm">Cancelar</button>
               </div>
             </>
