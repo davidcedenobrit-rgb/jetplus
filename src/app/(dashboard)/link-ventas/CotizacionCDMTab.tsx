@@ -245,8 +245,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
 
   async function enviar() {
     if (!vehiculoSel) return
-    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim() || !form.clienteCorreo.trim()) { setErrorMsg('Nombre, C.I./RIF y correo son obligatorios.'); return }
-    if (!/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
+    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) { setErrorMsg('Nombre y C.I./RIF son obligatorios.'); return }
+    if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
     if (plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
     setStep('sending'); setErrorMsg('')
     try {
@@ -282,8 +282,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
 
   function handleVistaPrevia() {
     if (!vehiculoSel) return
-    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim() || !form.clienteCorreo.trim()) { setErrorMsg('Nombre, C.I./RIF y correo son obligatorios para la vista previa.'); return }
-    if (!/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
+    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) { setErrorMsg('Nombre y C.I./RIF son obligatorios para la vista previa.'); return }
+    if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
     if (plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
     setErrorMsg('')
     setShowPreview(true)
@@ -614,7 +614,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
               </div>
             </div>
             <div>
-              <label className={labelCls}>Correo electrónico *</label>
+              <label className={labelCls}>Correo electrónico <span className="text-gray-400 font-normal">(opcional)</span></label>
               <input className={inputCls} type="email" value={form.clienteCorreo} onChange={e => setForm(p => ({ ...p, clienteCorreo: e.target.value }))} placeholder="cliente@email.com" />
             </div>
             <div>
@@ -893,11 +893,11 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   return (
     <div className="max-w-md mx-auto text-center py-12">
       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
-      <h3 className="text-xl font-bold text-oriental-black mb-2">¡Cotización enviada!</h3>
+      <h3 className="text-xl font-bold text-oriental-black mb-2">¡Cotización generada!</h3>
       <p className="text-sm text-oriental-gray mb-1">
         Número: <strong className="text-oriental-red">{numeroCot}</strong>
       </p>
-      <p className="text-sm text-oriental-gray mb-6">El PDF fue enviado al correo del cliente.</p>
+      <p className="text-sm text-oriental-gray mb-6">{form.clienteCorreo.trim() ? 'El PDF fue enviado al correo del cliente.' : 'Sin correo: compártela por WhatsApp o descarga el PDF.'}</p>
 
       {cotIdCreada && (
         <a

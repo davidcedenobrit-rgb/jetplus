@@ -65,11 +65,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: 'Gastos inválidos' }, { status: 400 })
       if (!['contado', 'credito_24'].includes(modalidad))
         return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
-      if (!['vehimotors', 'banco_100', 'ac500', 'personalizado'].includes(plan))
+      if (!['vehimotors', 'banco_100', 'ac500', 'personalizado', 'banca_nacional'].includes(plan))
         return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
-      if (!cliente_nombre?.trim() || !cliente_ci_rif?.trim() || !cliente_correo?.trim())
-        return NextResponse.json({ error: 'Nombre, C.I./RIF y correo son obligatorios' }, { status: 400 })
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente_correo.trim()))
+      if (!cliente_nombre?.trim() || !cliente_ci_rif?.trim())
+        return NextResponse.json({ error: 'Nombre y C.I./RIF son obligatorios' }, { status: 400 })
+      if (cliente_correo?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente_correo.trim()))
         return NextResponse.json({ error: 'Correo del cliente inválido' }, { status: 400 })
 
       // Recalcular con el motor único. Para banco, la placa y la tasa del banco
@@ -158,7 +158,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         cliente_id: clienteIdVinculado,
         cliente_nombre: cliente_nombre.trim(),
         cliente_ci_rif: cliente_ci_rif.trim(),
-        cliente_correo: cliente_correo.trim().toLowerCase(),
+        cliente_correo: (cliente_correo ?? '').trim().toLowerCase(),
         cliente_telefono: cliente_telefono?.trim() || null,
         cliente_direccion: cliente_direccion?.trim() || null,
         cliente_ciudad_estado: cliente_ciudad_estado?.trim() || null,

@@ -61,10 +61,11 @@ export async function POST(req: Request) {
     // Cantidad de vehículos (entero >= 1), independiente del stock de showroom
     const cantidadNum = Math.max(1, Math.floor(Number(cantidad) || 1))
 
-    // Validaciones básicas
-    if (!codigo || (!vehiculoId && !promoVehiculoId) || !clienteNombre?.trim() || !clienteCiRif?.trim() || !clienteCorreo?.trim() || !modalidad) {
+    // Validaciones básicas (el correo del cliente es opcional).
+    if (!codigo || (!vehiculoId && !promoVehiculoId) || !clienteNombre?.trim() || !clienteCiRif?.trim() || !modalidad) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
+    const correoCliente = clienteCorreo?.trim().toLowerCase() || ''
     if (!['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
     }
@@ -305,7 +306,7 @@ export async function POST(req: Request) {
         cliente_id: clienteIdVinculado,
         cliente_nombre: clienteNombre.trim(),
         cliente_ci_rif: clienteCiRif.trim(),
-        cliente_correo: clienteCorreo.trim().toLowerCase(),
+        cliente_correo: correoCliente,
         cliente_telefono: clienteTelefono?.trim() || null,
         cliente_direccion: clienteDireccion?.trim() || null,
         cliente_ciudad_estado: clienteCiudadEstado?.trim() || null,
@@ -356,7 +357,7 @@ export async function POST(req: Request) {
       clienteNombre: clienteNombre.trim(),
       clienteCiRif: clienteCiRif.trim(),
       clienteDireccion: clienteDireccion?.trim() || null,
-      clienteCorreo: clienteCorreo.trim().toLowerCase(),
+      clienteCorreo: correoCliente,
       clienteTelefono: clienteTelefono?.trim() || null,
       clienteCiudadEstado: clienteCiudadEstado?.trim() || null,
       clienteCodigoPostal: clienteCodigoPostal?.trim() || null,
@@ -380,14 +381,15 @@ export async function POST(req: Request) {
       mesesCredito: plan === 'personalizado' ? persMeses : undefined,
     }
 
-    // Enviar emails (ambos en paralelo, errores no bloqueantes)
+    // Enviar emails (ambos en paralelo, errores no bloqueantes).
+    // El correo al cliente solo se envía si dejó su correo (ahora es opcional).
     const emailResults = await Promise.allSettled([
-      enviarCotizacionCliente(pdfData, cot.token_respuesta, cot.id),
+      correoCliente ? enviarCotizacionCliente(pdfData, cot.token_respuesta, cot.id) : Promise.resolve(null),
       enviarNotificacionRojas({
         numero: cot.numero,
         vendedoraNombre: vendedora.nombre,
         clienteNombre: clienteNombre.trim(),
-        clienteCorreo: clienteCorreo.trim().toLowerCase(),
+        clienteCorreo: correoCliente,
         clienteCiRif: clienteCiRif.trim(),
         marca: vehiculo.brand,
         modelo: vehiculo.model,
