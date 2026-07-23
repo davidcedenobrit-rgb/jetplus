@@ -340,28 +340,18 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO{bn.banco ? ` · ${bn.banco}` : ''}</Text>
                 </View>
                 {[
-                  ['Precio base', bn.precio_base],
+                  ['Precio base', bn.precio_base + bn.diferencial],
                   ['IVA 16%', bn.iva],
                   ['Placa', bn.placa],
-                  ['Total para el banco', bn.total_banco],
+                  ['Gastos (pólizas, notaría, etc.)', bn.gastos],
+                  ['Total', bn.total_banco + bn.gastos + bn.diferencial],
+                  ['Aporte de su crédito bancario', bn.aprobado_banco],
                 ].map(([l, v]) => (
                   <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
                     <Text style={{ fontSize: 7.5, color: GRAY }}>{l}</Text>
                     <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(v as number)}</Text>
                   </View>
                 ))}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
-                  <Text style={{ fontSize: 7.5, color: GRAY }}>Aprobado por el banco ({fmt(bn.aprobado_pct)}%)</Text>
-                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(bn.aprobado_banco)}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
-                  <Text style={{ fontSize: 7.5, color: GRAY }}>Conversión al día (−{fmt(bn.merma_pct)}%) → valor real</Text>
-                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(bn.aprobado_real)}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
-                  <Text style={{ fontSize: 7.5, color: GRAY }}>Gastos (pólizas, notaría, etc.)</Text>
-                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(bn.gastos)}</Text>
-                </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '6pt 10pt', backgroundColor: '#fef9c3' }}>
                   <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD }}>INICIAL A PAGAR (CLIENTE):</Text>
                   <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(bn.inicial_cliente)}</Text>

@@ -377,13 +377,12 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                 <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO{data.bnVehimotors.banco ? ` · ${data.bnVehimotors.banco}` : ''}</Text>
               </View>
               {[
-                ['Precio base', data.bnVehimotors.precio_base],
+                ['Precio base', data.bnVehimotors.precio_base + data.bnVehimotors.diferencial],
                 ['IVA 16%', data.bnVehimotors.iva],
                 ['Placa', data.bnVehimotors.placa],
-                ['Total para el banco', data.bnVehimotors.total_banco],
-                [`Aprobado por el banco (${fmt(data.bnVehimotors.aprobado_pct)}%)`, data.bnVehimotors.aprobado_banco],
-                [`Conversión al día (−${fmt(data.bnVehimotors.merma_pct)}%) → valor real`, data.bnVehimotors.aprobado_real],
                 ['Gastos (pólizas, notaría, etc.)', data.bnVehimotors.gastos],
+                ['Total', data.bnVehimotors.total_banco + data.bnVehimotors.gastos + data.bnVehimotors.diferencial],
+                ['Aporte de su crédito bancario', data.bnVehimotors.aprobado_banco],
               ].map(([l, v]) => (
                 <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 12pt', borderBottom: `0.5pt solid ${BORDER}` }}>
                   <Text style={{ fontSize: 8, color: GRAY }}>{l}</Text>
