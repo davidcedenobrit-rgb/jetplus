@@ -9,10 +9,13 @@ const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 export default async function IngresosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; placa?: string; metodo?: string; cliente?: string }>
+  searchParams: Promise<{ estado?: string; placa?: string; metodo?: string; cliente?: string; limit?: string }>
 }) {
   const params = await searchParams
   const supabase = await createClient()
+
+  // Cuántos registros mostrar. Empieza en 100 y crece con "Cargar más antiguos".
+  const limitNum = Math.min(3000, Math.max(100, parseInt(params.limit ?? '100') || 100))
 
   const { data: { user } } = await supabase.auth.getUser()
   const rol = (user?.app_metadata?.rol as string) ?? 'editor'
@@ -34,7 +37,7 @@ export default async function IngresosPage({
     .from('ingresos')
     .select('*, clientes(nombre, cedula_rif)')
     .order('fecha_registro', { ascending: false })
-    .limit(100)
+    .limit(limitNum)
 
   if (params.estado) query = query.eq('estado', params.estado)
   if (params.placa) query = query.ilike('placa', `%${params.placa}%`)
@@ -324,6 +327,23 @@ export default async function IngresosPage({
           </table>
         </div>
       </div>
+
+      {(ingresos?.length ?? 0) >= limitNum && (() => {
+        const qs = new URLSearchParams()
+        if (params.estado) qs.set('estado', params.estado)
+        if (params.placa) qs.set('placa', params.placa)
+        if (params.metodo) qs.set('metodo', params.metodo)
+        if (params.cliente) qs.set('cliente', params.cliente)
+        qs.set('limit', String(limitNum + 100))
+        return (
+          <div className="flex justify-center mt-4">
+            <Link href={`/ingresos?${qs.toString()}`} scroll={false}
+              className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-oriental-gray hover:border-oriental-red hover:text-oriental-red transition-colors">
+              Cargar más antiguos
+            </Link>
+          </div>
+        )
+      })()}
     </div>
   )
 }

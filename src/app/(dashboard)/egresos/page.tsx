@@ -6,20 +6,30 @@ import { Plus, Search, FileBarChart2, ListChecks } from 'lucide-react'
 export default async function EgresosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string }>
+  searchParams: Promise<{ estado?: string; limit?: string }>
 }) {
   const params = await searchParams
   const supabase = await createClient()
+
+  // Cuántos registros mostrar. Empieza en 100 y crece con "Cargar más antiguos".
+  const limitNum = Math.min(3000, Math.max(100, parseInt(params.limit ?? '100') || 100))
 
   let query = supabase
     .from('egresos')
     .select('*')
     .order('fecha_registro', { ascending: false })
-    .limit(100)
+    .limit(limitNum)
 
   if (params.estado) query = query.eq('estado', params.estado)
 
   const { data: egresos } = await query
+  const hayMas = (egresos?.length ?? 0) >= limitNum
+  const masHref = (() => {
+    const qs = new URLSearchParams()
+    if (params.estado) qs.set('estado', params.estado)
+    qs.set('limit', String(limitNum + 100))
+    return `/egresos?${qs.toString()}`
+  })()
 
   const estadoColors: Record<string, string> = {
     registrado: 'bg-gray-100 text-gray-700',
@@ -141,6 +151,15 @@ export default async function EgresosPage({
           </table>
         </div>
       </div>
+
+      {hayMas && (
+        <div className="flex justify-center mt-4">
+          <Link href={masHref} scroll={false}
+            className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-oriental-gray hover:border-oriental-red hover:text-oriental-red transition-colors">
+            Cargar más antiguos
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
