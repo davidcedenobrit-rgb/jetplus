@@ -13,6 +13,7 @@ type Candidato = {
   marca: string
   modelo: string
   tienePlaca: boolean
+  creditoEstado: string
 }
 
 // Asignar el carro del showroom a un cliente con crédito AC500 (ya vendido a plazos).
@@ -33,7 +34,7 @@ export default function AsignarClienteAC500({ showroomId, vehiculoLabel }: { sho
       .from('creditos')
       .select('vehiculo_id, plan_tipo, estado, vehiculos(id, marca, modelo, placa), clientes(nombre, cedula_rif)')
       .eq('plan_tipo', 'asegurate_500')
-      .eq('estado', 'activo')
+      .in('estado', ['activo', 'pagado', 'mora'])
       .then(({ data }) => {
         const list: Candidato[] = (data ?? [])
           .filter((c: any) => c.vehiculos)
@@ -44,8 +45,11 @@ export default function AsignarClienteAC500({ showroomId, vehiculoLabel }: { sho
             marca: c.vehiculos.marca ?? '',
             modelo: c.vehiculos.modelo ?? '',
             tienePlaca: !!c.vehiculos.placa,
+            creditoEstado: c.estado ?? '',
           }))
           .filter((c: Candidato) => !c.tienePlaca) // solo los que aún no tienen carro físico
+          // Los que completaron el pago primero (listos para recibir).
+          .sort((a: Candidato, b: Candidato) => (a.creditoEstado === 'pagado' ? -1 : 0) - (b.creditoEstado === 'pagado' ? -1 : 0))
         setCandidatos(list)
         setCargando(false)
       })
@@ -110,7 +114,12 @@ export default function AsignarClienteAC500({ showroomId, vehiculoLabel }: { sho
                   {filtrados.map(c => (
                     <div key={c.vehiculoId} className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl p-3">
                       <div className="min-w-0">
-                        <p className="font-semibold text-oriental-black text-sm truncate">{c.clienteNombre}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-oriental-black text-sm truncate">{c.clienteNombre}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${c.creditoEstado === 'pagado' ? 'bg-green-100 text-green-700' : c.creditoEstado === 'mora' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {c.creditoEstado === 'pagado' ? '✓ Pagó completo' : c.creditoEstado === 'mora' ? 'En mora' : 'Pagando'}
+                          </span>
+                        </div>
                         <p className="text-xs text-gray-500 truncate">{c.clienteCedula} · {c.marca} {c.modelo}</p>
                       </div>
                       <button onClick={() => asignar(c)} disabled={!!saving}
