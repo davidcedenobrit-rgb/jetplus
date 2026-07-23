@@ -10,6 +10,7 @@ import EtiquetaExpedienteButton from './EtiquetaExpedienteButton'
 import EtiquetaVentaButton from './EtiquetaVentaButton'
 import SalidaAlternativaButtons from './SalidaAlternativaButtons'
 import InspeccionesVehiculo from './InspeccionesVehiculo'
+import AsignarClienteAC500 from './AsignarClienteAC500'
 
 const PASOS = [
   { key: 'llegada',        label: 'Recibido',         desc: 'Vehículo llegó a La Oriental' },
@@ -347,6 +348,10 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
               >
                 <Car size={16} /> Registrar venta
               </Link>
+              <AsignarClienteAC500
+                showroomId={id}
+                vehiculoLabel={`${v.marca} ${v.modelo}${v.placa ? ` · ${v.placa}` : ''}`}
+              />
               <SalidaAlternativaButtons
                 showroomId={id}
                 vehiculoLabel={`${v.marca} ${v.modelo}${v.placa ? ` · ${v.placa}` : ''}`}
