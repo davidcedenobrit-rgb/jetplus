@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { X, Loader2, Landmark } from 'lucide-react'
+import FileUpload from '@/components/FileUpload'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -149,8 +150,20 @@ export default function BancaNacionalTab({ catalogo = [] }: { catalogo?: any[] }
 // Enviar el expediente a Vehimotors por correo (encabezado del concesionario + datos + adjuntos).
 function EnviarVMModal({ caso, onClose, onDone }: { caso: Caso; onClose: () => void; onDone: () => void }) {
   const [correo, setCorreo] = useState(caso.vehimotors_email ?? '')
+  const [docs, setDocs] = useState<{ url: string; nombre: string }[]>(
+    (caso.expediente ?? []).map(d => ({ url: d.url, nombre: d.nombre ?? 'Documento' }))
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Persistir el expediente al agregar/quitar archivos (para que se envíen y queden guardados).
+  async function guardarDocs(nuevos: { url: string; nombre: string }[]) {
+    setDocs(nuevos)
+    await fetch(`/api/bn-casos/${caso.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expediente: nuevos }),
+    }).catch(() => {})
+  }
 
   async function enviar() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) { setError('Escribe un correo válido.'); return }
@@ -166,7 +179,6 @@ function EnviarVMModal({ caso, onClose, onDone }: { caso: Caso; onClose: () => v
     } catch { setError('Error de conexión'); setSaving(false) }
   }
 
-  const nDocs = caso.expediente?.length ?? 0
   const inp = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red'
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -180,7 +192,13 @@ function EnviarVMModal({ caso, onClose, onDone }: { caso: Caso; onClose: () => v
           <button onClick={() => !saving && onClose()} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X size={16} /></button>
         </div>
         <div className="p-5 space-y-3">
-          <p className="text-xs text-gray-500">Se enviará un correo con el encabezado de <b>{caso.concesionario_id === 'la-oriental' || !caso.concesionario_id ? 'La Oriental' : caso.concesionario_id}</b>, los datos del cliente y {nDocs > 0 ? <b>{nDocs} documento{nDocs !== 1 ? 's' : ''} del expediente</b> : 'sin documentos adjuntos'}.</p>
+          <p className="text-xs text-gray-500">Se enviará un correo con el encabezado de <b>{caso.concesionario_id === 'la-oriental' || !caso.concesionario_id ? 'La Oriental' : caso.concesionario_id}</b>, los datos del cliente y los documentos del expediente adjuntos.</p>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Expediente ({docs.length} documento{docs.length !== 1 ? 's' : ''}) — puedes agregar más</label>
+            <FileUpload files={docs} onFilesChange={guardarDocs} maxFiles={30} />
+          </div>
+
           <div>
             <label className="block text-[11px] font-semibold text-gray-500 mb-1">Correo de Vehimotors</label>
             <input className={inp} type="email" value={correo} onChange={e => setCorreo(e.target.value)} placeholder="creditos@vehimotors.com" />

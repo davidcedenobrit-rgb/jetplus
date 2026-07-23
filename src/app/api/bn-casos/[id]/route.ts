@@ -31,6 +31,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (b.gastos_estructura !== undefined) upd.gastos_estructura = b.gastos_estructura
   if (b.condiciones !== undefined) upd.condiciones = b.condiciones?.trim() || null
   if (b.notas !== undefined) upd.notas = b.notas?.trim() || null
+  if (b.expediente !== undefined) {
+    upd.expediente = Array.isArray(b.expediente)
+      ? b.expediente.filter((f: any) => f?.url).map((f: any) => ({ url: f.url, nombre: f.nombre ?? null }))
+      : null
+  }
 
   if (b.estado === 'rechazado') {
     upd.estado = 'rechazado'
