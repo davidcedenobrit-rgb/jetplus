@@ -177,10 +177,17 @@ export interface CotizacionPDFData {
   mesesCredito?: number
   // Propuesta de condiciones de pago personalizada (texto libre de Rojas).
   condicionesPersonalizadas?: string | null
+  // Banca Nacional — Vehimotors: desglose del cuadro (banco aprueba %, merma del día).
+  bnVehimotors?: {
+    precio_base: number; iva: number; placa: number; gastos: number
+    total_banco: number; aprobado_pct: number; aprobado_banco: number
+    merma_pct: number; aprobado_real: number; diferencial: number; inicial_cliente: number
+  } | null
 }
 
 export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const esAC500 = data.plan === 'ac500'
+  const bn = data.bnVehimotors ?? null
   const es24 = data.modalidad === 'credito_24'
   const esBanco = data.plan === 'banco_100'
   const esPersonalizado = data.plan === 'personalizado'
@@ -324,8 +331,46 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             </View>
           )}
 
+          {/* ── Cuadro Banca Nacional — Vehimotors ── */}
+          {bn && (
+            <View style={{ marginTop: 12, flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1, border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' }}>
+                <View style={{ backgroundColor: BLUE_DARK, padding: '6pt 10pt' }}>
+                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO</Text>
+                </View>
+                {[
+                  ['Precio base', bn.precio_base],
+                  ['IVA 16%', bn.iva],
+                  ['Placa', bn.placa],
+                  ['Total para el banco', bn.total_banco],
+                ].map(([l, v]) => (
+                  <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
+                    <Text style={{ fontSize: 7.5, color: GRAY }}>{l}</Text>
+                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(v as number)}</Text>
+                  </View>
+                ))}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
+                  <Text style={{ fontSize: 7.5, color: GRAY }}>Aprobado por el banco ({fmt(bn.aprobado_pct)}%)</Text>
+                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(bn.aprobado_banco)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
+                  <Text style={{ fontSize: 7.5, color: GRAY }}>Conversión al día (−{fmt(bn.merma_pct)}%) → valor real</Text>
+                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(bn.aprobado_real)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
+                  <Text style={{ fontSize: 7.5, color: GRAY }}>Gastos (pólizas, notaría, etc.)</Text>
+                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(bn.gastos)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '6pt 10pt', backgroundColor: '#fef9c3' }}>
+                  <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD }}>INICIAL A PAGAR (CLIENTE):</Text>
+                  <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(bn.inicial_cliente)}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* ── Standard modalidad + cálculos (non-AC500) ── */}
-          {!esAC500 && (
+          {!esAC500 && !bn && (
             <View style={s.modalidadBlock}>
               {es24 && (
                 <View style={s.noteBox}>

@@ -81,6 +81,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     planTipo: credito.plan_tipo ?? '',
     planLabel: planLabel[credito.plan_tipo] ?? 'Crédito',
     condicionesPersonalizadas: pro.condiciones_personalizadas ?? null,
+    bnVehimotors: pro.bn_vehimotors ?? null,
     // Proforma previa a la venta: nació de una cotización y aún no hay crédito.
     preVenta: !pro.credito_id && !!pro.cotizacion_id,
     cronograma,

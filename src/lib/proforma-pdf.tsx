@@ -203,6 +203,12 @@ export interface ProformaPDFData {
   // Condiciones de pago personalizadas propuestas y aceptadas: se muestran como
   // la modalidad de la proforma y en un bloque destacado.
   condicionesPersonalizadas?: string | null
+  // Banca Nacional — Vehimotors: desglose del cuadro (banco aprueba %, merma del día).
+  bnVehimotors?: {
+    precio_base: number; iva: number; placa: number; gastos: number
+    total_banco: number; aprobado_pct: number; aprobado_banco: number
+    merma_pct: number; aprobado_real: number; diferencial: number; inicial_cliente: number
+  } | null
   cronograma: CuotaCronogramaItem[]
   vendedor?: string | null
   acuerdoInicial?: AcuerdoInicialInfo | null
@@ -362,6 +368,33 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             </Text>
             )}
           </View>
+
+          {/* Cuadro Banca Nacional — Vehimotors */}
+          {data.bnVehimotors ? (
+            <View style={{ marginTop: 12, border: `1pt solid #1e3a5f`, borderRadius: 6, overflow: 'hidden' }}>
+              <View style={{ backgroundColor: '#1e3a5f', padding: '6pt 12pt' }}>
+                <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO</Text>
+              </View>
+              {[
+                ['Precio base', data.bnVehimotors.precio_base],
+                ['IVA 16%', data.bnVehimotors.iva],
+                ['Placa', data.bnVehimotors.placa],
+                ['Total para el banco', data.bnVehimotors.total_banco],
+                [`Aprobado por el banco (${fmt(data.bnVehimotors.aprobado_pct)}%)`, data.bnVehimotors.aprobado_banco],
+                [`Conversión al día (−${fmt(data.bnVehimotors.merma_pct)}%) → valor real`, data.bnVehimotors.aprobado_real],
+                ['Gastos (pólizas, notaría, etc.)', data.bnVehimotors.gastos],
+              ].map(([l, v]) => (
+                <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 12pt', borderBottom: `0.5pt solid ${BORDER}` }}>
+                  <Text style={{ fontSize: 8, color: GRAY }}>{l}</Text>
+                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: DARK }}>${fmt(v as number)}</Text>
+                </View>
+              ))}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '7pt 12pt', backgroundColor: '#fef9c3' }}>
+                <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GOLD }}>INICIAL A PAGAR (CLIENTE):</Text>
+                <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(data.bnVehimotors.inicial_cliente)}</Text>
+              </View>
+            </View>
+          ) : null}
 
           {/* Condiciones de pago personalizadas: modalidad libre acordada. */}
           {data.condicionesPersonalizadas ? (

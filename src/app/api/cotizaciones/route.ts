@@ -51,6 +51,9 @@ export async function POST(req: Request) {
       precioBaseOverride,
       gastosOverride,
       condicionesPersonalizadas,
+      // Banca Nacional — Vehimotors (desde la bandeja): % aprobado por el banco y
+      // % de merma del día que coloca Rojas.
+      bnVehimotors,
     } = body
 
     const condPersonalizadas = String(condicionesPersonalizadas ?? '').trim() || null
@@ -288,10 +291,34 @@ export async function POST(req: Request) {
       personalizadoMeses: persMeses,
       personalizadoTasaPct: persTasaPct,
     })
-    const totalInicial = totales.totalInicial
-    const financiamientoMonto = totales.financiamientoMonto
-    const cuotaMensual = totales.cuotaMensual
-    const costoTotal = totales.costoTotal
+    let totalInicial = totales.totalInicial
+    let financiamientoMonto = totales.financiamientoMonto
+    let cuotaMensual = totales.cuotaMensual
+    let costoTotal = totales.costoTotal
+
+    // Banca Nacional — Vehimotors: el banco aprueba un % del total (base+IVA+placa),
+    // pagado en Bs a BCV; con la merma del día se obtiene el valor real en dólares, y
+    // el cliente cubre la diferencia + gastos como inicial para llevarse el carro.
+    let bnVehimotorsData: any = null
+    if (plan === 'banca_nacional' && bnVehimotors && Number(bnVehimotors.aprobadoPct) > 0) {
+      const placaMonto = Number(bnVehimotors.placaMonto) || Number(vehiculo.placa_monto) || 400
+      const totalBanco = precioBase + iva + placaMonto
+      const aprobadoPct = Math.min(100, Math.max(0, Number(bnVehimotors.aprobadoPct)))
+      const mermaPct = Math.min(100, Math.max(0, Number(bnVehimotors.mermaPct)))
+      const aprobadoBanco = totalBanco * (aprobadoPct / 100)
+      const aprobadoReal = aprobadoBanco * (1 - mermaPct / 100)
+      const diferencial = aprobadoBanco - aprobadoReal
+      const inicialCliente = totalBanco - aprobadoReal + gastos
+      totalInicial = inicialCliente
+      financiamientoMonto = null
+      cuotaMensual = null
+      costoTotal = inicialCliente
+      bnVehimotorsData = {
+        precio_base: precioBase, iva, placa: placaMonto, gastos,
+        total_banco: totalBanco, aprobado_pct: aprobadoPct, aprobado_banco: aprobadoBanco,
+        merma_pct: mermaPct, aprobado_real: aprobadoReal, diferencial, inicial_cliente: inicialCliente,
+      }
+    }
 
     const hoy = new Date()
     const venc = new Date(hoy)
@@ -348,6 +375,7 @@ export async function POST(req: Request) {
         personalizado_tasa_pct: plan === 'personalizado' ? persTasaPct : null,
         personalizado_diferencial: plan === 'personalizado' ? persDiferencial : false,
         condiciones_personalizadas: condPersonalizadas,
+        bn_vehimotors: bnVehimotorsData,
       }])
       .select()
       .single()
@@ -393,6 +421,7 @@ export async function POST(req: Request) {
       inicialPct: plan === 'personalizado' ? persIniPct / 100 : undefined,
       mesesCredito: plan === 'personalizado' ? persMeses : undefined,
       condicionesPersonalizadas: condPersonalizadas,
+      bnVehimotors: bnVehimotorsData,
     }
 
     // Enviar emails (ambos en paralelo, errores no bloqueantes).

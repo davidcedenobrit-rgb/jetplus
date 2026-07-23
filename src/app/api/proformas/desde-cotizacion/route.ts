@@ -169,6 +169,7 @@ export async function POST(req: Request) {
       ultima_cuota_fecha: cronogramaSnapshot[cronogramaSnapshot.length - 1]?.fecha_vencimiento ?? null,
       observaciones: observacionesFinal,
       condiciones_personalizadas: condPersonalizadas,
+      bn_vehimotors: cot.bn_vehimotors ?? null,
       correo_destino: enviarCorreo ? String(correoDestino ?? cot.cliente_correo ?? '').trim().toLowerCase() : null,
       emitida_por: user.id,
     }])

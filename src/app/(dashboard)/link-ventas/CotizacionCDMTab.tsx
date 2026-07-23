@@ -217,6 +217,32 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     return { base, iva, gastos, total: base + iva + gastos }
   }, [vehiculoSel, bnDiferencial])
 
+  // BN Vehimotors: crea un caso en la bandeja Banca Nacional (pendiente de aprobación VM).
+  const [bnCasoSaving, setBnCasoSaving] = useState(false)
+  const [bnCasoMsg, setBnCasoMsg] = useState('')
+  async function crearCasoBN() {
+    if (!vehiculoSel) return
+    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) { setErrorMsg('Nombre y C.I./RIF del cliente son obligatorios.'); return }
+    setBnCasoSaving(true); setErrorMsg(''); setBnCasoMsg('')
+    try {
+      const r = await fetch('/api/bn-casos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clienteNombre: form.clienteNombre, clienteCiRif: form.clienteCiRif, clienteCorreo: form.clienteCorreo,
+          clienteTelefono: form.clienteTelefono, clienteDireccion: form.clienteDireccion,
+          clienteCiudadEstado: form.clienteCiudadEstado, clienteCodigoPostal: form.clienteCodigoPostal,
+          vehiculoId: vehiculoSel.id, marca: vehiculoSel.brand, modelo: vehiculoSel.model,
+          precioBase: vehiculoSel.cash ?? 0, placaMonto: (vehiculoSel as any).placa_monto ?? 400,
+          concesionarioId, notas: bnCond,
+        }),
+      })
+      const j = await r.json()
+      if (!r.ok) { setErrorMsg(j.error ?? 'No se pudo crear el caso'); setBnCasoSaving(false); return }
+      setBnCasoSaving(false)
+      setBnCasoMsg('✓ Caso enviado a la bandeja Banca Nacional. Cuando Vehimotors apruebe, procésalo desde la pestaña Banca Nacional.')
+    } catch { setErrorMsg('Error de conexión'); setBnCasoSaving(false) }
+  }
+
   function activarRojas() {
     const base: Modalidad = modalidad === 'credito_24' ? 'credito_24' : 'contado'
     setRojasMode(true)
@@ -694,7 +720,14 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                   <p className="font-bold">🏦 BN Vehimotors — gestión ante el banco</p>
                   <p>Recopila el expediente del cliente y envíalo a Vehimotors. Cuando el banco apruebe un porcentaje, el caso llega a la bandeja <b>Banca Nacional</b> para colocar la <b>conversión al día</b>, ajustar los gastos y generar la proforma.</p>
                   <p className="text-blue-700">Expediente típico: cédula/RIF, constancia de trabajo, referencias bancarias, estados de cuenta, planilla del banco.</p>
-                  <p className="text-[11px] text-blue-500">Esta variante se procesa en la bandeja <b>Banca Nacional</b> (pestaña de Ventas).</p>
+                  {bnCasoMsg ? (
+                    <p className="text-[12px] font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{bnCasoMsg}</p>
+                  ) : (
+                    <button type="button" onClick={crearCasoBN} disabled={bnCasoSaving}
+                      className="w-full py-2.5 bg-blue-800 hover:bg-blue-900 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
+                      {bnCasoSaving ? 'Enviando…' : '📨 Enviar caso a la bandeja Banca Nacional'}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -920,14 +953,18 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           <button onClick={() => setStep('vehiculo')} className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
             Cancelar
           </button>
-          <button onClick={handleVistaPrevia} disabled={isSending}
-            className="px-4 py-2.5 border-2 border-oriental-black text-oriental-black rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50">
-            👁 Vista previa
-          </button>
-          <button onClick={enviar} disabled={isSending}
-            className="flex-1 py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50">
-            {isSending ? 'Guardando…' : '💾 Guardar cotización'}
-          </button>
+          {!(!rojasMode && plan === 'banca_nacional' && bnVariante === 'vehimotors') && (
+            <>
+              <button onClick={handleVistaPrevia} disabled={isSending}
+                className="px-4 py-2.5 border-2 border-oriental-black text-oriental-black rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50">
+                👁 Vista previa
+              </button>
+              <button onClick={enviar} disabled={isSending}
+                className="flex-1 py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50">
+                {isSending ? 'Guardando…' : '💾 Guardar cotización'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

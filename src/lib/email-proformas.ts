@@ -141,6 +141,7 @@ async function fetchPdfBuffer(proformaId: string): Promise<Buffer> {
     planTipo: credito.plan_tipo ?? '',
     planLabel: planLabelMap[credito.plan_tipo] ?? 'Crédito',
     condicionesPersonalizadas: pro.condiciones_personalizadas ?? null,
+    bnVehimotors: pro.bn_vehimotors ?? null,
     cronograma,
     acuerdoInicial: credito.acuerdo_inicial ? {
       monto_acordado: Number(credito.acuerdo_inicial.monto_acordado ?? 0),
