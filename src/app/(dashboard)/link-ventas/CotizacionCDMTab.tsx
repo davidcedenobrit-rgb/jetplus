@@ -204,6 +204,19 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   const [rojasTasa, setRojasTasa] = useState('0')
   const [rojasCond, setRojasCond] = useState('')
 
+  // ── Banca Nacional: dos variantes ──
+  const [bnVariante, setBnVariante] = useState<'vehimotors' | 'cliente'>('cliente')
+  const [bnDiferencial, setBnDiferencial] = useState('')
+  const [bnCond, setBnCond] = useState('')
+
+  // BN Cliente directo: proforma de contado con el diferencial sumado al precio base.
+  const bnClienteCalc = useMemo(() => {
+    const base = (vehiculoSel?.cash ?? 0) + num(bnDiferencial)
+    const iva = base * 0.16
+    const gastos = vehiculoSel?.gc ?? 0
+    return { base, iva, gastos, total: base + iva + gastos }
+  }, [vehiculoSel, bnDiferencial])
+
   function activarRojas() {
     const base: Modalidad = modalidad === 'credito_24' ? 'credito_24' : 'contado'
     setRojasMode(true)
@@ -321,6 +334,11 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
     if (rojasMode && rojasCalc.precio <= 0) { setErrorMsg('Indica el precio base para la cotización personalizada.'); return }
     if (!rojasMode && plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
+    // BN Vehimotors se gestiona en la bandeja Banca Nacional, no se cotiza directo aquí.
+    if (!rojasMode && plan === 'banca_nacional' && bnVariante === 'vehimotors') {
+      setErrorMsg('BN Vehimotors se procesa en la bandeja Banca Nacional (pestaña de Ventas). Aquí usa BN Cliente directo.')
+      return
+    }
     setStep('sending'); setErrorMsg('')
 
     // En Rojas Personalizada la modalidad/plan salen de la base elegida y se
@@ -338,6 +356,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
       } : {}),
     } : {}
 
+    // BN Cliente directo: el diferencial se suma al precio base (proforma de contado).
+    const bnPayload = (!rojasMode && plan === 'banca_nacional' && bnVariante === 'cliente') ? {
+      precioBaseOverride: bnClienteCalc.base,
+      condicionesPersonalizadas: bnCond.trim() || null,
+    } : {}
+
     try {
       const r = await fetch('/api/cotizaciones', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -353,6 +377,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           concesionarioId,
           ...(!rojasMode && plan === 'ac500' && planAC500Sel ? { ac500PlanId: planAC500Sel.id, ac500Meses } : {}),
           ...rojasPayload,
+          ...bnPayload,
         }),
       })
       const json = await r.json()
@@ -369,6 +394,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
     setCantidad(1)
     setRojasMode(false); setRojasCond(''); setRojasLineas({}); setRojasPrecio('')
+    setBnVariante('cliente'); setBnDiferencial(''); setBnCond('')
   }
 
   function handleVistaPrevia() {
@@ -377,6 +403,10 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
     if (rojasMode && rojasCalc.precio <= 0) { setErrorMsg('Indica el precio base para la cotización personalizada.'); return }
     if (!rojasMode && plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
+    if (!rojasMode && plan === 'banca_nacional' && bnVariante === 'vehimotors') {
+      setErrorMsg('BN Vehimotors se procesa en la bandeja Banca Nacional (pestaña de Ventas). Aquí usa BN Cliente directo.')
+      return
+    }
     setErrorMsg('')
     setShowPreview(true)
   }
@@ -515,7 +545,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
             {/* Banca nacional: mismo formato que Contado (total a pagar). El banco
                 aprueba un % y el cliente cubre el resto (se define al pasar a proforma). */}
             <button
-              onClick={() => { setRojasMode(false); setModalidad('contado'); setPlan('banca_nacional') }}
+              onClick={() => { setRojasMode(false); setModalidad('contado'); setPlan('banca_nacional'); setBnVariante('cliente') }}
               className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${!rojasMode && plan === 'banca_nacional' ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
             >
               🏦 Banca nacional
@@ -620,6 +650,56 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
             </div>
           )}
 
+          {/* Banca Nacional: dos variantes */}
+          {!rojasMode && plan === 'banca_nacional' && (
+            <div className="mt-3 space-y-3">
+              <div>
+                <p className={labelCls}>Variante de Banca Nacional</p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setBnVariante('vehimotors')}
+                    className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${bnVariante === 'vehimotors' ? 'border-blue-800 bg-blue-800 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                    🏦 BN Vehimotors
+                  </button>
+                  <button type="button" onClick={() => setBnVariante('cliente')}
+                    className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${bnVariante === 'cliente' ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                    👤 BN Cliente directo
+                  </button>
+                </div>
+              </div>
+
+              {bnVariante === 'cliente' ? (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-3">
+                  <p className="text-[11px] text-emerald-800 leading-relaxed">
+                    Proforma en dólares (como contado). El <b>diferencial cambiario se suma al precio base</b>. El cliente lleva la proforma a su banco y regresa con la transferencia directa a La Oriental.
+                  </p>
+                  <div>
+                    <label className={labelCls}>Diferencial ($) — se suma al precio base</label>
+                    <input className={inputCls} inputMode="decimal" value={bnDiferencial} onChange={e => setBnDiferencial(e.target.value)} placeholder="0" />
+                  </div>
+                  <div className="rounded-lg bg-white border border-emerald-200 p-3 text-sm space-y-1">
+                    <div className="flex justify-between"><span className="text-gray-500">Precio base + diferencial</span><span className="font-bold text-oriental-black">${fmt(bnClienteCalc.base)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">IVA 16%</span><span className="font-semibold text-oriental-black">${fmt(bnClienteCalc.iva)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Gastos</span><span className="font-semibold text-oriental-black">${fmt(bnClienteCalc.gastos)}</span></div>
+                    <div className="flex justify-between border-t border-emerald-100 pt-1"><span className="font-bold text-emerald-800">TOTAL A PAGAR</span><span className="font-extrabold text-emerald-900">${fmt(bnClienteCalc.total)}</span></div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Propuesta de condiciones (opcional)</label>
+                    <textarea rows={3} value={bnCond} onChange={e => setBnCond(e.target.value)}
+                      placeholder="Ej: el cliente cubre la diferencia al liquidar el banco…"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red resize-none" />
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[12px] text-blue-900 space-y-2 leading-relaxed">
+                  <p className="font-bold">🏦 BN Vehimotors — gestión ante el banco</p>
+                  <p>Recopila el expediente del cliente y envíalo a Vehimotors. Cuando el banco apruebe un porcentaje, el caso llega a la bandeja <b>Banca Nacional</b> para colocar la <b>conversión al día</b>, ajustar los gastos y generar la proforma.</p>
+                  <p className="text-blue-700">Expediente típico: cédula/RIF, constancia de trabajo, referencias bancarias, estados de cuenta, planilla del banco.</p>
+                  <p className="text-[11px] text-blue-500">Esta variante se procesa en la bandeja <b>Banca Nacional</b> (pestaña de Ventas).</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Resumen Rojas Personalizada */}
           {rojasMode && (
             <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
@@ -638,7 +718,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           )}
 
           {/* Resumen financiero (non-AC500) */}
-          {!rojasMode && resumen && plan !== 'ac500' && (
+          {!rojasMode && resumen && plan !== 'ac500' && plan !== 'banca_nacional' && (
             <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-2">Resumen estimado</p>
               <div className="flex justify-between items-center">
@@ -882,6 +962,10 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
             costoTotal = rojasCalc.costoTotal
             labelInicial = 'INICIAL A PAGAR'
           }
+        } else if (plan === 'banca_nacional' && bnVariante === 'cliente') {
+          rows = [['Precio base + diferencial', bnClienteCalc.base], ['I.V.A. 16%', bnClienteCalc.iva], ['Gastos (traslado, póliza, notaría)', bnClienteCalc.gastos]]
+          totalInicial = bnClienteCalc.total
+          labelInicial = 'TOTAL A PAGAR'
         } else if (plan === 'ac500') {
           // handled in AC500 block
         } else if (modalidad === 'contado') {
@@ -916,6 +1000,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
 
         const planBadge = rojasMode
           ? `⚙ Rojas personalizada · ${rojasBase === 'contado' ? 'Contado' : 'Crédito'}`
+          : plan === 'banca_nacional' ? '🏦 Banca Nacional — Cliente directo'
           : plan === 'ac500' ? '🛡 Asegúrate $500' : modalidad === 'contado' ? 'Contado' : plan === 'banco_100' ? 'Crédito 100% Banco' : 'Crédito 24m — Vehimotors'
 
         return (
@@ -1029,11 +1114,11 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                   )
                 })()}
 
-                {/* Propuesta de condiciones (Rojas personalizada) */}
-                {rojasMode && rojasCond.trim() && (
+                {/* Propuesta de condiciones (Rojas personalizada / BN Cliente directo) */}
+                {((rojasMode && rojasCond.trim()) || (!rojasMode && plan === 'banca_nacional' && bnVariante === 'cliente' && bnCond.trim())) && (
                   <div className="border border-purple-200 bg-purple-50 rounded-xl p-3">
                     <p className="text-[10px] font-bold text-purple-800 uppercase tracking-wider mb-1">Condiciones de pago propuestas</p>
-                    <p className="text-xs text-purple-900 whitespace-pre-wrap leading-relaxed">{rojasCond}</p>
+                    <p className="text-xs text-purple-900 whitespace-pre-wrap leading-relaxed">{rojasMode ? rojasCond : bnCond}</p>
                   </div>
                 )}
 
