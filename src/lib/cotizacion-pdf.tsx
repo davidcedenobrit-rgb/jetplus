@@ -359,7 +359,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 </View>
                 {bn.financ_meses && bn.financ_cuota && bn.financ_meses > 0 && bn.financ_cuota > 0 ? (
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '5pt 10pt', backgroundColor: '#eef2ff', borderTop: `0.5pt solid ${BORDER}` }}>
-                    <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>Financiamiento con su banco: {bn.financ_meses} cuotas de{bn.financ_tasa ? ` (${fmt(bn.financ_tasa)}% anual)` : ''}</Text>
+                    <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>Financiamiento con su banco: {bn.financ_meses} cuotas de</Text>
                     <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>${fmt(bn.financ_cuota)}</Text>
                   </View>
                 ) : null}

@@ -403,8 +403,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     let bnCondFinal = bnCond.trim()
     if (bnVariante === 'cliente' && bnCuotas && bnCuotaRef > 0) {
       const mesesRef = Math.max(1, Math.round(num(bnMeses) || 24))
-      const tasaTxt = num(bnTasa) > 0 ? ` (${fmt(num(bnTasa))}% anual)` : ''
-      const linea = `Financiamiento con su banco: ${mesesRef} cuotas de $${fmt(bnCuotaRef)}${tasaTxt}. El crédito lo otorga y cobra su banco, no La Oriental.`
+      const linea = `Financiamiento con su banco: ${mesesRef} cuotas de $${fmt(bnCuotaRef)}. El crédito lo otorga y cobra su banco, no La Oriental.`
       bnCondFinal = bnCondFinal ? `${linea}\n${bnCondFinal}` : linea
     }
     const bnPayload = (!rojasMode && plan === 'banca_nacional' && bnVariante === 'cliente') ? {

@@ -223,6 +223,9 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
   const totalCronograma = data.cronograma.reduce((s, c) => s + Number(c.monto), 0)
   const preVenta = !!data.preVenta
   const tieneFinanciamiento = data.cronograma.length > 0 && data.cuotaMensual > 0
+  // Banca Nacional (Vehimotors): su cuadro reemplaza el resumen/compromiso estándar
+  // para no contradecirlo (precio maquillado, inicial y cuota van en el cuadro).
+  const bnV = data.bnVehimotors ?? null
 
   return (
     <Document title={`Proforma ${data.numero}`} author="La Oriental Automotors">
@@ -300,10 +303,11 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             <Text style={[s.tableCell, s.colMarca]}>{data.marca}</Text>
             <Text style={[s.tableCell, s.colModelo]}>{data.modelo}</Text>
             <Text style={[s.tableCell, s.colPlaca]}>{data.placa || '—'}</Text>
-            <Text style={[s.tableCell, s.colPrecio, { fontFamily: 'Helvetica-Bold' }]}>{fmt(data.totalVehiculo)}</Text>
+            <Text style={[s.tableCell, s.colPrecio, { fontFamily: 'Helvetica-Bold' }]}>{fmt(bnV ? bnV.precio_base + bnV.diferencial : data.totalVehiculo)}</Text>
           </View>
 
-          {/* Bloque de montos */}
+          {/* Bloque de montos (no en Banca Nacional: su cuadro lo reemplaza) */}
+          {!bnV && (
           <View style={s.montosRow}>
             <View style={s.montosBox}>
               <View style={s.montosHeader}>
@@ -329,10 +333,18 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               </View>
             </View>
           </View>
+          )}
 
           {/* Bloque de compromiso formal */}
           <View style={s.compromisoBox}>
-            {preVenta ? (
+            {bnV ? (
+              <Text style={s.compromisoText}>
+                <Text style={s.compromisoBold}>CONDICIONES ACEPTADAS: </Text>
+                El cliente <Text style={s.compromisoBold}>{data.clienteNombre}</Text>, C.I./RIF: <Text style={s.compromisoBold}>{data.clienteCiRif}</Text>,{' '}
+                adquiere el vehículo bajo la modalidad <Text style={s.compromisoBold}>Banca Nacional</Text>, con una <Text style={s.compromisoBold}>inicial a pagar de ${fmt(bnV.inicial_cliente)}</Text>
+                {bnV.financ_meses && bnV.financ_cuota ? <> y un financiamiento con su banco de <Text style={s.compromisoBold}>{bnV.financ_meses} cuotas de ${fmt(bnV.financ_cuota)}</Text></> : null}, y acepta las condiciones de compra aquí descritas.
+              </Text>
+            ) : preVenta ? (
               <Text style={s.compromisoText}>
                 <Text style={s.compromisoBold}>CONDICIONES ACEPTADAS: </Text>
                 El cliente <Text style={s.compromisoBold}>{data.clienteNombre}</Text>, C.I./RIF: <Text style={s.compromisoBold}>{data.clienteCiRif}</Text>,{' '}
@@ -396,7 +408,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               </View>
               {data.bnVehimotors.financ_meses && data.bnVehimotors.financ_cuota && data.bnVehimotors.financ_meses > 0 && data.bnVehimotors.financ_cuota > 0 ? (
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '6pt 12pt', backgroundColor: '#eef2ff', borderTop: `0.5pt solid ${BORDER}` }}>
-                  <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>Financiamiento con su banco: {data.bnVehimotors.financ_meses} cuotas de{data.bnVehimotors.financ_tasa ? ` (${fmt(data.bnVehimotors.financ_tasa)}% anual)` : ''}</Text>
+                  <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>Financiamiento con su banco: {data.bnVehimotors.financ_meses} cuotas de</Text>
                   <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>${fmt(data.bnVehimotors.financ_cuota)}</Text>
                 </View>
               ) : null}
