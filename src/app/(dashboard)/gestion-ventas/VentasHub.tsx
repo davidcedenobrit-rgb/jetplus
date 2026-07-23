@@ -427,7 +427,7 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
           </div>
 
           <div>
-            <label className={lbl}>Monto de proforma $</label>
+            <label className={lbl}>Monto de proforma $ <span className="font-normal text-gray-400">P. BASE — sin IVA ni placa</span></label>
             <input className={inp} inputMode="decimal" value={montoProforma} onChange={e => setMontoProforma(e.target.value)} />
           </div>
           <div>
@@ -451,7 +451,7 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
           </div>
 
           <div className="rounded-xl bg-gray-900 p-4 text-white space-y-1.5 text-sm">
-            <div className="flex justify-between text-gray-300"><span>Monto de proforma</span><span className="font-mono">${fmt(proforma)}</span></div>
+            <div className="flex justify-between text-gray-300"><span>Monto de proforma (P. BASE)</span><span className="font-mono">${fmt(proforma)}</span></div>
             <div className="flex justify-between text-gray-300"><span>− Pagado a Vehimotors</span><span className="font-mono">${fmt(y)}</span></div>
             <div className="flex justify-between text-gray-100 border-t border-gray-700 pt-1.5"><span>= Ingreso bruto La Oriental</span><span className="font-mono">${fmt(ingresoBruto)}</span></div>
             <div className="flex justify-between text-indigo-300"><span>− Comisión de venta ({pct || 0}%)</span><span className="font-mono">${fmt(comisionMonto)}</span></div>
