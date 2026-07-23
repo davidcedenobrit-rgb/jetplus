@@ -209,6 +209,7 @@ export interface ProformaPDFData {
     total_banco: number; aprobado_pct: number; aprobado_banco: number
     merma_pct: number; aprobado_real: number; diferencial: number; inicial_cliente: number
     banco?: string | null
+    financ_meses?: number; financ_tasa?: number; financ_cuota?: number
   } | null
   cronograma: CuotaCronogramaItem[]
   vendedor?: string | null
@@ -393,6 +394,12 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                 <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GOLD }}>INICIAL A PAGAR (CLIENTE):</Text>
                 <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(data.bnVehimotors.inicial_cliente)}</Text>
               </View>
+              {data.bnVehimotors.financ_meses && data.bnVehimotors.financ_cuota && data.bnVehimotors.financ_meses > 0 && data.bnVehimotors.financ_cuota > 0 ? (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '6pt 12pt', backgroundColor: '#eef2ff', borderTop: `0.5pt solid ${BORDER}` }}>
+                  <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>Financiamiento con su banco: {data.bnVehimotors.financ_meses} cuotas de{data.bnVehimotors.financ_tasa ? ` (${fmt(data.bnVehimotors.financ_tasa)}% anual)` : ''}</Text>
+                  <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>${fmt(data.bnVehimotors.financ_cuota)}</Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
 

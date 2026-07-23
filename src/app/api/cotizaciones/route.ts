@@ -323,6 +323,9 @@ export async function POST(req: Request) {
         total_banco: totalBanco, aprobado_pct: aprobadoPct, aprobado_banco: aprobadoBanco,
         merma_pct: mermaPct, aprobado_real: aprobadoReal, diferencial, inicial_cliente: inicialCliente,
         banco: (typeof bnVehimotors.banco === 'string' && bnVehimotors.banco.trim()) ? bnVehimotors.banco.trim() : null,
+        financ_meses: Number(bnVehimotors.financMeses) || 0,
+        financ_tasa: Number(bnVehimotors.financTasa) || 0,
+        financ_cuota: Number(bnVehimotors.financCuota) || 0,
       }
     }
 

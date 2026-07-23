@@ -316,8 +316,8 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
       : seedGastos(cat)
   )
   const [condiciones, setCondiciones] = useState(caso.condiciones ?? '')
-  const [mesesBanco, setMesesBanco] = useState('')
-  const [tasaBanco, setTasaBanco] = useState('')
+  const [mesesBanco, setMesesBanco] = useState('24')
+  const [tasaBanco, setTasaBanco] = useState('16')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -350,13 +350,9 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
     if (num(mermaPct) <= 0) { setError('Indica la conversión al día (% de merma).'); return }
     setSaving(true); setError('')
 
-    // Cuotas referenciales del banco (informativo) anexadas a las condiciones.
-    let cond = condiciones.trim()
+    // Las cuotas del banco se muestran en el cuadro del PDF (no en el texto).
+    const cond = condiciones.trim()
     const mB = Math.max(0, Math.round(num(mesesBanco)))
-    if (mB > 0 && cuotaBancoRef > 0) {
-      const linea = `Financiamiento con el banco: ${mB} cuotas de $${fmt(cuotaBancoRef)} (monto aprobado $${fmt(calc.aprobadoBanco)}). El crédito lo otorga y cobra su banco, no La Oriental.`
-      cond = cond ? `${linea}\n${cond}` : linea
-    }
     try {
       // 1) Generar la cotización (reusa numeración, PDF y correo del flujo normal).
       const r = await fetch('/api/cotizaciones', {
@@ -372,7 +368,10 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
           precioBaseOverride: caso.precio_base,
           gastosOverride: calc.gastos,
           condicionesPersonalizadas: cond || null,
-          bnVehimotors: { aprobadoPct: calc.apr, mermaPct: calc.merma, placaMonto: caso.placa_monto, banco: banco.trim() || null },
+          bnVehimotors: {
+            aprobadoPct: calc.apr, mermaPct: calc.merma, placaMonto: caso.placa_monto, banco: banco.trim() || null,
+            financMeses: mB, financTasa: num(tasaBanco), financCuota: cuotaBancoRef,
+          },
         }),
       })
       const j = await r.json()

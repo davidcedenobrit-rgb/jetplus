@@ -214,7 +214,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   const [bnCuotas, setBnCuotas] = useState(false)
   const [bnFinanciado, setBnFinanciado] = useState('')
   const [bnMeses, setBnMeses] = useState('24')
-  const [bnTasa, setBnTasa] = useState('')
+  const [bnTasa, setBnTasa] = useState('16')
   const bnCuotaRef = useMemo(() => {
     const cap = num(bnFinanciado)
     const meses = Math.max(1, Math.round(num(bnMeses) || 24))
@@ -403,7 +403,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     let bnCondFinal = bnCond.trim()
     if (bnVariante === 'cliente' && bnCuotas && bnCuotaRef > 0) {
       const mesesRef = Math.max(1, Math.round(num(bnMeses) || 24))
-      const linea = `Financiamiento referencial con el banco: ${mesesRef} cuotas de $${fmt(bnCuotaRef)} (monto financiado $${fmt(num(bnFinanciado))}). El crédito lo otorga y cobra su banco, no La Oriental.`
+      const tasaTxt = num(bnTasa) > 0 ? ` (${fmt(num(bnTasa))}% anual)` : ''
+      const linea = `Financiamiento con su banco: ${mesesRef} cuotas de $${fmt(bnCuotaRef)}${tasaTxt}. El crédito lo otorga y cobra su banco, no La Oriental.`
       bnCondFinal = bnCondFinal ? `${linea}\n${bnCondFinal}` : linea
     }
     const bnPayload = (!rojasMode && plan === 'banca_nacional' && bnVariante === 'cliente') ? {
@@ -445,7 +446,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setCantidad(1)
     setRojasMode(false); setRojasCond(''); setRojasLineas({}); setRojasPrecio('')
     setBnVariante('cliente'); setBnDiferencial(''); setBnCond(''); setBnExpediente([]); setBnCasoMsg(''); setBnBanco('')
-    setBnCuotas(false); setBnFinanciado(''); setBnMeses('24'); setBnTasa('')
+    setBnCuotas(false); setBnFinanciado(''); setBnMeses('24'); setBnTasa('16')
   }
 
   function handleVistaPrevia() {

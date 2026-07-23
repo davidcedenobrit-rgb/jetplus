@@ -183,6 +183,7 @@ export interface CotizacionPDFData {
     total_banco: number; aprobado_pct: number; aprobado_banco: number
     merma_pct: number; aprobado_real: number; diferencial: number; inicial_cliente: number
     banco?: string | null
+    financ_meses?: number; financ_tasa?: number; financ_cuota?: number
   } | null
 }
 
@@ -356,6 +357,12 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD }}>INICIAL A PAGAR (CLIENTE):</Text>
                   <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(bn.inicial_cliente)}</Text>
                 </View>
+                {bn.financ_meses && bn.financ_cuota && bn.financ_meses > 0 && bn.financ_cuota > 0 ? (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '5pt 10pt', backgroundColor: '#eef2ff', borderTop: `0.5pt solid ${BORDER}` }}>
+                    <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>Financiamiento con su banco: {bn.financ_meses} cuotas de{bn.financ_tasa ? ` (${fmt(bn.financ_tasa)}% anual)` : ''}</Text>
+                    <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>${fmt(bn.financ_cuota)}</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
           )}
