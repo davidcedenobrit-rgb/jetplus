@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { X, Loader2, Landmark } from 'lucide-react'
+import { X, Loader2, Landmark, Trash2 } from 'lucide-react'
 import FileUpload from '@/components/FileUpload'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -44,11 +44,25 @@ const ESTADOS = [
   { k: 'rechazado', label: 'Rechazado', cls: 'bg-red-100 text-red-700' },
 ]
 
-export default function BancaNacionalTab({ catalogo = [] }: { catalogo?: any[] }) {
+export default function BancaNacionalTab({ catalogo = [], puedeEditar = false }: { catalogo?: any[]; puedeEditar?: boolean }) {
   const [casos, setCasos] = useState<Caso[]>([])
   const [loading, setLoading] = useState(true)
   const [proc, setProc] = useState<Caso | null>(null)
   const [envio, setEnvio] = useState<Caso | null>(null)
+  const [borrando, setBorrando] = useState<string | null>(null)
+
+  async function borrar(c: Caso) {
+    const cotizado = c.estado === 'cotizado'
+    const msg = cotizado
+      ? 'Borrar este caso de la bandeja. La cotización y proforma ya generadas se conservan (siguen en Cotizaciones y en el historial del cliente). ¿Continuar?'
+      : '¿Borrar este caso de Banca Nacional? Esta acción no se puede deshacer.'
+    if (!window.confirm(msg)) return
+    setBorrando(c.id)
+    try {
+      const r = await fetch(`/api/bn-casos/${c.id}`, { method: 'DELETE' })
+      if (r.ok) setCasos(prev => prev.filter(x => x.id !== c.id))
+    } finally { setBorrando(null) }
+  }
 
   async function cargar() {
     setLoading(true)
@@ -130,6 +144,13 @@ export default function BancaNacionalTab({ catalogo = [] }: { catalogo?: any[] }
                             <button onClick={() => setProc(c)}
                               className="px-3 py-1.5 bg-blue-800 hover:bg-blue-900 text-white rounded-lg text-xs font-bold">Procesar aprobación</button>
                           </>
+                        )}
+                        {puedeEditar && (
+                          <button onClick={() => borrar(c)} disabled={borrando === c.id}
+                            title="Borrar caso de la bandeja"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-600 disabled:opacity-50">
+                            {borrando === c.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                          </button>
                         )}
                       </div>
                     </div>

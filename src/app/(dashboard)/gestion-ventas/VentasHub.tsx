@@ -243,7 +243,7 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
       ) : vista === 'generar' ? (
         <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} tasas={tasas} />
       ) : vista === 'banca' ? (
-        <BancaNacionalTab catalogo={catalogo} />
+        <BancaNacionalTab catalogo={catalogo} puedeEditar={puedeEditar} />
       ) : vista === 'tasas' ? (
         <TasasEditor />
       ) : vista === 'historial' ? (
