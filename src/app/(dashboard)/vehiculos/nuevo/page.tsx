@@ -607,10 +607,11 @@ export default function NuevoVehiculoPage() {
     setPrecioTotalVehiculo(calculadora.base.toFixed(2))
   }
 
-  async function crearIngresoInicial(vehiculoId: string, vehiculoDesc: string, clienteId: string, placa: string | null, acuerdoId?: string | null) {
-    if (!registrarIngresoInicial) return
+  async function crearIngresoInicial(vehiculoId: string, vehiculoDesc: string, clienteId: string, placa: string | null, acuerdoId?: string | null): Promise<{ id: string; montoUsd: number }[]> {
+    if (!registrarIngresoInicial) return []
     const pagosValidos = pagosIniciales.filter(p => parseFloat(p.monto) > 0 && p.metodo)
-    if (pagosValidos.length === 0) return
+    if (pagosValidos.length === 0) return []
+    const creados: { id: string; montoUsd: number }[] = []
     // registrado_por es OBLIGATORIO; sin él el ingreso no se guarda.
     const { data: { user } } = await supabase.auth.getUser()
     for (const pago of pagosValidos) {
@@ -641,6 +642,7 @@ export default function NuevoVehiculoPage() {
         registrado_por: user?.id ?? null,
       }).select('id').single()
       if (insErr || !ingresoCreado) { setError(`No se pudo registrar el pago inicial: ${insErr?.message ?? ''}`); setLoading(false); throw (insErr ?? new Error('ingreso')) }
+      creados.push({ id: ingresoCreado.id, montoUsd: parseFloat(pago.monto) || 0 })
       // Comprobantes del pago (si se cargaron) — se ligan al recibo creado.
       if (pago.comprobantes.length > 0) {
         await supabase.from('archivos').insert(
@@ -654,6 +656,7 @@ export default function NuevoVehiculoPage() {
         .update({ monto_pagado: totalPagado, updated_at: new Date().toISOString() })
         .eq('id', acuerdoId)
     }
+    return creados
   }
 
   function updatePago(id: string, field: keyof PagoInicial, value: string) {
@@ -1101,8 +1104,32 @@ export default function NuevoVehiculoPage() {
         })
       }
 
-      await supabase.from('cuotas').insert(cuotasData)
-      await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa)
+      const { data: cuotasCreadas } = await supabase.from('cuotas').insert(cuotasData).select('id, numero_cuota, monto')
+      const reservaIngresos = await crearIngresoInicial(vehiculo.id, `${vehiculo.marca} ${vehiculo.modelo}`, clienteSeleccionado.id, vehiculo.placa)
+
+      // AC500: la reserva ($500) ES la cuota 0. Aplicarla de una vez para que se
+      // refleje como pagada en el crédito (antes quedaba "vencida" sin vincular).
+      if (plan === 'asegurate_500' && cuotasCreadas && reservaIngresos.length > 0) {
+        const cuota0 = cuotasCreadas.find((c: any) => c.numero_cuota === 0)
+        if (cuota0) {
+          let restante = Number(cuota0.monto) || 0
+          const links: { cuota_id: string; ingreso_id: string; monto_aplicado: number }[] = []
+          for (const ing of reservaIngresos) {
+            if (restante <= 0) break
+            const aplica = Math.min(restante, ing.montoUsd)
+            if (aplica > 0) { links.push({ cuota_id: cuota0.id, ingreso_id: ing.id, monto_aplicado: aplica }); restante -= aplica }
+          }
+          if (links.length) {
+            await supabase.from('cuota_ingresos').insert(links)
+            const pagado = links.reduce((s, l) => s + l.monto_aplicado, 0)
+            await supabase.from('cuotas').update({
+              monto_pagado: pagado,
+              estado: pagado + 0.01 >= Number(cuota0.monto) ? 'pagada' : 'abono_parcial',
+            }).eq('id', cuota0.id)
+          }
+        }
+      }
+
       router.push(`/creditos/${creditoCreado.id}`)
       router.refresh()
       return
