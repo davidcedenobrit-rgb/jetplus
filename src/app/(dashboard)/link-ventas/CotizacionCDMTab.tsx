@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { waCotizacionUrl } from '@/lib/whatsapp-cotizacion'
+import FileUpload from '@/components/FileUpload'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
@@ -220,6 +221,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   // BN Vehimotors: crea un caso en la bandeja Banca Nacional (pendiente de aprobación VM).
   const [bnCasoSaving, setBnCasoSaving] = useState(false)
   const [bnCasoMsg, setBnCasoMsg] = useState('')
+  const [bnExpediente, setBnExpediente] = useState<{ url: string; nombre: string }[]>([])
   async function crearCasoBN() {
     if (!vehiculoSel) return
     if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) { setErrorMsg('Nombre y C.I./RIF del cliente son obligatorios.'); return }
@@ -233,12 +235,13 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           clienteCiudadEstado: form.clienteCiudadEstado, clienteCodigoPostal: form.clienteCodigoPostal,
           vehiculoId: vehiculoSel.id, marca: vehiculoSel.brand, modelo: vehiculoSel.model,
           precioBase: vehiculoSel.cash ?? 0, placaMonto: (vehiculoSel as any).placa_monto ?? 400,
-          concesionarioId, notas: bnCond,
+          concesionarioId, notas: bnCond, expediente: bnExpediente,
         }),
       })
       const j = await r.json()
       if (!r.ok) { setErrorMsg(j.error ?? 'No se pudo crear el caso'); setBnCasoSaving(false); return }
       setBnCasoSaving(false)
+      setBnExpediente([])
       setBnCasoMsg('✓ Caso enviado a la bandeja Banca Nacional. Cuando Vehimotors apruebe, procésalo desde la pestaña Banca Nacional.')
     } catch { setErrorMsg('Error de conexión'); setBnCasoSaving(false) }
   }
@@ -420,7 +423,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
     setCantidad(1)
     setRojasMode(false); setRojasCond(''); setRojasLineas({}); setRojasPrecio('')
-    setBnVariante('cliente'); setBnDiferencial(''); setBnCond('')
+    setBnVariante('cliente'); setBnDiferencial(''); setBnCond(''); setBnExpediente([]); setBnCasoMsg('')
   }
 
   function handleVistaPrevia() {
@@ -719,7 +722,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[12px] text-blue-900 space-y-2 leading-relaxed">
                   <p className="font-bold">🏦 BN Vehimotors — gestión ante el banco</p>
                   <p>Recopila el expediente del cliente y envíalo a Vehimotors. Cuando el banco apruebe un porcentaje, el caso llega a la bandeja <b>Banca Nacional</b> para colocar la <b>conversión al día</b>, ajustar los gastos y generar la proforma.</p>
-                  <p className="text-blue-700">Expediente típico: cédula/RIF, constancia de trabajo, referencias bancarias, estados de cuenta, planilla del banco.</p>
+                  <p className="text-blue-700">El cliente puede ser <b>nuevo</b> (llena los datos abajo) o uno <b>ya registrado</b> (búscalo en “Buscar cliente existente”).</p>
+                  <div>
+                    <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-1">Expediente del cliente (documentos)</p>
+                    <p className="text-[11px] text-blue-600 mb-2">Cédula/RIF, constancia de trabajo, referencias bancarias, estados de cuenta, planilla del banco…</p>
+                    <FileUpload files={bnExpediente} onFilesChange={setBnExpediente} maxFiles={20} />
+                  </div>
                   {bnCasoMsg ? (
                     <p className="text-[12px] font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{bnCasoMsg}</p>
                   ) : (

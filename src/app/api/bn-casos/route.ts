@@ -43,9 +43,21 @@ export async function POST(req: Request) {
   if (!b.vehiculoId) return NextResponse.json({ error: 'Falta el vehículo' }, { status: 400 })
 
   const admin = await createAdminClient()
+
+  // Vincular con un cliente ya registrado si el C.I./RIF coincide (nuevo o existente).
+  const ciNorm = b.clienteCiRif.trim().toUpperCase()
+  const { data: clienteExistente } = await admin
+    .from('clientes').select('id').ilike('cedula_rif', ciNorm).limit(1).maybeSingle()
+
+  const expediente = Array.isArray(b.expediente)
+    ? b.expediente.filter((f: any) => f?.url).map((f: any) => ({ url: f.url, nombre: f.nombre ?? null }))
+    : null
+
   const { data, error } = await admin.from('bn_casos').insert([{
     creado_por: user.id,
     concesionario_id: b.concesionarioId ?? 'la-oriental',
+    cliente_id: clienteExistente?.id ?? null,
+    expediente: expediente && expediente.length ? expediente : null,
     cliente_nombre: b.clienteNombre.trim(),
     cliente_ci_rif: b.clienteCiRif.trim(),
     cliente_correo: b.clienteCorreo?.trim() || null,

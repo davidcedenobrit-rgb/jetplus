@@ -32,6 +32,7 @@ type Caso = {
   precio_base: number; placa_monto: number
   aprobado_pct: number | null; merma_pct: number | null
   gastos_estructura: any; condiciones: string | null; notas: string | null
+  expediente: { url: string; nombre: string | null }[] | null
   cotizacion_id: string | null; cotizado_at: string | null
 }
 
@@ -97,6 +98,16 @@ export default function BancaNacionalTab({ catalogo = [] }: { catalogo?: any[] }
                         </div>
                         <p className="text-gray-500 text-xs truncate">{c.cliente_nombre} {c.cliente_ci_rif && <span className="text-gray-400">· {c.cliente_ci_rif}</span>}</p>
                         <p className="text-[11px] text-gray-400 mt-0.5">Precio base ${fmt(c.precio_base)}{c.aprobado_pct ? ` · Aprobado ${fmt(c.aprobado_pct)}%` : ''}</p>
+                        {c.expediente && c.expediente.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {c.expediente.map((d, i) => (
+                              <a key={i} href={d.url} target="_blank" rel="noopener noreferrer"
+                                className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100">
+                                📎 {d.nombre || `Doc ${i + 1}`}
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {c.estado === 'cotizado' && c.cotizacion_id && (
@@ -223,6 +234,20 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
 
         <div className="p-5 space-y-3">
           {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs text-red-800">{error}</div>}
+
+          {caso.expediente && caso.expediente.length > 0 && (
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-2.5">
+              <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1.5">Expediente del cliente</p>
+              <div className="flex flex-wrap gap-1.5">
+                {caso.expediente.map((d, i) => (
+                  <a key={i} href={d.url} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] px-2 py-1 rounded-lg bg-white border border-blue-200 text-blue-700 font-semibold hover:bg-blue-100">
+                    📎 {d.nombre || `Doc ${i + 1}`}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
