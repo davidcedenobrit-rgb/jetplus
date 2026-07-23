@@ -27,9 +27,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params
   const body = await req.json().catch(() => ({}))
-  const correo = String(body.correo ?? '').trim().toLowerCase()
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
-    return NextResponse.json({ error: 'Escribe un correo válido de Vehimotors' }, { status: 400 })
+  // Acepta uno o varios correos (array, o texto separado por coma/;/espacio/salto).
+  const rawCorreos: string[] = Array.isArray(body.correos)
+    ? body.correos
+    : String(body.correo ?? body.correos ?? '').split(/[,;\s]+/)
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const correos = Array.from(new Set(rawCorreos.map(c => String(c).trim().toLowerCase()).filter(c => emailRe.test(c))))
+  if (correos.length === 0) {
+    return NextResponse.json({ error: 'Escribe al menos un correo válido de Vehimotors' }, { status: 400 })
   }
 
   const admin = await createAdminClient()
@@ -80,16 +85,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     </div>
   </div>`
 
-  // Adjuntar los documentos del expediente (Resend los descarga por URL).
-  const attachments = expediente
-    .filter(d => d.url)
-    .map((d, i) => ({ filename: d.nombre || `documento-${i + 1}`, path: d.url }))
+  // Adjuntar los documentos del expediente. Se descargan y se adjuntan como
+  // contenido (más confiable que enviar solo la URL); si falla, se usa la URL.
+  const attachments: any[] = []
+  let adjuntados = 0
+  for (let i = 0; i < expediente.length; i++) {
+    const d = expediente[i]
+    if (!d.url) continue
+    const filename = (d.nombre && d.nombre.trim()) || `documento-${i + 1}`
+    try {
+      const res = await fetch(d.url)
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer())
+        attachments.push({ filename, content: buf })
+        adjuntados++
+      } else {
+        attachments.push({ filename, path: d.url })
+      }
+    } catch {
+      attachments.push({ filename, path: d.url })
+    }
+  }
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY!)
     const result: any = await resend.emails.send({
       from: FROM,
-      to: [correo],
+      to: correos,
       subject: `Solicitud de crédito — ${caso.cliente_nombre} — ${caso.marca ?? ''} ${caso.modelo ?? ''}`.trim(),
       html,
       attachments: attachments.length ? attachments : undefined,
@@ -102,8 +124,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   await admin.from('bn_casos').update({
-    vehimotors_email: correo, enviado_vm_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    vehimotors_email: correos.join(', '), enviado_vm_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   }).eq('id', id)
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, enviados: correos.length, adjuntos: expediente.length, adjuntadosComoArchivo: adjuntados })
 }

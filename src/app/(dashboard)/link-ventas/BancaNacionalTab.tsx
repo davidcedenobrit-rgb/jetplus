@@ -149,12 +149,23 @@ export default function BancaNacionalTab({ catalogo = [] }: { catalogo?: any[] }
 
 // Enviar el expediente a Vehimotors por correo (encabezado del concesionario + datos + adjuntos).
 function EnviarVMModal({ caso, onClose, onDone }: { caso: Caso; onClose: () => void; onDone: () => void }) {
-  const [correo, setCorreo] = useState(caso.vehimotors_email ?? '')
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const [correos, setCorreos] = useState<string[]>(
+    (caso.vehimotors_email ?? '').split(/[,;\s]+/).map(c => c.trim().toLowerCase()).filter(c => emailRe.test(c))
+  )
+  const [nuevo, setNuevo] = useState('')
   const [docs, setDocs] = useState<{ url: string; nombre: string }[]>(
     (caso.expediente ?? []).map(d => ({ url: d.url, nombre: d.nombre ?? 'Documento' }))
   )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  function agregarCorreo() {
+    const e = nuevo.trim().toLowerCase()
+    if (!emailRe.test(e)) { setError('Correo inválido.'); return }
+    if (!correos.includes(e)) setCorreos(c => [...c, e])
+    setNuevo(''); setError('')
+  }
 
   // Persistir el expediente al agregar/quitar archivos (para que se envíen y queden guardados).
   async function guardarDocs(nuevos: { url: string; nombre: string }[]) {
@@ -166,12 +177,15 @@ function EnviarVMModal({ caso, onClose, onDone }: { caso: Caso; onClose: () => v
   }
 
   async function enviar() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) { setError('Escribe un correo válido.'); return }
+    // Incluye un correo que se haya escrito y no agregado aún.
+    const extra = nuevo.trim().toLowerCase()
+    const lista = emailRe.test(extra) ? Array.from(new Set([...correos, extra])) : correos
+    if (lista.length === 0) { setError('Agrega al menos un correo válido.'); return }
     setSaving(true); setError('')
     try {
       const r = await fetch(`/api/bn-casos/${caso.id}/enviar-vm`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ correo: correo.trim() }),
+        body: JSON.stringify({ correos: lista }),
       })
       const j = await r.json()
       if (!r.ok) { setError(j.error ?? 'No se pudo enviar'); setSaving(false); return }
@@ -200,8 +214,23 @@ function EnviarVMModal({ caso, onClose, onDone }: { caso: Caso; onClose: () => v
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Correo de Vehimotors</label>
-            <input className={inp} type="email" value={correo} onChange={e => setCorreo(e.target.value)} placeholder="creditos@vehimotors.com" />
+            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Correos de Vehimotors (uno o varios)</label>
+            {correos.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {correos.map(c => (
+                  <span key={c} className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-full pl-2.5 pr-1 py-0.5">
+                    {c}
+                    <button type="button" onClick={() => setCorreos(cs => cs.filter(x => x !== c))} className="w-4 h-4 rounded-full hover:bg-blue-200 flex items-center justify-center">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input className={inp} type="email" value={nuevo} onChange={e => setNuevo(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarCorreo() } }}
+                placeholder="creditos@vehimotors.com" />
+              <button type="button" onClick={agregarCorreo} className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-oriental-gray hover:border-oriental-red hover:text-oriental-red shrink-0">Agregar</button>
+            </div>
           </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2 pt-1">
