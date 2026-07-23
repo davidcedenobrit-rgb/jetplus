@@ -18,9 +18,46 @@ export default async function ReportarPagosVMPage({ searchParams }: { searchPara
   // Filtro opcional por carro (entrada desde el módulo Ventas).
   const { vehiculoId } = await searchParams
   let vehiculoFiltro: { id: string; label: string; placa: string | null } | null = null
+  let cuadroVM: {
+    precioBase: number; iva: number; placa: number; gastos: number
+    totalInicial: number; pBase: number; ivaPlaca: number; banco: string | null
+  } | null = null
   if (vehiculoId) {
     const { data: veh } = await supabase.from('vehiculos').select('id, marca, modelo, placa').eq('id', vehiculoId).maybeSingle()
     if (veh) vehiculoFiltro = { id: veh.id, label: `${veh.marca} ${veh.modelo}`, placa: veh.placa }
+
+    // Cuadro de facturación para Vehimotors (P. BASE / IVA-PLACA), desde la
+    // proforma/cotización de esta venta.
+    const { data: pro } = await supabase
+      .from('proformas')
+      .select('cotizacion_id, precio_vehiculo, monto_inicial, bn_vehimotors')
+      .eq('vehiculo_id', vehiculoId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    let cot: any = null
+    if (pro?.cotizacion_id) {
+      const { data: c } = await supabase
+        .from('cotizaciones')
+        .select('precio_base, iva_monto, gastos_monto, total_inicial, banco, bn_vehimotors')
+        .eq('id', pro.cotizacion_id)
+        .maybeSingle()
+      cot = c
+    }
+    const bn = (cot?.bn_vehimotors ?? (pro as any)?.bn_vehimotors) as any
+    const precioBase = Number(cot?.precio_base ?? pro?.precio_vehiculo ?? 0)
+    const iva = Number(cot?.iva_monto ?? (bn?.iva ?? precioBase * 0.16))
+    const placa = Number(bn?.placa ?? 400)
+    const gastos = Number(cot?.gastos_monto ?? bn?.gastos ?? 0)
+    const totalInicial = Number(cot?.total_inicial ?? pro?.monto_inicial ?? 0)
+    if (totalInicial > 0 || precioBase > 0) {
+      cuadroVM = {
+        precioBase, iva, placa, gastos, totalInicial,
+        pBase: Math.max(0, totalInicial - iva - placa),
+        ivaPlaca: iva + placa,
+        banco: cot?.banco ?? bn?.banco ?? null,
+      }
+    }
   }
 
   // Cargar ingresos con saldo por reportar: aprobados directos + los que ya
@@ -115,6 +152,41 @@ export default async function ReportarPagosVMPage({ searchParams }: { searchPara
           <Link href="/gestion-ventas" className="text-xs font-bold text-indigo-700 hover:underline shrink-0">← Volver a Ventas</Link>
         )}
       </div>
+
+      {/* Cuadro de facturación para Vehimotors (P. BASE / IVA-PLACA) */}
+      {cuadroVM && (() => {
+        const f = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        return (
+          <div className="mb-6 max-w-md">
+            <div className="rounded-xl border border-indigo-200 overflow-hidden">
+              <div className="bg-[#1e3a5f] px-4 py-2.5">
+                <p className="text-[11px] font-bold text-white uppercase tracking-wider">Cuadro para Vehimotors{cuadroVM.banco ? ` · ${cuadroVM.banco}` : ''}</p>
+              </div>
+              {[
+                ['Precio base', cuadroVM.precioBase],
+                ['IVA 16%', cuadroVM.iva],
+                ['Placa', cuadroVM.placa],
+                ['Gastos', cuadroVM.gastos],
+                ['Total inicial a pagar', cuadroVM.totalInicial],
+              ].map(([l, v]) => (
+                <div key={String(l)} className="flex justify-between px-4 py-2 border-b border-gray-100 text-sm">
+                  <span className="text-gray-500">{l}</span>
+                  <span className="font-semibold text-oriental-black">${f(v as number)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between px-4 py-2.5 bg-amber-50 border-b border-amber-100">
+                <span className="font-bold text-amber-800 text-sm">P. BASE</span>
+                <span className="font-extrabold text-amber-900">${f(cuadroVM.pBase)}</span>
+              </div>
+              <div className="flex justify-between px-4 py-2.5 bg-blue-50">
+                <span className="font-bold text-blue-800 text-sm">IVA / PLACA</span>
+                <span className="font-extrabold text-blue-900">${f(cuadroVM.ivaPlaca)}</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1.5">P. BASE = Total inicial − IVA − Placa. Selecciona abajo los pagos a reportar.</p>
+          </div>
+        )
+      })()}
 
       {/* Alerta directos */}
       {directosSinReportar.length > 0 && (
