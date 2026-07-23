@@ -30,10 +30,11 @@ type Caso = {
   concesionario_id: string | null
   vehiculo_id: string | null; marca: string | null; modelo: string | null
   precio_base: number; placa_monto: number
-  aprobado_pct: number | null; merma_pct: number | null
+  aprobado_pct: number | null; merma_pct: number | null; banco: string | null
   gastos_estructura: any; condiciones: string | null; notas: string | null
   expediente: { url: string; nombre: string | null }[] | null
-  cotizacion_id: string | null; cotizado_at: string | null
+  vehimotors_email: string | null; enviado_vm_at: string | null
+  cotizacion_id: string | null; proforma_id: string | null; cotizado_at: string | null
 }
 
 const ESTADOS = [
@@ -46,6 +47,7 @@ export default function BancaNacionalTab({ catalogo = [] }: { catalogo?: any[] }
   const [casos, setCasos] = useState<Caso[]>([])
   const [loading, setLoading] = useState(true)
   const [proc, setProc] = useState<Caso | null>(null)
+  const [envio, setEnvio] = useState<Caso | null>(null)
 
   async function cargar() {
     setLoading(true)
@@ -109,14 +111,24 @@ export default function BancaNacionalTab({ catalogo = [] }: { catalogo?: any[] }
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                        {c.estado === 'cotizado' && c.proforma_id && (
+                          <a href={`/api/proformas/${c.proforma_id}/pdf`} target="_blank" rel="noopener noreferrer"
+                            className="px-3 py-1.5 border border-green-200 rounded-lg text-xs font-bold text-green-700 hover:bg-green-50">Ver proforma</a>
+                        )}
                         {c.estado === 'cotizado' && c.cotizacion_id && (
                           <a href={`/api/cotizaciones/${c.cotizacion_id}/pdf`} target="_blank" rel="noopener noreferrer"
-                            className="px-3 py-1.5 border border-blue-200 rounded-lg text-xs font-bold text-blue-700 hover:bg-blue-50">Ver PDF</a>
+                            className="px-3 py-1.5 border border-blue-200 rounded-lg text-xs font-bold text-blue-700 hover:bg-blue-50">Ver cotización</a>
                         )}
                         {c.estado === 'pendiente_vm' && (
-                          <button onClick={() => setProc(c)}
-                            className="px-3 py-1.5 bg-blue-800 hover:bg-blue-900 text-white rounded-lg text-xs font-bold">Procesar aprobación</button>
+                          <>
+                            <button onClick={() => setEnvio(c)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${c.enviado_vm_at ? 'border-green-200 text-green-700 hover:bg-green-50' : 'border-blue-200 text-blue-700 hover:bg-blue-50'}`}>
+                              {c.enviado_vm_at ? '✓ Reenviar a VM' : '📨 Enviar a Vehimotors'}
+                            </button>
+                            <button onClick={() => setProc(c)}
+                              className="px-3 py-1.5 bg-blue-800 hover:bg-blue-900 text-white rounded-lg text-xs font-bold">Procesar aprobación</button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -129,6 +141,59 @@ export default function BancaNacionalTab({ catalogo = [] }: { catalogo?: any[] }
       )}
 
       {proc && <ProcesarModal caso={proc} catalogo={catalogo} onClose={() => setProc(null)} onDone={() => { setProc(null); cargar() }} />}
+      {envio && <EnviarVMModal caso={envio} onClose={() => setEnvio(null)} onDone={() => { setEnvio(null); cargar() }} />}
+    </div>
+  )
+}
+
+// Enviar el expediente a Vehimotors por correo (encabezado del concesionario + datos + adjuntos).
+function EnviarVMModal({ caso, onClose, onDone }: { caso: Caso; onClose: () => void; onDone: () => void }) {
+  const [correo, setCorreo] = useState(caso.vehimotors_email ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function enviar() {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) { setError('Escribe un correo válido.'); return }
+    setSaving(true); setError('')
+    try {
+      const r = await fetch(`/api/bn-casos/${caso.id}/enviar-vm`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correo: correo.trim() }),
+      })
+      const j = await r.json()
+      if (!r.ok) { setError(j.error ?? 'No se pudo enviar'); setSaving(false); return }
+      setSaving(false); onDone()
+    } catch { setError('Error de conexión'); setSaving(false) }
+  }
+
+  const nDocs = caso.expediente?.length ?? 0
+  const inp = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red'
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !saving && onClose()} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+          <div>
+            <h2 className="font-bold text-oriental-black text-base">📨 Enviar a Vehimotors</h2>
+            <p className="text-xs text-oriental-gray">{caso.marca} {caso.modelo} · {caso.cliente_nombre}</p>
+          </div>
+          <button onClick={() => !saving && onClose()} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <p className="text-xs text-gray-500">Se enviará un correo con el encabezado de <b>{caso.concesionario_id === 'la-oriental' || !caso.concesionario_id ? 'La Oriental' : caso.concesionario_id}</b>, los datos del cliente y {nDocs > 0 ? <b>{nDocs} documento{nDocs !== 1 ? 's' : ''} del expediente</b> : 'sin documentos adjuntos'}.</p>
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Correo de Vehimotors</label>
+            <input className={inp} type="email" value={correo} onChange={e => setCorreo(e.target.value)} placeholder="creditos@vehimotors.com" />
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+            <button onClick={enviar} disabled={saving} className="flex-1 py-2.5 rounded-lg bg-blue-800 text-white text-sm font-semibold hover:bg-blue-900 disabled:opacity-50 flex items-center justify-center gap-2">
+              {saving && <Loader2 size={14} className="animate-spin" />} Enviar solicitud
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -148,6 +213,7 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
   const cat = useMemo(() => catalogo.find(v => v.id === caso.vehiculo_id), [catalogo, caso.vehiculo_id])
   const [aprobadoPct, setAprobadoPct] = useState(caso.aprobado_pct ? String(caso.aprobado_pct) : '70')
   const [mermaPct, setMermaPct] = useState(caso.merma_pct ? String(caso.merma_pct) : '')
+  const [banco, setBanco] = useState(caso.banco ?? '')
   const [lineas, setLineas] = useState<Record<string, string>>(
     caso.gastos_estructura && typeof caso.gastos_estructura === 'object'
       ? Object.fromEntries(CLAVES.map(({ k }) => [k, caso.gastos_estructura[k] != null ? String(caso.gastos_estructura[k]) : '']))
@@ -191,17 +257,30 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
           precioBaseOverride: caso.precio_base,
           gastosOverride: calc.gastos,
           condicionesPersonalizadas: condiciones.trim() || null,
-          bnVehimotors: { aprobadoPct: calc.apr, mermaPct: calc.merma, placaMonto: caso.placa_monto },
+          bnVehimotors: { aprobadoPct: calc.apr, mermaPct: calc.merma, placaMonto: caso.placa_monto, banco: banco.trim() || null },
         }),
       })
       const j = await r.json()
       if (!j.ok) { setError(j.error ?? 'No se pudo generar la cotización'); setSaving(false); return }
-      // 2) Marcar el caso como cotizado.
+
+      // 2) Convertir la cotización en proforma (el cliente ya fue aprobado por el banco).
+      let proformaId: string | null = null
+      try {
+        const rp = await fetch('/api/proformas/desde-cotizacion', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cotizacionId: j.id, enviarCorreo: false }),
+        })
+        const jp = await rp.json()
+        if (rp.ok) proformaId = jp.proformaId ?? null
+        else if (jp.proformaId) proformaId = jp.proformaId // ya existía
+      } catch { /* si falla la proforma, igual queda la cotización */ }
+
+      // 3) Marcar el caso como cotizado.
       await fetch(`/api/bn-casos/${caso.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          estado: 'cotizado', cotizacion_id: j.id,
-          aprobado_pct: calc.apr, merma_pct: calc.merma,
+          estado: 'cotizado', cotizacion_id: j.id, proforma_id: proformaId,
+          aprobado_pct: calc.apr, merma_pct: calc.merma, banco: banco.trim() || null,
           gastos_estructura: lineas, condiciones: condiciones.trim() || null,
         }),
       })
@@ -249,6 +328,10 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
             </div>
           )}
 
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Banco que aprobó</label>
+            <input className={inp} value={banco} onChange={e => setBanco(e.target.value)} placeholder="Ej: Banesco, BNC, Provincial…" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-gray-500 mb-1">Aprobado por el banco (%)</label>
@@ -310,7 +393,7 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
           <div className="flex gap-2 pt-1">
             <button onClick={rechazar} disabled={saving} className="px-4 py-2.5 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50">Rechazar</button>
             <button onClick={generar} disabled={saving} className="flex-1 py-2.5 rounded-lg bg-blue-800 text-white text-sm font-semibold hover:bg-blue-900 disabled:opacity-50 flex items-center justify-center gap-2">
-              {saving && <Loader2 size={14} className="animate-spin" />} Generar cotización
+              {saving && <Loader2 size={14} className="animate-spin" />} Generar proforma
             </button>
           </div>
         </div>

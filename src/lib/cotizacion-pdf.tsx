@@ -182,6 +182,7 @@ export interface CotizacionPDFData {
     precio_base: number; iva: number; placa: number; gastos: number
     total_banco: number; aprobado_pct: number; aprobado_banco: number
     merma_pct: number; aprobado_real: number; diferencial: number; inicial_cliente: number
+    banco?: string | null
   } | null
 }
 
@@ -336,7 +337,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             <View style={{ marginTop: 12, flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1, border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' }}>
                 <View style={{ backgroundColor: BLUE_DARK, padding: '6pt 10pt' }}>
-                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO</Text>
+                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO{bn.banco ? ` · ${bn.banco}` : ''}</Text>
                 </View>
                 {[
                   ['Precio base', bn.precio_base],

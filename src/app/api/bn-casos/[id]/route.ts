@@ -27,6 +27,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const upd: Record<string, any> = { updated_at: new Date().toISOString() }
   if (b.aprobado_pct != null) upd.aprobado_pct = Number(b.aprobado_pct)
   if (b.merma_pct != null) upd.merma_pct = Number(b.merma_pct)
+  if (b.banco !== undefined) upd.banco = b.banco?.trim() || null
   if (b.gastos_estructura !== undefined) upd.gastos_estructura = b.gastos_estructura
   if (b.condiciones !== undefined) upd.condiciones = b.condiciones?.trim() || null
   if (b.notas !== undefined) upd.notas = b.notas?.trim() || null
@@ -37,6 +38,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!b.cotizacion_id) return NextResponse.json({ error: 'Falta la cotización generada' }, { status: 400 })
     upd.estado = 'cotizado'
     upd.cotizacion_id = b.cotizacion_id
+    if (b.proforma_id) upd.proforma_id = b.proforma_id
     upd.cotizado_at = new Date().toISOString()
   }
 

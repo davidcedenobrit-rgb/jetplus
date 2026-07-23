@@ -208,6 +208,7 @@ export interface ProformaPDFData {
     precio_base: number; iva: number; placa: number; gastos: number
     total_banco: number; aprobado_pct: number; aprobado_banco: number
     merma_pct: number; aprobado_real: number; diferencial: number; inicial_cliente: number
+    banco?: string | null
   } | null
   cronograma: CuotaCronogramaItem[]
   vendedor?: string | null
@@ -373,7 +374,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
           {data.bnVehimotors ? (
             <View style={{ marginTop: 12, border: `1pt solid #1e3a5f`, borderRadius: 6, overflow: 'hidden' }}>
               <View style={{ backgroundColor: '#1e3a5f', padding: '6pt 12pt' }}>
-                <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO</Text>
+                <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO{data.bnVehimotors.banco ? ` · ${data.bnVehimotors.banco}` : ''}</Text>
               </View>
               {[
                 ['Precio base', data.bnVehimotors.precio_base],

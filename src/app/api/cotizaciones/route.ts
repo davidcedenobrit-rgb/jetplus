@@ -317,6 +317,7 @@ export async function POST(req: Request) {
         precio_base: precioBase, iva, placa: placaMonto, gastos,
         total_banco: totalBanco, aprobado_pct: aprobadoPct, aprobado_banco: aprobadoBanco,
         merma_pct: mermaPct, aprobado_real: aprobadoReal, diferencial, inicial_cliente: inicialCliente,
+        banco: (typeof bnVehimotors.banco === 'string' && bnVehimotors.banco.trim()) ? bnVehimotors.banco.trim() : null,
       }
     }
 
