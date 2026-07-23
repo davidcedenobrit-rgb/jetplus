@@ -316,6 +316,8 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
       : seedGastos(cat)
   )
   const [condiciones, setCondiciones] = useState(caso.condiciones ?? '')
+  const [mesesBanco, setMesesBanco] = useState('')
+  const [tasaBanco, setTasaBanco] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -334,10 +336,27 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
     return { precio, iva, placa, gastos, totalBanco, apr, merma, aprobadoBanco, aprobadoReal, diferencial, inicialCliente }
   }, [caso, aprobadoPct, mermaPct, lineas])
 
+  // Cuota referencial del banco: lo financiado es lo aprobado por el banco.
+  const cuotaBancoRef = useMemo(() => {
+    const meses = Math.max(0, Math.round(num(mesesBanco)))
+    if (meses <= 0 || calc.aprobadoBanco <= 0) return 0
+    const tasa = Math.max(0, num(tasaBanco))
+    const r = tasa / 100 / 12
+    return r > 0 ? (calc.aprobadoBanco * r * Math.pow(1 + r, meses)) / (Math.pow(1 + r, meses) - 1) : calc.aprobadoBanco / meses
+  }, [mesesBanco, tasaBanco, calc.aprobadoBanco])
+
   async function generar() {
     if (calc.apr <= 0) { setError('Indica el % aprobado por el banco.'); return }
     if (num(mermaPct) <= 0) { setError('Indica la conversión al día (% de merma).'); return }
     setSaving(true); setError('')
+
+    // Cuotas referenciales del banco (informativo) anexadas a las condiciones.
+    let cond = condiciones.trim()
+    const mB = Math.max(0, Math.round(num(mesesBanco)))
+    if (mB > 0 && cuotaBancoRef > 0) {
+      const linea = `Financiamiento con el banco: ${mB} cuotas de $${fmt(cuotaBancoRef)} (monto aprobado $${fmt(calc.aprobadoBanco)}). El crédito lo otorga y cobra su banco, no La Oriental.`
+      cond = cond ? `${linea}\n${cond}` : linea
+    }
     try {
       // 1) Generar la cotización (reusa numeración, PDF y correo del flujo normal).
       const r = await fetch('/api/cotizaciones', {
@@ -352,7 +371,7 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
           concesionarioId: caso.concesionario_id ?? 'la-oriental',
           precioBaseOverride: caso.precio_base,
           gastosOverride: calc.gastos,
-          condicionesPersonalizadas: condiciones.trim() || null,
+          condicionesPersonalizadas: cond || null,
           bnVehimotors: { aprobadoPct: calc.apr, mermaPct: calc.merma, placaMonto: caso.placa_monto, banco: banco.trim() || null },
         }),
       })
@@ -377,7 +396,7 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
         body: JSON.stringify({
           estado: 'cotizado', cotizacion_id: j.id, proforma_id: proformaId,
           aprobado_pct: calc.apr, merma_pct: calc.merma, banco: banco.trim() || null,
-          gastos_estructura: lineas, condiciones: condiciones.trim() || null,
+          gastos_estructura: lineas, condiciones: cond || null,
         }),
       })
       setSaving(false); onDone()
@@ -478,6 +497,27 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
               <span className="font-bold text-amber-800 text-xs uppercase">Inicial a pagar (cliente)</span>
               <span className="font-extrabold text-amber-900">${fmt(calc.inicialCliente)}</span>
             </div>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Cuotas del banco (informativo)</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">N° de cuotas (meses)</label>
+                <input className={inp} inputMode="numeric" value={mesesBanco} onChange={e => setMesesBanco(e.target.value)} placeholder="24" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">Tasa % anual (opcional)</label>
+                <input className={inp} inputMode="decimal" value={tasaBanco} onChange={e => setTasaBanco(e.target.value)} placeholder="0" />
+              </div>
+            </div>
+            {cuotaBancoRef > 0 && (
+              <div className="flex justify-between items-center bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mt-2">
+                <span className="text-xs text-gray-600">Cuota mensual referencial × {Math.max(1, Math.round(num(mesesBanco)))}</span>
+                <span className="text-sm font-bold text-blue-900">${fmt(cuotaBancoRef)}</span>
+              </div>
+            )}
+            <p className="text-[11px] text-gray-400 mt-1">Sobre el monto aprobado por el banco. El crédito lo otorga y cobra su banco.</p>
           </div>
 
           <div>
