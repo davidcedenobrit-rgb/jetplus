@@ -70,6 +70,7 @@ export async function POST(req: Request) {
     modelo: b.modelo ?? null,
     precio_base: Number(b.precioBase) || 0,
     placa_monto: Number(b.placaMonto) || 400,
+    banco: b.banco?.trim() || null,
     notas: b.notas?.trim() || null,
     estado: 'pendiente_vm',
   }]).select().single()

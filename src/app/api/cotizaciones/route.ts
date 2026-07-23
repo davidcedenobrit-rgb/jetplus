@@ -51,12 +51,17 @@ export async function POST(req: Request) {
       precioBaseOverride,
       gastosOverride,
       condicionesPersonalizadas,
+      // Banca Nacional: banco del crédito (para estadísticas).
+      banco,
       // Banca Nacional — Vehimotors (desde la bandeja): % aprobado por el banco y
       // % de merma del día que coloca Rojas.
       bnVehimotors,
     } = body
 
     const condPersonalizadas = String(condicionesPersonalizadas ?? '').trim() || null
+    const bancoCot = (typeof banco === 'string' && banco.trim())
+      ? banco.trim()
+      : (typeof bnVehimotors?.banco === 'string' && bnVehimotors.banco.trim() ? bnVehimotors.banco.trim() : null)
     const precioOverride = precioBaseOverride != null ? Number(precioBaseOverride) : null
     const gastosOverrideNum = gastosOverride != null ? Number(gastosOverride) : null
 
@@ -377,6 +382,7 @@ export async function POST(req: Request) {
         personalizado_diferencial: plan === 'personalizado' ? persDiferencial : false,
         condiciones_personalizadas: condPersonalizadas,
         bn_vehimotors: bnVehimotorsData,
+        banco: bancoCot,
       }])
       .select()
       .single()

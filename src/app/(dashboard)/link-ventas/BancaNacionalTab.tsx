@@ -81,6 +81,20 @@ export default function BancaNacionalTab({ catalogo = [], puedeEditar = false }:
     return g
   }, [casos])
 
+  // Indicador: bancos más solicitados / que más aprueban (casos cotizados).
+  const bancos = useMemo(() => {
+    const m = new Map<string, { total: number; aprobados: number }>()
+    for (const c of casos) {
+      const b = (c.banco ?? '').trim()
+      if (!b) continue
+      const e = m.get(b) ?? { total: 0, aprobados: 0 }
+      e.total++
+      if (c.estado === 'cotizado') e.aprobados++
+      m.set(b, e)
+    }
+    return Array.from(m.entries()).map(([banco, v]) => ({ banco, ...v })).sort((a, b) => b.total - a.total)
+  }, [casos])
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -90,6 +104,20 @@ export default function BancaNacionalTab({ catalogo = [], puedeEditar = false }:
         </div>
         <button onClick={cargar} className="text-xs font-semibold text-blue-700 hover:underline">↻ Actualizar</button>
       </div>
+
+      {bancos.length > 0 && (
+        <div className="mb-5">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Bancos — solicitudes y aprobaciones</p>
+          <div className="flex flex-wrap gap-2">
+            {bancos.map(b => (
+              <div key={b.banco} className="px-3 py-2 rounded-xl border border-gray-200 bg-white">
+                <p className="text-sm font-bold text-oriental-black">{b.banco}</p>
+                <p className="text-[11px] text-gray-500">{b.total} solicitud{b.total !== 1 ? 'es' : ''} · <span className="text-green-700 font-semibold">{b.aprobados} aprobada{b.aprobados !== 1 ? 's' : ''}</span></p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-center text-sm text-gray-400 py-10">Cargando casos…</p>

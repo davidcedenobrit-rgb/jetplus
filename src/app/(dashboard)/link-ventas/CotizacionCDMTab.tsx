@@ -209,6 +209,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   const [bnVariante, setBnVariante] = useState<'vehimotors' | 'cliente'>('cliente')
   const [bnDiferencial, setBnDiferencial] = useState('')
   const [bnCond, setBnCond] = useState('')
+  const [bnBanco, setBnBanco] = useState('')
 
   // BN Cliente directo: proforma de contado con el diferencial sumado al precio base.
   const bnClienteCalc = useMemo(() => {
@@ -235,7 +236,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           clienteCiudadEstado: form.clienteCiudadEstado, clienteCodigoPostal: form.clienteCodigoPostal,
           vehiculoId: vehiculoSel.id, marca: vehiculoSel.brand, modelo: vehiculoSel.model,
           precioBase: vehiculoSel.cash ?? 0, placaMonto: (vehiculoSel as any).placa_monto ?? 400,
-          concesionarioId, notas: bnCond, expediente: bnExpediente,
+          concesionarioId, notas: bnCond, expediente: bnExpediente, banco: bnBanco.trim() || null,
         }),
       })
       const j = await r.json()
@@ -389,6 +390,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     const bnPayload = (!rojasMode && plan === 'banca_nacional' && bnVariante === 'cliente') ? {
       precioBaseOverride: bnClienteCalc.base,
       condicionesPersonalizadas: bnCond.trim() || null,
+      banco: bnBanco.trim() || null,
     } : {}
 
     try {
@@ -423,7 +425,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
     setCantidad(1)
     setRojasMode(false); setRojasCond(''); setRojasLineas({}); setRojasPrecio('')
-    setBnVariante('cliente'); setBnDiferencial(''); setBnCond(''); setBnExpediente([]); setBnCasoMsg('')
+    setBnVariante('cliente'); setBnDiferencial(''); setBnCond(''); setBnExpediente([]); setBnCasoMsg(''); setBnBanco('')
   }
 
   function handleVistaPrevia() {
@@ -702,6 +704,10 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                     Proforma en dólares (como contado). El <b>diferencial cambiario se suma al precio base</b>. El cliente lleva la proforma a su banco y regresa con la transferencia directa a La Oriental.
                   </p>
                   <div>
+                    <label className={labelCls}>Banco del cliente</label>
+                    <input className={inputCls} value={bnBanco} onChange={e => setBnBanco(e.target.value)} placeholder="Ej: Banesco, BNC, Provincial…" />
+                  </div>
+                  <div>
                     <label className={labelCls}>Diferencial ($) — se suma al precio base</label>
                     <input className={inputCls} inputMode="decimal" value={bnDiferencial} onChange={e => setBnDiferencial(e.target.value)} placeholder="0" />
                   </div>
@@ -723,6 +729,10 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                   <p className="font-bold">🏦 BN Vehimotors — gestión ante el banco</p>
                   <p>Recopila el expediente del cliente y envíalo a Vehimotors. Cuando el banco apruebe un porcentaje, el caso llega a la bandeja <b>Banca Nacional</b> para colocar la <b>conversión al día</b>, ajustar los gastos y generar la proforma.</p>
                   <p className="text-blue-700">El cliente puede ser <b>nuevo</b> (llena los datos abajo) o uno <b>ya registrado</b> (búscalo en “Buscar cliente existente”).</p>
+                  <div>
+                    <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-1">Banco solicitado <span className="font-normal text-blue-500 normal-case">(opcional)</span></p>
+                    <input className={inputCls} value={bnBanco} onChange={e => setBnBanco(e.target.value)} placeholder="Banco al que se solicita — Ej: Banesco, BNC…" />
+                  </div>
                   <div>
                     <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-1">Expediente del cliente (documentos)</p>
                     <p className="text-[11px] text-blue-600 mb-2">Cédula/RIF, constancia de trabajo, referencias bancarias, estados de cuenta, planilla del banco…</p>
