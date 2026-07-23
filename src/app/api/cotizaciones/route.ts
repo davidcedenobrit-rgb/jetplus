@@ -186,29 +186,31 @@ export async function POST(req: Request) {
     const ac500Meses = ac500MesesBody ? Number(ac500MesesBody) : null
 
     if (plan === 'ac500' && ac500PlanId) {
-      const { data: planRow } = await supabase
-        .from('planes_ac500')
-        .select('cuota_0, cuota_1, cuota_2, cuota_3, cuota_4, cuota_5, cuota_6, cuota_7, cuota_8, cuota_9, total, modelo, meses')
+      // Fuente de verdad del AC500 = ac500_vehiculos (lo que edita Rojas).
+      const n = ac500Meses && [6, 9, 12].includes(ac500Meses) ? ac500Meses : 6
+      const { data: v } = await supabase
+        .from('ac500_vehiculos')
+        .select('*')
         .eq('id', ac500PlanId)
-        .eq('activo', true)
         .single()
-      if (!planRow) {
+      if (!v) {
         return NextResponse.json({ error: 'Plan AC500 no encontrado' }, { status: 404 })
       }
-      const n = Number(planRow.meses)
+      const row = v as Record<string, unknown>
+      const pref = `p${n}_`
       const cuotas: AC500CuotaItem[] = []
       for (let i = 1; i <= n; i++) {
         cuotas.push({
           label: i === n ? `Cuota ${i} (Entrega)` : `Cuota ${i}`,
-          monto: Number((planRow as Record<string, unknown>)[`cuota_${i}`]) || 0,
+          monto: Number(row[`${pref}c${i}`]) || 0,
         })
       }
       ac500Schedule = {
-        reserva: Number(planRow.cuota_0) || 500,
+        reserva: Number(row.reserva) || 500,
         meses: n,
-        modelo: String(planRow.modelo ?? ''),
+        modelo: String(row.model ?? ''),
         cuotas,
-        total: Number(planRow.total) || 0,
+        total: Number(row[`${pref}total`]) || 0,
       }
     }
 
