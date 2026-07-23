@@ -24,6 +24,11 @@ export async function POST(req: Request) {
   const pagoVM = num(b.pagoVehimotors)
   const comisionPct = num(b.comisionPct)
   const comisionMonto = b.comisionMonto != null ? num(b.comisionMonto) : Math.round(precioVenta * comisionPct) / 100
+  const montoProforma = num(b.montoProforma)
+  const polizaCarro = num(b.polizaCarro)
+  const polizaVida = num(b.polizaVida)
+  const obsequioClientes = num(b.obsequioClientes)
+  const alfombras = num(b.alfombras)
 
   // Referencias opcionales (proforma/cotización/cliente) desde la proforma de la venta.
   let proformaId: string | null = b.proformaId ?? null
@@ -49,6 +54,11 @@ export async function POST(req: Request) {
     pago_vehimotors: pagoVM,
     comision_pct: comisionPct,
     comision_monto: comisionMonto,
+    monto_proforma: montoProforma,
+    poliza_carro: polizaCarro,
+    poliza_vida: polizaVida,
+    obsequio_clientes: obsequioClientes,
+    alfombras: alfombras,
     vendedora: (b.vendedora ?? '').toString().trim() || null,
     reportado_vm: !!b.reportadoVm,
     notas: (b.notas ?? '').toString().trim() || null,
