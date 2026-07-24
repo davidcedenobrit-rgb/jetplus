@@ -801,6 +801,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
   const [filtroConces, setFiltroConces] = useState<string>('todos')
   const [concesMap, setConcesMap] = useState<Record<string, string>>({})
   const [selected, setSelected] = useState<Cotizacion | null>(null)
+  const [busq, setBusq] = useState('')
 
   useEffect(() => {
     fetch('/api/cotizaciones?limit=100')
@@ -829,9 +830,17 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
     : filtro === 'descuento' ? cotizaciones.filter(c => c.descuento_solicitado)
     : cotizaciones.filter(c => c.estado === filtro)
 
-  const visible = filtroConces === 'todos'
+  const visiblePorConces = filtroConces === 'todos'
     ? visiblePorEstado
     : visiblePorEstado.filter(c => (c.concesionario_id ?? 'la-oriental') === filtroConces)
+
+  // Buscador por N° de cotización (código), cliente, cédula o vehículo.
+  const nq = busq.trim().toLowerCase()
+  const visible = !nq ? visiblePorConces : visiblePorConces.filter(c =>
+    (c.numero ?? '').toLowerCase().includes(nq) ||
+    (c.cliente_nombre ?? '').toLowerCase().includes(nq) ||
+    (c.cliente_ci_rif ?? '').toLowerCase().includes(nq) ||
+    `${c.marca ?? ''} ${c.modelo ?? ''}`.toLowerCase().includes(nq))
 
   // Concesionarios presentes en las cotizaciones (para el filtro)
   const concesCount = new Map<string, number>()
@@ -888,6 +897,14 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
           <h2 className="text-base font-bold text-oriental-black">Cotizaciones</h2>
           <p className="text-xs text-oriental-gray mt-0.5">{cotizaciones.length} cotización{cotizaciones.length !== 1 ? 'es' : ''} registradas</p>
         </div>
+      </div>
+
+      {/* Buscador por N° de cotización (código), cliente, cédula o vehículo */}
+      <div className="relative mb-4">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input value={busq} onChange={e => setBusq(e.target.value)}
+          placeholder="Buscar por N° de cotización, cliente, cédula o vehículo…"
+          className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-oriental-red" />
       </div>
 
       {/* Filtros */}
