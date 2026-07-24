@@ -79,7 +79,9 @@ export async function POST(req: Request) {
     const cantidadNum = Math.max(1, Math.floor(Number(cantidad) || 1))
 
     // Validaciones básicas (el correo del cliente es opcional).
-    if (!codigo || (!vehiculoId && !promoVehiculoId) || !clienteNombre?.trim() || !clienteCiRif?.trim() || !modalidad) {
+    // AC500 puede cotizarse directo (sin carro del catálogo) usando el plan.
+    const ac500Directo = plan === 'ac500' && ac500PlanId && !vehiculoId
+    if (!codigo || (!vehiculoId && !promoVehiculoId && !ac500Directo) || !clienteNombre?.trim() || !clienteCiRif?.trim() || !modalidad) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
     const correoCliente = clienteCorreo?.trim().toLowerCase() || ''
@@ -165,6 +167,17 @@ export async function POST(req: Request) {
         diferencial_pct: null, tasa_banco_pct: null,
       }
       vehiculoIdGuardar = promo.vehiculo_id ?? null
+    } else if (ac500Directo) {
+      // AC500 directo: el modelo sale del plan AC500 (ac500_vehiculos), sin carro del catálogo.
+      const { data: acv } = await supabase.from('ac500_vehiculos').select('brand, model').eq('id', ac500PlanId).single()
+      if (!acv) return NextResponse.json({ error: 'Plan AC500 no encontrado' }, { status: 404 })
+      vehiculo = {
+        brand: acv.brand, model: acv.model, cash: 0, gc: 0, gcr: 0, tasa_credito: 0,
+        placa_monto: null, poliza_vehiculo_banco: null, poliza_vida_banco: null,
+        honorarios_banco: null, gastos_internos_banco: null, alfombras_banco: null,
+        diferencial_pct: null, tasa_banco_pct: null, cuotas_banco: null,
+      }
+      vehiculoIdGuardar = null
     } else {
       const { data: v } = await supabase
         .from('catalogo_ventas')

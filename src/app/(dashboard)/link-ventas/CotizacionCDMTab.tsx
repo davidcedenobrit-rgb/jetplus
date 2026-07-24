@@ -176,6 +176,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
 
   const [step, setStep] = useState<Step>('vehiculo')
   const [vehiculoSel, setVehiculoSel] = useState<Vehiculo | null>(null)
+  // Cotización AC500 directa (sin seleccionar carro; el plan AC500 define el modelo).
+  const [ac500Directo, setAc500Directo] = useState(false)
   const [modalidad, setModalidad] = useState<Modalidad>('contado')
   const [plan, setPlan] = useState<Plan>('vehimotors')
   const [form, setForm] = useState({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false })
@@ -321,14 +323,14 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     fetch(`/api/planes-ac500?meses=${ac500Meses}`)
       .then(r => r.json())
       .then((data: PlanAC500[]) => {
-        const lista = data ?? []
-        const filtered = vehiculoSel ? lista.filter(p => p.marca === vehiculoSel.brand) : lista
-        setPlanesAC500(filtered)
+        // AC500: mostrar TODOS los modelos del catálogo (MG y MAXUS), sin importar
+        // qué carro se haya seleccionado — el plan AC500 define el modelo.
+        setPlanesAC500(data ?? [])
         setLoadingPlanes(false)
       })
       .catch(() => setLoadingPlanes(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan, ac500Meses, vehiculoSel?.brand])
+  }, [plan, ac500Meses])
 
   // Busca clientes existentes conforme se escribe (debounce)
   useEffect(() => {
@@ -364,6 +366,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
 
   function seleccionarVehiculo(v: Vehiculo) {
     setVehiculoSel(v)
+    setAc500Directo(false)
     setModalidad('contado')
     setPlan('vehimotors')
     setPlanAC500Sel(null)
@@ -372,7 +375,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   }
 
   async function enviar() {
-    if (!vehiculoSel) return
+    if (!vehiculoSel && !ac500Directo) return
     if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) { setErrorMsg('Nombre y C.I./RIF son obligatorios.'); return }
     if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
     if (rojasMode && rojasCalc.precio <= 0) { setErrorMsg('Indica el precio base para la cotización personalizada.'); return }
@@ -416,7 +419,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
       const r = await fetch('/api/cotizaciones', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          codigo: ROJAS_CODIGO, vehiculoId: vehiculoSel.id,
+          codigo: ROJAS_CODIGO, vehiculoId: vehiculoSel?.id ?? null,
           clienteNombre: form.clienteNombre, clienteCiRif: form.clienteCiRif,
           clienteCorreo: form.clienteCorreo, clienteTelefono: form.clienteTelefono || null,
           clienteDireccion: form.clienteDireccion || null, clienteCiudadEstado: form.clienteCiudadEstado || null,
@@ -437,7 +440,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   }
 
   function reset() {
-    setStep('vehiculo'); setVehiculoSel(null); setModalidad('contado'); setPlan('vehimotors')
+    setStep('vehiculo'); setVehiculoSel(null); setAc500Directo(false); setModalidad('contado'); setPlan('vehimotors')
     setForm({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false })
     setErrorMsg(''); setNumeroCot(''); setCotIdCreada('')
     setPlanAC500Sel(null); setPlanesAC500([])
@@ -462,13 +465,14 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setShowPreview(true)
   }
 
-  const resumen = vehiculoSel
-    ? plan === 'ac500'
-      ? planAC500Sel
+  // AC500 no depende del carro seleccionado (el plan define el modelo).
+  const resumen = plan === 'ac500'
+    ? (planAC500Sel
         ? { label: 'PAGO INICIAL (Cuota 0)', total: planAC500Sel.cuota_0, cuota: null, financiamiento: planAC500Sel.total - planAC500Sel.cuota_0 }
-        : null
-      : calcResumen(vehiculoSel, modalidad, plan, tasas)
-    : null
+        : null)
+    : vehiculoSel
+      ? calcResumen(vehiculoSel, modalidad, plan, tasas)
+      : null
 
   /* ── PASO 1: Seleccionar vehículo ── */
   if (step === 'vehiculo') {
@@ -481,7 +485,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           </p>
         </div>
 
-        <div className="mb-4 relative">
+        <div className="mb-3 relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
           <input
             value={busqVeh}
@@ -490,6 +494,17 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
             className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-oriental-red"
           />
         </div>
+
+        {/* Atajo: cotización AC500 directa (todos los modelos, sin elegir carro) */}
+        <button
+          onClick={() => {
+            setVehiculoSel(null); setAc500Directo(true)
+            setModalidad('credito_24'); setPlan('ac500'); setAc500Meses(6); setPlanAC500Sel(null)
+            setStep('form')
+          }}
+          className="w-full mb-5 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-blue-800 text-blue-800 hover:bg-blue-50 text-sm font-bold transition-colors">
+          🛡 Cotización de Asegúrate $500 — ver todos los planes
+        </button>
 
         {disponibles.length === 0 ? (
           <div className="card p-12 text-center text-oriental-gray">
@@ -557,9 +572,9 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
       <>
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => setStep('vehiculo')} className="text-oriental-gray hover:text-oriental-black text-sm font-medium">← Cambiar vehículo</button>
+          <button onClick={() => { setAc500Directo(false); setStep('vehiculo') }} className="text-oriental-gray hover:text-oriental-black text-sm font-medium">← {ac500Directo ? 'Volver' : 'Cambiar vehículo'}</button>
           <span className="text-gray-300">|</span>
-          <h2 className="text-base font-bold text-oriental-black">{vehiculoSel?.brand} {vehiculoSel?.model}</h2>
+          <h2 className="text-base font-bold text-oriental-black">{ac500Directo ? '🛡 Cotización Asegúrate $500' : `${vehiculoSel?.brand} ${vehiculoSel?.model}`}</h2>
         </div>
 
         {/* Concesionario (encabezado de la cotización) */}
@@ -579,7 +594,10 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
 
         {/* Modalidad */}
         <div className="card p-4 mb-4">
-          <p className={labelCls}>Modalidad de venta</p>
+          <p className={labelCls}>{ac500Directo ? 'Modalidad' : 'Modalidad de venta'}</p>
+          {ac500Directo ? (
+            <div className="inline-flex px-3 py-2 rounded-lg bg-blue-800 text-white text-sm font-bold">🛡 Asegúrate $500</div>
+          ) : (
           <div className="flex gap-2 flex-wrap">
             {([['contado', 'Contado'], ['credito_24', 'Crédito 24 meses']] as [Modalidad, string][]).map(([val, lbl]) => (
               <button key={val} onClick={() => { setRojasMode(false); setModalidad(val); if (val === 'contado') setPlan('vehimotors') }}
@@ -609,6 +627,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
               ⚙ Rojas personalizada
             </button>
           </div>
+          )}
 
           {/* Cantidad de vehículos */}
           <div className="mt-3">
@@ -1021,10 +1040,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           </button>
           {!(!rojasMode && plan === 'banca_nacional' && bnVariante === 'vehimotors') && (
             <>
-              <button onClick={handleVistaPrevia} disabled={isSending}
-                className="px-4 py-2.5 border-2 border-oriental-black text-oriental-black rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50">
-                👁 Vista previa
-              </button>
+              {!ac500Directo && (
+                <button onClick={handleVistaPrevia} disabled={isSending}
+                  className="px-4 py-2.5 border-2 border-oriental-black text-oriental-black rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50">
+                  👁 Vista previa
+                </button>
+              )}
               <button onClick={enviar} disabled={isSending}
                 className="flex-1 py-2.5 bg-oriental-red text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50">
                 {isSending ? 'Guardando…' : '💾 Guardar cotización'}
@@ -1314,8 +1335,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
         <a
           href={waCotizacionUrl({
             numero: numeroCot,
-            marca: vehiculoSel?.brand ?? '',
-            modelo: vehiculoSel?.model ?? '',
+            marca: vehiculoSel?.brand ?? planAC500Sel?.marca ?? '',
+            modelo: vehiculoSel?.model ?? planAC500Sel?.modelo ?? '',
             telefono: form.clienteTelefono,
             clienteNombre: form.clienteNombre,
             pdfUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/cotizaciones/${cotIdCreada}/pdf`,
