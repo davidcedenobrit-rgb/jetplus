@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, FileBarChart2, Link2, Database
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, BookOpen, FileBarChart2, Link2, Database
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
 
@@ -97,6 +97,7 @@ const SECTIONS: NavSection[] = [
     links: [
       { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package, sub: [
         { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
+        { href: '/repuestos/catalogo-plaza', label: 'Catálogo compra en plaza', icon: BookOpen },
         { href: '/repuestos/catalogo', label: 'Catálogo repuestos VM', icon: BookOpenCheck },
       ] },
       { href: '/materiales', label: 'Materiales e insumos', icon: Boxes,     roles: DIR },
