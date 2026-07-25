@@ -98,7 +98,7 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
   const body = `
     <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#C41E3A;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px">${isAC500 ? 'Plan Asegúrate $500' : 'Cotización de vehículo'}</p>
     <h1 style="font-family:sans-serif;font-size:20px;font-weight:800;color:#111;margin:0 0 4px">Estimado/a ${data.clienteNombre}</h1>
-    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">Adjunto encontrará su ${isAC500 ? 'plan de separación' : 'cotización formal'}. Tiene una validez de 2 días.</p>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">Adjunto encontrará su ${isAC500 ? 'plan de reserva' : 'cotización formal'}. Tiene una validez de 2 días.</p>
 
     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;margin-bottom:18px">
       <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px">Resumen de cotización</p>

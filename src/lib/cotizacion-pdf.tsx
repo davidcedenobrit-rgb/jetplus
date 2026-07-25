@@ -316,7 +316,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={s.ac500HeaderSub}>CRONOGRAMA DE PAGOS</Text>
                 </View>
                 <View style={s.ac500ReservaRow}>
-                  <Text style={s.ac500ReservaLabel}>CUOTA 0 — RESERVA (SEPARACIÓN)</Text>
+                  <Text style={s.ac500ReservaLabel}>CUOTA 0 — RESERVA</Text>
                   <Text style={s.ac500ReservaVal}>${fmt(data.ac500Schedule.reserva)}</Text>
                 </View>
                 {data.ac500Schedule.cuotas.map((c, i) => (
@@ -514,13 +514,13 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             </View>
           )}
 
-          {/* Texto legal — solo en el plan Asegúrate $500 (compromiso de separación).
+          {/* Texto legal — solo en el plan Asegúrate $500 (compromiso de reserva).
               En cotización de contado y crédito no se muestra texto legal. */}
           {esAC500 && (
             <View style={s.legalBox}>
               <Text style={s.legalText}>
-                <Text style={s.legalBold}>PLAN ASEGÚRATE $500 — COMPROMISO DE SEPARACIÓN: </Text>
-                El cliente {data.clienteNombre}, R.I.F.: {data.clienteCiRif}, separa el vehículo MARCA: {data.marca}, MODELO: {data.modelo}, bajo el PLAN ASEGÚRATE $500 a {data.ac500Schedule?.meses} meses, comprometiéndose a realizar los pagos según el cronograma indicado anteriormente.{'\n\n'}
+                <Text style={s.legalBold}>PLAN ASEGÚRATE $500 — COMPROMISO DE RESERVA: </Text>
+                El cliente {data.clienteNombre}, R.I.F.: {data.clienteCiRif}, reserva el vehículo MARCA: {data.marca}, MODELO: {data.modelo}, bajo el PLAN ASEGÚRATE $500 a {data.ac500Schedule?.meses} meses, comprometiéndose a realizar los pagos según el cronograma indicado anteriormente.{'\n\n'}
                 <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
                 FIRMÓ, ACEPTÓ, ESTOY DE ACUERDO Y ASUMO EL COMPROMISO EN LO DESCRITO ANTERIORMENTE
               </Text>

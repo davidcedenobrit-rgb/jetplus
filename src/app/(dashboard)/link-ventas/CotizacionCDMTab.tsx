@@ -1221,7 +1221,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                         <p className="text-[10px] text-blue-300">Cronograma de pagos</p>
                       </div>
                       <div className="bg-blue-50 flex justify-between items-center px-4 py-2.5 border-b border-blue-200">
-                        <span className="text-xs font-bold text-blue-900">Cuota 0 — Reserva (Separación)</span>
+                        <span className="text-xs font-bold text-blue-900">Cuota 0 — Reserva</span>
                         <span className="text-xs font-bold text-blue-900">${fmt(planAC500Sel.cuota_0)}</span>
                       </div>
                       {cprev.slice(1).map((c, i) => (
