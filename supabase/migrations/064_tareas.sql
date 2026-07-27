@@ -31,13 +31,13 @@ create policy tareas_select on tareas
   using (
     asignado_a = auth.uid()
     or creado_por = auth.uid()
-    or (auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','mary','leysdem')
+    or (auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','carla')
   );
 
 drop policy if exists tareas_insert on tareas;
 create policy tareas_insert on tareas
   for insert to authenticated
-  with check ((auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','mary','leysdem'));
+  with check ((auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','carla'));
 
 -- Actualiza: dirección todo; el asignado puede actualizar (cambiar estado) su tarea.
 drop policy if exists tareas_update on tareas;
@@ -45,14 +45,14 @@ create policy tareas_update on tareas
   for update to authenticated
   using (
     asignado_a = auth.uid()
-    or (auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','mary','leysdem')
+    or (auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','carla')
   )
   with check (
     asignado_a = auth.uid()
-    or (auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','mary','leysdem')
+    or (auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','carla')
   );
 
 drop policy if exists tareas_delete on tareas;
 create policy tareas_delete on tareas
   for delete to authenticated
-  using ((auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','mary','leysdem'));
+  using ((auth.jwt() -> 'app_metadata' ->> 'rol') in ('jose','admin','director','carla'));

@@ -1,11 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, ListChecks } from 'lucide-react'
 import TareasClient from './TareasClient'
 
-// Roles de dirección que pueden asignar/crear/eliminar tareas.
-const ASIGNADORES = ['jose', 'admin', 'director', 'mary', 'leysdem']
+// Roles que pueden asignar/crear/eliminar tareas: Rojas (admin/director) y Carla.
+const ASIGNADORES = ['jose', 'admin', 'director', 'carla']
 
 export default async function TareasPage() {
   const supabase = await createClient()
@@ -15,11 +15,25 @@ export default async function TareasPage() {
   const puedeAsignar = ASIGNADORES.includes(rol)
 
   // Usuarios activos para el selector de responsable (solo lo usan los asignadores).
-  const { data: usuarios } = await supabase
+  const { data: usuariosRaw } = await supabase
     .from('usuarios')
-    .select('id, nombre, rol')
+    .select('id, nombre')
     .eq('activo', true)
     .order('nombre')
+
+  // El rol real de cada usuario vive en app_metadata (no en usuarios.rol).
+  // Se resuelve con el admin client para mostrarlo en el selector y filtrar
+  // a quienes no tienen login (no podrían ver la tarea).
+  let usuarios: { id: string; nombre: string; rol: string }[] = (usuariosRaw as { id: string; nombre: string }[] ?? []).map(u => ({ ...u, rol: '' }))
+  try {
+    const admin = await createAdminClient()
+    const { data: authList } = await admin.auth.admin.listUsers({ perPage: 1000 })
+    const rolPorId: Record<string, string> = {}
+    for (const au of authList?.users ?? []) rolPorId[au.id] = (au.app_metadata?.rol as string) ?? ''
+    usuarios = usuarios
+      .filter(u => rolPorId[u.id] !== undefined) // solo con login
+      .map(u => ({ ...u, rol: rolPorId[u.id] ?? '' }))
+  } catch { /* si falla, se usa la lista base sin rol */ }
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl">
