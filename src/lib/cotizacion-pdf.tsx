@@ -345,8 +345,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 {[
                   ['Precio base', bn.precio_base],
                   ['IVA 16%', bn.iva],
-                  ['Placa', bn.placa],
-                  ['Gastos (pólizas, notaría, etc.)', bn.gastos],
+                  ['Gastos (placa, pólizas, notaría, etc.)', bn.gastos + bn.placa],
                   ['Monto aportado por el banco', bn.aprobado_real],
                 ].map(([l, v]) => (
                   <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>

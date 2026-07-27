@@ -392,8 +392,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               {[
                 ['Precio base', data.bnVehimotors.precio_base],
                 ['IVA 16%', data.bnVehimotors.iva],
-                ['Placa', data.bnVehimotors.placa],
-                ['Gastos (pólizas, notaría, etc.)', data.bnVehimotors.gastos],
+                ['Gastos (placa, pólizas, notaría, etc.)', data.bnVehimotors.gastos + data.bnVehimotors.placa],
                 ['Monto aportado por el banco', data.bnVehimotors.aprobado_real],
               ].map(([l, v]) => (
                 <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 12pt', borderBottom: `0.5pt solid ${BORDER}` }}>
