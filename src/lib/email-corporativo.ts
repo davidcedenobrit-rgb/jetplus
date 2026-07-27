@@ -137,3 +137,47 @@ export async function enviarRecordatorioPermiso(opts: { nombre: string; fechaPag
     return { ok: false, error: String(err) }
   }
 }
+
+// Recordatorio de cumpleaños: avisa a Rojas, Mary y Leysdem 5 y 3 días antes
+// (y el mismo día si dias===0) del cumpleaños de un empleado.
+export async function enviarRecordatorioCumpleanos(opts: { nombre: string; fecha: string; dias: number; to?: string[] }) {
+  const { nombre, fecha, dias } = opts
+  const destinatarios = (opts.to && opts.to.length) ? opts.to : [CORREO_ROJAS, CORREO_MARY, CORREO_LEYSDEM]
+  const resend = getResend()
+  const fechaFmt = (() => {
+    try { return new Date(fecha + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: '2-digit', month: 'long' }) }
+    catch { return fecha }
+  })()
+  const cuando = dias <= 0 ? 'es HOY' : `es en ${dias} día${dias === 1 ? '' : 's'}`
+
+  const body = `
+    <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#C41E3A;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Recordatorio de cumpleaños</p>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 6px">🎂 Cumpleaños de ${nombre}</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">
+      El cumpleaños de <b style="color:#111">${nombre}</b> ${cuando} (${fechaFmt}).
+    </p>
+    <div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:18px 22px;margin-bottom:24px">
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-family:sans-serif;font-size:13px;color:#374151">
+        <tr><td style="padding:4px 0;color:#9ca3af">Empleado</td><td style="padding:4px 0;text-align:right;font-weight:700;color:#111">${nombre}</td></tr>
+        <tr><td style="padding:4px 0;color:#9ca3af">Cumpleaños</td><td style="padding:4px 0;text-align:right;font-weight:700;color:#C41E3A">${fechaFmt}</td></tr>
+        <tr><td style="padding:4px 0;color:#9ca3af">Faltan</td><td style="padding:4px 0;text-align:right;font-weight:700;color:#111">${dias <= 0 ? 'Es hoy' : `${dias} día${dias === 1 ? '' : 's'}`}</td></tr>
+      </table>
+    </div>
+    <div style="text-align:center">
+      <a href="${APP_URL}/eventos" style="display:inline-block;background:#C41E3A;color:#fff;font-family:sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:10px">Ver calendario</a>
+    </div>
+  `
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: destinatarios,
+      subject: `🎂 Cumpleaños de ${nombre} ${dias <= 0 ? 'HOY' : `en ${dias} día(s)`}`,
+      html: wrap(body),
+    })
+    return { ok: true }
+  } catch (err) {
+    console.error('[email-corporativo] error recordatorio cumpleaños:', err)
+    return { ok: false, error: String(err) }
+  }
+}
