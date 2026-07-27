@@ -5,7 +5,7 @@ import { FileText, ExternalLink, Mail, Loader2, Check, CalendarDays } from 'luci
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export default function RetencionCard({ egreso }: { egreso: any }) {
+export default function RetencionCard({ egreso, correoProveedor }: { egreso: any; correoProveedor?: string | null }) {
   const [comprobante, setComprobante] = useState<string>(egreso.ret_iva_comprobante ?? '')
   const [fecha, setFecha] = useState<string>(egreso.ret_iva_fecha_emision ?? '')
   const [editando, setEditando] = useState(false)
@@ -13,6 +13,9 @@ export default function RetencionCard({ egreso }: { egreso: any }) {
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState<boolean>(!!egreso.ret_iva_email_enviado_at)
   const [msg, setMsg] = useState('')
+  // Envío por correo: al abrir, pide/confirma el correo destino.
+  const [modoEnvio, setModoEnvio] = useState(false)
+  const [correo, setCorreo] = useState<string>(correoProveedor ?? '')
 
   const moneda = egreso.moneda === 'VES' ? 'Bs' : (egreso.moneda ?? 'USD')
   const f = (n: number) => Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -31,11 +34,16 @@ export default function RetencionCard({ egreso }: { egreso: any }) {
   }
 
   async function enviar() {
+    const destino = correo.trim()
+    if (!/\S+@\S+\.\S+/.test(destino)) { setMsg('Indica un correo válido para enviar la retención.'); return }
     setEnviando(true); setMsg('')
     try {
-      const r = await fetch(`/api/egresos/${egreso.id}/retencion`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      const r = await fetch(`/api/egresos/${egreso.id}/retencion`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correo: destino }),
+      })
       const j = await r.json()
-      if (r.ok) { setEnviado(true); setMsg(`Enviado a ${j.correo}`) }
+      if (r.ok) { setEnviado(true); setModoEnvio(false); setMsg(`Enviado a ${j.correo}`) }
       else setMsg(j.error ?? 'No se pudo enviar')
     } finally { setEnviando(false) }
   }
@@ -70,11 +78,32 @@ export default function RetencionCard({ egreso }: { egreso: any }) {
           className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-red-700">
           <ExternalLink size={13} /> Ver comprobante (PDF)
         </a>
-        <button onClick={enviar} disabled={enviando}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-gray-200 text-oriental-black text-xs font-bold hover:bg-gray-50 disabled:opacity-50">
-          {enviando ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
-          {enviado ? 'Reenviar al proveedor' : 'Enviar al proveedor'}
-        </button>
+        {modoEnvio ? (
+          <div className="border border-gray-200 rounded-lg p-2.5 space-y-2">
+            <label className="text-[11px] font-semibold text-oriental-gray">Correo del destinatario</label>
+            <input
+              type="email"
+              value={correo}
+              onChange={e => setCorreo(e.target.value)}
+              placeholder="correo@proveedor.com"
+              autoFocus
+              className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => { setModoEnvio(false); setMsg('') }} className="flex-1 py-1.5 rounded-lg border border-gray-200 text-oriental-gray text-xs font-bold hover:bg-gray-50">Cancelar</button>
+              <button onClick={enviar} disabled={enviando}
+                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-red-700 disabled:opacity-50">
+                {enviando ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />} Enviar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => { setModoEnvio(true); setMsg('') }}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-gray-200 text-oriental-black text-xs font-bold hover:bg-gray-50">
+            <Mail size={13} />
+            {enviado ? 'Reenviar al proveedor' : 'Enviar al proveedor'}
+          </button>
+        )}
       </div>
       {msg && <p className="text-[11px] text-oriental-gray mt-2">{msg}</p>}
     </div>

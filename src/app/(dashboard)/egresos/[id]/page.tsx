@@ -29,6 +29,13 @@ export default async function EgresoDetallePage({
 
   if (!egreso) notFound()
 
+  // Correo registrado del proveedor (para precargar el reenvío de la retención)
+  let correoProveedor: string | null = null
+  if (egreso.proveedor_id) {
+    const { data: prov } = await supabase.from('proveedores').select('correo').eq('id', egreso.proveedor_id).maybeSingle()
+    correoProveedor = prov?.correo ?? null
+  }
+
   const { data: archivos } = await supabase
     .from('archivos')
     .select('*')
@@ -221,7 +228,7 @@ export default async function EgresoDetallePage({
           <EgresoActionButtons egresoId={egreso.id} estado={egreso.estado} />
 
           {egreso.ret_iva_aplica && egreso.ret_iva_comprobante && (
-            <RetencionCard egreso={egreso} />
+            <RetencionCard egreso={egreso} correoProveedor={correoProveedor} />
           )}
 
           {/* Timeline */}
