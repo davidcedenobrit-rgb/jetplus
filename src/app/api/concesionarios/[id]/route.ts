@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 const ROLES = ['jose', 'admin', 'director']
-const CAMPOS_TEXTO = ['nombre', 'rif', 'direccion', 'telefono', 'correo', 'logo_url', 'prefijo'] as const
+const CAMPOS_TEXTO = ['nombre', 'rif', 'direccion', 'telefono', 'correo', 'logo_url', 'sello_url', 'prefijo'] as const
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

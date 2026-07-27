@@ -42,6 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const pdfData: CotizacionPDFData = {
     logoSrc: conces.logoSrc,
+    selloSrc: conces.selloSrc,
     empresaNombre: conces.nombre,
     empresaRif: conces.rif,
     empresaDireccion: conces.direccion,

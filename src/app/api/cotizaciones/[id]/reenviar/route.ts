@@ -50,6 +50,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     const pdfData: CotizacionPDFData = {
       logoSrc: conces.logoSrc,
+      selloSrc: conces.selloSrc,
       empresaNombre: conces.nombre,
       empresaRif: conces.rif,
       empresaDireccion: conces.direccion,

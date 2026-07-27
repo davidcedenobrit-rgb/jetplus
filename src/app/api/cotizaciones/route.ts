@@ -435,6 +435,7 @@ export async function POST(req: Request) {
 
     const pdfData: CotizacionPDFData = {
       logoSrc: conces.logoSrc,
+      selloSrc: conces.selloSrc,
       empresaNombre: conces.nombre,
       empresaRif: conces.rif,
       empresaDireccion: conces.direccion,

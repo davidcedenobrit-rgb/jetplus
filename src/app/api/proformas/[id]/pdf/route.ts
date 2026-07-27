@@ -7,6 +7,7 @@ import { join } from 'path'
 import { createAdminClient } from '@/lib/supabase/server'
 import { ProformaPDF } from '@/lib/proforma-pdf'
 import type { ProformaPDFData, CuotaCronogramaItem } from '@/lib/proforma-pdf'
+import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 function getLogoBase64(): string {
   try {
@@ -57,9 +58,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const credito: any = pro.credito_snapshot ?? {}
   const cronograma: CuotaCronogramaItem[] = (pro.cronograma_snapshot ?? []) as CuotaCronogramaItem[]
 
+  // Logo y sello: La Oriental usa los archivos locales; si la proforma nace de
+  // una cotización de otra sede, se usa el logo/sello de esa sede.
+  let logoSrc: string = getLogoBase64()
+  let selloSrc: string | undefined = getSelloBase64()
+  if (pro.cotizacion_id) {
+    const { data: cot } = await supabase.from('cotizaciones').select('concesionario_id').eq('id', pro.cotizacion_id).maybeSingle()
+    if (cot?.concesionario_id && cot.concesionario_id !== 'la-oriental') {
+      const ident = await getConcesionarioIdentity(supabase, cot.concesionario_id)
+      if (ident.logoSrc) logoSrc = ident.logoSrc
+      if (ident.selloSrc) selloSrc = ident.selloSrc
+    }
+  }
+
   const pdfData: ProformaPDFData = {
-    logoSrc: getLogoBase64(),
-    selloSrc: getSelloBase64(),
+    logoSrc,
+    selloSrc,
     numero: pro.numero,
     fecha: fmtDate(pro.fecha_emision),
     clienteNombre: cliente.nombre ?? '',

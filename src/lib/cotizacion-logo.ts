@@ -17,3 +17,13 @@ export function getLogoBase64(): string {
     return 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
   }
 }
+
+/** Sello de La Oriental (archivo local) en base64, para estamparlo en el PDF. */
+export function getSelloBase64(): string | undefined {
+  try {
+    const buf = readFileSync(join(process.cwd(), 'public', 'sello-la-oriental.jpeg'))
+    return `data:image/jpeg;base64,${buf.toString('base64')}`
+  } catch {
+    return undefined
+  }
+}

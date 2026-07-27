@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   if (all) {
     const { data } = await supabase
       .from('concesionarios')
-      .select('id, nombre, rif, direccion, telefono, correo, logo_url, prefijo, es_principal, activo, orden, secuencia')
+      .select('id, nombre, rif, direccion, telefono, correo, logo_url, sello_url, prefijo, es_principal, activo, orden, secuencia')
       .order('orden')
     return NextResponse.json(data ?? [])
   }

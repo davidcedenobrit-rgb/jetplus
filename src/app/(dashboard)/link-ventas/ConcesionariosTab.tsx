@@ -12,6 +12,7 @@ interface Concesionario {
   telefono: string | null
   correo: string | null
   logo_url: string | null
+  sello_url: string | null
   prefijo: string
   es_principal: boolean
   activo: boolean
@@ -29,8 +30,10 @@ export default function ConcesionariosTab() {
   const [saving, setSaving] = useState<Record<string, boolean>>({})
   const [saved, setSaved] = useState<Record<string, boolean>>({})
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
+  const [uploadingSello, setUploadingSello] = useState<Record<string, boolean>>({})
   const [error, setError] = useState('')
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const selloRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => {
     fetch('/api/concesionarios?all=1')
@@ -62,6 +65,23 @@ export default function ConcesionariosTab() {
     }
   }
 
+  async function subirSello(id: string, file: File) {
+    if (!file.type.startsWith('image/')) { setError('El sello debe ser una imagen'); return }
+    setUploadingSello(p => ({ ...p, [id]: true })); setError('')
+    try {
+      const ext = file.name.split('.').pop() || 'png'
+      const path = `concesionarios/${id}-sello-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('comprobantes').upload(path, file, { contentType: file.type, upsert: true })
+      if (upErr) { setError('Error al subir: ' + upErr.message); return }
+      const { data: urlData } = supabase.storage.from('comprobantes').getPublicUrl(path)
+      set(id, 'sello_url', urlData.publicUrl)
+    } catch {
+      setError('Error al subir el sello')
+    } finally {
+      setUploadingSello(p => ({ ...p, [id]: false }))
+    }
+  }
+
   async function guardar(id: string) {
     const c = items.find(x => x.id === id)
     if (!c) return
@@ -71,7 +91,7 @@ export default function ConcesionariosTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nombre: c.nombre, rif: c.rif, direccion: c.direccion, telefono: c.telefono,
-        correo: c.correo, logo_url: c.logo_url, prefijo: c.prefijo,
+        correo: c.correo, logo_url: c.logo_url, sello_url: c.sello_url, prefijo: c.prefijo,
         activo: c.activo, es_principal: c.es_principal,
       }),
     })
@@ -157,6 +177,16 @@ export default function ConcesionariosTab() {
                 {uploading[c.id] ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                 {uploading[c.id] ? 'Subiendo...' : (c.logo_url ? 'Cambiar logo' : 'Subir logo')}
               </button>
+
+              {c.sello_url && <img src={c.sello_url} alt="sello" className="h-10 w-10 object-contain rounded border border-gray-100" />}
+              <input ref={el => { selloRefs.current[c.id] = el }} type="file" accept="image/*" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) subirSello(c.id, f); e.target.value = '' }} />
+              <button onClick={() => selloRefs.current[c.id]?.click()} disabled={uploadingSello[c.id]}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60">
+                {uploadingSello[c.id] ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {uploadingSello[c.id] ? 'Subiendo...' : (c.sello_url ? 'Cambiar sello' : 'Subir sello')}
+              </button>
+
               <div className="flex-1" />
               <button onClick={() => guardar(c.id)} disabled={saving[c.id]}
                 className="flex items-center gap-1.5 px-4 py-2 bg-oriental-red text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-60">

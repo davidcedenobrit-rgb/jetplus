@@ -296,6 +296,7 @@ export async function POST(req: Request) {
       const conces = await getConcesionarioIdentity(supabase, original.concesionario_id ?? null)
       const pdfData: CotizacionPDFData = {
         logoSrc: conces.logoSrc,
+        selloSrc: conces.selloSrc,
         empresaNombre: conces.nombre,
         empresaRif: conces.rif,
         empresaDireccion: conces.direccion,

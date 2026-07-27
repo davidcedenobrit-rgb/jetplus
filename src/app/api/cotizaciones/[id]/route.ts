@@ -217,6 +217,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           const conces = await getConcesionarioIdentity(supabase, cotActual.concesionario_id ?? null)
           const pdfData: CotizacionPDFData = {
             logoSrc: conces.logoSrc,
+            selloSrc: conces.selloSrc,
             empresaNombre: conces.nombre,
             empresaRif: conces.rif,
             empresaDireccion: conces.direccion,
@@ -381,7 +382,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         try {
           const conces = await getConcesionarioIdentity(supabase, cotActual.concesionario_id ?? null)
           const pdfData: CotizacionPDFData = {
-            logoSrc: conces.logoSrc, empresaNombre: conces.nombre, empresaRif: conces.rif,
+            logoSrc: conces.logoSrc, selloSrc: conces.selloSrc, empresaNombre: conces.nombre, empresaRif: conces.rif,
             empresaDireccion: conces.direccion, empresaTelefono: conces.telefono, empresaCorreo: conces.correo,
             numero: cotActual.numero, fecha: fmtDate(cotActual.fecha), vencimiento: fmtDate(cotActual.vencimiento),
             clienteNombre: cotActual.cliente_nombre, clienteCiRif: cotActual.cliente_ci_rif,

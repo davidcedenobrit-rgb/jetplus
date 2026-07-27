@@ -110,6 +110,7 @@ const s = StyleSheet.create({
 
   // Sello
   selloBox: { width: 100, height: 100, border: `1.5pt dashed ${GRAY}`, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  selloImg: { width: 100, height: 100, objectFit: 'contain', marginBottom: 6 },
   selloInner: { alignItems: 'center' },
   selloText: { fontSize: 8, color: GRAY, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
   selloSubText: { fontSize: 7, color: '#9ca3af', textAlign: 'center', marginTop: 2 },
@@ -141,6 +142,7 @@ export interface AC500ScheduleData {
 
 export interface CotizacionPDFData {
   logoSrc?: string
+  selloSrc?: string
   empresaNombre?: string
   empresaRif?: string | null
   empresaDireccion?: string | null
@@ -546,12 +548,16 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
 
             {/* La Oriental */}
             <View style={s.sigBlock}>
-              <View style={s.selloBox}>
-                <View style={s.selloInner}>
-                  <Text style={s.selloText}>SELLO</Text>
-                  <Text style={s.selloSubText}>{empNombre}</Text>
+              {data.selloSrc ? (
+                <Image src={data.selloSrc} style={s.selloImg} />
+              ) : (
+                <View style={s.selloBox}>
+                  <View style={s.selloInner}>
+                    <Text style={s.selloText}>SELLO</Text>
+                    <Text style={s.selloSubText}>{empNombre}</Text>
+                  </View>
                 </View>
-              </View>
+              )}
               <View style={s.sigLineOnly} />
               <Text style={s.sigLabel}>REPRESENTANTE</Text>
               <Text style={s.sigSub}>{empNombre}</Text>
