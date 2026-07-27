@@ -271,9 +271,10 @@ export default async function IngresosPage({
                   <td className="px-4 py-3 text-gray-700">{ingreso.concepto}</td>
                   <td className="px-4 py-3 text-right font-bold text-oriental-black">
                     {ingreso.moneda === 'VES' && ingreso.tasa_cambio
-                      ? <span>
-                          <span className="text-oriental-black">{formatCurrency(Number(ingreso.monto) / Number(ingreso.tasa_cambio))}</span>
-                          <span className="block text-[10px] font-normal text-oriental-gray">Bs. {Number(ingreso.monto).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(ingreso.monto))*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
+                      ? <span className="inline-flex flex-col items-end gap-0.5">
+                          {/* Registrado en Bs → el Bs es el principal; el USD va en la nubecita */}
+                          <span className="text-oriental-black">Bs. {Number(ingreso.monto).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(ingreso.monto))*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5">≈ {formatCurrency(Number(ingreso.monto) / Number(ingreso.tasa_cambio))}</span>
                         </span>
                       : formatCurrency(ingreso.monto, ingreso.moneda === 'VES' ? 'VES' : 'USD')
                     }
