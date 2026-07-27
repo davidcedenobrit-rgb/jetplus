@@ -1027,6 +1027,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                         >
                           Ver PDF
                         </a>
+                        <AcuerdoCobroPanel cotId={c.id} vendedoraNombre={c.vendedora_nombre} compact onChange={() => router.refresh()} />
                         <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} compact onDone={() => router.refresh()} />
                       </div>
                     </td>
@@ -1063,7 +1064,8 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                   <ModalidadBadge modalidad={c.modalidad} plan={c.plan} />
                   <p className="text-sm font-bold text-oriental-black">${fmt(c.total_inicial)}</p>
                 </div>
-                <div className="mt-2 pt-2 border-t border-gray-100" onClick={e => e.stopPropagation()}>
+                <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                  <AcuerdoCobroPanel cotId={c.id} vendedoraNombre={c.vendedora_nombre} compact onChange={() => router.refresh()} />
                   <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} compact onDone={() => router.refresh()} />
                 </div>
               </div>

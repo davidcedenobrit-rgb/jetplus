@@ -11,11 +11,12 @@ import { FileSignature, X, Loader2, ExternalLink, CheckCircle2, Trash2, Clock } 
 // cliente termina de pagar. Cuando existe y está aceptado, junto con la
 // cotización aprobada, habilita crear la proforma.
 export default function AcuerdoCobroPanel({
-  cotId, vendedoraNombre, onChange,
+  cotId, vendedoraNombre, onChange, compact = false,
 }: {
   cotId: string
   vendedoraNombre?: string
   onChange?: () => void
+  compact?: boolean
 }) {
   const [acuerdo, setAcuerdo] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -141,11 +142,27 @@ export default function AcuerdoCobroPanel({
     } finally { setSaving(false) }
   }
 
-  if (loading) return null
+  // En modo compacto no dejamos hueco mientras carga: se muestra "Realizar
+  // acuerdo de cobro" por defecto y cambia a "Ver" si ya existe uno.
+  if (loading && !compact) return null
 
   const aceptado = acuerdo?.estado === 'aceptado'
 
   return (
+    <>
+    {compact ? (
+      !acuerdo ? (
+        <button onClick={abrir}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-purple-300 bg-white hover:bg-purple-50 text-purple-700 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors">
+          <FileSignature size={12} /> Realizar acuerdo de cobro
+        </button>
+      ) : (
+        <a href={`/api/acuerdos-cobro/${acuerdo.id}/pdf`} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors">
+          <ExternalLink size={11} /> Ver acuerdo de cobro
+        </a>
+      )
+    ) : (
     <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-3">
       <div className="flex items-center justify-between gap-2 mb-1">
         <p className="text-[11px] font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -191,6 +208,8 @@ export default function AcuerdoCobroPanel({
           )}
         </div>
       )}
+    </div>
+    )}
 
       {open && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -245,7 +264,7 @@ export default function AcuerdoCobroPanel({
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
