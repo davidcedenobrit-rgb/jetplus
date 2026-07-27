@@ -32,6 +32,13 @@ export default function AcuerdoCobroPanel({
   const [planCuotas, setPlanCuotas] = useState('')
   const [observaciones, setObservaciones] = useState('')
 
+  // Flags de "el usuario lo escribió a mano". Mientras estén en false, el campo
+  // se calcula solo a partir de los otros. Se marcan true al editar el campo, o
+  // al abrir un acuerdo ya guardado (para respetar lo que quedó registrado).
+  const [finManual, setFinManual] = useState(false)
+  const [cuotaManual, setCuotaManual] = useState(false)
+  const [planManual, setPlanManual] = useState(false)
+
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
@@ -52,10 +59,48 @@ export default function AcuerdoCobroPanel({
     setCuotaMonto(acuerdo?.cuota_monto != null ? String(acuerdo.cuota_monto) : '')
     setPlanCuotas(acuerdo?.plan_cuotas ?? '')
     setObservaciones(acuerdo?.observaciones ?? '')
+    // Al reabrir un acuerdo ya guardado respetamos sus valores (manual = true).
+    // En uno nuevo, todo se calcula solo (manual = false).
+    const existe = !!acuerdo
+    setFinManual(existe && acuerdo?.monto_financiado != null)
+    setCuotaManual(existe && acuerdo?.cuota_monto != null)
+    setPlanManual(existe && !!acuerdo?.plan_cuotas)
     setOpen(true)
   }
 
-  const num = (s: string) => { const n = parseFloat(s.replace(',', '.')); return Number.isFinite(n) ? n : null }
+  const num = (s: string) => { const n = parseFloat(String(s).replace(',', '.')); return Number.isFinite(n) ? n : null }
+
+  // Formatea un número calculado en un string limpio para el input (punto decimal,
+  // sin ceros sobrantes) que el parser num() vuelve a leer sin problemas.
+  const clean = (n: number) => String(Math.round(n * 100) / 100)
+  // Texto en formato local (es-VE) solo para la sugerencia del plan de cuotas.
+  const fmtLocal = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  // Financiado por La Oriental = Inicial total − Pagado de contado.
+  useEffect(() => {
+    if (finManual) return
+    const it = num(inicialTotal)
+    if (it == null) { setMontoFinanciado(''); return }
+    const fin = Math.max(0, it - (num(montoContado) ?? 0))
+    setMontoFinanciado(fin > 0 ? clean(fin) : '')
+  }, [inicialTotal, montoContado, finManual]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Monto por cuota = Financiado ÷ N° de cuotas.
+  useEffect(() => {
+    if (cuotaManual) return
+    const fin = num(montoFinanciado), nc = num(numCuotas)
+    if (fin == null || !nc || nc <= 0) { setCuotaMonto(''); return }
+    setCuotaMonto(clean(fin / nc))
+  }, [montoFinanciado, numCuotas, cuotaManual]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sugerencia del plan de cuotas en texto: "N cuotas mensuales de $X,XX".
+  useEffect(() => {
+    if (planManual) return
+    const nc = num(numCuotas), cm = num(cuotaMonto)
+    if (!nc || nc <= 0 || cm == null || cm <= 0) { setPlanCuotas(''); return }
+    const n = Math.round(nc)
+    setPlanCuotas(`${n} ${n === 1 ? 'cuota mensual' : 'cuotas mensuales'} de $${fmtLocal(cm)} desde la entrega`)
+  }, [numCuotas, cuotaMonto, planManual]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function guardar() {
     if (!num(montoFinanciado) || num(montoFinanciado)! <= 0) { setError('Indica el monto financiado por La Oriental.'); return }
@@ -125,7 +170,7 @@ export default function AcuerdoCobroPanel({
         <div className="flex flex-wrap items-center gap-2">
           <a href={`/api/acuerdos-cobro/${acuerdo.id}/pdf`} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-purple-300 text-purple-700 rounded-lg text-[11px] font-bold hover:bg-purple-50">
-            <ExternalLink size={11} /> Ver PDF
+            <ExternalLink size={11} /> Ver acuerdo de cobro
           </a>
           {!aceptado && (
             <>
@@ -163,15 +208,26 @@ export default function AcuerdoCobroPanel({
                 <Field label="Inicial total ($)" value={inicialTotal} onChange={setInicialTotal} />
                 <Field label="Pagado de contado ($)" value={montoContado} onChange={setMontoContado} />
               </div>
-              <Field label="Financiado por La Oriental ($) *" value={montoFinanciado} onChange={setMontoFinanciado} />
+              <Field label="Financiado por La Oriental ($) *" value={montoFinanciado}
+                onChange={v => { setFinManual(true); setMontoFinanciado(v) }}
+                hint={finManual ? 'Editado manualmente' : 'Automático: inicial − contado'}
+                auto={!finManual} onReset={() => setFinManual(false)} />
               <div className="grid grid-cols-2 gap-3">
                 <Field label="N° de cuotas" value={numCuotas} onChange={setNumCuotas} />
-                <Field label="Monto por cuota ($)" value={cuotaMonto} onChange={setCuotaMonto} />
+                <Field label="Monto por cuota ($)" value={cuotaMonto}
+                  onChange={v => { setCuotaManual(true); setCuotaMonto(v) }}
+                  hint={cuotaManual ? 'Manual' : 'Auto: financiado ÷ cuotas'}
+                  auto={!cuotaManual} onReset={() => setCuotaManual(false)} />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-gray-500 mb-1">Plan de cuotas (texto)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-semibold text-gray-500">Plan de cuotas (texto)</label>
+                  {planManual
+                    ? <button type="button" onClick={() => setPlanManual(false)} className="text-[10px] font-bold text-purple-600 hover:underline">Auto</button>
+                    : <span className="text-[10px] font-medium text-purple-500">Generado automático</span>}
+                </div>
                 <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-500"
-                  value={planCuotas} onChange={e => setPlanCuotas(e.target.value)} placeholder="Ej: 3 cuotas mensuales de $1.666,67 desde la entrega" />
+                  value={planCuotas} onChange={e => { setPlanManual(true); setPlanCuotas(e.target.value) }} placeholder="Ej: 3 cuotas mensuales de $1.666,67 desde la entrega" />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 mb-1">Observaciones (opcional)</label>
@@ -193,11 +249,19 @@ export default function AcuerdoCobroPanel({
   )
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Field({ label, value, onChange, hint, auto, onReset }: {
+  label: string; value: string; onChange: (v: string) => void
+  hint?: string; auto?: boolean; onReset?: () => void
+}) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-gray-500 mb-1">{label}</label>
-      <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-purple-500"
+      <div className="flex items-center justify-between mb-1 gap-1">
+        <label className="block text-[11px] font-semibold text-gray-500 truncate">{label}</label>
+        {hint && (auto
+          ? <span className="text-[9px] font-medium text-purple-500 whitespace-nowrap">{hint}</span>
+          : <button type="button" onClick={onReset} className="text-[9px] font-bold text-purple-600 hover:underline whitespace-nowrap">Auto</button>)}
+      </div>
+      <input className={`w-full px-3 py-2 border rounded-lg text-sm text-right focus:outline-none focus:border-purple-500 ${auto ? 'border-purple-200 bg-purple-50/40' : 'border-gray-200'}`}
         inputMode="decimal" value={value} onChange={e => onChange(e.target.value)} placeholder="0,00" />
     </div>
   )
