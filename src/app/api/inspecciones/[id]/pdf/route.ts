@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { InspeccionPDF, type InspeccionPDFData } from '@/lib/inspeccion-pdf'
+import { InspeccionPDF, type InspeccionPDFData, type DamageMark } from '@/lib/inspeccion-pdf'
 import { PLANTILLAS, agruparItems, type Plantilla } from '@/lib/inspecciones'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 
@@ -45,6 +45,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const ident = await getConcesionarioIdentity(admin, 'la-oriental')
   const firmas = insp.tipo === 'pdi' ? ['Técnico responsable', 'Supervisor de taller'] : ['Cliente', 'Asesor técnico']
 
+  // Marcas del diagrama de daños (guardadas en datos._damage como JSON)
+  let marks: DamageMark[] = []
+  try { if (datos._damage) marks = JSON.parse(datos._damage) as DamageMark[] } catch { marks = [] }
+
   const data: InspeccionPDFData = {
     membrete: {
       nombre: ident.nombre, rif: ident.rif, direccion: ident.direccion,
@@ -59,6 +63,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     notas: insp.notas ?? null,
     leyenda: plant.descripcion,
     firmas,
+    marks,
   }
 
   const pdfBuffer = await renderToBuffer(React.createElement(InspeccionPDF, { data }) as any)

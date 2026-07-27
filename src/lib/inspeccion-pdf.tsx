@@ -1,6 +1,12 @@
 import React from 'react'
-import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
+import { Document, Page, View, Text, StyleSheet, Svg, Rect, Line, Circle, Text as SvgText } from '@react-pdf/renderer'
 import { PdfMembrete, type MembreteData } from './pdf-membrete'
+
+export type DamageMark = { x: number; y: number; codigo: number }
+const DAMAGE_CODES = [
+  '1. Rayón leve', '2. Choque leve', '3. Mancha', '4. Roto',
+  '5. Rayón fuerte', '6. Choque fuerte', '7. Abollado', '8. Ausente',
+]
 
 // PDF imprimible de una inspección de vehículo (recepción o PDI), con el
 // membrete del concesionario de turno. Reproduce el checklist con columnas
@@ -16,6 +22,34 @@ export interface InspeccionPDFData {
   notas?: string | null
   leyenda?: string
   firmas: string[]
+  marks?: DamageMark[]
+}
+
+// Diagrama del vehículo (vista superior) con las marcas de daño. Mismo viewBox
+// que el componente web (220 x 120).
+function CarDiagramPDF({ marks, primario }: { marks: DamageMark[]; primario: string }) {
+  return (
+    <Svg viewBox="0 0 220 120" style={{ width: 300, height: 164 }}>
+      <Rect x={30} y={25} width={160} height={70} rx={18} fill="#ffffff" stroke="#374151" strokeWidth={1.6} />
+      <Rect x={78} y={40} width={64} height={40} rx={8} fill="none" stroke="#9ca3af" strokeWidth={1} />
+      <Line x1={64} y1={26} x2={64} y2={94} stroke="#d1d5db" strokeWidth={1} />
+      <Line x1={156} y1={26} x2={156} y2={94} stroke="#d1d5db" strokeWidth={1} />
+      <Rect x={44} y={19} width={16} height={7} rx={2} fill="#374151" />
+      <Rect x={160} y={19} width={16} height={7} rx={2} fill="#374151" />
+      <Rect x={44} y={94} width={16} height={7} rx={2} fill="#374151" />
+      <Rect x={160} y={94} width={16} height={7} rx={2} fill="#374151" />
+      <SvgText x={12} y={63} style={{ fontSize: 7, fill: '#9ca3af' }}>Frente</SvgText>
+      <SvgText x={193} y={63} style={{ fontSize: 7, fill: '#9ca3af' }}>Cola</SvgText>
+      <SvgText x={100} y={13} style={{ fontSize: 7, fill: '#9ca3af' }}>Izquierdo</SvgText>
+      <SvgText x={101} y={117} style={{ fontSize: 7, fill: '#9ca3af' }}>Derecho</SvgText>
+      {marks.map((m, i) => (
+        <React.Fragment key={i}>
+          <Circle cx={m.x} cy={m.y} r={7} fill={primario} stroke="#ffffff" strokeWidth={1} />
+          <SvgText x={m.x} y={m.y + 2.6} style={{ fontSize: 8, fill: '#ffffff' }} textAnchor="middle">{String(m.codigo)}</SvgText>
+        </React.Fragment>
+      ))}
+    </Svg>
+  )
 }
 
 const DARK = '#111827'
@@ -94,6 +128,18 @@ export function InspeccionPDF({ data }: { data: InspeccionPDFData }) {
             ))}
           </View>
         ))}
+
+        {data.marks && data.marks.length > 0 ? (
+          <View wrap={false} style={{ marginTop: 8 }}>
+            <Text style={s.grupoTit}>Diagrama de daños</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <CarDiagramPDF marks={data.marks} primario={primario} />
+              <View style={{ marginLeft: 12 }}>
+                {DAMAGE_CODES.map((c, i) => <Text key={i} style={{ fontSize: 6.8, color: GRAY, marginBottom: 1.5 }}>{c}</Text>)}
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         {data.leyenda ? <Text style={s.leyenda}>{data.leyenda}</Text> : null}
         {data.notas ? <Text style={s.notas}>Observaciones: {data.notas}</Text> : null}

@@ -4,8 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ClipboardCheck, Plus, X, Loader2, ChevronDown, Truck, Wrench, BadgeCheck, FileDown } from 'lucide-react'
 import { PLANTILLAS, TIPO_LABEL, agruparItems, type Plantilla } from '@/lib/inspecciones'
+import { CarDiagram, DAMAGE_CODES, type DamageMark } from '@/components/CarDiagram'
 
 type ItemGuardado = { clave: string; label: string; estado: string; nota: string }
+
+// Lee/parses las marcas de daño guardadas en datos._damage (JSON).
+function parseMarks(datos: Record<string, string> | undefined): DamageMark[] {
+  try { const raw = datos?._damage; return raw ? (JSON.parse(raw) as DamageMark[]) : [] } catch { return [] }
+}
 type Inspeccion = {
   id: string; tipo: string; datos: Record<string, string>; items: ItemGuardado[]
   realizado_por: string | null; notas: string | null; created_at: string
@@ -140,6 +146,19 @@ export default function InspeccionesVehiculo({ showroomId, puedeGestionar }: { s
                         </>
                       )
                     })()}
+                    {(() => {
+                      const marks = parseMarks(insp.datos)
+                      if (insp.tipo !== 'recepcion' || marks.length === 0) return null
+                      return (
+                        <div className="mt-4">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-oriental-gray mb-1">Daños marcados</p>
+                          <div className="max-w-md"><CarDiagram marks={marks} readOnly /></div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[10px] text-oriental-gray">
+                            {DAMAGE_CODES.map(c => <span key={c.codigo}>{c.codigo}. {c.label}</span>)}
+                          </div>
+                        </div>
+                      )
+                    })()}
                     {insp.notas && <p className="text-xs text-oriental-gray mt-3">Notas: {insp.notas}</p>}
                   </div>
                 )}
@@ -169,14 +188,20 @@ function ModalInspeccion({ plantilla, showroomId, onClose, onSaved }: { plantill
   const [notas, setNotas] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  // Marcas de daño sobre el diagrama (solo recepción)
+  const [marks, setMarks] = useState<DamageMark[]>([])
+  const [codigoSel, setCodigoSel] = useState(1)
+  const esRecepcion = plantilla.tipo === 'recepcion'
 
   async function guardar() {
     setGuardando(true); setError('')
     const { data: { user } } = await supabase.auth.getUser()
-    const realizadoPor = campos['recibido_por'] || campos['realizado_por'] || user?.email || null
+    const realizadoPor = campos['recibido_por'] || campos['realizado_por'] || campos['asesor'] || user?.email || null
     const itemsPayload = plantilla.items.map(it => ({ clave: it.clave, label: it.label, estado: items[it.clave].estado, nota: items[it.clave].nota.trim() }))
+    const datosPayload: Record<string, string> = { ...campos }
+    if (esRecepcion && marks.length > 0) datosPayload._damage = JSON.stringify(marks)
     const { error: e } = await supabase.from('inspecciones_vehiculo').insert({
-      showroom_vehiculo_id: showroomId, tipo: plantilla.tipo, datos: campos, items: itemsPayload,
+      showroom_vehiculo_id: showroomId, tipo: plantilla.tipo, datos: datosPayload, items: itemsPayload,
       realizado_por: realizadoPor, notas: notas.trim() || null,
     })
     setGuardando(false)
@@ -240,6 +265,29 @@ function ModalInspeccion({ plantilla, showroomId, onClose, onSaved }: { plantill
               </div>
             ))}
           </div>
+
+          {/* Diagrama de daños (solo recepción) */}
+          {esRecepcion && (
+            <div className="mt-5">
+              <label className="label">Diagrama de daños — haz clic sobre el vehículo para marcar</label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {DAMAGE_CODES.map(c => (
+                  <button key={c.codigo} type="button" onClick={() => setCodigoSel(c.codigo)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${codigoSel === c.codigo ? 'bg-oriental-red text-white border-oriental-red' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
+                    {c.codigo}. {c.label}
+                  </button>
+                ))}
+              </div>
+              <div className="max-w-md">
+                <CarDiagram
+                  marks={marks}
+                  onAdd={(x, y) => setMarks([...marks, { x, y, codigo: codigoSel }])}
+                  onRemove={(i) => setMarks(marks.filter((_, idx) => idx !== i))}
+                />
+              </div>
+              <p className="text-[11px] text-oriental-gray mt-1">Seleccionaste código <b className="text-oriental-red">{codigoSel}</b>. Haz clic en el dibujo para marcar; clic sobre una marca para quitarla.</p>
+            </div>
+          )}
 
           <div className="mt-4">
             <label className="label">Observaciones generales</label>
