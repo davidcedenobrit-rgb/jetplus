@@ -54,7 +54,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         precio_base, gastos_monto, cuota_mensual, modalidad, plan,
         cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono,
         cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal,
-        agente_retencion, marca, modelo,
+        agente_retencion, retencion_pct, marca, modelo,
         motivo, reenviar_correo,
       } = body
 
@@ -177,6 +177,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         cliente_ciudad_estado: cliente_ciudad_estado?.trim() || null,
         cliente_codigo_postal: cliente_codigo_postal?.trim() || null,
         agente_retencion: !!agente_retencion,
+        retencion_pct: agente_retencion ? (Number(retencion_pct) || 75) : null,
         marca: marca?.trim() || cotActual.marca,
         modelo: modelo?.trim() || cotActual.modelo,
       }
@@ -234,6 +235,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             clienteCiudadEstado: nuevos.cliente_ciudad_estado,
             clienteCodigoPostal: nuevos.cliente_codigo_postal,
             agenteRetencion: nuevos.agente_retencion,
+            retencionPct: nuevos.retencion_pct != null ? Number(nuevos.retencion_pct) : null,
             marca: nuevos.marca,
             modelo: nuevos.modelo,
             cantidad: Number(cotActual.cantidad) || 1,
@@ -389,6 +391,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             clienteDireccion: cotActual.cliente_direccion, clienteCorreo: cotActual.cliente_correo,
             clienteTelefono: cotActual.cliente_telefono, clienteCiudadEstado: cotActual.cliente_ciudad_estado,
             clienteCodigoPostal: cotActual.cliente_codigo_postal, agenteRetencion: !!cotActual.agente_retencion,
+            retencionPct: cotActual.retencion_pct != null ? Number(cotActual.retencion_pct) : null,
             marca: cotActual.marca, modelo: cotActual.modelo, cantidad: Number(cotActual.cantidad) || 1,
             precioBase, modalidad, plan, ivaMonto: t.iva, gastosMonto: t.gastos,
             totalVehiculo: plan === 'banco_100' ? (t.totalVehiculoBanco ?? undefined) : undefined,

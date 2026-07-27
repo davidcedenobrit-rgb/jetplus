@@ -27,6 +27,7 @@ interface Cotizacion {
   cliente_ciudad_estado: string | null
   cliente_codigo_postal: string | null
   agente_retencion: boolean
+  retencion_pct: number | null
   marca: string
   modelo: string
   modalidad: 'contado' | 'credito_24' | 'ac500'
@@ -246,6 +247,7 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
     cliente_ciudad_estado: cot.cliente_ciudad_estado ?? '',
     cliente_codigo_postal: cot.cliente_codigo_postal ?? '',
     agente_retencion: cot.agente_retencion,
+    retencion_pct: cot.retencion_pct != null ? String(cot.retencion_pct) : '75',
     motivo: '',
     reenviar_correo: false,
   })
@@ -361,6 +363,7 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
         cliente_ciudad_estado: eForm.cliente_ciudad_estado || null,
         cliente_codigo_postal: eForm.cliente_codigo_postal || null,
         agente_retencion: eForm.agente_retencion,
+        retencion_pct: eForm.agente_retencion ? (parseFloat(String(eForm.retencion_pct).replace(',', '.')) || 75) : null,
         motivo: eForm.motivo || null,
         reenviar_correo: eForm.reenviar_correo,
       }),
@@ -532,6 +535,13 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
                       <input type="checkbox" checked={eForm.agente_retencion} onChange={e => setEForm(p => ({ ...p, agente_retencion: e.target.checked }))} className="w-4 h-4 rounded border-gray-300" />
                       <span className="text-xs font-medium text-oriental-black">Agente de retención</span>
                     </label>
+                    {eForm.agente_retencion && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-500">% de retención del IVA</span>
+                        <input className={`${inCls} w-20 text-right`} inputMode="decimal" value={eForm.retencion_pct}
+                          onChange={e => setEForm(p => ({ ...p, retencion_pct: e.target.value }))} placeholder="75" />
+                      </div>
+                    )}
                   </div>
                 </div>
 

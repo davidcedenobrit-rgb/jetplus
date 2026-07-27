@@ -67,6 +67,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       clienteCiudadEstado: cot.cliente_ciudad_estado,
       clienteCodigoPostal: cot.cliente_codigo_postal,
       agenteRetencion: !!cot.agente_retencion,
+      retencionPct: cot.retencion_pct != null ? Number(cot.retencion_pct) : null,
       marca: cot.marca,
       modelo: cot.modelo,
       cantidad: Number(cot.cantidad) || 1,

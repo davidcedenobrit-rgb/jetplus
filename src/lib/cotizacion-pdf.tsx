@@ -159,6 +159,7 @@ export interface CotizacionPDFData {
   clienteCiudadEstado: string | null
   clienteCodigoPostal: string | null
   agenteRetencion: boolean
+  retencionPct?: number | null
   marca: string
   modelo: string
   cantidad?: number
@@ -204,6 +205,11 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const persFinPctLabel = Math.round((1 - persIniFrac) * 100)
   const persMeses = Math.max(1, Math.round(data.mesesCredito ?? 24))
   const importeUnit = esAC500 ? (data.ac500Schedule?.total ?? 0) : data.precioBase
+
+  // Retención de IVA (informativa): cuánto retiene el cliente y cuánto pagaría.
+  const retPct = data.retencionPct != null ? Number(data.retencionPct) : 75
+  const retMonto = data.agenteRetencion ? Math.round((Number(data.ivaMonto) || 0) * retPct) / 100 : 0
+  const totalConRetencion = Math.round(((Number(data.totalInicial) || 0) - retMonto) * 100) / 100
 
   // Si el llamador manda empresaNombre, es consciente del concesionario y se
   // respetan SUS valores tal cual (incluidos los nulos: p. ej. Autosurca sin
@@ -285,7 +291,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
               </View>
               <View style={!data.agenteRetencion ? [s.retBadge, s.retBadgeNo] : s.retBadge}>
                 <Text style={!data.agenteRetencion ? [s.retBadgeText, s.retBadgeNoText] : s.retBadgeText}>
-                  AGENTE DE RETENCIÓN: {data.agenteRetencion ? 'SÍ' : 'NO'}
+                  AGENTE DE RETENCIÓN: {data.agenteRetencion ? `SÍ (${retPct}%)` : 'NO'}
                 </Text>
               </View>
             </View>
@@ -373,7 +379,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
               {es24 && (
                 <View style={s.noteBox}>
                   <Text style={s.noteText}>
-                    (Nota: si el cliente es agente de retención, deberá presentar retención al momento de ser facturado para que se le reconozca el 75% del IVA.)
+                    (Nota: si el cliente es agente de retención, deberá presentar la retención al momento de ser facturado para que se le reconozca el {retPct}% del IVA.)
                   </Text>
                 </View>
               )}
@@ -443,6 +449,29 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                     </View>
                   </>
                 )}
+              </View>
+            </View>
+          )}
+
+          {/* Retención de IVA (informativa): lo que el cliente retiene y paga */}
+          {data.agenteRetencion && retMonto > 0 && (
+            <View style={{ alignItems: 'flex-end', marginTop: 6 }}>
+              <View style={[s.finBox, { width: 240 }]}>
+                <View style={[s.finHeader, { backgroundColor: '#15803d' }]}>
+                  <Text style={s.finHeaderText}>RETENCIÓN DE IVA — AGENTE DE RETENCIÓN</Text>
+                </View>
+                <View style={s.finRow}>
+                  <Text style={s.finLabel}>I.V.A. 16%</Text>
+                  <Text style={s.finVal}>${fmt(data.ivaMonto)}</Text>
+                </View>
+                <View style={s.finRow}>
+                  <Text style={s.finLabel}>Retención IVA ({retPct}%)</Text>
+                  <Text style={[s.finVal, { color: '#b91c1c' }]}>- ${fmt(retMonto)}</Text>
+                </View>
+                <View style={[s.finRow, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={[s.finLabel, { fontFamily: 'Helvetica-Bold', color: '#15803d' }]}>Total con retención aplicada</Text>
+                  <Text style={[s.finVal, { fontFamily: 'Helvetica-Bold', color: '#15803d' }]}>${fmt(totalConRetencion)}</Text>
+                </View>
               </View>
             </View>
           )}

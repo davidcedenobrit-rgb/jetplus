@@ -59,6 +59,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     clienteCiudadEstado: cot.cliente_ciudad_estado ?? null,
     clienteCodigoPostal: cot.cliente_codigo_postal ?? null,
     agenteRetencion: !!cot.agente_retencion,
+    retencionPct: cot.retencion_pct != null ? Number(cot.retencion_pct) : null,
     marca: cot.marca,
     modelo: cot.modelo,
     cantidad: Number(cot.cantidad) || 1,

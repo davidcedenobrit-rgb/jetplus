@@ -34,6 +34,7 @@ export async function POST(req: Request) {
       clienteCiudadEstado,
       clienteCodigoPostal,
       agenteRetencion,
+      retencionPct,
       modalidad,
       plan: planBody,
       ac500PlanId,
@@ -398,6 +399,7 @@ export async function POST(req: Request) {
         cliente_ciudad_estado: clienteCiudadEstado?.trim() || null,
         cliente_codigo_postal: clienteCodigoPostal?.trim() || null,
         agente_retencion: !!agenteRetencion,
+        retencion_pct: agenteRetencion ? (Number(retencionPct) || 75) : null,
         vehiculo_id: vehiculoIdGuardar,
         marca: vehiculo.brand,
         modelo: vehiculo.model,
@@ -452,6 +454,7 @@ export async function POST(req: Request) {
       clienteCiudadEstado: clienteCiudadEstado?.trim() || null,
       clienteCodigoPostal: clienteCodigoPostal?.trim() || null,
       agenteRetencion: !!agenteRetencion,
+      retencionPct: agenteRetencion ? (Number(retencionPct) || 75) : null,
       marca: vehiculo.brand,
       modelo: vehiculo.model,
       cantidad: cantidadNum,
@@ -517,7 +520,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabase
     .from('cotizaciones')
-    .select('id, numero, fecha, vencimiento, vendedora_nombre, concesionario_id, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, descuento_solicitado, motivo_descuento, condiciones_personalizadas, created_at, resend_email_id, email_ultimo_estado, email_ultimo_evento_at')
+    .select('id, numero, fecha, vencimiento, vendedora_nombre, concesionario_id, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, retencion_pct, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, descuento_solicitado, motivo_descuento, condiciones_personalizadas, created_at, resend_email_id, email_ultimo_estado, email_ultimo_evento_at')
     .order('created_at', { ascending: false })
     .limit(limit)
 

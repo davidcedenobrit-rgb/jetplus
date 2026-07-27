@@ -180,7 +180,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   const [ac500Directo, setAc500Directo] = useState(false)
   const [modalidad, setModalidad] = useState<Modalidad>('contado')
   const [plan, setPlan] = useState<Plan>('vehimotors')
-  const [form, setForm] = useState({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false })
+  const [form, setForm] = useState({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false, retencionPct: '75', tipoPersona: 'natural' })
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
   const [cotIdCreada, setCotIdCreada] = useState('')
@@ -371,6 +371,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
       clienteDireccion: c.direccion || '',
       clienteCiudadEstado: c.ciudad_estado || '',
       clienteCodigoPostal: c.codigo_postal || '',
+      tipoPersona: /^[jgJG]/.test((c.ci_rif || '').trim()) ? 'juridica' : 'natural',
     }))
     setCliQuery('')
     setCliResultados([])
@@ -438,6 +439,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           clienteCorreo: form.clienteCorreo, clienteTelefono: form.clienteTelefono || null,
           clienteDireccion: form.clienteDireccion || null, clienteCiudadEstado: form.clienteCiudadEstado || null,
           clienteCodigoPostal: form.clienteCodigoPostal || null, agenteRetencion: form.agenteRetencion,
+          retencionPct: form.agenteRetencion ? (num(form.retencionPct) ?? 75) : null,
           modalidad: modalidadEnvio,
           plan: planEnvio,
           cantidad,
@@ -456,7 +458,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
 
   function reset() {
     setStep('vehiculo'); setVehiculoSel(null); setAc500Directo(false); setModalidad('contado'); setPlan('vehimotors')
-    setForm({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false })
+    setForm({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false, retencionPct: '75', tipoPersona: 'natural' })
     setErrorMsg(''); setNumeroCot(''); setCotIdCreada('')
     setPlanAC500Sel(null); setPlanesAC500([])
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
@@ -953,14 +955,34 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           </div>
 
           <div className="grid gap-3">
+            {/* Tipo de persona: define si el RIF va con V- (natural) o J- (jurídica) */}
             <div>
-              <label className={labelCls}>Nombre completo *</label>
-              <input className={inputCls} value={form.clienteNombre} onChange={e => setForm(p => ({ ...p, clienteNombre: e.target.value }))} placeholder="Nombre del cliente" />
+              <label className={labelCls}>Tipo de persona</label>
+              <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+                {([['natural', 'Natural (V-)'], ['juridica', 'Jurídica (J-)']] as const).map(([val, lbl]) => (
+                  <button key={val} type="button"
+                    onClick={() => setForm(p => {
+                      const rif = p.clienteCiRif.trim()
+                      const sinPref = rif.replace(/^[vejgVEJG]-?/, '')
+                      const nuevoRif = val === 'juridica'
+                        ? (rif ? `J-${sinPref}` : '')
+                        : (rif ? `V-${sinPref}` : '')
+                      return { ...p, tipoPersona: val, clienteCiRif: nuevoRif }
+                    })}
+                    className={`px-3 py-1.5 text-xs font-bold transition-colors ${form.tipoPersona === val ? 'bg-oriental-red text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>{form.tipoPersona === 'juridica' ? 'Razón social *' : 'Nombre completo *'}</label>
+              <input className={inputCls} value={form.clienteNombre} onChange={e => setForm(p => ({ ...p, clienteNombre: e.target.value }))} placeholder={form.tipoPersona === 'juridica' ? 'Nombre de la empresa' : 'Nombre del cliente'} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>C.I. / RIF *</label>
-                <input className={inputCls} value={form.clienteCiRif} onChange={e => setForm(p => ({ ...p, clienteCiRif: e.target.value }))} placeholder="V-12345678" />
+                <label className={labelCls}>{form.tipoPersona === 'juridica' ? 'RIF *' : 'C.I. / RIF *'}</label>
+                <input className={inputCls} value={form.clienteCiRif} onChange={e => setForm(p => ({ ...p, clienteCiRif: e.target.value }))} placeholder={form.tipoPersona === 'juridica' ? 'J-12345678-9' : 'V-12345678'} />
               </div>
               <div>
                 <label className={labelCls}>Teléfono</label>
@@ -985,10 +1007,22 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                 <input className={inputCls} value={form.clienteCodigoPostal} onChange={e => setForm(p => ({ ...p, clienteCodigoPostal: e.target.value }))} placeholder="6201" />
               </div>
             </div>
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 font-medium">
-              <input type="checkbox" checked={form.agenteRetencion} onChange={e => setForm(p => ({ ...p, agenteRetencion: e.target.checked }))} className="w-4 h-4 accent-oriental-red" />
-              Agente de Retención
-            </label>
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 font-medium">
+                <input type="checkbox" checked={form.agenteRetencion} onChange={e => setForm(p => ({ ...p, agenteRetencion: e.target.checked }))} className="w-4 h-4 accent-oriental-red" />
+                Agente de Retención
+              </label>
+              {form.agenteRetencion && (
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-xs font-semibold text-gray-500">% de retención del IVA</label>
+                  <input className="w-24 px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-oriental-red"
+                    inputMode="decimal" value={form.retencionPct}
+                    onChange={e => setForm(p => ({ ...p, retencionPct: e.target.value }))} placeholder="75" />
+                  <span className="text-xs text-gray-400">%</span>
+                  <span className="text-[11px] text-gray-400">(típico 75 · 100)</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1167,6 +1201,11 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           : plan === 'banca_nacional' ? '🏦 Banca Nacional — Cliente directo'
           : plan === 'ac500' ? '🛡 Asegúrate $500' : modalidad === 'contado' ? 'Contado' : plan === 'banco_100' ? 'Crédito 100% Banco' : 'Crédito 24m — Vehimotors'
 
+        // Retención de IVA (informativa): toma el IVA del propio resumen.
+        const ivaPrev = Number(rows.find(([l]) => /I\.V\.A/i.test(l))?.[1]) || 0
+        const retPctPrev = parseFloat(String(form.retencionPct).replace(',', '.')) || 75
+        const retMontoPrev = form.agenteRetencion ? Math.round(ivaPrev * retPctPrev) / 100 : 0
+
         return (
           <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
             <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto shadow-2xl">
@@ -1248,6 +1287,23 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                         )}
                       </>
                     )}
+                  </div>
+                )}
+
+                {/* Retención de IVA (informativa) */}
+                {form.agenteRetencion && plan !== 'ac500' && retMontoPrev > 0 && (
+                  <div className="border border-green-200 rounded-xl overflow-hidden">
+                    <div className="bg-green-700 px-4 py-2.5">
+                      <p className="text-[10px] font-bold text-green-50 uppercase tracking-wider">Retención de IVA — Agente de retención ({retPctPrev}%)</p>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                      <span className="text-xs text-gray-500">Retención IVA ({retPctPrev}%)</span>
+                      <span className="text-xs font-semibold text-red-600">- ${fmt(retMontoPrev)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-3 bg-green-50">
+                      <span className="text-xs font-bold text-green-800 uppercase">Total con retención</span>
+                      <span className="text-sm font-extrabold text-green-900">${fmt(totalInicial - retMontoPrev)}</span>
+                    </div>
                   </div>
                 )}
 

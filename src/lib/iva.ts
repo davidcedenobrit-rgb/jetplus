@@ -15,3 +15,13 @@ export function desglosarIva(total: number, tasa: number): DesgloseIva {
 function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
+
+// Retención de IVA de un agente de retención. `pct` es el % del IVA que el
+// cliente retiene (75, 95, 100…). Devuelve cuánto retiene y el neto que pagaría
+// al proveedor (total − retenido). Es informativo: no altera el total real.
+export function calcRetencion(total: number, iva: number, pct: number | null | undefined) {
+  const p = Number(pct) || 0
+  const t = Number(total) || 0
+  const retenido = round2((Number(iva) || 0) * p / 100)
+  return { pct: p, retenido, netoAPagar: round2(t - retenido) }
+}
