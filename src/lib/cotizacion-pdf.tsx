@@ -386,7 +386,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                       <Text style={s.finHeaderText}>FINANCIAMIENTO CON SU BANCO</Text>
                     </View>
                     <View style={s.finRow}>
-                      <Text style={s.finLabel}>Cuotas mensuales</Text>
+                      <Text style={s.finLabel}>Cuotas a tasa Banco Central</Text>
                       <Text style={s.finVal}>{bn.financ_meses}   ${fmt(bn.financ_cuota)}</Text>
                     </View>
                   </View>
