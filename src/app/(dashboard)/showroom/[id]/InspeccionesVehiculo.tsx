@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ClipboardCheck, Plus, X, Loader2, ChevronDown, Truck, Wrench, BadgeCheck } from 'lucide-react'
+import { ClipboardCheck, Plus, X, Loader2, ChevronDown, Truck, Wrench, BadgeCheck, FileDown } from 'lucide-react'
 import { PLANTILLAS, TIPO_LABEL, agruparItems, type Plantilla } from '@/lib/inspecciones'
 
 type ItemGuardado = { clave: string; label: string; estado: string; nota: string }
@@ -81,6 +81,12 @@ export default function InspeccionesVehiculo({ showroomId, puedeGestionar }: { s
                 </button>
                 {open && (
                   <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                    <div className="flex justify-end mb-2">
+                      <a href={`/api/inspecciones/${insp.id}/pdf`} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-oriental-red hover:border-oriental-red transition-colors">
+                        <FileDown size={14} /> Exportar PDF
+                      </a>
+                    </div>
                     <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-xs">
                       {plant?.campos.map(c => insp.datos?.[c.clave] ? (
                         <span key={c.clave} className="text-oriental-gray">{c.label}: <b className="text-oriental-black">{insp.datos[c.clave]}</b></span>
