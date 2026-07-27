@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/marcar-cotizaciones-vencidas",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/recordatorio-permisos",
+      "schedule": "0 12 * * *"
     }
   ]
 }

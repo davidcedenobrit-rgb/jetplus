@@ -7,6 +7,8 @@ const FROM = 'La Oriental Automotors <corporativo@laoriental.co>'
 
 // Destinatarios de la notificación cuando un empleado completa su cuestionario
 const CORREO_ROJAS = process.env.CORREO_ROJAS ?? 'rojasjgx@gmail.com'
+const CORREO_MARY = process.env.CORREO_MARY ?? 'marymarquez@gmail.com'
+const CORREO_LEYSDEM = process.env.CORREO_LEYSDEM ?? 'leysdm@gmail.com'
 const CORREO_CORPORATIVO = 'laorientalautomotorsc@gmail.com'
 
 function headerHTML() {
@@ -88,6 +90,49 @@ export async function enviarNotificacionCuestionarioCompletado(opts: Cuestionari
     return { ok: true }
   } catch (err) {
     console.error('[email-corporativo] error notificando cuestionario:', err)
+    return { ok: false, error: String(err) }
+  }
+}
+
+// Recordatorio de pago/renovación de un permiso gubernamental (7 y 3 días antes).
+// Va a Rojas, Mary y Leysdem.
+export async function enviarRecordatorioPermiso(opts: { nombre: string; fechaPago: string; dias: number; url?: string | null }) {
+  const { nombre, fechaPago, dias, url } = opts
+  const resend = getResend()
+  const fechaFmt = (() => {
+    try { return new Date(fechaPago + 'T00:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' }) }
+    catch { return fechaPago }
+  })()
+  const cuando = dias <= 0 ? 'vence hoy' : `vence en ${dias} día${dias === 1 ? '' : 's'}`
+
+  const body = `
+    <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#C41E3A;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Recordatorio de pago</p>
+    <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 6px">Permiso gubernamental por pagar</h1>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">
+      El permiso <b style="color:#111">${nombre}</b> ${cuando} (${fechaFmt}). Por favor gestionar el pago a tiempo.
+    </p>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:18px 22px;margin-bottom:24px">
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-family:sans-serif;font-size:13px;color:#374151">
+        <tr><td style="padding:4px 0;color:#9ca3af">Documento</td><td style="padding:4px 0;text-align:right;font-weight:700;color:#111">${nombre}</td></tr>
+        <tr><td style="padding:4px 0;color:#9ca3af">Fecha de pago</td><td style="padding:4px 0;text-align:right;font-weight:700;color:#92400e">${fechaFmt}</td></tr>
+        <tr><td style="padding:4px 0;color:#9ca3af">Faltan</td><td style="padding:4px 0;text-align:right;font-weight:700;color:#111">${dias <= 0 ? 'Vence hoy' : `${dias} día${dias === 1 ? '' : 's'}`}</td></tr>
+      </table>
+    </div>
+    <div style="text-align:center">
+      <a href="${url || `${APP_URL}/documentos-empresa`}" style="display:inline-block;background:#C41E3A;color:#fff;font-family:sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:10px">Ver documento</a>
+    </div>
+  `
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: [CORREO_ROJAS, CORREO_MARY, CORREO_LEYSDEM],
+      subject: `⏰ Permiso por pagar en ${dias <= 0 ? '0' : dias} día(s) — ${nombre}`,
+      html: wrap(body),
+    })
+    return { ok: true }
+  } catch (err) {
+    console.error('[email-corporativo] error recordatorio permiso:', err)
     return { ok: false, error: String(err) }
   }
 }
