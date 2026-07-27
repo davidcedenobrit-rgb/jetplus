@@ -14,20 +14,27 @@ const PURPLE_LIGHT = '#f5f3ff'
 const s = StyleSheet.create({
   page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 96 },
 
-  // Membrete (idéntico en estructura al de proforma/cotización, dinámico por agencia)
-  header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '12pt 28pt 10pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  // Membrete (dinámico por agencia) con barra superior + línea de acento dorado/rojo
+  topBar: { height: 6, backgroundColor: RED },
+  header: { backgroundColor: '#fff', padding: '13pt 28pt 11pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoWrap: { flexShrink: 0 },
   logo: { width: 240, height: 48, objectFit: 'contain' },
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
   companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
   companyLine: { fontSize: 7.5, color: GRAY },
+  headerAccent: { flexDirection: 'row', height: 3 },
+  headerAccentGold: { width: 96, backgroundColor: GOLD },
+  headerAccentRed: { flex: 1, backgroundColor: RED },
 
-  body: { padding: '14pt 28pt' },
+  body: { padding: '16pt 28pt 14pt' },
 
-  documentTitleWrap: { alignItems: 'center', marginBottom: 12 },
-  documentTitle: { fontSize: 13.5, fontFamily: 'Helvetica-Bold', color: PURPLE, letterSpacing: 1, textAlign: 'center' },
-  documentSubtitle: { fontSize: 8, color: GRAY, letterSpacing: 1, marginTop: 3, textAlign: 'center' },
+  // Banda de título elegante
+  titleBand: { alignItems: 'center', marginBottom: 14 },
+  titleEyebrow: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: GOLD, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 },
+  documentTitle: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: PURPLE, letterSpacing: 0.8, textAlign: 'center' },
+  documentSubtitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#6b7280', letterSpacing: 1, marginTop: 3, textAlign: 'center' },
+  titleRule: { width: 64, height: 2.5, backgroundColor: PURPLE, borderRadius: 2, marginTop: 8 },
 
   // Datos (dos columnas: cliente + operación)
   metaBox: { border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden', marginBottom: 12 },
@@ -125,7 +132,8 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
     <Document title="Acuerdo de gestión de cobro" author={empNombre}>
       <Page size="A4" style={s.page}>
 
-        {/* Membrete */}
+        {/* Membrete con barra superior y línea de acento */}
+        <View style={s.topBar} />
         <View style={s.header}>
           <View style={s.logoWrap}>
             {data.logoSrc
@@ -141,12 +149,18 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
             {empContacto ? <Text style={s.companyLine}>{empContacto}</Text> : null}
           </View>
         </View>
+        <View style={s.headerAccent}>
+          <View style={s.headerAccentGold} />
+          <View style={s.headerAccentRed} />
+        </View>
 
         <View style={s.body}>
 
-          <View style={s.documentTitleWrap}>
+          <View style={s.titleBand}>
+            <Text style={s.titleEyebrow}>Documento interno · La Oriental</Text>
             <Text style={s.documentTitle}>ACUERDO DE RESPONSABILIDAD DE GESTIÓN DE COBRO</Text>
             <Text style={s.documentSubtitle}>Y CONDICIÓN DE PAGO DE COMISIÓN</Text>
+            <View style={s.titleRule} />
           </View>
 
           {/* Datos de la operación */}
