@@ -12,7 +12,7 @@ const PURPLE = '#6d28d9'
 const PURPLE_LIGHT = '#f5f3ff'
 
 const s = StyleSheet.create({
-  page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 96 },
+  page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 40 },
 
   // Membrete (dinámico por agencia) con barra superior + línea de acento dorado/rojo
   topBar: { height: 6, backgroundColor: RED },
@@ -86,14 +86,14 @@ const s = StyleSheet.create({
   obsBox: { marginTop: 8, backgroundColor: LIGHT, border: `1pt solid ${BORDER}`, borderRadius: 6, padding: '8pt 12pt' },
   obsText: { fontSize: 8, color: GRAY, lineHeight: 1.5 },
 
-  // Firma fija al pie (en todas las páginas)
-  firmaFooter: { position: 'absolute', bottom: 34, left: 28, right: 28, alignItems: 'center' },
-  firmaLine: { width: 240, borderBottom: `1pt solid ${DARK}`, height: 30, marginBottom: 4 },
+  // Firma + sello: fluye al final del documento (no fija), para no tapar texto
+  firmaBlock: { marginTop: 26, alignItems: 'center' },
+  firmaLine: { width: 240, borderBottom: `1pt solid ${DARK}`, height: 26, marginBottom: 4 },
   firmaLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: DARK },
   firmaSub: { fontSize: 7, color: GRAY },
   selloImg: { width: 42, height: 42, objectFit: 'contain', marginBottom: 2 },
 
-  footer: { position: 'absolute', bottom: 18, left: 28, right: 28, flexDirection: 'row', justifyContent: 'space-between', borderTop: `0.5pt solid ${BORDER}`, paddingTop: 6 },
+  footer: { position: 'absolute', bottom: 16, left: 28, right: 28, flexDirection: 'row', justifyContent: 'space-between', borderTop: `0.5pt solid ${BORDER}`, paddingTop: 6 },
   footerText: { fontSize: 7, color: '#9ca3af' },
 })
 
@@ -296,14 +296,14 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
           ) : null}
 
           <Text style={[s.p, { marginTop: 12 }]}>En señal de conformidad con los términos expresados, se firma la presente acta:</Text>
-        </View>
 
-        {/* Firma + sello fijos al pie */}
-        <View style={s.firmaFooter} fixed>
-          {data.selloSrc ? <Image src={data.selloSrc} style={s.selloImg} /> : null}
-          <View style={s.firmaLine} />
-          <Text style={s.firmaLabel}>{data.vendedoras || 'Ejecutivo(a) de Ventas'}</Text>
-          <Text style={s.firmaSub}>C.I.: ____________________</Text>
+          {/* Firma + sello: fluyen al final, sin partirse (no tapan el texto) */}
+          <View style={s.firmaBlock} wrap={false}>
+            {data.selloSrc ? <Image src={data.selloSrc} style={s.selloImg} /> : null}
+            <View style={s.firmaLine} />
+            <Text style={s.firmaLabel}>{data.vendedoras || 'Ejecutivo(a) de Ventas'}</Text>
+            <Text style={s.firmaSub}>C.I.: ____________________</Text>
+          </View>
         </View>
 
         <View style={s.footer} fixed>
