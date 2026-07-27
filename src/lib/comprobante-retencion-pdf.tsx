@@ -89,7 +89,9 @@ const fmtFecha = (d: string) => { try { return new Date(d + 'T00:00:00').toLocal
 export function ComprobanteRetencionPDF({ data }: { data: ComprobanteRetencionData }) {
   const cols = ['1', fmtFecha(data.fechaFactura), data.numeroFactura, data.numeroControl, '01-Reg', `${data.moneda} ${fmt(data.totalConIva)}`, `${data.moneda} ${fmt(data.baseImponible)}`, `${data.alicuota}%`, `${data.moneda} ${fmt(data.impuestoIva)}`, `${data.moneda} ${fmt(data.ivaRetenido)}`]
   const heads = ['N° Oper.', 'Fecha factura', 'N° factura', 'N° control', 'Tipo trans.', 'Total c/IVA', 'Base imponible', '% Alíc.', 'Impuesto IVA', 'IVA retenido']
-  const widths = [30, 60, 68, 68, 46, 74, 76, 40, 74, 76]
+  // Porcentajes (suman 100) para que la tabla ocupe todo el ancho de la hoja.
+  const widths = [5, 10, 11, 11, 7, 12, 12, 6, 13, 13]
+  const w = (i: number) => `${widths[i]}%`
 
   return (
     <Document>
@@ -149,22 +151,22 @@ export function ComprobanteRetencionPDF({ data }: { data: ComprobanteRetencionDa
         <View style={s.table}>
           <View style={s.row}>
             {heads.map((h, i) => (
-              <Text key={i} style={[s.th, { width: widths[i], borderRightWidth: i === heads.length - 1 ? 0 : 1 }]}>{h}</Text>
+              <Text key={i} style={[s.th, { width: w(i), borderRightWidth: i === heads.length - 1 ? 0 : 1 }]}>{h}</Text>
             ))}
           </View>
           <View style={s.row}>
             {cols.map((c, i) => (
-              <Text key={i} style={[i >= 5 ? s.tdRight : s.td, { width: widths[i], borderTopWidth: 0, borderRightWidth: i === cols.length - 1 ? 0 : 1 }]}>{c}</Text>
+              <Text key={i} style={[i >= 5 ? s.tdRight : s.td, { width: w(i), borderTopWidth: 0, borderRightWidth: i === cols.length - 1 ? 0 : 1 }]}>{c}</Text>
             ))}
           </View>
           {/* Totales */}
           <View style={[s.row, s.totalRow]}>
-            <Text style={[s.tdRight, { width: widths.slice(0, 5).reduce((a, b) => a + b, 0), fontFamily: 'Helvetica-Bold', color: DARK }]}>TOTALES</Text>
-            <Text style={[s.tdRight, { width: widths[5] }]}>{`${data.moneda} ${fmt(data.totalConIva)}`}</Text>
-            <Text style={[s.tdRight, { width: widths[6] }]}>{`${data.moneda} ${fmt(data.baseImponible)}`}</Text>
-            <Text style={[s.td, { width: widths[7] }]}> </Text>
-            <Text style={[s.tdRight, { width: widths[8] }]}>{`${data.moneda} ${fmt(data.impuestoIva)}`}</Text>
-            <Text style={[s.tdRight, { width: widths[9], borderRightWidth: 0, fontFamily: 'Helvetica-Bold', color: RED }]}>{`${data.moneda} ${fmt(data.ivaRetenido)}`}</Text>
+            <Text style={[s.tdRight, { width: `${widths.slice(0, 5).reduce((a, b) => a + b, 0)}%`, fontFamily: 'Helvetica-Bold', color: DARK }]}>TOTALES</Text>
+            <Text style={[s.tdRight, { width: w(5) }]}>{`${data.moneda} ${fmt(data.totalConIva)}`}</Text>
+            <Text style={[s.tdRight, { width: w(6) }]}>{`${data.moneda} ${fmt(data.baseImponible)}`}</Text>
+            <Text style={[s.td, { width: w(7) }]}> </Text>
+            <Text style={[s.tdRight, { width: w(8) }]}>{`${data.moneda} ${fmt(data.impuestoIva)}`}</Text>
+            <Text style={[s.tdRight, { width: w(9), borderRightWidth: 0, fontFamily: 'Helvetica-Bold', color: RED }]}>{`${data.moneda} ${fmt(data.ivaRetenido)}`}</Text>
           </View>
         </View>
 
