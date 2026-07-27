@@ -56,6 +56,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     montoFinanciado: Number(ac.monto_financiado ?? 0),
     numCuotas: ac.num_cuotas != null ? Number(ac.num_cuotas) : null,
     cuotaMonto: ac.cuota_monto != null ? Number(ac.cuota_monto) : null,
+    tasaInteres: ac.tasa_interes != null ? Number(ac.tasa_interes) : null,
     planCuotas: ac.plan_cuotas ?? null,
     observaciones: ac.observaciones ?? null,
   }

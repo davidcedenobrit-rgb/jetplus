@@ -121,6 +121,7 @@ export interface AcuerdoCobroData {
   montoFinanciado: number
   numCuotas?: number | null
   cuotaMonto?: number | null
+  tasaInteres?: number | null
   planCuotas?: string | null
   observaciones?: string | null
 }
@@ -160,17 +161,25 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
     const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate())
     return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
   }
+  // Con interés, el total a pagar es cuota × nº de cuotas (mayor que el capital
+  // financiado); sin interés, el total es el propio monto financiado.
+  const tasa = data.tasaInteres != null ? Number(data.tasaInteres) : 0
+  const conInteres = tasa > 0 && cuotaBase > 0 && nCuotas > 0
+  const totalObjetivo = conInteres
+    ? Math.round(cuotaBase * nCuotas * 100) / 100
+    : data.montoFinanciado
   const cronograma: { n: number; venc: string; monto: number }[] = []
   if (nCuotas >= 1 && cuotaBase > 0) {
     for (let i = 1; i <= nCuotas; i++) {
-      // La última cuota absorbe el redondeo para cuadrar con el total financiado.
-      const monto = (i === nCuotas && data.montoFinanciado > 0)
-        ? Math.round((data.montoFinanciado - cuotaBase * (nCuotas - 1)) * 100) / 100
+      // La última cuota absorbe el redondeo para cuadrar con el total.
+      const monto = (i === nCuotas && totalObjetivo > 0)
+        ? Math.round((totalObjetivo - cuotaBase * (nCuotas - 1)) * 100) / 100
         : cuotaBase
       cronograma.push({ n: i, venc: vencimiento(i), monto })
     }
   }
   const totalCrono = cronograma.reduce((a, c) => a + c.monto, 0)
+  const interesTotal = conInteres ? Math.round((totalCrono - data.montoFinanciado) * 100) / 100 : 0
 
   return (
     <Document title="Acuerdo de gestión de cobro" author={empNombre}>
@@ -240,6 +249,12 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
                 <Text style={s.montoVal}>{nCuotas ? `${nCuotas} cuota(s)` : ''}{nCuotas && cuotaBase ? ' × ' : ''}{cuotaBase ? fmtUsd(cuotaBase) : ''}</Text>
               </View>
             ) : null}
+            {conInteres ? (
+              <>
+                <View style={s.montoRow}><Text style={s.montoLabel}>Tasa de interés anual</Text><Text style={s.montoVal}>{tasa.toLocaleString('es-VE', { maximumFractionDigits: 2 })}%</Text></View>
+                <View style={s.montoRow}><Text style={s.montoLabel}>Interés total</Text><Text style={s.montoVal}>{fmtUsd(interesTotal)}</Text></View>
+              </>
+            ) : null}
             {cronograma.length === 0 ? (
               <View style={s.planRow}><Text style={s.planLabel}>Plan de cuotas</Text><Text style={s.planVal}>{data.planCuotas || '________________'}</Text></View>
             ) : null}
@@ -265,7 +280,7 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
                 </View>
               ))}
               <View style={s.cronoTotal}>
-                <Text style={s.cronoTotalLabel}>Total financiado ({nCuotas} cuota{nCuotas === 1 ? '' : 's'})</Text>
+                <Text style={s.cronoTotalLabel}>{conInteres ? 'Total a pagar (capital + interés)' : 'Total financiado'} ({nCuotas} cuota{nCuotas === 1 ? '' : 's'})</Text>
                 <Text style={s.cronoTotalVal}>{fmtUsd(totalCrono)}</Text>
               </View>
             </View>

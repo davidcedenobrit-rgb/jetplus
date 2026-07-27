@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const {
     cotizacionId,
     inicialTotal, montoContado, montoFinanciado,
-    numCuotas, cuotaMonto, planCuotas,
+    numCuotas, cuotaMonto, tasaInteres, planCuotas,
     observaciones,
   } = body
 
@@ -83,6 +83,7 @@ export async function POST(req: Request) {
     monto_financiado: financiado,
     num_cuotas: num(numCuotas),
     cuota_monto: num(cuotaMonto),
+    tasa_interes: num(tasaInteres),
     plan_cuotas: (typeof planCuotas === 'string' && planCuotas.trim()) ? planCuotas.trim() : null,
     vendedoras,
     observaciones: (typeof observaciones === 'string' && observaciones.trim()) ? observaciones.trim() : null,
