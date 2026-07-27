@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ClipboardCheck, Plus, X, Loader2, ChevronDown, Truck, Wrench, BadgeCheck } from 'lucide-react'
-import { PLANTILLAS, TIPO_LABEL, type Plantilla } from '@/lib/inspecciones'
+import { PLANTILLAS, TIPO_LABEL, agruparItems, type Plantilla } from '@/lib/inspecciones'
 
 type ItemGuardado = { clave: string; label: string; estado: string; nota: string }
 type Inspeccion = {
@@ -86,18 +86,54 @@ export default function InspeccionesVehiculo({ showroomId, puedeGestionar }: { s
                         <span key={c.clave} className="text-oriental-gray">{c.label}: <b className="text-oriental-black">{insp.datos[c.clave]}</b></span>
                       ) : null)}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                      {insp.items.map(it => {
-                        const est = plant?.estados.find(e => e.value === it.estado)
-                        return (
-                          <div key={it.clave} className="flex items-center gap-2 text-xs">
-                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${TONO[est?.tono ?? 'muted']}`}>{est?.label ?? it.estado}</span>
-                            <span className="text-oriental-black">{it.label}</span>
-                            {it.nota && <span className="text-oriental-gray">· {it.nota}</span>}
-                          </div>
-                        )
-                      })}
-                    </div>
+                    {(() => {
+                      const savedMap: Record<string, ItemGuardado> = {}
+                      insp.items.forEach(x => { savedMap[x.clave] = x })
+                      // Ítems que ya no están en la plantilla actual (formatos viejos)
+                      const clavesPlant = new Set((plant?.items ?? []).map(i => i.clave))
+                      const grupos = plant ? agruparItems(plant.items) : []
+                      const extra = insp.items.filter(x => !clavesPlant.has(x.clave))
+                      return (
+                        <>
+                          {grupos.map(({ grupo, items }) => {
+                            const visibles = items.filter(it => savedMap[it.clave])
+                            if (visibles.length === 0) return null
+                            return (
+                              <div key={grupo} className="mb-3 last:mb-0">
+                                {grupo !== 'General' && <p className="text-[10px] font-bold uppercase tracking-wide text-oriental-gray mb-1">{grupo}</p>}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                  {visibles.map(it => {
+                                    const saved = savedMap[it.clave]
+                                    const est = plant?.estados.find(e => e.value === saved.estado)
+                                    return (
+                                      <div key={it.clave} className="flex items-center gap-2 text-xs">
+                                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${TONO[est?.tono ?? 'muted']}`}>{est?.label ?? saved.estado}</span>
+                                        <span className="text-oriental-black">{it.label}</span>
+                                        {saved.nota && <span className="text-oriental-gray">· {saved.nota}</span>}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {extra.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {extra.map(it => {
+                                const est = plant?.estados.find(e => e.value === it.estado)
+                                return (
+                                  <div key={it.clave} className="flex items-center gap-2 text-xs">
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${TONO[est?.tono ?? 'muted']}`}>{est?.label ?? it.estado}</span>
+                                    <span className="text-oriental-black">{it.label}</span>
+                                    {it.nota && <span className="text-oriental-gray">· {it.nota}</span>}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                     {insp.notas && <p className="text-xs text-oriental-gray mt-3">Notas: {insp.notas}</p>}
                   </div>
                 )}
@@ -172,20 +208,29 @@ function ModalInspeccion({ plantilla, showroomId, onClose, onSaved }: { plantill
             ))}
           </div>
 
-          {/* Checklist */}
-          <div className="space-y-2">
-            {plantilla.items.map(it => (
-              <div key={it.clave} className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-oriental-black w-44 flex-shrink-0">{it.label}</span>
-                <div className="flex gap-1">
-                  {plantilla.estados.map(es => (
-                    <button key={es.value} onClick={() => setItems({ ...items, [it.clave]: { ...items[it.clave], estado: es.value } })}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${items[it.clave].estado === es.value ? `${TONO[es.tono]} border-transparent` : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
-                      {es.label}
-                    </button>
+          {/* Checklist por secciones */}
+          <div className="space-y-4">
+            {agruparItems(plantilla.items).map(({ grupo, items: gItems }) => (
+              <div key={grupo}>
+                {grupo !== 'General' && (
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-oriental-red mb-2 pb-1 border-b border-gray-100">{grupo}</p>
+                )}
+                <div className="space-y-2">
+                  {gItems.map(it => (
+                    <div key={it.clave} className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-oriental-black w-44 flex-shrink-0">{it.label}</span>
+                      <div className="flex gap-1">
+                        {plantilla.estados.map(es => (
+                          <button key={es.value} onClick={() => setItems({ ...items, [it.clave]: { ...items[it.clave], estado: es.value } })}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${items[it.clave].estado === es.value ? `${TONO[es.tono]} border-transparent` : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
+                            {es.label}
+                          </button>
+                        ))}
+                      </div>
+                      <input type="text" placeholder="Nota (opcional)" value={items[it.clave].nota} onChange={e => setItems({ ...items, [it.clave]: { ...items[it.clave], nota: e.target.value } })} className="input py-1 text-xs flex-1 min-w-[120px]" />
+                    </div>
                   ))}
                 </div>
-                <input type="text" placeholder="Nota (opcional)" value={items[it.clave].nota} onChange={e => setItems({ ...items, [it.clave]: { ...items[it.clave], nota: e.target.value } })} className="input py-1 text-xs flex-1 min-w-[120px]" />
               </div>
             ))}
           </div>
