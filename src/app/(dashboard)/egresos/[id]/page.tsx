@@ -6,6 +6,7 @@ import { ArrowLeft, Building2 } from 'lucide-react'
 import EgresoActionButtons from './EgresoActionButtons'
 import EgresoTasaEditor from './EgresoTasaEditor'
 import ComprobantesGallery from '@/components/ComprobantesGallery'
+import RetencionCard from './RetencionCard'
 
 const ROLES_EDITAR_TASA = ['jose', 'admin', 'director', 'leysdem', 'mary', 'arianna']
 
@@ -218,6 +219,10 @@ export default async function EgresoDetallePage({
         {/* Actions */}
         <div className="space-y-4">
           <EgresoActionButtons egresoId={egreso.id} estado={egreso.estado} />
+
+          {egreso.ret_iva_aplica && egreso.ret_iva_comprobante && (
+            <RetencionCard egreso={egreso} />
+          )}
 
           {/* Timeline */}
           <div className="card p-5">

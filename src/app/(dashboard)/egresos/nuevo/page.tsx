@@ -10,8 +10,18 @@ import FileUpload from '@/components/FileUpload'
 import { crearEgreso, type Proveedor } from '../actions'
 import IvaBloque from '@/components/IvaBloque'
 import ProveedorPicker from './ProveedorPicker'
+import { desglosarIva } from '@/lib/iva'
 
 type CentroCosto = { id: string; nombre: string }
+
+function Celda({ label, value, fuerte }: { label: string; value: string; fuerte?: boolean }) {
+  return (
+    <div className={`rounded-lg border px-2.5 py-1.5 bg-white ${fuerte ? 'border-oriental-red/40' : 'border-gray-200'}`}>
+      <p className="text-[10px] text-oriental-gray uppercase tracking-wide">{label}</p>
+      <p className={`font-mono ${fuerte ? 'font-bold text-oriental-red' : 'text-oriental-black'}`}>{value}</p>
+    </div>
+  )
+}
 
 export default function NuevoEgresoPage() {
   const router = useRouter()
@@ -40,6 +50,14 @@ export default function NuevoEgresoPage() {
   const [ivaAplica, setIvaAplica] = useState(false)
   const [ivaTasa, setIvaTasa] = useState('16')
   const [montoExento, setMontoExento] = useState('')
+  // Soporte y retención de IVA
+  const [tipoSoporte, setTipoSoporte] = useState<'' | 'factura' | 'nota_entrega'>('')
+  const [fechaFactura, setFechaFactura] = useState('')
+  const [numeroFactura, setNumeroFactura] = useState('')
+  const [numeroControl, setNumeroControl] = useState('')
+  const [retIvaAplica, setRetIvaAplica] = useState(false)
+  const [retIvaPct, setRetIvaPct] = useState<'75' | '100'>('75')
+  const [retIvaFechaEmision, setRetIvaFechaEmision] = useState(new Date().toISOString().split('T')[0])
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [categorias, setCategorias] = useState<{ clave: string; nombre: string }[]>([])
 
@@ -69,6 +87,15 @@ export default function NuevoEgresoPage() {
     const conceptoFinal = concepto === '__otro__' ? conceptoPersonalizado.trim() : concepto
     if (!conceptoFinal) { setError('El concepto es requerido'); return }
 
+    // Retención de IVA: requiere IVA y datos de factura obligatorios.
+    if (retIvaAplica) {
+      if (!ivaAplica) { setError('Para retener IVA, marca "Incluye IVA" y su desglose.'); return }
+      if (!fechaFactura || !numeroFactura.trim() || !numeroControl.trim()) {
+        setError('La retención de IVA requiere fecha, número y número de control de la factura.'); return
+      }
+      if (!proveedor) { setError('Selecciona el proveedor (sujeto retenido) para la retención.'); return }
+    }
+
     setLoading(true)
     setError('')
 
@@ -97,6 +124,13 @@ export default function NuevoEgresoPage() {
       iva_aplica: ivaAplica,
       iva_tasa: ivaAplica ? (parseFloat(ivaTasa) || 0) : null,
       monto_exento: ivaAplica ? (parseFloat(montoExento) || 0) : null,
+      tipo_soporte: tipoSoporte || null,
+      fecha_factura: fechaFactura || null,
+      numero_factura: numeroFactura.trim() || null,
+      numero_control: numeroControl.trim() || null,
+      ret_iva_aplica: retIvaAplica,
+      ret_iva_pct: retIvaAplica ? Number(retIvaPct) : null,
+      ret_iva_fecha_emision: retIvaAplica ? retIvaFechaEmision : null,
       comprobantes,
     })
 
@@ -316,6 +350,88 @@ export default function NuevoEgresoPage() {
               <label className="label">Observaciones</label>
               <textarea className="textarea" rows={3} placeholder="Notas adicionales..." value={observaciones} onChange={e => setObservaciones(e.target.value)} />
             </div>
+          </div>
+        </div>
+
+        {/* ── FACTURA Y RETENCIÓN DE IVA ── */}
+        <div className="card p-6">
+          <h2 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="w-1 h-4 bg-oriental-red rounded-full" />
+            Factura y retención de IVA
+          </h2>
+
+          {/* Tipo de soporte */}
+          <div className="mb-4">
+            <label className="label">Tipo de soporte</label>
+            <div className="flex gap-2 flex-wrap">
+              {([['', 'Sin especificar'], ['factura', 'Factura'], ['nota_entrega', 'Nota de entrega']] as const).map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setTipoSoporte(v)}
+                  className={`px-3 py-1.5 rounded-lg border-2 text-xs font-bold transition-all ${tipoSoporte === v ? 'border-oriental-red bg-oriental-red text-white' : 'border-gray-200 text-gray-500 hover:border-oriental-red'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-oriental-gray mt-1">La factura va al libro de compra. La nota de entrega no aplica para retenciones.</p>
+          </div>
+
+          {/* Datos de la factura */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="label">Fecha de la factura {retIvaAplica && <span className="text-oriental-red">*</span>}</label>
+              <input type="date" className="input" value={fechaFactura} onChange={e => setFechaFactura(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">N° de factura {retIvaAplica && <span className="text-oriental-red">*</span>}</label>
+              <input type="text" className="input font-mono" placeholder="00-0000000" value={numeroFactura} onChange={e => setNumeroFactura(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">N° de control {retIvaAplica && <span className="text-oriental-red">*</span>}</label>
+              <input type="text" className="input font-mono" placeholder="00-00000000" value={numeroControl} onChange={e => setNumeroControl(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Retención de IVA */}
+          <div className="rounded-xl border border-gray-200 p-3 bg-gray-50/60">
+            <label className="flex items-center gap-2 text-sm font-medium text-oriental-black cursor-pointer">
+              <input type="checkbox" checked={retIvaAplica} onChange={e => setRetIvaAplica(e.target.checked)} className="w-4 h-4" />
+              Aplica retención de IVA (emitir comprobante al proveedor)
+            </label>
+
+            {retIvaAplica && (() => {
+              const total = parseFloat(monto) || 0
+              const exentoNum = Math.max(0, Math.min(parseFloat(montoExento) || 0, total))
+              const gravado = Math.max(0, total - exentoNum)
+              const tasaNum = parseFloat(ivaTasa) || 0
+              const iva = ivaAplica && gravado > 0 && tasaNum > 0 ? desglosarIva(gravado, tasaNum).iva : 0
+              const base = ivaAplica && gravado > 0 && tasaNum > 0 ? desglosarIva(gravado, tasaNum).base : 0
+              const retenido = Math.round(iva * Number(retIvaPct)) / 100
+              const f = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              return (
+                <div className="mt-3 space-y-3">
+                  {!ivaAplica && <p className="text-xs text-red-600">Marca primero &quot;Incluye IVA&quot; arriba para calcular la retención.</p>}
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-oriental-gray">Porcentaje a retener</label>
+                    {(['75', '100'] as const).map(p => (
+                      <button key={p} type="button" onClick={() => setRetIvaPct(p)}
+                        className={`px-3 py-1.5 rounded-lg border-2 text-xs font-bold ${retIvaPct === p ? 'border-oriental-red bg-oriental-red text-white' : 'border-gray-200 text-gray-500'}`}>
+                        {p}%
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                    <Celda label="Base imponible" value={`${moneda} ${f(base)}`} />
+                    <Celda label={`IVA (${tasaNum}%)`} value={`${moneda} ${f(iva)}`} />
+                    <Celda label={`Retenido (${retIvaPct}%)`} value={`${moneda} ${f(retenido)}`} fuerte />
+                    <Celda label="Total con IVA" value={`${moneda} ${f(total)}`} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-oriental-gray">Fecha de emisión del comprobante</label>
+                    <input type="date" className="input" value={retIvaFechaEmision} onChange={e => setRetIvaFechaEmision(e.target.value)} />
+                    <p className="text-[11px] text-oriental-gray mt-1">Por defecto hoy. La puedes editar (define el período fiscal y la numeración). El N° de comprobante se genera automáticamente.</p>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
 

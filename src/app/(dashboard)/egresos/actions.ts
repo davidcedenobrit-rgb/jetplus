@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { EgresoSchema } from '@/lib/validations'
 import { permitido } from '@/lib/rate-limit'
 import { desglosarIva, IVA_TASA_DEFAULT } from '@/lib/iva'
+import { periodoDeFecha, siguienteComprobante, calcRetIva } from '@/lib/retencion-iva'
 
 export type CrearEgresoPayload = {
   categoria: string
@@ -28,6 +29,14 @@ export type CrearEgresoPayload = {
   iva_aplica?: boolean
   iva_tasa?: number | null
   monto_exento?: number | null
+  // Soporte y retención de IVA
+  tipo_soporte?: string | null            // 'factura' | 'nota_entrega' | null
+  fecha_factura?: string | null
+  numero_factura?: string | null
+  numero_control?: string | null
+  ret_iva_aplica?: boolean
+  ret_iva_pct?: number | null             // 75 | 100
+  ret_iva_fecha_emision?: string | null
   comprobantes: { url: string; nombre: string }[]
 }
 
@@ -91,8 +100,35 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
     ? desglosarIva(parsed.data.monto - (montoExento ?? 0), ivaTasa)
     : { base: null as number | null, iva: null as number | null }
 
+  // Retención de IVA: cuando aplica, se retiene 75% o 100% del IVA y se le
+  // asigna un número de comprobante (AAAAMM + secuencial) según la fecha de
+  // emisión (por defecto hoy). Los campos de factura son obligatorios.
+  const retIvaAplica = !!payload.ret_iva_aplica
+  const tipoSoporte = payload.tipo_soporte === 'factura' ? 'factura'
+    : payload.tipo_soporte === 'nota_entrega' ? 'nota_entrega' : null
+  const fechaFactura = payload.fecha_factura?.trim() || null
+  const numeroFactura = payload.numero_factura?.trim() || null
+  const numeroControl = payload.numero_control?.trim() || null
+
   // 3. Generar número de egreso y persistir (admin client — SECURITY DEFINER equivalente)
   const admin = await createAdminClient()
+
+  let retIvaPct: number | null = null
+  let retIvaMonto: number | null = null
+  let retIvaComprobante: string | null = null
+  let retIvaPeriodo: string | null = null
+  let retIvaFechaEmision: string | null = null
+  if (retIvaAplica) {
+    if (!ivaAplica || !ivaMonto) return { error: 'Para retener IVA, el egreso debe incluir IVA.' }
+    if (!fechaFactura || !numeroFactura || !numeroControl) {
+      return { error: 'La retención de IVA requiere fecha, número y número de control de la factura.' }
+    }
+    retIvaPct = Number(payload.ret_iva_pct) === 100 ? 100 : 75
+    retIvaMonto = calcRetIva(ivaMonto, retIvaPct)
+    retIvaFechaEmision = payload.ret_iva_fecha_emision?.trim() || new Date().toISOString().slice(0, 10)
+    retIvaPeriodo = periodoDeFecha(retIvaFechaEmision)
+    retIvaComprobante = await siguienteComprobante(admin, retIvaPeriodo)
+  }
 
   const year = new Date().getFullYear()
   const buf = new Uint32Array(1)
@@ -131,6 +167,16 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       base_imponible:   baseImponible,
       iva_monto:        ivaMonto,
       monto_exento:     montoExento && montoExento > 0 ? montoExento : null,
+      tipo_soporte:     tipoSoporte,
+      fecha_factura:    fechaFactura,
+      numero_factura:   numeroFactura,
+      numero_control:   numeroControl,
+      ret_iva_aplica:   retIvaAplica,
+      ret_iva_pct:      retIvaPct,
+      ret_iva_monto:    retIvaMonto,
+      ret_iva_comprobante: retIvaComprobante,
+      ret_iva_periodo:  retIvaPeriodo,
+      ret_iva_fecha_emision: retIvaFechaEmision,
       estado:           'pendiente_aprobacion',
       registrado_por:   user.id,
     })
