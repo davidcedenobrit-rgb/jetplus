@@ -150,6 +150,19 @@
 - [ ] **Ingresar cada dato una sola vez** y reutilizarlo en todos lados (cotización → proforma → venta → ingresos → créditos).
 - [ ] Permitir **carga masiva de clientes** desde documentos (ej. Ari carga, otro verifica y guarda).
 
+## 19. Documentos por automatizar (generar PDF desde el CDM) 🔴
+> David pasará los **formatos que ya existen** para replicarlos con el membrete y estilo del sistema. Todos se generan por **selección simple** en el CDM y producen el PDF.
+
+- [ ] **Formato de circulación personal.**
+- [ ] **Formato de traslado en grúa.**
+- [ ] **Formato de penalización de dinero:** cuando ya se aprobó la compra y el cliente pagó un monto (XXX) y **se quiere echar para atrás**, se le cobra una **penalización**. El formato debe reflejar el monto pagado, la penalización aplicada y el saldo a devolver/retener.
+- [ ] **Formato de PDI (Ari)** — genera desde el CDM por selección simple → PDF.
+- [ ] **Formato de PDI (taller)** — genera desde el CDM por selección simple → PDF.
+- [ ] Estilo unificado: membrete por agencia + márgenes correctos (igual que el acuerdo de cobro / proforma).
+- [ ] **Pendiente de David:** enviar los formatos actuales de cada uno para calcarlos.
+
+*(Relacionado con los pendientes de Showroom #29–#30: proceso de chequeo de vehículo y PDI.)*
+
 ---
 
 ## Operativo / no-software (mencionado, para no perderlo)
