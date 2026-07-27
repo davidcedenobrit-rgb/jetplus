@@ -321,6 +321,8 @@ export const METODOS_PAGO = [
   'Transferencia bancaria',
   'Transferencia bancaria a Vehimotor',
   'Transferencia bancaria a Oriental',
+  'Banesco Panamá',
+  'Mercantil Panamá',
   'Pago móvil',
   'Zelle',
   'Binance',

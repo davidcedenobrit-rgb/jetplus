@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, BookOpen, FileBarChart2, Link2, Database
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, BookOpen, FileBarChart2, Link2, Database, ListChecks
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
 
@@ -142,6 +142,8 @@ const SECTIONS: NavSection[] = [
 ]
 
 const DASHBOARD_LINK: NavLink = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hideFor: ['arianna', 'almacen'] }
+// Tareas — visible para todos los roles (cada quien ve "Mis tareas").
+const TAREAS_LINK: NavLink = { href: '/tareas', label: 'Tareas', icon: ListChecks }
 
 function canSee(link: NavLink, rol: string, email?: string): boolean {
   if (link.emails) return link.emails.map(e => e.toLowerCase()).includes((email ?? '').toLowerCase())
@@ -265,6 +267,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
         {rol === 'carla' && (() => {
           const carlaNav = [
             { href: '/dashboard', label: 'Dashboard',         icon: LayoutDashboard },
+            { href: '/tareas',    label: 'Tareas',             icon: ListChecks },
             { href: '/carla',     label: 'RR · Recibido de Rojas', icon: PackageCheck },
             { href: '/clientes',  label: 'Clientes',           icon: Users },
             { href: '/showroom',  label: 'Vehículo Showroom',  icon: Store },
@@ -298,6 +301,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
         {rol === 'taller' && (() => {
           const tallerNav = [
             { href: '/dashboard',  label: 'Dashboard',          icon: LayoutDashboard },
+            { href: '/tareas',     label: 'Tareas',             icon: ListChecks },
             { href: '/showroom',   label: 'Vehículo Showroom',  icon: Store },
             { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package },
             { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
@@ -321,6 +325,8 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
           {/* Dashboard — enlace suelto arriba */}
           {canSee(DASHBOARD_LINK, rol, userEmail) && renderLink(DASHBOARD_LINK)}
+          {/* Tareas — visible para todos */}
+          {renderLink(TAREAS_LINK)}
 
           {/* Secciones colapsables */}
           {SECTIONS.map(section => {
