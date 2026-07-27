@@ -80,8 +80,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       <p style="color:#6b7280;font-size:12px">Documento generado por el sistema administrativo de ${data.agenteNombre}.</p>
     </div>`
 
+  // Remitente en el dominio verificado en Resend (mismo que usan las proformas).
   const result = await resend.emails.send({
-    from: 'LA ORIENTAL AUTOMOTORS <retenciones@laoriental.co>',
+    from: 'La Oriental Automotors <administracion@laoriental.co>',
+    replyTo: 'administracion@laoriental.co',
     to: [correo],
     subject: asunto,
     html,
