@@ -62,6 +62,23 @@ const s = StyleSheet.create({
   planLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: PURPLE },
   planVal: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#4c1d95', textAlign: 'right', flex: 1, marginLeft: 12 },
 
+  // Cronograma detallado de cuotas de la inicial
+  cronoBox: { border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden', marginTop: 10 },
+  cronoHeader: { backgroundColor: PURPLE, padding: '5pt 12pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cronoHeaderText: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
+  cronoHeaderSub: { fontSize: 7.5, color: '#ede9fe' },
+  cronoTh: { flexDirection: 'row', backgroundColor: PURPLE_LIGHT, padding: '4pt 12pt', borderBottom: `0.5pt solid ${BORDER}` },
+  cronoThText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: PURPLE, textTransform: 'uppercase', letterSpacing: 0.4 },
+  cronoRow: { flexDirection: 'row', padding: '4pt 12pt', borderBottom: `0.5pt solid ${BORDER}` },
+  cronoRowAlt: { backgroundColor: '#faf9ff' },
+  cronoCell: { fontSize: 8.5, color: DARK },
+  colNum: { width: 40 },
+  colVenc: { flex: 1 },
+  colMonto: { width: 100, textAlign: 'right' },
+  cronoTotal: { flexDirection: 'row', padding: '6pt 12pt', backgroundColor: '#fef9c3' },
+  cronoTotalLabel: { flex: 1, fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD },
+  cronoTotalVal: { width: 100, textAlign: 'right', fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#92400e' },
+
   li: { flexDirection: 'row', marginBottom: 5 },
   liDot: { width: 12, fontSize: 8.5, color: PURPLE },
   liText: { flex: 1, textAlign: 'justify', fontSize: 8.5, lineHeight: 1.5 },
@@ -128,6 +145,31 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
   // Nombre corto de la agencia para los textos del cuerpo (sin "C.A." ni RIF).
   const agencia = empNombre.replace(/,?\s*C\.?A\.?\s*$/i, '').trim() || empNombre
 
+  // Cronograma detallado: una fila por cuota (N°, vencimiento mensual, monto).
+  const nCuotas = data.numCuotas != null ? Math.max(0, Math.round(Number(data.numCuotas))) : 0
+  const cuotaBase = data.cuotaMonto != null && Number(data.cuotaMonto) > 0
+    ? Number(data.cuotaMonto)
+    : (nCuotas > 0 ? data.montoFinanciado / nCuotas : 0)
+  const baseDate = (() => {
+    try { const d = new Date(data.fecha + 'T00:00:00'); return isNaN(d.getTime()) ? null : d } catch { return null }
+  })()
+  const vencimiento = (i: number) => {
+    if (!baseDate) return `Mes ${i}`
+    const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate())
+    return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+  const cronograma: { n: number; venc: string; monto: number }[] = []
+  if (nCuotas >= 1 && cuotaBase > 0) {
+    for (let i = 1; i <= nCuotas; i++) {
+      // La última cuota absorbe el redondeo para cuadrar con el total financiado.
+      const monto = (i === nCuotas && data.montoFinanciado > 0)
+        ? Math.round((data.montoFinanciado - cuotaBase * (nCuotas - 1)) * 100) / 100
+        : cuotaBase
+      cronograma.push({ n: i, venc: vencimiento(i), monto })
+    }
+  }
+  const totalCrono = cronograma.reduce((a, c) => a + c.monto, 0)
+
   return (
     <Document title="Acuerdo de gestión de cobro" author={empNombre}>
       <Page size="A4" style={s.page}>
@@ -189,14 +231,42 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
             <View style={s.montoRow}><Text style={s.montoLabel}>Monto total de la inicial</Text><Text style={s.montoVal}>{fmtUsd(data.inicialTotal)}</Text></View>
             <View style={s.montoRow}><Text style={s.montoLabel}>Pagado al contado por el cliente</Text><Text style={s.montoVal}>{fmtUsd(data.montoContado)}</Text></View>
             <View style={s.montoTotalRow}><Text style={s.montoTotalLabel}>Financiado por {agencia}</Text><Text style={s.montoTotalVal}>{fmtUsd(data.montoFinanciado)}</Text></View>
-            {data.numCuotas || data.cuotaMonto ? (
+            {nCuotas || data.cuotaMonto ? (
               <View style={s.montoRow}>
                 <Text style={s.montoLabel}>Cuotas</Text>
-                <Text style={s.montoVal}>{data.numCuotas ? `${Math.round(Number(data.numCuotas))} cuota(s)` : ''}{data.numCuotas && data.cuotaMonto ? ' × ' : ''}{data.cuotaMonto ? fmtUsd(data.cuotaMonto) : ''}</Text>
+                <Text style={s.montoVal}>{nCuotas ? `${nCuotas} cuota(s)` : ''}{nCuotas && cuotaBase ? ' × ' : ''}{cuotaBase ? fmtUsd(cuotaBase) : ''}</Text>
               </View>
             ) : null}
-            <View style={s.planRow}><Text style={s.planLabel}>Plan de cuotas</Text><Text style={s.planVal}>{data.planCuotas || '________________'}</Text></View>
+            {cronograma.length === 0 ? (
+              <View style={s.planRow}><Text style={s.planLabel}>Plan de cuotas</Text><Text style={s.planVal}>{data.planCuotas || '________________'}</Text></View>
+            ) : null}
           </View>
+
+          {/* Cronograma detallado: cada cuota con su vencimiento y monto */}
+          {cronograma.length > 0 ? (
+            <View style={s.cronoBox}>
+              <View style={s.cronoHeader}>
+                <Text style={s.cronoHeaderText}>Cronograma de cuotas de la inicial</Text>
+                {data.planCuotas ? <Text style={s.cronoHeaderSub}>{data.planCuotas}</Text> : null}
+              </View>
+              <View style={s.cronoTh}>
+                <Text style={[s.cronoThText, s.colNum]}>N°</Text>
+                <Text style={[s.cronoThText, s.colVenc]}>Vencimiento</Text>
+                <Text style={[s.cronoThText, s.colMonto]}>Monto</Text>
+              </View>
+              {cronograma.map((c, i) => (
+                <View key={c.n} style={i % 2 === 1 ? [s.cronoRow, s.cronoRowAlt] : s.cronoRow}>
+                  <Text style={[s.cronoCell, s.colNum]}>{c.n}</Text>
+                  <Text style={[s.cronoCell, s.colVenc]}>{c.venc}</Text>
+                  <Text style={[s.cronoCell, s.colMonto, { fontFamily: 'Helvetica-Bold' }]}>{fmtUsd(c.monto)}</Text>
+                </View>
+              ))}
+              <View style={s.cronoTotal}>
+                <Text style={s.cronoTotalLabel}>Total financiado ({nCuotas} cuota{nCuotas === 1 ? '' : 's'})</Text>
+                <Text style={s.cronoTotalVal}>{fmtUsd(totalCrono)}</Text>
+              </View>
+            </View>
+          ) : null}
 
           <Text style={s.sectionTitle}>Compromiso de Gestión y Seguimiento de Cobranza</Text>
           <Text style={s.p}>
