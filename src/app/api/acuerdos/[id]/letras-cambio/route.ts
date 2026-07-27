@@ -4,6 +4,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { LetraCambioPDF, LetraCambioData } from '@/lib/letra-cambio-pdf'
+import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
@@ -106,6 +107,14 @@ export async function GET(
     fiadorNombre,
     fiadorCedula,
     letras,
+  }
+
+  // Membrete del concesionario de turno (La Oriental por defecto).
+  const ident = await getConcesionarioIdentity(admin, (acuerdo as any).concesionario_id ?? 'la-oriental')
+  data.membrete = {
+    nombre: ident.nombre, rif: ident.rif, direccion: ident.direccion,
+    telefono: ident.telefono, correo: ident.correo, logoSrc: ident.logoSrc,
+    colorPrimario: ident.colorPrimario, colorSecundario: ident.colorSecundario,
   }
 
   const pdfBuffer = await renderToBuffer(

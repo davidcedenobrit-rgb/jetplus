@@ -1,5 +1,6 @@
 import React from 'react'
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
+import { PdfMembrete, type MembreteData } from './pdf-membrete'
 
 const RED = '#C41E3A'
 const BLACK = '#111111'
@@ -60,14 +61,15 @@ export interface ShowroomFila {
   proforma_vehimotors: string | null
 }
 
-export function ShowroomListadoPDF({ filas, titulo, fecha }: { filas: ShowroomFila[]; titulo: string; fecha: string }) {
+export function ShowroomListadoPDF({ filas, titulo, fecha, membrete }: { filas: ShowroomFila[]; titulo: string; fecha: string; membrete?: MembreteData }) {
   return (
-    <Document title={`Listado showroom — ${titulo}`} author="La Oriental Automotors">
+    <Document title={`Listado showroom — ${titulo}`} author={membrete?.nombre ?? 'La Oriental Automotors'}>
       <Page size="A4" orientation="landscape" style={s.page}>
+        {membrete ? <View style={{ marginBottom: 8 }} fixed><PdfMembrete data={membrete} /></View> : null}
         <View style={s.header}>
           <View>
             <Text style={s.title}>Vehículos en Showroom</Text>
-            <Text style={s.sub}>La Oriental Automotors · MG & MAXUS · {titulo}</Text>
+            <Text style={s.sub}>{membrete?.nombre ?? 'La Oriental Automotors'} · {titulo}</Text>
           </View>
           <View>
             <Text style={s.meta}>{filas.length} vehículo{filas.length !== 1 ? 's' : ''}</Text>

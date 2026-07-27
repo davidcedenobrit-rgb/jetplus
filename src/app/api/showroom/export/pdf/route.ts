@@ -4,6 +4,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { ShowroomListadoPDF } from '@/lib/showroom-listado-pdf'
+import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 const TAB_LABEL: Record<string, string> = {
   todos: 'Todos',
@@ -33,11 +34,19 @@ export async function GET(req: Request) {
   const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })
   const titulo = TAB_LABEL[tab] ?? 'Todos'
 
+  const ident = await getConcesionarioIdentity(supabase, 'la-oriental')
+  const membrete = {
+    nombre: ident.nombre, rif: ident.rif, direccion: ident.direccion,
+    telefono: ident.telefono, correo: ident.correo, logoSrc: ident.logoSrc,
+    colorPrimario: ident.colorPrimario, colorSecundario: ident.colorSecundario,
+  }
+
   const pdfBuffer = await renderToBuffer(
     React.createElement(ShowroomListadoPDF, {
       filas: (filas ?? []) as any,
       titulo,
       fecha,
+      membrete,
     }) as any
   )
 

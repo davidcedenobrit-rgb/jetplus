@@ -1,6 +1,7 @@
 import React from 'react'
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { montoUsdALetras, mesEnLetras, diaEnLetras } from './monto-a-letras'
+import { PdfMembrete, type MembreteData } from './pdf-membrete'
 
 const BLACK = '#000000'
 const GRAY = '#4b5563'
@@ -78,6 +79,7 @@ export interface LetraCambioData {
   deudorCorreo: string
   fiadorNombre?: string | null
   fiadorCedula?: string | null
+  membrete?: MembreteData
   letras: Array<{
     monto: number
     fechaVencimiento: string  // ISO date
@@ -115,6 +117,9 @@ export function LetraCambioPDF({ data }: { data: LetraCambioData }) {
         return (
           <Page key={idx} size="A4" style={s.page}>
             <View style={s.letraBox}>
+              {data.membrete ? (
+                <View style={{ marginBottom: 8 }}><PdfMembrete data={data.membrete} /></View>
+              ) : null}
               <Text style={s.title}>LETRA DE CAMBIO</Text>
 
               <View style={s.headerRow}>

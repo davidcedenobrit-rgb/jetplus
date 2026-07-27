@@ -9,7 +9,13 @@ export interface ConcesionarioIdentity {
   correo: string | null
   logoSrc?: string
   selloSrc?: string
+  colorPrimario: string
+  colorSecundario: string
 }
+
+// Colores TOP por defecto (La Oriental): rojo + negro.
+export const PDF_COLOR_PRIMARIO = '#C41E3A'
+export const PDF_COLOR_SECUNDARIO = '#111827'
 
 const LA_ORIENTAL_FALLBACK = {
   id: 'la-oriental',
@@ -43,7 +49,7 @@ export async function getConcesionarioIdentity(supabase: any, id: string | null)
   const cid = id || 'la-oriental'
   const { data } = await supabase
     .from('concesionarios')
-    .select('id, nombre, rif, direccion, telefono, correo, logo_url, sello_url')
+    .select('id, nombre, rif, direccion, telefono, correo, logo_url, sello_url, color_primario, color_secundario')
     .eq('id', cid)
     .maybeSingle()
 
@@ -69,5 +75,7 @@ export async function getConcesionarioIdentity(supabase: any, id: string | null)
     correo: row.correo,
     logoSrc,
     selloSrc,
+    colorPrimario: (row as any).color_primario || PDF_COLOR_PRIMARIO,
+    colorSecundario: (row as any).color_secundario || PDF_COLOR_SECUNDARIO,
   }
 }
