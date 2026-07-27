@@ -15,6 +15,10 @@ export async function buildComprobanteData(admin: any, egreso: any): Promise<Com
     const { data: prov } = await admin.from('proveedores').select('nombre, rif, direccion').eq('id', egreso.proveedor_id).maybeSingle()
     if (prov) { sujetoNombre = prov.nombre ?? sujetoNombre; sujetoRif = prov.rif ?? sujetoRif; sujetoDireccion = prov.direccion ?? '' }
   }
+  // La dirección capturada en el egreso tiene prioridad sobre la del proveedor.
+  if (egreso.beneficiario_direccion && String(egreso.beneficiario_direccion).trim()) {
+    sujetoDireccion = String(egreso.beneficiario_direccion).trim()
+  }
 
   const periodo: string = egreso.ret_iva_periodo ?? ''
   const mesNum = parseInt(periodo.slice(4, 6), 10)

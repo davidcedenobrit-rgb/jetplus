@@ -17,6 +17,7 @@ export type CrearEgresoPayload = {
   banco_origen: string | null
   beneficiario: string | null
   cedula_rif_benef: string | null
+  beneficiario_direccion: string | null
   referencia: string | null
   fecha_egreso: string
   area_responsable: string | null
@@ -48,6 +49,7 @@ export type Proveedor = {
   telefono: string | null
   numero_cuenta: string | null
   banco: string | null
+  direccion: string | null
 }
 
 export async function crearEgreso(payload: CrearEgresoPayload) {
@@ -149,6 +151,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       banco_origen:     parsed.data.banco_origen ?? null,
       beneficiario:     parsed.data.beneficiario ?? null,
       cedula_rif_benef: parsed.data.cedula_rif_benef ?? null,
+      beneficiario_direccion: payload.beneficiario_direccion?.trim() || null,
       referencia:       parsed.data.referencia ?? null,
       fecha_egreso:     parsed.data.fecha_egreso,
       area_responsable: parsed.data.area_responsable ?? null,
@@ -228,7 +231,7 @@ export async function actualizarTasaEgreso(egresoId: string, tasa: number, monto
 
 // ── Proveedores (beneficiario del egreso) ──────────────────────────────────
 
-const PROVEEDOR_COLS = 'id, nombre, rif, correo, telefono, numero_cuenta, banco'
+const PROVEEDOR_COLS = 'id, nombre, rif, correo, telefono, numero_cuenta, banco, direccion'
 
 export async function buscarProveedores(query: string): Promise<{ proveedores: Proveedor[] }> {
   const supabase = await createClient()
@@ -255,6 +258,7 @@ export async function crearProveedor(input: {
   telefono?: string | null
   numero_cuenta?: string | null
   banco?: string | null
+  direccion?: string | null
 }): Promise<{ proveedor?: Proveedor; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -275,6 +279,7 @@ export async function crearProveedor(input: {
       telefono:      clean(input.telefono),
       numero_cuenta: clean(input.numero_cuenta),
       banco:         clean(input.banco),
+      direccion:     clean(input.direccion),
     })
     .select(PROVEEDOR_COLS)
     .single()
