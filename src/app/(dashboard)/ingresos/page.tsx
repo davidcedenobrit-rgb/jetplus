@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCurrency, formatDate, ESTADOS_RECIBO_LABEL, METODOS_PAGO } from '@/lib/utils'
-import { Plus, Search, FileBarChart2 } from 'lucide-react'
+import { Plus, Search, FileBarChart2, Layers } from 'lucide-react'
 import BuscadorClienteURL from './BuscadorClienteURL'
 
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
@@ -143,6 +143,9 @@ export default async function IngresosPage({
           <p className="text-oriental-gray text-sm mt-1">{ingresos?.length ?? 0} registros</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/ingresos/sin-centro" className="btn-secondary flex items-center gap-2">
+            <Layers size={16} /> Sin centro de costo
+          </Link>
           <Link href="/ingresos/reporte" className="btn-secondary flex items-center gap-2">
             <FileBarChart2 size={16} /> Reporte
           </Link>

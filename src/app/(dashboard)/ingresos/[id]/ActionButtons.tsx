@@ -12,6 +12,7 @@ import {
 import ReporteVehimotorsModal from './ReporteVehimotorsModal'
 import { BRANDING } from '@/lib/branding'
 import { CUSTODIOS_FIJOS, CANAL_A_CUSTODIO_DEFAULT } from '@/lib/custodios'
+import { CENTROS_NO_PROPIOS } from '@/lib/centros-costo'
 
 const CANALES: Array<{ value: string; label: string; requiereCustodio: boolean }> = [
   { value: 'efectivo',         label: 'Efectivo',                          requiereCustodio: true },
@@ -646,7 +647,11 @@ export default function ActionButtons({
 
   async function handleRecalificar(centroId: string) {
     setLoading('recalificar')
-    await supabase.from('ingresos').update({ centro_costo_id: centroId || null, updated_at: new Date().toISOString() }).eq('id', ingresoId)
+    const update: Record<string, any> = { centro_costo_id: centroId || null, updated_at: new Date().toISOString() }
+    // Coherencia: el centro Vehimotors representa fondos de terceros.
+    if (centroId && CENTROS_NO_PROPIOS.has(centroId)) update.titular_fondos = 'vehimotors'
+    else if (centroId) update.titular_fondos = 'propio'
+    await supabase.from('ingresos').update(update).eq('id', ingresoId)
     setLoading('')
     setShowModalRecalificar(false)
     router.refresh()
