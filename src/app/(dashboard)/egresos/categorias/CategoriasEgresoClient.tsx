@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ListChecks, Check, X, Pencil, ChevronUp, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
-import { renombrarCategoria, toggleCategoria, moverCategoria } from './actions'
+import { ArrowLeft, ListChecks, Check, X, Pencil, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, Plus } from 'lucide-react'
+import { renombrarCategoria, toggleCategoria, moverCategoria, crearCategoria } from './actions'
 
 export type CategoriaRow = { clave: string; nombre: string; activo: boolean; orden: number }
 
@@ -14,8 +14,18 @@ export default function CategoriasEgresoClient({ inicial }: { inicial: Categoria
   const [editando, setEditando] = useState<string | null>(null)
   const [texto, setTexto] = useState('')
   const [trabajando, setTrabajando] = useState<string | null>(null)
+  const [nueva, setNueva] = useState('')
+  const [creando, setCreando] = useState(false)
 
   const refrescar = () => startTransition(() => router.refresh())
+
+  async function crear() {
+    const n = nueva.trim()
+    if (!n) return
+    setCreando(true)
+    await crearCategoria(n)
+    setNueva(''); setCreando(false); refrescar()
+  }
 
   async function guardarNombre(clave: string) {
     setTrabajando(clave)
@@ -50,6 +60,15 @@ export default function CategoriasEgresoClient({ inicial }: { inicial: Categoria
 
       <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
         Las <b>desactivadas</b> dejan de aparecer al registrar egresos nuevos, pero los egresos anteriores conservan su categoría. No se borran datos.
+      </div>
+
+      {/* Crear nueva categoría */}
+      <div className="card p-3 mb-4 flex items-center gap-2">
+        <input value={nueva} onChange={e => setNueva(e.target.value)} placeholder="Nueva categoría (ej. Publicidad)"
+          className="input py-2 flex-1" onKeyDown={e => { if (e.key === 'Enter') crear() }} />
+        <button onClick={crear} disabled={creando || !nueva.trim()} className="btn-primary flex items-center gap-1.5 py-2 px-4 text-sm disabled:opacity-50">
+          {creando ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Agregar
+        </button>
       </div>
 
       <div className="card divide-y divide-gray-100">

@@ -15,6 +15,26 @@ async function guarded() {
   return { svc }
 }
 
+function slug(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'categoria'
+}
+
+export async function crearCategoria(nombre: string) {
+  const g = await guarded(); if ('error' in g) return g
+  const n = nombre.trim()
+  if (!n) return { error: 'El nombre no puede estar vacío' }
+  // Genera una clave única a partir del nombre
+  const base = slug(n)
+  const { data: existentes } = await g.svc.from('categorias_egreso').select('clave, orden')
+  const claves = new Set((existentes ?? []).map(c => c.clave))
+  let clave = base, i = 2
+  while (claves.has(clave)) { clave = `${base}_${i++}` }
+  const maxOrden = Math.max(0, ...(existentes ?? []).map(c => Number(c.orden) || 0))
+  const { error } = await g.svc.from('categorias_egreso').insert({ clave, nombre: n, activo: true, orden: maxOrden + 1 })
+  return error ? { error: error.message } : { ok: true }
+}
+
 export async function renombrarCategoria(clave: string, nombre: string) {
   const g = await guarded(); if ('error' in g) return g
   const n = nombre.trim()

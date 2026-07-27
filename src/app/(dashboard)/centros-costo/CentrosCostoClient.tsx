@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, PieChart, TrendingUp, TrendingDown, FileDown } from 'lucide-react'
+import { ArrowLeft, PieChart, TrendingUp, TrendingDown, FileDown, Settings } from 'lucide-react'
 import Link from 'next/link'
 
 type Mov = { monto: number; moneda: string; tasa: number | null; centro: string | null }
@@ -121,7 +121,10 @@ export default function CentrosCostoClient() {
           <label className="label">Hasta</label>
           <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="input" />
         </div>
-        <button onClick={exportarCsv} disabled={filas.length === 0} className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50 disabled:opacity-50">
+        <Link href="/centros-costo/gestionar" className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50">
+          <Settings size={15} /> Gestionar centros
+        </Link>
+        <button onClick={exportarCsv} disabled={filas.length === 0} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50 disabled:opacity-50">
           <FileDown size={15} /> CSV
         </button>
       </div>
