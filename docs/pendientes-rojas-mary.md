@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Cotización — Retenciones automáticas de IVA 🔴
+## 1. Cotización — Retenciones automáticas de IVA ✅ HECHO
 *("estaba a punto de cargar las retenciones en automático")*
 
 - [ ] Al marcar el cliente como **agente de retención**, calcular la retención **automáticamente** (hoy solo aparece una nota, no el cálculo).
@@ -17,7 +17,11 @@
 - [ ] Mostrar el **monto ya calculado** de lo que pagaría el cliente (no solo la nota). *"Si le da el cálculo de una vez, ya sabe cuánto tendría que pagar — eso es lo que le gusta al cliente."*
 - [ ] Mantener la nota existente: *"Si el cliente es agente de retención, deberá presentar la retención al momento de ser facturado para que se le reconozca dicho porcentaje del IVA."*
 
-## 2. Cotización — Editar cliente / persona jurídica 🔴
+## 2. Cotización — Editar cliente / persona jurídica ✅ HECHO
+<!-- Selector Natural/Jurídica + editar nombre/RIF (ya existía vía editar_completa). -->
+<!-- Extra hecho: cotización Banca Nacional con cuadro a la derecha, "tasa Banco
+     Central", "Monto aprobado por el banco" en franja verde; egresos reordenado. -->
+
 
 - [ ] Permitir **editar el nombre del cliente** en la cotización (ej. pasar de persona natural al nombre de la empresa a facturar).
 - [ ] Corregir el selector **"Jurídico"**: hoy no deja seleccionarlo (*"no me da la opción para agarrar jurídico"*).
