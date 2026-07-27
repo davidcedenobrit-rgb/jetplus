@@ -433,9 +433,9 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
           ) : null}
 
           {/* Compromiso de pago — Financiamiento de la INICIAL por La Oriental.
-              Es un crédito aparte del de Vehimotor; se muestra como su propio
-              bloque (también en pre-venta, como condición aceptada). */}
-          {acLO ? (
+              Es un crédito aparte del de Vehimotor; solo se detalla en el
+              documento de venta (ya registrada), no en la proforma pre-venta. */}
+          {acLO && !preVenta ? (
             <View style={{ marginTop: 14 }}>
               <View style={{ border: '1pt solid #7c3aed', borderRadius: 6, overflow: 'hidden' }}>
                 <View style={{ backgroundColor: '#7c3aed', padding: '7pt 10pt' }}>
