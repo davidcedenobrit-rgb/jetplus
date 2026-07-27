@@ -10,14 +10,16 @@ export async function buildComprobanteData(admin: any, egreso: any): Promise<Com
 
   let sujetoNombre = egreso.beneficiario ?? '—'
   let sujetoRif = egreso.cedula_rif_benef ?? '—'
-  let sujetoDireccion = ''
+  // La dirección va ANCLADA al proveedor: la del proveedor manda; solo si el
+  // proveedor no tiene, se usa la capturada en el egreso como respaldo.
+  let sujetoDireccion = egreso.beneficiario_direccion ? String(egreso.beneficiario_direccion).trim() : ''
   if (egreso.proveedor_id) {
     const { data: prov } = await admin.from('proveedores').select('nombre, rif, direccion').eq('id', egreso.proveedor_id).maybeSingle()
-    if (prov) { sujetoNombre = prov.nombre ?? sujetoNombre; sujetoRif = prov.rif ?? sujetoRif; sujetoDireccion = prov.direccion ?? '' }
-  }
-  // La dirección capturada en el egreso tiene prioridad sobre la del proveedor.
-  if (egreso.beneficiario_direccion && String(egreso.beneficiario_direccion).trim()) {
-    sujetoDireccion = String(egreso.beneficiario_direccion).trim()
+    if (prov) {
+      sujetoNombre = prov.nombre ?? sujetoNombre
+      sujetoRif = prov.rif ?? sujetoRif
+      if (prov.direccion && String(prov.direccion).trim()) sujetoDireccion = String(prov.direccion).trim()
+    }
   }
 
   const periodo: string = egreso.ret_iva_periodo ?? ''

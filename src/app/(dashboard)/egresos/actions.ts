@@ -15,6 +15,7 @@ export type CrearEgresoPayload = {
   tasa_cambio: number | null
   metodo_pago: string | null
   banco_origen: string | null
+  banco_destino: string | null
   beneficiario: string | null
   cedula_rif_benef: string | null
   beneficiario_direccion: string | null
@@ -149,6 +150,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       moneda:           parsed.data.moneda,
       metodo_pago:      parsed.data.metodo_pago ?? null,
       banco_origen:     parsed.data.banco_origen ?? null,
+      banco_destino:    payload.banco_destino?.trim() || null,
       beneficiario:     parsed.data.beneficiario ?? null,
       cedula_rif_benef: parsed.data.cedula_rif_benef ?? null,
       beneficiario_direccion: payload.beneficiario_direccion?.trim() || null,
@@ -187,6 +189,19 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
     .single()
 
   if (insertError || !inserted) return { error: 'Error al guardar el egreso' }
+
+  // 3b. Anclar dirección y banco al proveedor: la dirección/banco capturados en
+  // el egreso quedan guardados en la ficha del proveedor (fuente de verdad).
+  if (proveedorId) {
+    const provUpdate: Record<string, string> = {}
+    const dir = payload.beneficiario_direccion?.trim()
+    const bancoDest = payload.banco_destino?.trim()
+    if (dir) provUpdate.direccion = dir
+    if (bancoDest) provUpdate.banco = bancoDest
+    if (Object.keys(provUpdate).length > 0) {
+      await admin.from('proveedores').update(provUpdate).eq('id', proveedorId)
+    }
+  }
 
   // 4. Registrar comprobantes
   if (payload.comprobantes.length > 0) {

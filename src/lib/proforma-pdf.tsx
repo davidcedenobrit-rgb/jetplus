@@ -250,8 +250,8 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
           <View style={s.companyBlock}>
             <Text style={s.companyName}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
             <Text style={s.companyRif}>RIF: J-505692143</Text>
-            <Text style={s.companyLine}>AV. UGARTE ALIRIO PELYO · CENTRO PROFESIONAL DAVID</Text>
-            <Text style={s.companyLine}>MATURÍN - MONAGAS - VENEZUELA</Text>
+            <Text style={s.companyLine}>AVENIDA ALIRIO UGARTE PELAYO · CENTRO PROFESIONAL DAVIS · QTA/GALPÓN S/N</Text>
+            <Text style={s.companyLine}>SECTOR CENTRO · MATURÍN - MONAGAS · ZONA POSTAL 6201</Text>
             <Text style={s.companyLine}>TEL: 0414-9989010 · laorientalautomotorsc@gmail.com</Text>
           </View>
         </View>

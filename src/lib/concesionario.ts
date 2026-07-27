@@ -21,7 +21,7 @@ const LA_ORIENTAL_FALLBACK = {
   id: 'la-oriental',
   nombre: 'LA ORIENTAL AUTOMOTORS, C.A.',
   rif: 'J-505692143',
-  direccion: 'AV. UGARTE ALIRIO PELYO · CENTRO PROFESIONAL DAVID\nMATURÍN - MONAGAS - VENEZUELA',
+  direccion: 'AVENIDA ALIRIO UGARTE PELAYO, CENTRO PROFESIONAL DAVIS, QTA/GALPÓN NRO S/N, SECTOR CENTRO\nMATURÍN - MONAGAS - ZONA POSTAL 6201',
   telefono: '0414-9989010',
   correo: 'laorientalautomotorsc@gmail.com',
   logo_url: null as string | null,

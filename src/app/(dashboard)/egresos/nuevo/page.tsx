@@ -48,6 +48,7 @@ export default function NuevoEgresoPage() {
   const [tasaCambio, setTasaCambio] = useState('')
   const [metodoPago, setMetodoPago] = useState('')
   const [bancoOrigen, setBancoOrigen] = useState('')
+  const [bancoDestino, setBancoDestino] = useState('')
   const [proveedor, setProveedor] = useState<Proveedor | null>(null)
   const [direccionBeneficiario, setDireccionBeneficiario] = useState('')
   const [referencia, setReferencia] = useState('')
@@ -84,9 +85,11 @@ export default function NuevoEgresoPage() {
       .then(({ data }) => { if (data) setCategorias(data) })
   }, [])
 
-  // Al elegir un proveedor, prellena su dirección (editable) si tiene una.
+  // Al elegir un proveedor, prellena su dirección y su banco (editables). La
+  // dirección/banco quedan anclados al proveedor: si se editan, se guardan en él.
   useEffect(() => {
     if (proveedor?.direccion) setDireccionBeneficiario(proveedor.direccion)
+    if (proveedor?.banco) setBancoDestino(proveedor.banco)
   }, [proveedor])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -122,6 +125,7 @@ export default function NuevoEgresoPage() {
       tasa_cambio: !isNaN(tasaNum) && tasaNum > 0 ? tasaNum : null,
       metodo_pago: metodoPago || null,
       banco_origen: bancoOrigen || null,
+      banco_destino: bancoDestino.trim() || null,
       beneficiario: proveedor?.nombre ?? null,
       cedula_rif_benef: proveedor?.rif ?? null,
       beneficiario_direccion: direccionBeneficiario.trim() || null,
@@ -322,8 +326,9 @@ export default function NuevoEgresoPage() {
               <p className="text-[11px] text-oriental-gray mt-1">Busca un proveedor o créalo en línea (nombre, RIF, correo, teléfono, N° de cuenta).</p>
             </div>
             <div>
-              <label className="label">Dirección del beneficiario</label>
-              <textarea className="textarea" rows={2} placeholder="Dirección fiscal del proveedor / cliente" value={direccionBeneficiario} onChange={e => setDireccionBeneficiario(e.target.value)} />
+              <label className="label">Dirección fiscal del proveedor</label>
+              <textarea className="textarea" rows={2} placeholder="Dirección fiscal del proveedor" value={direccionBeneficiario} onChange={e => setDireccionBeneficiario(e.target.value)} />
+              <p className="text-[11px] text-oriental-gray mt-1">Queda anclada al proveedor: si la editas, se guarda en su ficha y aparece en el comprobante de retención.</p>
             </div>
           </div>
         </div>
@@ -423,11 +428,20 @@ export default function NuevoEgresoPage() {
               </select>
             </div>
             <div>
-              <label className="label">Banco origen</label>
+              <label className="label">Banco origen (La Oriental)</label>
               <select className="select" value={bancoOrigen} onChange={e => setBancoOrigen(e.target.value)}>
                 <option value="">Seleccionar...</option>
                 {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="label">Banco destino (proveedor)</label>
+              <input type="text" className="input" placeholder="Banco del proveedor que recibe el pago"
+                value={bancoDestino} onChange={e => setBancoDestino(e.target.value)} list="bancos-ve-destino" />
+              <datalist id="bancos-ve-destino">
+                {BANCOS_VE.map(b => <option key={b} value={b} />)}
+              </datalist>
+              {proveedor?.numero_cuenta && <p className="text-[11px] text-oriental-gray mt-1">Cta. del proveedor: <b className="font-mono text-oriental-black">{proveedor.numero_cuenta}</b></p>}
             </div>
             <div>
               <label className="label">Referencia</label>

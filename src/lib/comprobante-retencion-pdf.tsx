@@ -100,7 +100,7 @@ export function ComprobanteRetencionPDF({ data }: { data: ComprobanteRetencionDa
           <View style={s.companyBlock}>
             <Text style={s.companyName}>{data.agenteNombre || 'LA ORIENTAL AUTOMOTORS, C.A.'}</Text>
             <Text style={s.companyRif}>RIF: {data.agenteRif || 'J-505692143'}</Text>
-            <Text style={s.companyLine}>{data.agenteDireccion || 'AV. UGARTE ALIRIO PELYO · CENTRO PROFESIONAL DAVID · MATURÍN - MONAGAS'}</Text>
+            <Text style={s.companyLine}>{data.agenteDireccion || 'AVENIDA ALIRIO UGARTE PELAYO, CENTRO PROFESIONAL DAVIS, QTA/GALPÓN NRO S/N, SECTOR CENTRO, MATURÍN - MONAGAS, ZONA POSTAL 6201'}</Text>
             <Text style={s.companyLine}>TEL: 0414-9989010 · laorientalautomotorsc@gmail.com</Text>
           </View>
         </View>
