@@ -20,7 +20,7 @@ export async function GET() {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
     .from('vendedoras')
-    .select('id, nombre, activa, created_at')
+    .select('id, nombre, codigo, activa, created_at')
     .order('created_at')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

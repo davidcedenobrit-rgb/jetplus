@@ -66,7 +66,7 @@ export default async function GestionVentasPage() {
       .range(from, to)),
     fetchAllRows<any>((from, to) => supabase
       .from('proformas')
-      .select('id, vehiculo_id, numero, precio_vehiculo, cotizacion_id, cliente_id')
+      .select('id, vehiculo_id, numero, precio_vehiculo, cotizacion_id, cliente_id, vendedoras')
       .not('vehiculo_id', 'is', null)
       .range(from, to)),
     fetchAllRows<any>((from, to) => supabase
@@ -126,7 +126,11 @@ export default async function GestionVentasPage() {
       poliza_vida: Number(div?.poliza_vida ?? 0),
       obsequio_clientes: Number(div?.obsequio_clientes ?? 0),
       alfombras: Number(div?.alfombras ?? 0),
-      vendedora: div?.vendedora ?? '',
+      // Vendedora ya definida en la división, o la sugerida por la proforma
+      // (viene de la cotización, para no re-escribirla a mano).
+      vendedora: div?.vendedora
+        || (Array.isArray(pro?.vendedoras) ? pro.vendedoras.map((x: any) => x?.nombre).filter(Boolean).join(', ') : '')
+        || '',
       reportado_vm: !!div?.reportado_vm,
       div_notas: div?.notas ?? '',
     }

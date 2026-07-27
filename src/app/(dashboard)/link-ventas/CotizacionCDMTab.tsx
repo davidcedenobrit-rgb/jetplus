@@ -297,6 +297,20 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   const [concesionarios, setConcesionarios] = useState<Concesionario[]>([])
   const [concesionarioId, setConcesionarioId] = useState('la-oriental')
 
+  // Vendedora(s): cuando Rojas cotiza desde el panel debe atribuir la venta a
+  // una o varias vendedoras (desde el link ya vienen por su código).
+  const [vendedorasList, setVendedorasList] = useState<{ codigo: string; nombre: string }[]>([])
+  const [vendedorasSel, setVendedorasSel] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/vendedoras')
+      .then(r => r.json())
+      .then((d: { codigo: string; nombre: string; activa?: boolean }[]) => {
+        if (Array.isArray(d)) setVendedorasList(d.filter(v => v.activa !== false && v.codigo !== ROJAS_CODIGO))
+      })
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     fetch('/api/concesionarios')
       .then(r => r.json())
@@ -428,6 +442,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
           plan: planEnvio,
           cantidad,
           concesionarioId,
+          vendedorasCodigos: vendedorasSel,
           ...(!rojasMode && plan === 'ac500' && planAC500Sel ? { ac500PlanId: planAC500Sel.id, ac500Meses } : {}),
           ...rojasPayload,
           ...bnPayload,
@@ -445,7 +460,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     setErrorMsg(''); setNumeroCot(''); setCotIdCreada('')
     setPlanAC500Sel(null); setPlanesAC500([])
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
-    setCantidad(1)
+    setCantidad(1); setVendedorasSel([])
     setRojasMode(false); setRojasCond(''); setRojasLineas({}); setRojasPrecio('')
     setBnVariante('cliente'); setBnDiferencial(''); setBnCond(''); setBnExpediente([]); setBnCasoMsg(''); setBnBanco('')
     setBnCuotas(false); setBnFinanciado(''); setBnMeses('24'); setBnTasa('16')
@@ -873,6 +888,31 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
               )}
             </div>
           )}
+        </div>
+
+        {/* Vendedora(s) — atribución de la venta */}
+        <div className="card p-4 mb-4">
+          <p className="text-xs font-bold text-oriental-black uppercase tracking-wider mb-1">Vendedora(s)</p>
+          <p className="text-[11px] text-gray-400 mb-3">Selecciona quién(es) atiende(n) esta venta. Puedes marcar varias. Si no marcas ninguna, queda a nombre de la casa (José Rojas).</p>
+          <div className="flex flex-wrap gap-2">
+            {vendedorasList.length === 0 && (
+              <span className="text-[11px] text-gray-400">No hay vendedoras registradas.</span>
+            )}
+            {vendedorasList.map(v => {
+              const activo = vendedorasSel.includes(v.codigo)
+              return (
+                <button
+                  key={v.codigo}
+                  type="button"
+                  onClick={() => setVendedorasSel(prev => activo ? prev.filter(c => c !== v.codigo) : [...prev, v.codigo])}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${activo ? 'bg-oriental-red text-white border-oriental-red' : 'bg-white text-oriental-gray border-gray-200 hover:border-oriental-red'}`}
+                >
+                  {v.nombre}
+                  <span className={`ml-1.5 text-[9px] ${activo ? 'text-white/70' : 'text-gray-400'}`}>{v.codigo}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Datos del cliente */}

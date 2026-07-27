@@ -170,6 +170,7 @@ export async function POST(req: Request) {
       observaciones: observacionesFinal,
       condiciones_personalizadas: condPersonalizadas,
       bn_vehimotors: cot.bn_vehimotors ?? null,
+      vendedoras: cot.vendedoras ?? (cot.vendedora_nombre ? [{ nombre: cot.vendedora_nombre }] : null),
       correo_destino: enviarCorreo ? String(correoDestino ?? cot.cliente_correo ?? '').trim().toLowerCase() : null,
       emitida_por: user.id,
     }])

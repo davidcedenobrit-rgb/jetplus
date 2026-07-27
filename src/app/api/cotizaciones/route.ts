@@ -56,6 +56,10 @@ export async function POST(req: Request) {
       // Banca Nacional — Vehimotors (desde la bandeja): % aprobado por el banco y
       // % de merma del día que coloca Rojas.
       bnVehimotors,
+      // Vendedora(s) atribuidas cuando Rojas cotiza desde el panel. Arreglo de
+      // códigos de la tabla `vendedoras`. En el link público no se envía: la
+      // vendedora ya viene identificada por su propio código.
+      vendedorasCodigos,
     } = body
 
     const condPersonalizadas = String(condicionesPersonalizadas ?? '').trim() || null
@@ -139,6 +143,24 @@ export async function POST(req: Request) {
     if (!vendedora || (!vendedora.activa && codigoTrim !== CODIGO_CASA)) {
       return NextResponse.json({ error: 'Código de vendedora inválido' }, { status: 401 })
     }
+
+    // Vendedora(s) que se atribuyen la venta. Desde el panel de Rojas pueden
+    // seleccionarse una o varias; desde el link público se usa la que verificó
+    // su código. `vendedora_nombre` (texto) guarda los nombres unidos; el
+    // arreglo `vendedoras` guarda la estructura [{ codigo, nombre }].
+    const codigosSel = Array.isArray(vendedorasCodigos)
+      ? [...new Set(vendedorasCodigos.map((c: unknown) => String(c).trim()).filter(Boolean))]
+      : []
+    let vendedorasList: Array<{ codigo: string; nombre: string }> = []
+    if (codigosSel.length) {
+      const { data: vs } = await supabase
+        .from('vendedoras')
+        .select('codigo, nombre')
+        .in('codigo', codigosSel)
+      vendedorasList = (vs ?? []).map((v: { codigo: string; nombre: string }) => ({ codigo: v.codigo, nombre: v.nombre }))
+    }
+    if (!vendedorasList.length) vendedorasList = [{ codigo: codigoTrim, nombre: vendedora.nombre }]
+    const vendedoraNombreFinal = vendedorasList.map(v => v.nombre).join(', ')
 
     // Obtener vehículo — desde una promoción especial o del catálogo normal.
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -364,7 +386,8 @@ export async function POST(req: Request) {
       .insert([{
         fecha: hoy.toISOString().slice(0, 10),
         vencimiento: venc.toISOString().slice(0, 10),
-        vendedora_nombre: vendedora.nombre,
+        vendedora_nombre: vendedoraNombreFinal,
+        vendedoras: vendedorasList,
         concesionario_id: conces.id,
         cliente_id: clienteIdVinculado,
         cliente_nombre: clienteNombre.trim(),
