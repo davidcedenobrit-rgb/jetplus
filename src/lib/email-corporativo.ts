@@ -96,8 +96,9 @@ export async function enviarNotificacionCuestionarioCompletado(opts: Cuestionari
 
 // Recordatorio de pago/renovación de un permiso gubernamental (7 y 3 días antes).
 // Va a Rojas, Mary y Leysdem.
-export async function enviarRecordatorioPermiso(opts: { nombre: string; fechaPago: string; dias: number; url?: string | null }) {
+export async function enviarRecordatorioPermiso(opts: { nombre: string; fechaPago: string; dias: number; url?: string | null; to?: string[] }) {
   const { nombre, fechaPago, dias, url } = opts
+  const destinatarios = (opts.to && opts.to.length) ? opts.to : [CORREO_ROJAS, CORREO_MARY, CORREO_LEYSDEM]
   const resend = getResend()
   const fechaFmt = (() => {
     try { return new Date(fechaPago + 'T00:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' }) }
@@ -126,7 +127,7 @@ export async function enviarRecordatorioPermiso(opts: { nombre: string; fechaPag
   try {
     await resend.emails.send({
       from: FROM,
-      to: [CORREO_ROJAS, CORREO_MARY, CORREO_LEYSDEM],
+      to: destinatarios,
       subject: `⏰ Permiso por pagar en ${dias <= 0 ? '0' : dias} día(s) — ${nombre}`,
       html: wrap(body),
     })

@@ -18,6 +18,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
+  // Modo prueba: ?to=correo → envía a ese correo, sin marcar los avisos como
+  // enviados y sin filtrar por avisos previos (repetible, no molesta a nadie).
+  const testTo = url.searchParams.get('to')?.trim() || null
+  const esTest = !!(testTo && /\S+@\S+\.\S+/.test(testTo))
+
   const supabase = await createAdminClient()
   const { data: permisos, error } = await supabase
     .from('archivos')
@@ -34,6 +39,16 @@ export async function GET(req: Request) {
     const f = new Date(String(p.fecha_pago) + 'T00:00:00')
     const dias = Math.round((f.getTime() - hoy.getTime()) / 86400000)
     if (dias < 0) continue // ya venció: no re-notificar (evita spam)
+
+    // Modo prueba: envía cualquier permiso dentro de 7 días al correo de prueba,
+    // sin tocar los flags de aviso.
+    if (esTest) {
+      if (dias <= 7) {
+        const r = await enviarRecordatorioPermiso({ nombre: p.nombre ?? 'Permiso', fechaPago: String(p.fecha_pago), dias, url: p.url, to: [testTo!] })
+        if (r.ok) enviados.push({ id: p.id, dias, tipo: 'prueba', to: testTo })
+      }
+      continue
+    }
 
     // Ventana de 3 días: enviar el aviso "3 días" (una sola vez).
     if (dias <= 3 && !p.alerta_pago_3d_at) {
