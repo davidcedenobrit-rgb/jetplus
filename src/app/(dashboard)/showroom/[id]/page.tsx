@@ -202,6 +202,9 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
             )}
           </div>
 
+          {/* Inspecciones: recepción, chequeo, PDI (arriba, se usan al llegar el vehículo) */}
+          <InspeccionesVehiculo showroomId={id} puedeGestionar={puedeInspeccionar} />
+
           {/* PDI */}
           <div className={`card p-5 border-2 ${v.pdi_hecho ? 'border-green-200 bg-green-50' : 'border-dashed border-gray-200'}`}>
             <div className="flex items-center justify-between">
@@ -224,9 +227,6 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
 
           {/* Documentos preventa */}
           <ShowroomDocumentos showroomId={id} archivosIniciales={(archivos ?? []) as any} />
-
-          {/* Inspecciones: recepción, chequeo, PDI */}
-          <InspeccionesVehiculo showroomId={id} puedeGestionar={puedeInspeccionar} />
 
           {/* Historial de estados */}
           {(historial ?? []).length > 0 && (
