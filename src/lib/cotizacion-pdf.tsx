@@ -368,9 +368,9 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                     <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
                     <Text style={s.calcVal}>{fmt(bn.gastos + bn.placa)}</Text>
                   </View>
-                  <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>Monto aportado por el banco</Text>
-                    <Text style={s.calcVal}>{fmt(bn.aprobado_real)}</Text>
+                  <View style={[s.calcRow, { backgroundColor: '#dcfce7', borderBottom: 'none' }]}>
+                    <Text style={[s.calcLabel, { fontFamily: 'Helvetica-Bold', color: '#15803d' }]}>Monto aprobado por el banco</Text>
+                    <Text style={[s.calcVal, { color: '#15803d' }]}>{fmt(bn.aprobado_real)}</Text>
                   </View>
                   <View style={s.calcTotalRow}>
                     <Text style={s.calcTotalLabel}>INICIAL A PAGAR DEL CLIENTE:</Text>
