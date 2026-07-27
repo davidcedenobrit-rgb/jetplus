@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { CheckCircle2, Clock, Send, Inbox, ArrowRight, Wallet, DollarSign } from 'lucide-react'
+import { NOMBRES_CUSTODIOS_FIJOS } from '@/lib/custodios'
 
 const CANAL_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -130,7 +131,7 @@ export default async function CarlaPage() {
       </div>
 
       {/* Efectivo en poder de cada persona */}
-      {custodios.length > 0 && (
+      {(custodios.length > 0 || custodiosExternos.length > 0) && (
         <div className="card p-4 mb-5">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -183,29 +184,31 @@ export default async function CarlaPage() {
               )
             })}
 
-            {/* Custodios externos (nombre libre, sin cuenta en el sistema) */}
+            {/* Custodios por nombre. Los custodios fijos (José, Carla, Mary, Leysdem)
+                se muestran como custodios normales; el resto como externos (ámbar). */}
             {custodiosExternos.map(e => {
+              const esFijo = NOMBRES_CUSTODIOS_FIJOS.has(e.nombre)
               const canalesExt = new Map<string, number>()
               for (const ing of e.ingresos) {
                 const k = ing.canal_destino as string
                 canalesExt.set(k, (canalesExt.get(k) ?? 0) + Number(ing.monto))
               }
               return (
-                <div key={`ext-${e.nombre}`} className="rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+                <div key={`ext-${e.nombre}`} className={`rounded-xl border p-3 ${esFijo ? 'bg-white border-gray-200' : 'bg-amber-50/50 border-amber-200'}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wide truncate">{e.nombre}</p>
-                    <span className="text-[9px] text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">{e.ingresos.length}</span>
+                    <p className={`text-[10px] font-bold uppercase tracking-wide truncate ${esFijo ? 'text-oriental-gray' : 'text-amber-800'}`}>{e.nombre}</p>
+                    <span className={`text-[9px] rounded px-1.5 py-0.5 ${esFijo ? 'text-oriental-gray bg-gray-100' : 'text-amber-700 bg-amber-100'}`}>{e.ingresos.length}</span>
                   </div>
                   <p className="text-lg font-black text-oriental-black mb-1">{formatCurrency(e.total)}</p>
-                  <div className="space-y-0.5 mt-2 pt-2 border-t border-amber-100">
+                  <div className={`space-y-0.5 mt-2 pt-2 border-t ${esFijo ? 'border-gray-100' : 'border-amber-100'}`}>
                     {Array.from(canalesExt.entries()).map(([canal, monto]) => (
                       <div key={canal} className="flex justify-between text-[10px]">
-                        <span className="text-amber-700">{CANAL_LABELS[canal] ?? canal}</span>
+                        <span className={esFijo ? 'text-oriental-gray' : 'text-amber-700'}>{CANAL_LABELS[canal] ?? canal}</span>
                         <span className="font-semibold text-oriental-black">${monto.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(monto)*100)%100===0?0:2, maximumFractionDigits: 2 })}</span>
                       </div>
                     ))}
                   </div>
-                  <p className="text-[9px] text-amber-600 mt-2">Custodio externo (no es usuario del sistema)</p>
+                  {!esFijo && <p className="text-[9px] text-amber-600 mt-2">Custodio externo (no es usuario del sistema)</p>}
                 </div>
               )
             })}

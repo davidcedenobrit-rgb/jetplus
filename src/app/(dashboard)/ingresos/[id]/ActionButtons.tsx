@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import ReporteVehimotorsModal from './ReporteVehimotorsModal'
 import { BRANDING } from '@/lib/branding'
+import { CUSTODIOS_FIJOS, CANAL_A_CUSTODIO_DEFAULT } from '@/lib/custodios'
 
 const CANALES: Array<{ value: string; label: string; requiereCustodio: boolean }> = [
   { value: 'efectivo',         label: 'Efectivo',                          requiereCustodio: true },
@@ -25,12 +26,6 @@ const CANALES: Array<{ value: string; label: string; requiereCustodio: boolean }
   { value: 'otro',             label: 'Otro',                              requiereCustodio: true },
 ]
 
-const CANAL_A_CUSTODIO_DEFAULT: Record<string, string> = {
-  personal_jose: 'jose',
-  personal_carla: 'carla',
-  personal_mary: 'mary',
-  personal_leysdem: 'leysdem',
-}
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const ROL_PUEDE_SOLICITAR = ['mary', 'leysdem', 'jose', 'admin', 'director']
 const ROL_PUEDE_RESOLVER = ['jose', 'admin', 'director']
@@ -483,20 +478,19 @@ function ModalAprobarIngreso({
   loading: boolean
 }) {
   const [canal, setCanal] = useState('')
-  const [custodioId, setCustodioId] = useState('')      // '' | uuid | 'otro'
-  const [custodioOtro, setCustodioOtro] = useState('')  // nombre libre cuando custodioId === 'otro'
+  // custodioSel puede ser: '' | nombre fijo (José, Carla…) | uuid de usuario | 'otro'
+  const [custodioSel, setCustodioSel] = useState('')
+  const [custodioOtro, setCustodioOtro] = useState('')  // nombre libre cuando custodioSel === 'otro'
   const canalCfg = CANALES.find(c => c.value === canal)
-  const esOtro = custodioId === 'otro'
-  const custodioValido = !canalCfg?.requiereCustodio || (esOtro ? !!custodioOtro.trim() : !!custodioId)
+  const esOtro = custodioSel === 'otro'
+  const esUsuario = custodios.some(c => c.id === custodioSel)
+  const custodioValido = !canalCfg?.requiereCustodio || (esOtro ? !!custodioOtro.trim() : !!custodioSel)
 
   useEffect(() => {
     if (!canal) return
-    const rolDefault = CANAL_A_CUSTODIO_DEFAULT[canal]
-    if (rolDefault) {
-      const match = custodios.find(c => c.rol === rolDefault)
-      if (match) setCustodioId(match.id)
-    }
-  }, [canal, custodios])
+    const sugerido = CANAL_A_CUSTODIO_DEFAULT[canal]
+    if (sugerido) setCustodioSel(sugerido)
+  }, [canal])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -506,8 +500,10 @@ function ModalAprobarIngreso({
       await onConfirm(canal, null, null)
     } else if (esOtro) {
       await onConfirm(canal, null, custodioOtro.trim())
+    } else if (esUsuario) {
+      await onConfirm(canal, custodioSel, null)          // usuario del sistema → custodio_id
     } else {
-      await onConfirm(canal, custodioId, null)
+      await onConfirm(canal, null, custodioSel)           // custodio fijo (nombre) → custodio_externo
     }
   }
 
@@ -544,7 +540,7 @@ function ModalAprobarIngreso({
             </label>
             <select
               value={canal}
-              onChange={e => { setCanal(e.target.value); setCustodioId('') }}
+              onChange={e => { setCanal(e.target.value); setCustodioSel('') }}
               required
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white"
             >
@@ -564,12 +560,15 @@ function ModalAprobarIngreso({
                 Custodio (quién lo tiene ahora) <span className="text-red-500">*</span>
               </label>
               <select
-                value={custodioId}
-                onChange={e => setCustodioId(e.target.value)}
+                value={custodioSel}
+                onChange={e => setCustodioSel(e.target.value)}
                 required
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-oriental-black focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white"
               >
                 <option value="">Seleccionar…</option>
+                {CUSTODIOS_FIJOS.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
                 {custodios.map(c => (
                   <option key={c.id} value={c.id}>{c.nombre} ({c.rol})</option>
                 ))}
