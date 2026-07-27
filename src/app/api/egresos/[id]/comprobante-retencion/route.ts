@@ -2,11 +2,22 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ComprobanteRetencionPDF } from '@/lib/comprobante-retencion-pdf'
 import { buildComprobanteData } from '@/lib/comprobante-retencion-data'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
+
+function getLogoBase64(): string | undefined {
+  try { return `data:image/png;base64,${readFileSync(join(process.cwd(), 'public', 'logo-la-oriental.png')).toString('base64')}` }
+  catch { return undefined }
+}
+function getSelloBase64(): string | undefined {
+  try { return `data:image/jpeg;base64,${readFileSync(join(process.cwd(), 'public', 'sello-la-oriental.jpeg')).toString('base64')}` }
+  catch { return undefined }
+}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
@@ -25,6 +36,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   const data = await buildComprobanteData(admin, e)
+  data.logoSrc = getLogoBase64()
+  data.selloSrc = getSelloBase64()
   const pdfBuffer = await renderToBuffer(React.createElement(ComprobanteRetencionPDF, { data }) as any)
   return new NextResponse(pdfBuffer as any, {
     status: 200,

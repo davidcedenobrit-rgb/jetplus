@@ -3,12 +3,23 @@ import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { Resend } from 'resend'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ComprobanteRetencionPDF } from '@/lib/comprobante-retencion-pdf'
 import { buildComprobanteData } from '@/lib/comprobante-retencion-data'
 import { periodoDeFecha, siguienteComprobante } from '@/lib/retencion-iva'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
+
+function getLogoBase64(): string | undefined {
+  try { return `data:image/png;base64,${readFileSync(join(process.cwd(), 'public', 'logo-la-oriental.png')).toString('base64')}` }
+  catch { return undefined }
+}
+function getSelloBase64(): string | undefined {
+  try { return `data:image/jpeg;base64,${readFileSync(join(process.cwd(), 'public', 'sello-la-oriental.jpeg')).toString('base64')}` }
+  catch { return undefined }
+}
 
 async function auth(req: Request) {
   const supabase = await createClient()
@@ -67,6 +78,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const data = await buildComprobanteData(admin, e)
+  data.logoSrc = getLogoBase64()
+  data.selloSrc = getSelloBase64()
   const pdfBuffer = await renderToBuffer(React.createElement(ComprobanteRetencionPDF, { data }) as any)
 
   const resend = new Resend(process.env.RESEND_API_KEY!)
