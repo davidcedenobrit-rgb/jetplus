@@ -6,6 +6,7 @@ import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 import { waCotizacionUrl } from '@/lib/whatsapp-cotizacion'
 import DescuentoPanel from './DescuentoPanel'
 import ProformaPanel from './ProformaPanel'
+import AcuerdoCobroPanel from './AcuerdoCobroPanel'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -419,6 +420,10 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
         </div>
 
         <div className="flex-1 px-5 py-4 space-y-5">
+          {/* Acuerdo de gestión de cobro (solo cuando La Oriental financia la
+              inicial). Si existe y no está aceptado, bloquea la proforma. */}
+          <AcuerdoCobroPanel cotId={cot.id} vendedoraNombre={cot.vendedora_nombre} onChange={() => router.refresh()} />
+
           {/* Flujo de venta: convertir la cotización en proforma (documento previo
               a la venta). Disponible en cualquier estado, porque muchos clientes
               avisan que aceptan por teléfono y no por el botón del correo. */}
