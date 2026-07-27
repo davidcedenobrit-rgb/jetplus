@@ -6,7 +6,7 @@ import type { Proveedor } from '../egresos/actions'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
-const COLS = 'id, nombre, rif, correo, telefono, numero_cuenta, banco'
+const COLS = 'id, nombre, rif, correo, telefono, numero_cuenta, banco, direccion'
 
 async function guard() {
   const supabase = await createClient()
@@ -24,6 +24,7 @@ type ProvInput = {
   telefono: string | null
   numero_cuenta: string | null
   banco: string | null
+  direccion: string | null
 }
 
 export async function listarProveedoresAdmin(): Promise<{ proveedores: Proveedor[]; error?: string }> {
@@ -46,6 +47,7 @@ export async function guardarProveedor(id: string | null, input: ProvInput): Pro
     telefono: clean(input.telefono),
     numero_cuenta: clean(input.numero_cuenta),
     banco: clean(input.banco),
+    direccion: clean(input.direccion),
   }
   const admin = await createAdminClient()
   const { error } = id

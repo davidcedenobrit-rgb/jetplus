@@ -5,7 +5,7 @@ import { Truck, Plus, Pencil, Trash2, Check, Search } from 'lucide-react'
 import { listarProveedoresAdmin, guardarProveedor, desactivarProveedor } from './actions'
 import type { Proveedor } from '../egresos/actions'
 
-const EMPTY = { nombre: '', rif: '', correo: '', telefono: '', numero_cuenta: '', banco: '' }
+const EMPTY = { nombre: '', rif: '', correo: '', telefono: '', numero_cuenta: '', banco: '', direccion: '' }
 type Form = typeof EMPTY
 
 function toRow(f: Form) {
@@ -17,6 +17,7 @@ function toRow(f: Form) {
     telefono: clean(f.telefono),
     numero_cuenta: clean(f.numero_cuenta),
     banco: clean(f.banco),
+    direccion: clean(f.direccion),
   }
 }
 
@@ -43,7 +44,7 @@ export default function ProveedoresClient() {
 
   function abrirNuevo() { setForm(EMPTY); setCreando(true); setEditId(null); setError('') }
   function abrirEditar(p: Proveedor) {
-    setForm({ nombre: p.nombre, rif: p.rif ?? '', correo: p.correo ?? '', telefono: p.telefono ?? '', numero_cuenta: p.numero_cuenta ?? '', banco: p.banco ?? '' })
+    setForm({ nombre: p.nombre, rif: p.rif ?? '', correo: p.correo ?? '', telefono: p.telefono ?? '', numero_cuenta: p.numero_cuenta ?? '', banco: p.banco ?? '', direccion: p.direccion ?? '' })
     setEditId(p.id); setCreando(false); setError('')
   }
 
@@ -82,6 +83,7 @@ export default function ProveedoresClient() {
             <div><label className="label">Correo</label><input className="input" type="email" value={form.correo} onChange={e => setForm(p => ({ ...p, correo: e.target.value }))} /></div>
             <div><label className="label">N° de cuenta</label><input className="input font-mono" value={form.numero_cuenta} onChange={e => setForm(p => ({ ...p, numero_cuenta: e.target.value }))} /></div>
             <div><label className="label">Banco</label><input className="input" value={form.banco} onChange={e => setForm(p => ({ ...p, banco: e.target.value }))} /></div>
+            <div className="md:col-span-2"><label className="label">Dirección fiscal</label><textarea className="textarea" rows={2} value={form.direccion} onChange={e => setForm(p => ({ ...p, direccion: e.target.value }))} placeholder="Dirección fiscal del proveedor (aparece en el comprobante de retención)" /></div>
           </div>
           {error && <p className="text-xs text-oriental-red mt-2">{error}</p>}
           <div className="flex gap-2 mt-4">
@@ -109,6 +111,7 @@ export default function ProveedoresClient() {
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-oriental-gray">Teléfono</th>
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-oriental-gray">Correo</th>
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-oriental-gray">Cuenta / Banco</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-oriental-gray">Dirección</th>
                   <th className="px-4 py-2.5 w-16"></th>
                 </tr>
               </thead>
@@ -120,6 +123,11 @@ export default function ProveedoresClient() {
                     <td className="px-4 py-2.5 text-oriental-gray text-xs">{p.telefono ?? '—'}</td>
                     <td className="px-4 py-2.5 text-oriental-gray text-xs">{p.correo ?? '—'}</td>
                     <td className="px-4 py-2.5 text-oriental-gray text-xs">{p.numero_cuenta ? <span className="font-mono">{p.numero_cuenta}</span> : '—'}{p.banco ? ` · ${p.banco}` : ''}</td>
+                    <td className="px-4 py-2.5 text-xs max-w-[240px]">
+                      {p.direccion
+                        ? <span className="text-oriental-gray line-clamp-2" title={p.direccion}>{p.direccion}</span>
+                        : <button onClick={() => abrirEditar(p)} className="text-oriental-red hover:underline font-medium">+ Agregar</button>}
+                    </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => abrirEditar(p)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-blue-50"><Pencil size={13} className="text-blue-500" /></button>
