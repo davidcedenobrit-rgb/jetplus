@@ -21,19 +21,20 @@ export default async function TareasPage() {
     .eq('activo', true)
     .order('nombre')
 
-  // El rol real de cada usuario vive en app_metadata (no en usuarios.rol).
-  // Se resuelve con el admin client para mostrarlo en el selector y filtrar
-  // a quienes no tienen login (no podrían ver la tarea).
+  // Se muestran SIEMPRE todos los usuarios activos. El rol real vive en
+  // app_metadata (no en usuarios.rol); se agrega como etiqueta si el admin
+  // client está disponible, pero nunca se elimina a nadie de la lista.
   let usuarios: { id: string; nombre: string; rol: string }[] = (usuariosRaw as { id: string; nombre: string }[] ?? []).map(u => ({ ...u, rol: '' }))
   try {
     const admin = await createAdminClient()
     const { data: authList } = await admin.auth.admin.listUsers({ perPage: 1000 })
-    const rolPorId: Record<string, string> = {}
-    for (const au of authList?.users ?? []) rolPorId[au.id] = (au.app_metadata?.rol as string) ?? ''
-    usuarios = usuarios
-      .filter(u => rolPorId[u.id] !== undefined) // solo con login
-      .map(u => ({ ...u, rol: rolPorId[u.id] ?? '' }))
-  } catch { /* si falla, se usa la lista base sin rol */ }
+    const authUsers = authList?.users ?? []
+    if (authUsers.length > 0) {
+      const rolPorId: Record<string, string> = {}
+      for (const au of authUsers) rolPorId[au.id] = (au.app_metadata?.rol as string) ?? ''
+      usuarios = usuarios.map(u => ({ ...u, rol: rolPorId[u.id] ?? '' }))
+    }
+  } catch { /* si falla, se muestran igual sin la etiqueta de rol */ }
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl">
