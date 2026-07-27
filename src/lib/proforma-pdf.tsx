@@ -217,6 +217,16 @@ export interface ProformaPDFData {
   // Proforma PREVIA a la venta (nace de una cotización, sin entrega aún). Cambia
   // el texto legal: propuesta de condiciones, no entrega bajo compromiso.
   preVenta?: boolean
+  // Crédito de la INICIAL otorgado por La Oriental (acuerdo de gestión de cobro),
+  // aparte del crédito Vehimotor. Se muestra como un compromiso de pago propio.
+  acuerdoLaOriental?: {
+    montoFinanciado: number
+    numCuotas: number
+    cuotaMonto: number
+    tasaInteres?: number | null
+    planCuotas?: string | null
+    totalAPagar: number
+  } | null
 }
 
 export function ProformaPDF({ data }: { data: ProformaPDFData }) {
@@ -226,6 +236,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
   // Banca Nacional (Vehimotors): su cuadro reemplaza el resumen/compromiso estándar
   // para no contradecirlo (precio maquillado, inicial y cuota van en el cuadro).
   const bnV = data.bnVehimotors ?? null
+  const acLO = data.acuerdoLaOriental && data.acuerdoLaOriental.montoFinanciado > 0 ? data.acuerdoLaOriental : null
 
   return (
     <Document title={`Proforma ${data.numero}`} author="La Oriental Automotors">
@@ -421,12 +432,46 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             </View>
           ) : null}
 
-          {/* Bloque de crédito / financiamiento (solo si hay cuotas) */}
-          {tieneFinanciamiento && (
+          {/* Compromiso de pago — Financiamiento de la INICIAL por La Oriental.
+              Es un crédito aparte del de Vehimotor; se muestra como su propio
+              bloque (también en pre-venta, como condición aceptada). */}
+          {acLO ? (
+            <View style={{ marginTop: 14 }}>
+              <View style={{ border: '1pt solid #7c3aed', borderRadius: 6, overflow: 'hidden' }}>
+                <View style={{ backgroundColor: '#7c3aed', padding: '7pt 10pt' }}>
+                  <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#fff' }}>COMPROMISO DE PAGO — FINANCIAMIENTO LA ORIENTAL (INICIAL)</Text>
+                  <Text style={{ fontSize: 7.5, color: '#ede9fe', marginTop: 2 }}>Crédito otorgado por La Oriental para la inicial del vehículo</Text>
+                </View>
+                <View style={{ flexDirection: 'row', padding: '8pt 10pt', backgroundColor: '#faf5ff' }}>
+                  {[
+                    ['Financiado', `$${fmt(acLO.montoFinanciado)}`],
+                    ['N° cuotas', acLO.numCuotas ? String(acLO.numCuotas) : '—'],
+                    ['Cuota', `$${fmt(acLO.cuotaMonto)}`],
+                    ...(acLO.tasaInteres && acLO.tasaInteres > 0 ? [['Tasa anual', `${acLO.tasaInteres}%`]] : []),
+                    ['Total a pagar', `$${fmt(acLO.totalAPagar)}`],
+                  ].map(([l, v], i) => (
+                    <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 6.5, color: GRAY, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>{l}</Text>
+                      <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: DARK }}>{v}</Text>
+                    </View>
+                  ))}
+                </View>
+                {acLO.planCuotas ? (
+                  <View style={{ padding: '5pt 10pt', borderTop: `0.5pt solid ${BORDER}`, backgroundColor: '#fff' }}>
+                    <Text style={{ fontSize: 7.5, color: '#5b21b6' }}>{acLO.planCuotas}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+
+          {/* Bloque de crédito Vehimotor (cronograma). Solo cuando la venta ya
+              está registrada: la proforma pre-venta se queda en las condiciones. */}
+          {tieneFinanciamiento && !preVenta && (
           <View style={s.creditoWrap}>
             <View style={s.creditoBox}>
               <View style={s.creditoHeader}>
-                <Text style={s.creditoHeaderTitle}>{preVenta ? 'COMPROMISO DE PAGO — FINANCIAMIENTO' : 'COMPROMISO DE PAGO — CRÉDITO OTORGADO'}</Text>
+                <Text style={s.creditoHeaderTitle}>COMPROMISO DE PAGO — CRÉDITO VEHIMOTOR</Text>
                 <Text style={s.creditoHeaderSub}>Plan: {data.planLabel}</Text>
               </View>
 

@@ -58,6 +58,30 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const credito: any = pro.credito_snapshot ?? {}
   const cronograma: CuotaCronogramaItem[] = (pro.cronograma_snapshot ?? []) as CuotaCronogramaItem[]
 
+  // Crédito de la INICIAL otorgado por La Oriental (acuerdo de gestión de cobro).
+  // Es un compromiso aparte del crédito Vehimotor. Solo aplica cuando existe un
+  // acuerdo aceptado ligado a la cotización de esta proforma.
+  let acuerdoLaOriental: ProformaPDFData['acuerdoLaOriental'] = null
+  if (pro.cotizacion_id) {
+    const { data: ac } = await supabase
+      .from('acuerdos_cobro')
+      .select('monto_financiado, num_cuotas, cuota_monto, tasa_interes, plan_cuotas, estado')
+      .eq('cotizacion_id', pro.cotizacion_id)
+      .maybeSingle()
+    if (ac && Number(ac.monto_financiado) > 0) {
+      const nc = ac.num_cuotas != null ? Math.round(Number(ac.num_cuotas)) : 0
+      const cuota = ac.cuota_monto != null ? Number(ac.cuota_monto) : (nc > 0 ? Number(ac.monto_financiado) / nc : 0)
+      acuerdoLaOriental = {
+        montoFinanciado: Number(ac.monto_financiado),
+        numCuotas: nc,
+        cuotaMonto: cuota,
+        tasaInteres: ac.tasa_interes != null ? Number(ac.tasa_interes) : null,
+        planCuotas: ac.plan_cuotas ?? null,
+        totalAPagar: nc > 0 && cuota > 0 ? Math.round(cuota * nc * 100) / 100 : Number(ac.monto_financiado),
+      }
+    }
+  }
+
   // Logo y sello: La Oriental usa los archivos locales; si la proforma nace de
   // una cotización de otra sede, se usa el logo/sello de esa sede.
   let logoSrc: string = getLogoBase64()
@@ -99,6 +123,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     // Proforma previa a la venta: nació de una cotización y aún no hay crédito.
     preVenta: !pro.credito_id && !!pro.cotizacion_id,
     cronograma,
+    acuerdoLaOriental,
     acuerdoInicial: credito.acuerdo_inicial ? {
       monto_acordado: Number(credito.acuerdo_inicial.monto_acordado ?? 0),
       monto_pagado: Number(credito.acuerdo_inicial.monto_pagado ?? 0),
