@@ -12,11 +12,13 @@ const PURPLE = '#6d28d9'
 const PURPLE_LIGHT = '#f5f3ff'
 
 const s = StyleSheet.create({
-  page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 40 },
+  // Margen superior en TODAS las páginas (la hoja 2 respeta el borde) + inferior
+  page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingTop: 22, paddingBottom: 40 },
 
-  // Membrete (dinámico por agencia) con barra superior + línea de acento dorado/rojo
-  topBar: { height: 6, backgroundColor: RED },
-  header: { backgroundColor: '#fff', padding: '13pt 28pt 11pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  // Barra superior fija (flush al borde, se repite en cada página)
+  topBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: RED },
+  // Membrete (dinámico por agencia) con línea de acento dorado/rojo
+  header: { backgroundColor: '#fff', padding: '4pt 28pt 11pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoWrap: { flexShrink: 0 },
   logo: { width: 240, height: 48, objectFit: 'contain' },
   companyBlock: { alignItems: 'flex-end' },
@@ -174,8 +176,9 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
     <Document title="Acuerdo de gestión de cobro" author={empNombre}>
       <Page size="A4" style={s.page}>
 
-        {/* Membrete con barra superior y línea de acento */}
-        <View style={s.topBar} />
+        {/* Barra superior fija: se repite en todas las páginas, flush al borde */}
+        <View style={s.topBar} fixed />
+        {/* Membrete con línea de acento */}
         <View style={s.header}>
           <View style={s.logoWrap}>
             {data.logoSrc
