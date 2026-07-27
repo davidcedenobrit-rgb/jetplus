@@ -341,36 +341,58 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             </View>
           )}
 
-          {/* ── Cuadro Banca Nacional — Vehimotors ── */}
+          {/* ── Banca Nacional — mismo formato que la modalidad estándar:
+                 nota a la izquierda + cuadrito de cálculo a la derecha. ── */}
           {bn && (
-            <View style={{ marginTop: 12, flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1, border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' }}>
-                <View style={{ backgroundColor: BLUE_DARK, padding: '6pt 10pt' }}>
-                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO{bn.banco ? ` · ${bn.banco}` : ''}</Text>
+            <>
+              <View style={s.modalidadBlock}>
+                <View style={s.noteBox}>
+                  <Text style={s.noteText}>
+                    (Nota: si el cliente es agente de retención, deberá presentar la retención al momento de ser facturado para que se le reconozca el {retPct}% del IVA.)
+                  </Text>
                 </View>
-                {[
-                  ['Precio base', bn.precio_base],
-                  ['IVA 16%', bn.iva],
-                  ['Gastos (placa, pólizas, notaría, etc.)', bn.gastos + bn.placa],
-                  ['Monto aportado por el banco', bn.aprobado_real],
-                ].map(([l, v]) => (
-                  <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
-                    <Text style={{ fontSize: 7.5, color: GRAY }}>{l}</Text>
-                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK }}>{fmt(v as number)}</Text>
+                <View style={s.calcBox}>
+                  <View style={s.calcHeader}>
+                    <Text style={s.calcHeaderLabel}>MODALIDAD DE VENTAS</Text>
+                    <Text style={s.calcHeaderVal}>BANCA NACIONAL — CRÉDITO BANCARIO{bn.banco ? ` · ${bn.banco}` : ''}</Text>
                   </View>
-                ))}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '6pt 10pt', backgroundColor: '#fef9c3' }}>
-                  <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD }}>Inicial a pagar del cliente:</Text>
-                  <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(bn.inicial_cliente)}</Text>
+                  <View style={s.calcRow}>
+                    <Text style={s.calcLabel}>Precio base</Text>
+                    <Text style={s.calcVal}>{fmt(bn.precio_base)}</Text>
+                  </View>
+                  <View style={s.calcRow}>
+                    <Text style={s.calcLabel}>I.V.A. 16%</Text>
+                    <Text style={s.calcVal}>{fmt(bn.iva)}</Text>
+                  </View>
+                  <View style={s.calcRow}>
+                    <Text style={s.calcLabel}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría</Text>
+                    <Text style={s.calcVal}>{fmt(bn.gastos + bn.placa)}</Text>
+                  </View>
+                  <View style={s.calcRow}>
+                    <Text style={s.calcLabel}>Monto aportado por el banco</Text>
+                    <Text style={s.calcVal}>{fmt(bn.aprobado_real)}</Text>
+                  </View>
+                  <View style={s.calcTotalRow}>
+                    <Text style={s.calcTotalLabel}>INICIAL A PAGAR DEL CLIENTE:</Text>
+                    <Text style={s.calcTotalVal}>${fmt(bn.inicial_cliente)}</Text>
+                  </View>
                 </View>
-                {bn.financ_meses && bn.financ_cuota && bn.financ_meses > 0 && bn.financ_cuota > 0 ? (
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '5pt 10pt', backgroundColor: '#eef2ff', borderTop: `0.5pt solid ${BORDER}` }}>
-                    <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>Financiamiento con su banco: {bn.financ_meses} cuotas de</Text>
-                    <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#312e81' }}>${fmt(bn.financ_cuota)}</Text>
-                  </View>
-                ) : null}
               </View>
-            </View>
+
+              {bn.financ_meses && bn.financ_cuota && bn.financ_meses > 0 && bn.financ_cuota > 0 ? (
+                <View style={{ alignItems: 'flex-end', marginTop: 6 }}>
+                  <View style={[s.finBox, { width: 240 }]}>
+                    <View style={s.finHeader}>
+                      <Text style={s.finHeaderText}>FINANCIAMIENTO CON SU BANCO</Text>
+                    </View>
+                    <View style={s.finRow}>
+                      <Text style={s.finLabel}>Cuotas mensuales</Text>
+                      <Text style={s.finVal}>{bn.financ_meses}   ${fmt(bn.financ_cuota)}</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+            </>
           )}
 
           {/* ── Standard modalidad + cálculos (non-AC500) ── */}
