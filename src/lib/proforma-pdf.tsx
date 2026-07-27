@@ -303,7 +303,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             <Text style={[s.tableCell, s.colMarca]}>{data.marca}</Text>
             <Text style={[s.tableCell, s.colModelo]}>{data.modelo}</Text>
             <Text style={[s.tableCell, s.colPlaca]}>{data.placa || '—'}</Text>
-            <Text style={[s.tableCell, s.colPrecio, { fontFamily: 'Helvetica-Bold' }]}>{fmt(bnV ? bnV.precio_base + bnV.diferencial : data.totalVehiculo)}</Text>
+            <Text style={[s.tableCell, s.colPrecio, { fontFamily: 'Helvetica-Bold' }]}>{fmt(bnV ? bnV.precio_base : data.totalVehiculo)}</Text>
           </View>
 
           {/* Bloque de montos (no en Banca Nacional: su cuadro lo reemplaza) */}
@@ -390,12 +390,11 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                 <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO{data.bnVehimotors.banco ? ` · ${data.bnVehimotors.banco}` : ''}</Text>
               </View>
               {[
-                ['Precio base', data.bnVehimotors.precio_base + data.bnVehimotors.diferencial],
+                ['Precio base', data.bnVehimotors.precio_base],
                 ['IVA 16%', data.bnVehimotors.iva],
                 ['Placa', data.bnVehimotors.placa],
                 ['Gastos (pólizas, notaría, etc.)', data.bnVehimotors.gastos],
-                ['Total', data.bnVehimotors.total_banco + data.bnVehimotors.gastos + data.bnVehimotors.diferencial],
-                ['Aporte de su crédito bancario', data.bnVehimotors.aprobado_banco],
+                ['Monto aportado por el banco', data.bnVehimotors.aprobado_real],
               ].map(([l, v]) => (
                 <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 12pt', borderBottom: `0.5pt solid ${BORDER}` }}>
                   <Text style={{ fontSize: 8, color: GRAY }}>{l}</Text>
@@ -403,7 +402,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                 </View>
               ))}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '7pt 12pt', backgroundColor: '#fef9c3' }}>
-                <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GOLD }}>INICIAL A PAGAR (CLIENTE):</Text>
+                <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GOLD }}>Inicial a pagar del cliente:</Text>
                 <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(data.bnVehimotors.inicial_cliente)}</Text>
               </View>
               {data.bnVehimotors.financ_meses && data.bnVehimotors.financ_cuota && data.bnVehimotors.financ_meses > 0 && data.bnVehimotors.financ_cuota > 0 ? (

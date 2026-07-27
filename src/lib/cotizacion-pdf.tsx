@@ -343,12 +343,11 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' }}>BANCA NACIONAL — CRÉDITO BANCARIO{bn.banco ? ` · ${bn.banco}` : ''}</Text>
                 </View>
                 {[
-                  ['Precio base', bn.precio_base + bn.diferencial],
+                  ['Precio base', bn.precio_base],
                   ['IVA 16%', bn.iva],
                   ['Placa', bn.placa],
                   ['Gastos (pólizas, notaría, etc.)', bn.gastos],
-                  ['Total', bn.total_banco + bn.gastos + bn.diferencial],
-                  ['Aporte de su crédito bancario', bn.aprobado_banco],
+                  ['Monto aportado por el banco', bn.aprobado_real],
                 ].map(([l, v]) => (
                   <View key={String(l)} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` }}>
                     <Text style={{ fontSize: 7.5, color: GRAY }}>{l}</Text>
@@ -356,7 +355,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   </View>
                 ))}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '6pt 10pt', backgroundColor: '#fef9c3' }}>
-                  <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD }}>INICIAL A PAGAR (CLIENTE):</Text>
+                  <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD }}>Inicial a pagar del cliente:</Text>
                   <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(bn.inicial_cliente)}</Text>
                 </View>
                 {bn.financ_meses && bn.financ_cuota && bn.financ_meses > 0 && bn.financ_cuota > 0 ? (
