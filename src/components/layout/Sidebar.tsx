@@ -60,6 +60,7 @@ const SECTIONS: NavSection[] = [
       ] },
       { href: '/link-ventas', label: 'Link de Ventas',  icon: Globe,         roles: ['jose', 'admin', 'director'] },
       { href: '/creditos',  label: 'Créditos',          icon: CreditCard,    hideFor: ['arianna', 'almacen'] },
+      { href: '/reportes/creditos', label: 'Reporte de créditos', icon: BarChart2, roles: DIR },
       { href: '/acuerdos',  label: 'Acuerdos de Pago',  icon: Handshake,     hideFor: ['arianna', 'almacen'] },
       { href: '/historial', label: 'Historial cliente', icon: ClipboardList, hideFor: ['arianna', 'almacen'] },
     ],
