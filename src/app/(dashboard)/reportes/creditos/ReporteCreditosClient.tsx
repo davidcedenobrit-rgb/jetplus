@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowLeft, CreditCard, FileDown } from 'lucide-react'
+import ExportBar from '@/components/ExportBar'
+import type { ReportePayload } from '@/lib/reporte-tipos'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -104,6 +106,21 @@ export default function ReporteCreditosClient() {
 
   const periodo = mes === 0 ? `${anio}` : `${MESES[mes - 1]} ${anio}`
 
+  const buildPayload = (): ReportePayload => ({
+    titulo: 'Reporte de créditos', periodo: `Otorgados en ${periodo}`,
+    kpis: [
+      { label: 'Créditos otorgados', value: String(datos.n) },
+      { label: 'Cobro mensual proyectado', value: `$${fmt(datos.cobroMensual)}` },
+      { label: 'Saldo por cobrar', value: `$${fmt(datos.saldo)}` },
+      { label: 'Al día', value: `${datos.pctAlDia}%` },
+    ],
+    secciones: [
+      { titulo: 'Por modalidad', headers: ['Modalidad', 'Créditos', 'Cobro mensual', 'Saldo'], rows: datos.porMod.map(([k, x]) => [k, x.n, `$${fmt(x.mensual)}`, `$${fmt(x.saldo)}`]) },
+      { titulo: `Créditos del período (${filtrados.length})`, headers: ['Cliente', 'Modalidad', 'Otorgado', 'Cuota mensual', 'Saldo', 'Estado'],
+        rows: filtrados.map(c => [c.clientes?.nombre ?? '—', PLAN_LABEL[c.plan_tipo] ?? 'Otro', String(c.fecha_inicio ?? '').slice(0, 10), `$${fmt(cuotaMensual(c))}`, `$${fmt(Number(c.saldo || 0))}`, c.estado === 'pagado' ? 'Pagado' : (enMora.has(c.id) ? 'En mora' : 'Al día')]) },
+    ],
+  })
+
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
       <div className="flex items-center gap-4 mb-6">
@@ -115,6 +132,7 @@ export default function ReporteCreditosClient() {
             <p className="text-oriental-gray text-sm">Otorgados en {periodo} · cobro mensual proyectado (USD)</p>
           </div>
         </div>
+        <ExportBar build={buildPayload} />
       </div>
 
       <div className="card p-4 mb-6 flex flex-wrap items-end gap-3">

@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowLeft, BarChart3, ShoppingCart, CalendarDays, FileDown, TrendingUp, TrendingDown } from 'lucide-react'
+import ExportBar from '@/components/ExportBar'
+import type { ReportePayload } from '@/lib/reporte-tipos'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -123,6 +125,23 @@ export default function ConsolidadosClient() {
 
   const margen = v.proforma - c.total
 
+  const buildPayload = (): ReportePayload => ({
+    titulo: 'Consolidados', periodo: `${desde} a ${hasta}`,
+    kpis: [
+      { label: 'Ventas (proforma)', value: `$${fmt(v.proforma)}` },
+      { label: 'Compras', value: `$${fmt(c.total)}` },
+      { label: 'Margen (ventas − compras)', value: `$${fmt(margen)}` },
+      { label: 'Remanente directiva', value: `$${fmt(v.directiva)}` },
+    ],
+    secciones: [
+      { titulo: 'Ventas por marca', headers: ['Marca', 'Unidades', 'Monto USD'], rows: v.marca.map(([m, x]) => [m, x.n, `$${fmt(x.monto)}`]) },
+      { titulo: 'Ventas por vendedora', headers: ['Vendedora', 'Unidades', 'Monto USD'], rows: v.vend.map(([m, x]) => [m, x.n, `$${fmt(x.monto)}`]) },
+      { titulo: 'Compras por tipo', headers: ['Categoría', 'Total USD'], rows: c.cat.map(([k, m]) => [COMPRA_CATS[k] ?? k, `$${fmt(m)}`]) },
+      { titulo: 'Top proveedores', headers: ['Proveedor', 'Total USD'], rows: c.prov.map(([p, m]) => [p, `$${fmt(m)}`]) },
+      { titulo: 'Eventos del período', headers: ['Fecha', 'Evento', 'Tipo'], rows: ev.lista.map((e: any) => [String(e.fecha).slice(0, 10), e.titulo, e.tipo ?? '']) },
+    ],
+  })
+
   return (
     <div className="p-4 lg:p-8 max-w-6xl">
       <div className="flex items-center gap-4 mb-6">
@@ -134,6 +153,7 @@ export default function ConsolidadosClient() {
             <p className="text-oriental-gray text-sm">Ventas, compras y eventos del período (USD)</p>
           </div>
         </div>
+        <ExportBar build={buildPayload} />
       </div>
 
       {/* Filtros */}

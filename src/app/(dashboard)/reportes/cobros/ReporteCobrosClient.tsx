@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowLeft, CalendarRange, FileDown } from 'lucide-react'
+import ExportBar from '@/components/ExportBar'
+import type { ReportePayload } from '@/lib/reporte-tipos'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -116,6 +118,31 @@ export default function ReporteCobrosClient() {
   const maxDia = Math.max(1, ...Object.values(datos.porDia))
   const periodo = `${MESES[mes - 1]} ${anio}`
 
+  const buildPayload = (): ReportePayload => {
+    const q = porModQuincena
+    const modRows: (string | number)[][] = [
+      ['La Oriental', `$${fmt(q.q1.la_oriental)}`, `$${fmt(q.q2.la_oriental)}`, `$${fmt(q.q1.la_oriental + q.q2.la_oriental)}`],
+      ['Vehimotors', `$${fmt(q.q1.motor)}`, `$${fmt(q.q2.motor)}`, `$${fmt(q.q1.motor + q.q2.motor)}`],
+      ['Asegúrate 500', `$${fmt(q.q1.ac500)}`, `$${fmt(q.q2.ac500)}`, `$${fmt(q.q1.ac500 + q.q2.ac500)}`],
+      ['Cuotas especiales', `$${fmt(q.q1.especial)}`, `$${fmt(q.q2.especial)}`, `$${fmt(q.q1.especial + q.q2.especial)}`],
+    ]
+    if (q.q1.otros + q.q2.otros > 0) modRows.push(['Otros', `$${fmt(q.q1.otros)}`, `$${fmt(q.q2.otros)}`, `$${fmt(q.q1.otros + q.q2.otros)}`])
+    return {
+      titulo: 'Cobros por quincena', periodo: modalidad === 'todas' ? periodo : `${periodo} · ${MODALIDAD.find(m => m.key === modalidad)?.label}`,
+      kpis: [
+        { label: '1ª quincena (1–15)', value: `$${fmt(datos.q1)}` },
+        { label: `2ª quincena (16–${diasMes})`, value: `$${fmt(datos.q2)}` },
+        { label: 'Total del mes', value: `$${fmt(datos.programado)}` },
+        { label: 'Ya cobrado / pendiente', value: `$${fmt(datos.cobrado)} / $${fmt(datos.pendiente)}` },
+      ],
+      secciones: [
+        { titulo: 'Por cobrar por modalidad', headers: ['Modalidad', '1ª quincena', '2ª quincena', 'Total'], rows: modRows },
+        { titulo: 'Cobros por día', headers: ['Día', 'Monto USD'], rows: Object.entries(datos.porDia).map(([d, v]) => [Number(d), `$${fmt(v)}`]).sort((a, b) => Number(a[0]) - Number(b[0])) },
+        { titulo: 'Mejores clientes (por cobro del mes)', headers: ['Cliente', 'Monto USD'], rows: datos.mejoresClientes.map(x => [x.nombre, `$${fmt(x.monto)}`]) },
+      ],
+    }
+  }
+
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
       <div className="flex items-center gap-4 mb-6">
@@ -127,6 +154,7 @@ export default function ReporteCobrosClient() {
             <p className="text-oriental-gray text-sm">Cuánto se cobra cada día del mes · {periodo} (USD)</p>
           </div>
         </div>
+        <ExportBar build={buildPayload} />
       </div>
 
       {/* Filtros */}

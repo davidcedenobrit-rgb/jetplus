@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowLeft, ShoppingBag, FileDown } from 'lucide-react'
+import ExportBar from '@/components/ExportBar'
+import type { ReportePayload } from '@/lib/reporte-tipos'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -92,6 +94,16 @@ export default function ReporteVentasClient() {
 
   const periodo = mes === 0 ? `${anio}` : `${MESES[mes - 1]} ${anio}`
 
+  const buildPayload = (): ReportePayload => ({
+    titulo: 'Reporte de ventas', periodo,
+    kpis: [{ label: 'Vehículos vendidos', value: String(filtradas.length) }, { label: 'Monto total (proforma)', value: `$${fmt(totalMonto)}` }],
+    secciones: [
+      { titulo: 'Por marca y modelo', headers: ['Marca / Modelo', 'Unidades', 'Monto USD'], rows: porMarcaModelo.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
+      { titulo: 'Por modalidad de venta', headers: ['Modalidad', 'Unidades', 'Monto USD'], rows: porModalidad.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
+      { titulo: 'Por vendedora', headers: ['Vendedora', 'Unidades', 'Monto USD'], rows: porVendedora.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
+    ],
+  })
+
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
       <div className="flex items-center gap-4 mb-6">
@@ -103,6 +115,7 @@ export default function ReporteVentasClient() {
             <p className="text-oriental-gray text-sm">Por marca/modelo, modalidad y vendedora — {periodo}</p>
           </div>
         </div>
+        <ExportBar build={buildPayload} />
       </div>
 
       <div className="card p-4 mb-6 flex flex-wrap items-end gap-3">
