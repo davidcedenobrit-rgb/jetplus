@@ -14,12 +14,12 @@ const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const MODALIDAD: { key: string; label: string; planes: string[] }[] = [
   { key: 'todas', label: 'Todas', planes: [] },
   { key: 'la_oriental', label: 'Crédito La Oriental', planes: ['inicial_la_oriental', 'cuota_especial'] },
-  { key: 'motor', label: 'Crédito del motor', planes: ['financiamiento_vehimotors'] },
+  { key: 'motor', label: 'Vehimotors', planes: ['financiamiento_vehimotors'] },
   { key: 'ac500', label: 'Asegúrate 500', planes: ['asegurate_500'] },
 ]
 const PLAN_LABEL: Record<string, string> = {
   inicial_la_oriental: 'La Oriental', cuota_especial: 'Cuota especial',
-  financiamiento_vehimotors: 'Crédito del motor', asegurate_500: 'Asegúrate 500',
+  financiamiento_vehimotors: 'Vehimotors', asegurate_500: 'Asegúrate 500',
 }
 
 async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null }>): Promise<T[]> {
@@ -225,7 +225,7 @@ export default function ReporteCobrosClient() {
           {([['1ª quincena (1–15)', porModQuincena.q1], [`2ª quincena (16–${diasMes})`, porModQuincena.q2]] as const).map(([titulo, q]) => {
             const items = [
               { label: 'La Oriental', v: q.la_oriental, cls: 'text-oriental-red' },
-              { label: 'Crédito del motor', v: q.motor, cls: 'text-indigo-700' },
+              { label: 'Vehimotors', v: q.motor, cls: 'text-indigo-700' },
               { label: 'Asegúrate 500', v: q.ac500, cls: 'text-blue-700' },
               { label: 'Cuotas especiales', v: q.especial, cls: 'text-amber-700' },
             ]

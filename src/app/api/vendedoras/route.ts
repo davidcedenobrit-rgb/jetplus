@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
-const ROLES_PERMITIDOS = ['jose', 'admin', 'director']
+const ROLES_PERMITIDOS = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 async function checkAuth() {
   const supabase = await createClient()

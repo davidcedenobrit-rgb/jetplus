@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Search, ShoppingCart, ListChecks, ExternalLink, Calculator, X, Loader2, FileText, ClipboardList, FilePlus2, Percent, Users, Landmark } from 'lucide-react'
@@ -387,11 +387,38 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
   const [polizaVida, setPolizaVida] = useState(String(venta.poliza_vida || ''))
   const [obsequio, setObsequio] = useState(String(venta.obsequio_clientes || ''))
   const [alfombras, setAlfombras] = useState(String(venta.alfombras || ''))
-  const [vendedora, setVendedora] = useState(venta.vendedora || '')
+  // Vendedoras: base de datos (Rojas las carga) + áreas fijas. Se puede elegir 1 o 2.
+  const AREAS = ['Dpto. de Mercadeo', 'Taller', 'Dpto. Administrativo', 'Directiva']
+  const [vendedorasBd, setVendedorasBd] = useState<string[]>([])
+  const [selVend, setSelVend] = useState<string[]>(
+    (venta.vendedora || '').split(/\s*(?:\/|,)\s*/).map(s => s.trim()).filter(Boolean)
+  )
   const [reportadoVm, setReportadoVm] = useState(venta.reportado_vm)
   const [notas, setNotas] = useState(venta.div_notas || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/vendedoras').then(r => r.ok ? r.json() : []).then((data: any[]) => {
+      setVendedorasBd((data ?? []).filter(v => v.activa !== false).map(v => v.nombre).filter(Boolean))
+    }).catch(() => {})
+  }, [])
+
+  // Opciones: vendedoras de BD + áreas + cualquier valor ya guardado que no esté en la lista
+  const opcionesVend = useMemo(() => {
+    const base = [...vendedorasBd, ...AREAS]
+    const extra = selVend.filter(v => !base.includes(v))
+    return [...base, ...extra]
+  }, [vendedorasBd, selVend])
+
+  function toggleVend(nombre: string) {
+    setSelVend(prev => {
+      if (prev.includes(nombre)) return prev.filter(v => v !== nombre)
+      if (prev.length >= 2) return prev // máximo 2
+      return [...prev, nombre]
+    })
+  }
+  const vendedora = selVend.join(' / ')
 
   const nf = (s: string) => parseFloat(s.replace(',', '.')) || 0
   const x = nf(precioVenta)            // precio base del carro
@@ -476,8 +503,21 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
           </div>
 
           <div>
-            <label className={lbl}>Vendedora</label>
-            <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red" value={vendedora} onChange={e => setVendedora(e.target.value)} placeholder="Nombre de la vendedora" />
+            <label className={lbl}>Vendedora(s) — elige 1 o 2</label>
+            <div className="flex flex-wrap gap-1.5">
+              {opcionesVend.map(nombre => {
+                const on = selVend.includes(nombre)
+                const dis = !on && selVend.length >= 2
+                return (
+                  <button key={nombre} type="button" onClick={() => toggleVend(nombre)} disabled={dis}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${on ? 'bg-oriental-red text-white border-oriental-red' : dis ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed' : 'bg-white text-oriental-gray border-gray-200 hover:border-oriental-red'}`}>
+                    {nombre}
+                  </button>
+                )
+              })}
+            </div>
+            {vendedorasBd.length === 0 && <p className="text-[11px] text-amber-600 mt-1">No hay vendedoras cargadas. Rojas las agrega en Base de datos → Vendedoras.</p>}
+            {selVend.length > 0 && <p className="text-[11px] text-oriental-gray mt-1">Seleccionadas: <b className="text-oriental-black">{selVend.join(' / ')}</b></p>}
           </div>
 
           <div className="rounded-xl bg-gray-900 p-4 text-white space-y-1.5 text-sm">

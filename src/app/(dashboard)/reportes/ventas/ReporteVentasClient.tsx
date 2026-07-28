@@ -9,7 +9,7 @@ import { ArrowLeft, ShoppingBag, FileDown } from 'lucide-react'
 
 const MODALIDAD: Record<string, string> = {
   contado: 'Contado',
-  financiamiento_vehimotors: 'Crédito del motor',
+  financiamiento_vehimotors: 'Vehimotors',
   inicial_la_oriental: 'Crédito La Oriental',
   asegurate_500: 'Asegúrate 500',
   cuota_especial: 'Cuota especial',

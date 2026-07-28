@@ -12,12 +12,12 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', '
 const MODALIDAD: { key: string; label: string; planes: string[] }[] = [
   { key: 'todas', label: 'Todas', planes: [] },
   { key: 'la_oriental', label: 'Crédito La Oriental', planes: ['inicial_la_oriental', 'cuota_especial'] },
-  { key: 'motor', label: 'Crédito del motor', planes: ['financiamiento_vehimotors'] },
+  { key: 'motor', label: 'Vehimotors', planes: ['financiamiento_vehimotors'] },
   { key: 'ac500', label: 'Asegúrate 500', planes: ['asegurate_500'] },
 ]
 const PLAN_LABEL: Record<string, string> = {
   inicial_la_oriental: 'La Oriental', cuota_especial: 'Cuota especial',
-  financiamiento_vehimotors: 'Crédito del motor', asegurate_500: 'Asegúrate 500',
+  financiamiento_vehimotors: 'Vehimotors', asegurate_500: 'Asegúrate 500',
 }
 const FACTOR_MES: Record<string, number> = { mensual: 1, quincenal: 2, semanal: 4, catorcenal: 2 }
 
