@@ -93,7 +93,12 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
   const [vista, setVista] = useState<Vista>(tabUrl && VISTAS_VALIDAS.includes(tabUrl) ? tabUrl : 'registradas')
   const [q, setQ] = useState('')
   const [etapa, setEtapa] = useState<string>('todas')
+  const [tipoVenta, setTipoVenta] = useState<'todas' | 'nuevas' | 'antiguas'>('todas')
   const [editar, setEditar] = useState<Venta | null>(null)
+
+  // "Nueva" = venta cargada/registrada en el sistema (tiene proforma, división
+  // definida o es AC500). "Antigua" = venta importada del pasado, sin eso.
+  const esNueva = (v: Venta) => !!(v.proforma_numero || v.div_definida || v.es_ac500)
 
   const etapas = useMemo(() => {
     const set = new Map<string, string>()
@@ -110,8 +115,10 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
   }
 
   const filtradas = useMemo(() =>
-    ventas.filter(v => (etapa === 'todas' || v.etapa_key === etapa) && filtroFn(v)),
-    [ventas, q, etapa])
+    ventas.filter(v => (etapa === 'todas' || v.etapa_key === etapa)
+      && (tipoVenta === 'todas' || (tipoVenta === 'nuevas' ? esNueva(v) : !esNueva(v)))
+      && filtroFn(v)),
+    [ventas, q, etapa, tipoVenta])
 
   const divFiltradas = useMemo(() => ventas.filter(filtroFn), [ventas, q])
 
@@ -203,6 +210,18 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
         </div>
       )}
 
+      {/* Filtro cliente antiguo / ventas nuevas */}
+      {vista === 'registradas' && (
+        <div className="flex items-center gap-2 mb-4">
+          {([['todas', 'Todas'], ['nuevas', 'Ventas nuevas'], ['antiguas', 'Clientes antiguos']] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setTipoVenta(k)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${tipoVenta === k ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {vista === 'registradas' ? (
         filtradas.length === 0 ? (
           <p className="text-center text-sm text-gray-400 py-10">No hay ventas que coincidan.</p>
@@ -222,8 +241,12 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
                     {v.es_showroom && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700">🏬 Showroom</span>}
                     {v.es_ac500 && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">🛡 AC500</span>}
                     {v.proforma_numero && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700">{v.proforma_numero}</span>}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${esNueva(v) ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{esNueva(v) ? 'Nueva' : 'Antigua'}</span>
                   </div>
-                  <p className="text-gray-500 text-xs truncate">{v.cliente_nombre} {v.cliente_ci && <span className="text-gray-400">· {v.cliente_ci}</span>}</p>
+                  <p className="text-gray-500 text-xs truncate">
+                    {v.cliente_nombre} {v.cliente_ci && <span className="text-gray-400">· {v.cliente_ci}</span>}
+                    {v.vendedora ? <span className="text-oriental-red font-semibold"> · Vendedora: {v.vendedora}</span> : <span className="text-amber-600"> · Sin vendedora</span>}
+                  </p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-bold text-oriental-black">${fmt(v.precio_total)}</p>
@@ -239,6 +262,13 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
                     </button>
                   )}
                 </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditar(v) }}
+                  className="shrink-0 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50 hidden sm:block"
+                  title="Editar vendedora y división">
+                  Editar
+                </button>
                 <ExternalLink size={14} className="text-gray-300 shrink-0 hidden sm:block" />
               </Link>
               )
