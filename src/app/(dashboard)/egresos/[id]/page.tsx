@@ -71,6 +71,19 @@ export default async function EgresoDetallePage({
         </div>
       </div>
 
+      {/* Motivo de rechazo / corrección */}
+      {(egreso.estado === 'correccion_requerida' || egreso.estado === 'rechazado') && egreso.motivo_revision && (
+        <div className={`rounded-xl border p-3 mb-6 text-sm ${egreso.estado === 'rechazado' ? 'border-red-200 bg-red-50 text-red-800' : 'border-orange-200 bg-orange-50 text-orange-800'}`}>
+          <b>{egreso.estado === 'rechazado' ? 'Rechazado' : 'Corrección solicitada'}:</b> {egreso.motivo_revision}
+        </div>
+      )}
+      {/* Datos del pago */}
+      {egreso.estado === 'pagado' && egreso.pago_fecha && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 mb-6 text-sm text-blue-800">
+          <b>Pagado</b> el {formatDate(egreso.pago_fecha)}{egreso.pago_referencia ? ` · Ref: ${egreso.pago_referencia}` : ''}.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Comprobante */}
@@ -225,7 +238,7 @@ export default async function EgresoDetallePage({
 
         {/* Actions */}
         <div className="space-y-4">
-          <EgresoActionButtons egresoId={egreso.id} estado={egreso.estado} />
+          <EgresoActionButtons egresoId={egreso.id} estado={egreso.estado} rol={rol} esRegistrador={egreso.registrado_por === user?.id} />
 
           {egreso.ret_iva_aplica && egreso.ret_iva_comprobante && (
             <RetencionCard egreso={egreso} correoProveedor={correoProveedor} />
