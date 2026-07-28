@@ -785,7 +785,7 @@ export default function ReportesPage() {
       fetchAllRows<any>((f, t) => supabase.from('vehiculos').select('id, marca, modelo, tipo_compra').range(f, t)),
       fetchAllRows<any>((f, t) => supabase.from('creditos').select('id, plan_tipo, saldo, monto_financiado, placa, cliente_id, clientes(id, nombre, cedula_rif, telefono, whatsapp, correo)').range(f, t)),
       fetchAllRows<any>((f, t) => supabase.from('cuotas').select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id').range(f, t)),
-      fetchAllRows<any>((f, t) => supabase.from('ingresos').select('id, monto, moneda, tasa_cambio, metodo_pago, estado, fecha_pago')
+      fetchAllRows<any>((f, t) => supabase.from('ingresos').select('id, monto, moneda, tasa_cambio, metodo_pago, estado, fecha_pago, titular_fondos')
         .gte('fecha_pago', fechaDesde).lte('fecha_pago', fechaHasta).range(f, t)),
       fetchAllRows<any>((f, t) => supabase.from('egresos').select('id, monto, moneda, tasa_cambio, categoria, estado, fecha_egreso')
         .gte('fecha_egreso', fechaDesde).lte('fecha_egreso', fechaHasta).range(f, t)),
@@ -1092,7 +1092,8 @@ export default function ReportesPage() {
       }
       return monto
     }
-    const ingAprobados = ingData?.filter(i => i.estado === 'aprobado') ?? []
+    // Solo ingresos propios de La Oriental (excluye custodia de Vehimotors / terceros)
+    const ingAprobados = ingData?.filter(i => i.estado === 'aprobado' && ((i.titular_fondos ?? 'propio') === 'propio')) ?? []
     const egrAprobados = egrData?.filter(e => e.estado === 'aprobado') ?? []
 
     setTotalIngresos(ingAprobados.reduce((s, i) => s + toUSD(i), 0))

@@ -37,7 +37,7 @@ export default async function DashboardPage() {
     cotizacionesMes,
     creditosActivos,
   ] = await Promise.all([
-    fetchAllRows<any>((f, t) => supabase.from('ingresos').select('monto, moneda, tasa_cambio').gte('fecha_pago', inicioMes).eq('estado', 'aprobado').range(f, t)),
+    fetchAllRows<any>((f, t) => supabase.from('ingresos').select('monto, moneda, tasa_cambio').gte('fecha_pago', inicioMes).eq('estado', 'aprobado').or('titular_fondos.is.null,titular_fondos.eq.propio').range(f, t)),
     fetchAllRows<any>((f, t) => supabase.from('egresos').select('monto, moneda, tasa_cambio').gte('fecha_egreso', inicioMes).eq('estado', 'aprobado').range(f, t)),
     fetchAllRows<any>((f, t) => supabase.from('ingresos').select('id').eq('estado', 'pendiente_aprobacion').range(f, t)),
     fetchAllRows<any>((f, t) => supabase.from('egresos').select('id').eq('estado', 'pendiente_aprobacion').range(f, t)),

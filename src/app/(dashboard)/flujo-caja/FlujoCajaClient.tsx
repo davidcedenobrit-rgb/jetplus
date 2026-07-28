@@ -31,6 +31,8 @@ export default function FlujoCajaClient() {
     const [ing, egr] = await Promise.all([
       fetchAll<Record<string, unknown>>((f, t) => supabase.from('ingresos')
         .select('monto, moneda, tasa_cambio, fecha_pago').neq('estado', 'anulado').neq('estado', 'rechazado')
+        // Solo dinero propio de La Oriental (excluye custodia de Vehimotors / terceros)
+        .or('titular_fondos.is.null,titular_fondos.eq.propio')
         .gte('fecha_pago', desde).lte('fecha_pago', hasta).range(f, t)),
       fetchAll<Record<string, unknown>>((f, t) => supabase.from('egresos')
         .select('monto, moneda, tasa_cambio, fecha_egreso').neq('estado', 'anulado').neq('estado', 'rechazado')
