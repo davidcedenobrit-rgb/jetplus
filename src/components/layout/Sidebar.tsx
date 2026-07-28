@@ -357,7 +357,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
                 </button>
 
                 {isOpen && (
-                  <div className="mt-0.5 space-y-0.5">
+                  <div className="mt-1 mb-1 space-y-0.5 rounded-lg bg-white/[0.07] border border-white/5 p-1.5">
                     {links.map(link => (
                       <div key={link.href}>
                         {renderLink(link)}
