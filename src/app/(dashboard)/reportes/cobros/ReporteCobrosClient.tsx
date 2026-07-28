@@ -71,6 +71,7 @@ export default function ReporteCobrosClient() {
 
   const datos = useMemo(() => {
     const porDia: Record<number, number> = {}
+    const porDiaInfo: Record<number, { monto: number; count: number; pagadas: number; vencidas: number }> = {}
     let programado = 0, cobrado = 0
     const porCliente: Record<string, number> = {}
     for (const c of filtradas) {
@@ -79,6 +80,10 @@ export default function ReporteCobrosClient() {
       programado += monto
       cobrado += Number(c.monto_pagado || 0)
       porDia[dia] = (porDia[dia] ?? 0) + monto
+      const inf = (porDiaInfo[dia] ??= { monto: 0, count: 0, pagadas: 0, vencidas: 0 })
+      inf.monto += monto; inf.count++
+      if (c.estado === 'pagada') inf.pagadas++
+      if (c.estado === 'vencida') inf.vencidas++
       const cli = c.creditos?.clientes?.nombre || '—'
       porCliente[cli] = (porCliente[cli] ?? 0) + monto
     }
@@ -86,7 +91,7 @@ export default function ReporteCobrosClient() {
     const q2 = programado - q1
     const mejoresDias = Object.entries(porDia).map(([d, v]) => ({ dia: Number(d), monto: v })).sort((a, b) => b.monto - a.monto).slice(0, 5)
     const mejoresClientes = Object.entries(porCliente).map(([n, v]) => ({ nombre: n, monto: v })).sort((a, b) => b.monto - a.monto).slice(0, 8)
-    return { porDia, programado, cobrado, pendiente: programado - cobrado, q1, q2, mejoresDias, mejoresClientes }
+    return { porDia, porDiaInfo, programado, cobrado, pendiente: programado - cobrado, q1, q2, mejoresDias, mejoresClientes }
   }, [filtradas])
 
   // Por cobrar por modalidad y quincena (siempre sobre todas las modalidades)
@@ -190,21 +195,34 @@ export default function ReporteCobrosClient() {
             <div className="grid grid-cols-7 gap-1">
               {celdas.map((d, i) => {
                 if (d === null) return <div key={i} className="aspect-square rounded-lg bg-gray-50/50" />
-                const monto = datos.porDia[d] ?? 0
+                const info = datos.porDiaInfo[d]
+                const monto = info?.monto ?? 0
+                const todoPagado = !!info && info.count > 0 && info.pagadas === info.count
+                const tieneVencidas = !!info && info.vencidas > 0
                 const intensidad = monto > 0 ? 0.12 + 0.6 * (monto / maxDia) : 0
+                const rgb = todoPagado ? '5,150,105' : '196,30,58' // verde vs rojo
                 const activo = diaSel === d
                 return (
                   <button key={i} type="button" disabled={monto === 0}
                     onClick={() => setDiaSel(activo ? null : d)}
-                    className={`aspect-square rounded-lg border p-1.5 flex flex-col text-left transition-all ${monto > 0 ? 'cursor-pointer hover:ring-2 hover:ring-oriental-red/40' : 'cursor-default'} ${activo ? 'ring-2 ring-oriental-red' : d === 15 ? 'border-oriental-red/40' : 'border-gray-100'}`}
-                    style={{ backgroundColor: monto > 0 ? `rgba(196,30,58,${intensidad})` : '#fff' }}>
+                    className={`aspect-square rounded-lg border-2 p-1.5 flex flex-col text-left transition-all ${monto > 0 ? 'cursor-pointer hover:ring-2 hover:ring-oriental-red/40' : 'cursor-default'} ${activo ? 'ring-2 ring-oriental-red' : ''}`}
+                    style={{
+                      backgroundColor: monto > 0 ? `rgba(${rgb},${intensidad})` : '#fff',
+                      borderColor: tieneVencidas ? '#dc2626' : (d === 15 ? 'rgba(196,30,58,0.35)' : '#f3f4f6'),
+                    }}>
                     <span className={`text-[11px] font-bold ${intensidad > 0.4 ? 'text-white' : 'text-oriental-black'}`}>{d}</span>
                     {monto > 0 && <span className={`text-[10px] font-semibold mt-auto ${intensidad > 0.4 ? 'text-white' : 'text-oriental-black'}`}>${fmt(monto)}</span>}
                   </button>
                 )
               })}
             </div>
-            <p className="text-[11px] text-oriental-gray mt-2">Haz clic en un día para ver a quién toca cobrar. Cada celda muestra el total a cobrar ese día (por vencimiento de cuotas). Más rojo = más cobro.</p>
+            <p className="text-[11px] text-oriental-gray mt-2">Haz clic en un día para ver a quién toca cobrar. Cada celda muestra el total de cuotas de ese día.</p>
+            {/* Leyenda de colores */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 text-[11px] text-oriental-gray">
+              <span className="inline-flex items-center gap-1.5"><span className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(5,150,105,0.55)' }} /> Todo cobrado</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(196,30,58,0.55)' }} /> Por cobrar (más oscuro = más monto)</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2" style={{ borderColor: '#dc2626' }} /> Con cuotas vencidas</span>
+            </div>
 
             {/* Detalle del día seleccionado */}
             {diaSel !== null && (() => {
