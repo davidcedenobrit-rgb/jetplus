@@ -51,6 +51,7 @@ const SECTIONS: NavSection[] = [
     icon: Users,
     links: [
       { href: '/gestion-ventas', label: 'Ventas',        icon: ShoppingBag,   roles: DIR },
+      { href: '/reportes/ventas', label: 'Reporte de ventas', icon: BarChart2, roles: DIR },
       { href: '/base-datos', label: 'Base de datos',      icon: Database,      roles: DIR },
       { href: '/clientes',  label: 'Clientes',          icon: Users,         hideFor: ['arianna', 'almacen'] },
       { href: '/vehiculos', label: 'Vehículos',         icon: Car,           hideFor: ['arianna', 'almacen'] },
