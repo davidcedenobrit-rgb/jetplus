@@ -80,6 +80,7 @@ const SECTIONS: NavSection[] = [
       { href: '/movimientos',  label: 'Movimientos y conciliación', icon: Wallet, roles: DIR },
       { href: '/libro-iva',    label: 'Libro de IVA',       icon: Scale,        roles: DIR },
       { href: '/cobranza',     label: 'Cartera de cobranza', icon: Coins,       roles: DIR },
+      { href: '/reportes/cobros', label: 'Cobros por quincena', icon: CalendarDays, roles: DIR },
       { href: '/centros-costo', label: 'Centros de costo',  icon: BarChart2,    roles: DIR },
       { href: '/cuentas',      label: 'Por pagar / cobrar', icon: Coins,        roles: DIR },
       { href: '/pagos-fijos',  label: 'Pago Fijo',          icon: Repeat,       roles: DIR },
