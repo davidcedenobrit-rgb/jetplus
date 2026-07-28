@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Users, Car, Store, Boxes, Gift, Building2, Package, CalendarDays, Database } from 'lucide-react'
+import { Users, Car, Store, Boxes, Gift, Building2, Package, CalendarDays, Database, BarChart3 } from 'lucide-react'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
@@ -15,6 +15,7 @@ const CARDS: { href: string; label: string; desc: string; icon: any; color: stri
   { href: '/obsequios', label: 'Obsequios a clientes', desc: 'Registro de obsequios entregados', icon: Gift, color: 'text-pink-600 bg-pink-50' },
   { href: '/base-datos/concesionarios', label: 'Concesionarios', desc: 'Concesionarios, prefijos y logos', icon: Building2, color: 'text-slate-600 bg-slate-50' },
   { href: '/eventos', label: 'Eventos', desc: 'Cronograma y calendario de eventos', icon: CalendarDays, color: 'text-purple-600 bg-purple-50' },
+  { href: '/consolidados', label: 'Consolidados', desc: 'Ventas, compras y eventos del período', icon: BarChart3, color: 'text-teal-600 bg-teal-50' },
 ]
 
 export default async function BaseDatosPage() {

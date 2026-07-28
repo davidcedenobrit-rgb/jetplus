@@ -84,6 +84,7 @@ const SECTIONS: NavSection[] = [
       { href: '/pagos-fijos',  label: 'Pago Fijo',          icon: Repeat,       roles: DIR },
       { href: '/tasas',        label: 'Tasas',              icon: ArrowLeftRight, hideFor: ['arianna', 'almacen'] },
       { href: '/reportes',     label: 'Reportes',           icon: BarChart2,    hideFor: ['arianna', 'almacen'] },
+      { href: '/consolidados', label: 'Consolidados',       icon: BarChart2,    roles: DIR },
       { href: '/proveedores',  label: 'Proveedores',        icon: Truck,        roles: DIR },
       { href: '/aprobaciones', label: 'Aprobaciones',       icon: ShieldCheck,  hideFor: ['arianna', 'almacen'], badge: 'aprob' },
       { href: '/anulaciones',  label: 'Anulaciones',        icon: Ban,          roles: DIR, badge: 'anul' },
