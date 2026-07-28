@@ -87,6 +87,23 @@ export default function ReporteCobrosClient() {
     return { porDia, programado, cobrado, pendiente: programado - cobrado, q1, q2, mejoresDias, mejoresClientes }
   }, [filtradas])
 
+  // Por cobrar por modalidad y quincena (siempre sobre todas las modalidades)
+  const porModQuincena = useMemo(() => {
+    const init = () => ({ la_oriental: 0, motor: 0, ac500: 0, especial: 0, otros: 0 })
+    const q1 = init(), q2 = init()
+    for (const c of cuotas) {
+      const dia = Number(String(c.fecha_vencimiento).slice(8, 10))
+      const monto = Number(c.monto || 0)
+      const plan = c.creditos?.plan_tipo
+      const k = plan === 'inicial_la_oriental' ? 'la_oriental'
+        : plan === 'financiamiento_vehimotors' ? 'motor'
+        : plan === 'asegurate_500' ? 'ac500'
+        : plan === 'cuota_especial' ? 'especial' : 'otros'
+      ;(dia <= 15 ? q1 : q2)[k] += monto
+    }
+    return { q1, q2 }
+  }, [cuotas])
+
   // Grilla del calendario
   const celdas = useMemo(() => {
     const primerDia = new Date(anio, mes - 1, 1).getDay() // 0=Dom
@@ -203,6 +220,34 @@ export default function ReporteCobrosClient() {
               )
             })()}
           </div>
+
+          {/* Por cobrar por modalidad (por quincena) */}
+          {([['1ª quincena (1–15)', porModQuincena.q1], [`2ª quincena (16–${diasMes})`, porModQuincena.q2]] as const).map(([titulo, q]) => {
+            const items = [
+              { label: 'La Oriental', v: q.la_oriental, cls: 'text-oriental-red' },
+              { label: 'Crédito del motor', v: q.motor, cls: 'text-indigo-700' },
+              { label: 'Asegúrate 500', v: q.ac500, cls: 'text-blue-700' },
+              { label: 'Cuotas especiales', v: q.especial, cls: 'text-amber-700' },
+            ]
+            if (q.otros > 0) items.push({ label: 'Otros', v: q.otros, cls: 'text-oriental-gray' })
+            const tot = items.reduce((s, x) => s + x.v, 0)
+            return (
+              <div key={titulo} className="mb-5">
+                <div className="flex items-baseline justify-between mb-2">
+                  <h2 className="font-bold text-oriental-black text-sm">Por cobrar — {titulo}</h2>
+                  <span className="text-sm font-black text-green-700">${fmt(tot)}</span>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {items.map(x => (
+                    <div key={x.label} className="card p-4">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray mb-1">{x.label}</p>
+                      <p className={`text-xl font-black ${x.cls}`}>${fmt(x.v)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Mejores fechas */}
