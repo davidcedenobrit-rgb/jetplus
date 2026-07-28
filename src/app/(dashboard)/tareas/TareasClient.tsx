@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ListChecks, Plus, Trash2, X, Loader2, Check, User, Clock, Flag, ChevronRight, AlertCircle } from 'lucide-react'
+import { ListChecks, Plus, Trash2, X, Loader2, Check, User, Clock, Flag, AlertCircle, LayoutGrid, List } from 'lucide-react'
 
 type Usuario = { id: string; nombre: string; rol: string }
 
@@ -19,23 +19,25 @@ type Tarea = {
   created_at: string
 }
 
-const ESTADOS: Record<Tarea['estado'], { label: string; cls: string; dot: string }> = {
-  pendiente: { label: 'Pendiente', cls: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' },
-  en_curso:  { label: 'En curso',  cls: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-  hecha:     { label: 'Hecha',     cls: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-}
+const COLUMNAS: { estado: Tarea['estado']; label: string; head: string }[] = [
+  { estado: 'pendiente', label: 'Por hacer', head: 'bg-gray-100 text-gray-700' },
+  { estado: 'en_curso', label: 'En curso', head: 'bg-blue-100 text-blue-700' },
+  { estado: 'hecha', label: 'Hecha', head: 'bg-green-100 text-green-700' },
+]
 
 const PRIORIDADES: Record<Tarea['prioridad'], { label: string; cls: string }> = {
-  alta:  { label: 'Alta',  cls: 'bg-red-100 text-red-700 border-red-200' },
+  alta: { label: 'Alta', cls: 'bg-red-100 text-red-700 border-red-200' },
   media: { label: 'Media', cls: 'bg-amber-100 text-amber-700 border-amber-200' },
-  baja:  { label: 'Baja',  cls: 'bg-gray-100 text-gray-500 border-gray-200' },
+  baja: { label: 'Baja', cls: 'bg-gray-100 text-gray-500 border-gray-200' },
 }
 
-// Siguiente estado en el ciclo pendiente → en_curso → hecha → pendiente
-const NEXT_ESTADO: Record<Tarea['estado'], Tarea['estado']> = {
-  pendiente: 'en_curso',
-  en_curso: 'hecha',
-  hecha: 'pendiente',
+// Color determinístico por responsable
+const PALETA = ['#C41E3A', '#2563eb', '#059669', '#7c3aed', '#d97706', '#0891b2', '#db2777', '#4b5563', '#65a30d', '#e11d48']
+function colorDe(id?: string | null) {
+  if (!id) return '#9ca3af'
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return PALETA[h % PALETA.length]
 }
 
 const EMPTY = { titulo: '', descripcion: '', asignado_a: '', prioridad: 'media' as Tarea['prioridad'], fecha_limite: '' }
@@ -43,7 +45,7 @@ type Form = typeof EMPTY
 
 function fmtFecha(d: string | null) {
   if (!d) return null
-  return new Date(d + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })
+  return new Date(d + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })
 }
 
 export default function TareasClient({ currentUserId, puedeAsignar, usuarios }: {
@@ -54,11 +56,14 @@ export default function TareasClient({ currentUserId, puedeAsignar, usuarios }: 
   const supabase = createClient()
   const [items, setItems] = useState<Tarea[]>([])
   const [loading, setLoading] = useState(true)
+  const [modo, setModo] = useState<'tablero' | 'lista'>('tablero')
   const [vista, setVista] = useState<'mias' | 'asignadas' | 'todas'>(puedeAsignar ? 'todas' : 'mias')
   const [creando, setCreando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState<Form>(EMPTY)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [overCol, setOverCol] = useState<string | null>(null)
 
   const nombreDe = useMemo(() => {
     const m: Record<string, string> = {}
@@ -79,10 +84,8 @@ export default function TareasClient({ currentUserId, puedeAsignar, usuarios }: 
     let base = items
     if (vista === 'mias') base = items.filter(t => t.asignado_a === currentUserId)
     else if (vista === 'asignadas') base = items.filter(t => t.creado_por === currentUserId)
-    // Orden: no-hechas primero, luego por prioridad (alta→baja), luego por fecha límite
     const prioRank = { alta: 0, media: 1, baja: 2 }
     return [...base].sort((a, b) => {
-      if ((a.estado === 'hecha') !== (b.estado === 'hecha')) return a.estado === 'hecha' ? 1 : -1
       if (prioRank[a.prioridad] !== prioRank[b.prioridad]) return prioRank[a.prioridad] - prioRank[b.prioridad]
       return (a.fecha_limite ?? '9999').localeCompare(b.fecha_limite ?? '9999')
     })
@@ -113,15 +116,17 @@ export default function TareasClient({ currentUserId, puedeAsignar, usuarios }: 
     setGuardando(false); setCreando(false); load()
   }
 
-  async function cambiarEstado(t: Tarea) {
-    const nuevo = NEXT_ESTADO[t.estado]
-    // Actualización optimista
-    setItems(prev => prev.map(x => x.id === t.id ? { ...x, estado: nuevo } : x))
+  const puedeMover = (t: Tarea) => t.asignado_a === currentUserId || puedeAsignar
+
+  async function moverA(id: string, estado: Tarea['estado']) {
+    const t = items.find(x => x.id === id)
+    if (!t || t.estado === estado || !puedeMover(t)) return
+    setItems(prev => prev.map(x => x.id === id ? { ...x, estado } : x))
     await supabase.from('tareas').update({
-      estado: nuevo,
-      completado_at: nuevo === 'hecha' ? new Date().toISOString() : null,
+      estado,
+      completado_at: estado === 'hecha' ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
-    }).eq('id', t.id)
+    }).eq('id', id)
     load()
   }
 
@@ -135,6 +140,45 @@ export default function TareasClient({ currentUserId, puedeAsignar, usuarios }: 
     ? [{ k: 'todas', label: 'Todas' }, { k: 'mias', label: 'Mis tareas' }, { k: 'asignadas', label: 'Asignadas por mí' }]
     : [{ k: 'mias', label: 'Mis tareas' }]
 
+  function Tarjeta({ t }: { t: Tarea }) {
+    const prio = PRIORIDADES[t.prioridad]
+    const vencida = t.fecha_limite && t.fecha_limite < hoy && t.estado !== 'hecha'
+    const color = colorDe(t.asignado_a)
+    const movible = puedeMover(t)
+    return (
+      <div
+        draggable={movible}
+        onDragStart={e => { setDragId(t.id); e.dataTransfer.effectAllowed = 'move' }}
+        onDragEnd={() => { setDragId(null); setOverCol(null) }}
+        className={`bg-white rounded-xl border border-gray-200 p-3 shadow-sm ${movible ? 'cursor-grab active:cursor-grabbing' : ''} ${dragId === t.id ? 'opacity-40' : ''} ${t.estado === 'hecha' ? 'opacity-75' : ''}`}
+        style={{ borderLeft: `4px solid ${color}` }}>
+        <div className="flex items-start gap-2">
+          <p className={`flex-1 font-semibold text-oriental-black text-sm leading-snug ${t.estado === 'hecha' ? 'line-through text-oriental-gray' : ''}`}>{t.titulo}</p>
+          {puedeAsignar && (
+            <button onClick={() => borrar(t.id)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 flex-shrink-0"><Trash2 size={12} className="text-red-400" /></button>
+          )}
+        </div>
+        {t.descripcion && <p className="text-xs text-oriental-gray mt-1 line-clamp-2">{t.descripcion}</p>}
+        <div className="flex items-center gap-2 flex-wrap mt-2">
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${prio.cls}`}><Flag size={9} /> {prio.label}</span>
+          {t.fecha_limite && (
+            <span className={`text-[10px] inline-flex items-center gap-1 ${vencida ? 'text-red-600 font-bold' : 'text-oriental-gray'}`}>
+              {vencida ? <AlertCircle size={10} /> : <Clock size={10} />} {fmtFecha(t.fecha_limite)}
+            </span>
+          )}
+        </div>
+        {t.asignado_a && (
+          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-50">
+            <span className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[8px] font-bold text-white" style={{ backgroundColor: color }}>
+              {(nombreDe[t.asignado_a] ?? '?').charAt(0).toUpperCase()}
+            </span>
+            <span className="text-[11px] text-oriental-gray truncate">{nombreDe[t.asignado_a] ?? 'Usuario'}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -147,74 +191,53 @@ export default function TareasClient({ currentUserId, puedeAsignar, usuarios }: 
             )}
           </button>
         ))}
+        {/* Toggle tablero / lista */}
+        <div className="flex items-center gap-1 ml-auto bg-gray-100 rounded-lg p-0.5">
+          <button onClick={() => setModo('tablero')} title="Tablero" className={`w-8 h-7 flex items-center justify-center rounded-md ${modo === 'tablero' ? 'bg-white shadow-sm text-oriental-black' : 'text-oriental-gray'}`}><LayoutGrid size={15} /></button>
+          <button onClick={() => setModo('lista')} title="Lista" className={`w-8 h-7 flex items-center justify-center rounded-md ${modo === 'lista' ? 'bg-white shadow-sm text-oriental-black' : 'text-oriental-gray'}`}><List size={15} /></button>
+        </div>
         {puedeAsignar && (
-          <button onClick={abrirNuevo} className="btn-primary flex items-center gap-2 ml-auto"><Plus size={16} /> Asignar tarea</button>
+          <button onClick={abrirNuevo} className="btn-primary flex items-center gap-2"><Plus size={16} /> Asignar tarea</button>
         )}
       </div>
 
       {loading ? (
         <div className="card p-12 text-center text-oriental-gray text-sm">Cargando…</div>
-      ) : filtradas.length === 0 ? (
-        <div className="card p-12 text-center">
-          <ListChecks size={30} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-oriental-gray text-sm">
-            {vista === 'mias' ? 'No tienes tareas asignadas.' : vista === 'asignadas' ? 'No has asignado tareas.' : 'Sin tareas registradas.'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtradas.map(t => {
-            const est = ESTADOS[t.estado]
-            const prio = PRIORIDADES[t.prioridad]
-            const vencida = t.fecha_limite && t.fecha_limite < hoy && t.estado !== 'hecha'
-            const esMia = t.asignado_a === currentUserId
-            const puedeCambiar = esMia || puedeAsignar
+      ) : modo === 'tablero' ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {COLUMNAS.map(col => {
+            const tareasCol = filtradas.filter(t => t.estado === col.estado)
             return (
-              <div key={t.id} className={`card p-4 flex items-start gap-3 group ${t.estado === 'hecha' ? 'opacity-70' : ''}`}>
-                {/* Toggle estado */}
-                <button
-                  onClick={() => puedeCambiar && cambiarEstado(t)}
-                  disabled={!puedeCambiar}
-                  title={puedeCambiar ? 'Cambiar estado' : 'Solo el responsable puede cambiar el estado'}
-                  className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
-                    t.estado === 'hecha' ? 'bg-green-500 border-green-500' : t.estado === 'en_curso' ? 'border-blue-500' : 'border-gray-300'
-                  } ${puedeCambiar ? 'hover:scale-105 cursor-pointer' : 'cursor-default'}`}>
-                  {t.estado === 'hecha' ? <Check size={13} className="text-white" strokeWidth={3} />
-                    : t.estado === 'en_curso' ? <ChevronRight size={13} className="text-blue-500" />
-                    : null}
-                </button>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className={`font-semibold text-oriental-black ${t.estado === 'hecha' ? 'line-through text-oriental-gray' : ''}`}>{t.titulo}</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${est.cls}`}>{est.label}</span>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${prio.cls}`}><Flag size={9} /> {prio.label}</span>
-                  </div>
-                  {t.descripcion && <p className="text-xs text-oriental-gray mt-1">{t.descripcion}</p>}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-[11px] text-oriental-gray">
-                    {t.asignado_a && (
-                      <span className="inline-flex items-center gap-1"><User size={11} /> {nombreDe[t.asignado_a] ?? 'Usuario'}</span>
-                    )}
-                    {t.fecha_limite && (
-                      <span className={`inline-flex items-center gap-1 ${vencida ? 'text-red-600 font-semibold' : ''}`}>
-                        {vencida ? <AlertCircle size={11} /> : <Clock size={11} />} {vencida ? 'Venció' : 'Límite'}: {fmtFecha(t.fecha_limite)}
-                      </span>
-                    )}
-                    {t.creado_por && puedeAsignar && t.creado_por !== currentUserId && (
-                      <span className="text-oriental-gray/70">· asignó {nombreDe[t.creado_por] ?? '—'}</span>
-                    )}
-                  </div>
+              <div key={col.estado}
+                onDragOver={e => { e.preventDefault(); setOverCol(col.estado) }}
+                onDragLeave={() => setOverCol(prev => prev === col.estado ? null : prev)}
+                onDrop={() => { if (dragId) moverA(dragId, col.estado); setDragId(null); setOverCol(null) }}
+                className={`rounded-xl p-2.5 transition-colors ${overCol === col.estado ? 'bg-oriental-red/5 ring-2 ring-oriental-red/30' : 'bg-gray-50'}`}>
+                <div className="flex items-center justify-between px-1 mb-2">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${col.head}`}>{col.label}</span>
+                  <span className="text-xs font-semibold text-oriental-gray">{tareasCol.length}</span>
                 </div>
-
-                {puedeAsignar && (
-                  <button onClick={() => borrar(t.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                    <Trash2 size={13} className="text-red-400" />
-                  </button>
-                )}
+                <div className="space-y-2 min-h-[80px]">
+                  {tareasCol.map(t => <Tarjeta key={t.id} t={t} />)}
+                  {tareasCol.length === 0 && <p className="text-[11px] text-gray-400 text-center py-6">Arrastra tareas aquí</p>}
+                </div>
               </div>
             )
           })}
         </div>
+      ) : filtradas.length === 0 ? (
+        <div className="card p-12 text-center">
+          <ListChecks size={30} className="mx-auto text-gray-300 mb-3" />
+          <p className="text-oriental-gray text-sm">Sin tareas.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtradas.map(t => <div key={t.id}><Tarjeta t={t} /></div>)}
+        </div>
+      )}
+
+      {!loading && modo === 'tablero' && (
+        <p className="text-[11px] text-oriental-gray mt-3">Arrastra las tarjetas entre columnas para cambiar su estado. El color identifica al responsable.</p>
       )}
 
       {creando && (
