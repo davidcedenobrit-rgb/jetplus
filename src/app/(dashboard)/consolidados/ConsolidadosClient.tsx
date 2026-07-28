@@ -61,7 +61,7 @@ export default function ConsolidadosClient() {
     setLoading(true)
     const [div, egr, evt] = await Promise.all([
       fetchAll<any>((f, t) => supabase.from('ventas_division_contable')
-        .select('*, vehiculos(marca, modelo, placa, fecha_venta, created_at)').range(f, t)),
+        .select('*, vehiculos(marca, modelo, placa, fecha_entrega, created_at)').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('egresos')
         .select('monto, moneda, tasa_cambio, categoria, beneficiario, fecha_egreso, estado')
         .in('categoria', Object.keys(COMPRA_CATS)).neq('estado', 'anulado').neq('estado', 'rechazado')
@@ -71,7 +71,7 @@ export default function ConsolidadosClient() {
     ])
     // Fecha de la venta: fecha_venta del vehículo, o created_at como respaldo.
     const dentro = (v: any) => {
-      const fv = v.vehiculos?.fecha_venta ?? v.vehiculos?.created_at ?? v.created_at
+      const fv = v.vehiculos?.fecha_entrega ?? v.vehiculos?.created_at ?? v.created_at
       const d = String(fv ?? '').slice(0, 10)
       return d >= desde && d <= hasta
     }

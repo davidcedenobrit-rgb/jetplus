@@ -47,7 +47,7 @@ export default function ReporteVentasClient() {
   const cargar = useCallback(async () => {
     setLoading(true)
     const [vehiculos, creditos, divisiones] = await Promise.all([
-      fetchAll<any>((f, t) => supabase.from('vehiculos').select('id, marca, modelo, tipo_compra, fecha_venta, precio_total, estado').not('fecha_venta', 'is', null).range(f, t)),
+      fetchAll<any>((f, t) => supabase.from('vehiculos').select('id, marca, modelo, tipo_compra, fecha_entrega, created_at, precio_total, estado').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('creditos').select('vehiculo_id, plan_tipo').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('ventas_division_contable').select('vehiculo_id, vendedora, monto_proforma').range(f, t)),
     ])
@@ -63,7 +63,7 @@ export default function ReporteVentasClient() {
       const div = divMap[v.id]
       return {
         id: v.id, marca: v.marca ?? '—', modelo: v.modelo ?? '—',
-        fecha: String(v.fecha_venta).slice(0, 10),
+        fecha: String(v.fecha_entrega ?? v.created_at ?? '').slice(0, 10),
         modalidad, vendedora: div?.vendedora || 'Sin asignar',
         monto: Number(div?.monto_proforma ?? v.precio_total ?? 0),
       }
