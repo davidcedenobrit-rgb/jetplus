@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, XCircle, AlertTriangle, Printer, Banknote, Send, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { CheckCircle2, XCircle, AlertTriangle, Printer, Banknote, Send, Loader2, Pencil } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import { aprobarEgreso, rechazarEgreso, solicitarCorreccionEgreso, reenviarEgreso, marcarPagadoEgreso } from './estado-actions'
 
@@ -25,6 +26,7 @@ export default function EgresoActionButtons({ egresoId, estado, rol, esRegistrad
   const [pagoRef, setPagoRef] = useState('')
 
   const puedeAprobar = DIR.includes(rol)
+  const editable = ['registrado', 'pendiente_aprobacion', 'correccion_requerida'].includes(estado) && (puedeAprobar || esRegistrador)
 
   async function run(key: string, fn: () => Promise<{ ok?: boolean; error?: string }>) {
     setLoading(key); setError('')
@@ -83,6 +85,11 @@ export default function EgresoActionButtons({ egresoId, estado, rol, esRegistrad
       {error && <p className="text-xs text-oriental-red mt-2">{error}</p>}
 
       <div className="border-t border-gray-100 mt-4 pt-4 space-y-2">
+        {editable && (
+          <Link href={`/egresos/${egresoId}/editar`} className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-black hover:bg-gray-50 transition-colors">
+            <Pencil size={16} /> Editar egreso
+          </Link>
+        )}
         <button onClick={() => window.print()} className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-oriental-gray hover:bg-gray-50 transition-colors">
           <Printer size={16} /> Imprimir comprobante
         </button>
