@@ -17,6 +17,10 @@ const MODALIDAD: { key: string; label: string; planes: string[] }[] = [
   { key: 'motor', label: 'Crédito del motor', planes: ['financiamiento_vehimotors'] },
   { key: 'ac500', label: 'Asegúrate 500', planes: ['asegurate_500'] },
 ]
+const PLAN_LABEL: Record<string, string> = {
+  inicial_la_oriental: 'La Oriental', cuota_especial: 'Cuota especial',
+  financiamiento_vehimotors: 'Crédito del motor', asegurate_500: 'Asegúrate 500',
+}
 
 async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null }>): Promise<T[]> {
   const PAGE = 1000; let out: T[] = []
@@ -42,6 +46,7 @@ export default function ReporteCobrosClient() {
   const [modalidad, setModalidad] = useState('todas')
   const [loading, setLoading] = useState(true)
   const [cuotas, setCuotas] = useState<any[]>([])
+  const [diaSel, setDiaSel] = useState<number | null>(null)
 
   const desde = `${anio}-${String(mes).padStart(2, '0')}-01`
   const diasMes = new Date(anio, mes, 0).getDate()
@@ -55,6 +60,7 @@ export default function ReporteCobrosClient() {
     setCuotas(data); setLoading(false)
   }, [desde, hasta])
   useEffect(() => { cargar() }, [cargar])
+  useEffect(() => { setDiaSel(null) }, [mes, anio, modalidad])
 
   const planesSel = MODALIDAD.find(m => m.key === modalidad)?.planes ?? []
   const filtradas = useMemo(() => cuotas.filter(c =>
@@ -141,16 +147,61 @@ export default function ReporteCobrosClient() {
                 if (d === null) return <div key={i} className="aspect-square rounded-lg bg-gray-50/50" />
                 const monto = datos.porDia[d] ?? 0
                 const intensidad = monto > 0 ? 0.12 + 0.6 * (monto / maxDia) : 0
+                const activo = diaSel === d
                 return (
-                  <div key={i} className={`aspect-square rounded-lg border p-1.5 flex flex-col ${d === 15 ? 'border-oriental-red/40' : 'border-gray-100'}`}
+                  <button key={i} type="button" disabled={monto === 0}
+                    onClick={() => setDiaSel(activo ? null : d)}
+                    className={`aspect-square rounded-lg border p-1.5 flex flex-col text-left transition-all ${monto > 0 ? 'cursor-pointer hover:ring-2 hover:ring-oriental-red/40' : 'cursor-default'} ${activo ? 'ring-2 ring-oriental-red' : d === 15 ? 'border-oriental-red/40' : 'border-gray-100'}`}
                     style={{ backgroundColor: monto > 0 ? `rgba(196,30,58,${intensidad})` : '#fff' }}>
                     <span className={`text-[11px] font-bold ${intensidad > 0.4 ? 'text-white' : 'text-oriental-black'}`}>{d}</span>
                     {monto > 0 && <span className={`text-[10px] font-semibold mt-auto ${intensidad > 0.4 ? 'text-white' : 'text-oriental-black'}`}>${fmt(monto)}</span>}
-                  </div>
+                  </button>
                 )
               })}
             </div>
-            <p className="text-[11px] text-oriental-gray mt-2">Cada celda muestra el total a cobrar ese día (según fecha de vencimiento de las cuotas). Más rojo = más cobro.</p>
+            <p className="text-[11px] text-oriental-gray mt-2">Haz clic en un día para ver a quién toca cobrar. Cada celda muestra el total a cobrar ese día (por vencimiento de cuotas). Más rojo = más cobro.</p>
+
+            {/* Detalle del día seleccionado */}
+            {diaSel !== null && (() => {
+              const delDia = filtradas
+                .filter(c => Number(String(c.fecha_vencimiento).slice(8, 10)) === diaSel)
+                .sort((a, b) => Number(b.monto || 0) - Number(a.monto || 0))
+              const totalDia = delDia.reduce((s, c) => s + Number(c.monto || 0), 0)
+              const estadoCuota = (c: any) => {
+                if (c.estado === 'pagada') return { t: 'Pagada', cls: 'bg-blue-100 text-blue-700' }
+                if (c.estado === 'vencida') return { t: 'Vencida', cls: 'bg-red-100 text-red-700' }
+                if (Number(c.monto_pagado || 0) > 0) return { t: 'Abono', cls: 'bg-amber-100 text-amber-700' }
+                return { t: 'Pendiente', cls: 'bg-gray-100 text-gray-600' }
+              }
+              return (
+                <div className="mt-3 border-t border-gray-100 pt-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-oriental-black text-sm">Cobros del {diaSel} de {MESES[mes - 1]} — <span className="text-green-700">${fmt(totalDia)}</span></h3>
+                    <button onClick={() => setDiaSel(null)} className="text-xs text-oriental-gray hover:text-oriental-black">Cerrar ✕</button>
+                  </div>
+                  {delDia.length === 0 ? <p className="text-sm text-oriental-gray">Sin cobros ese día.</p> : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50"><tr>{['Cliente', 'Modalidad', 'Monto', 'Estado'].map((h, i) => <th key={i} className={`px-3 py-1.5 text-[11px] font-semibold text-oriental-gray ${i <= 1 ? 'text-left' : 'text-right'}`}>{h}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {delDia.map((c, i) => {
+                            const e = estadoCuota(c)
+                            return (
+                              <tr key={i} className="hover:bg-gray-50">
+                                <td className="px-3 py-1.5 text-oriental-black truncate max-w-[200px]">{c.creditos?.clientes?.nombre ?? '—'}</td>
+                                <td className="px-3 py-1.5 text-oriental-gray text-xs">{PLAN_LABEL[c.creditos?.plan_tipo] ?? 'Otro'}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums font-semibold">${fmt(Number(c.monto || 0))}</td>
+                                <td className="px-3 py-1.5 text-right"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${e.cls}`}>{e.t}</span></td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
