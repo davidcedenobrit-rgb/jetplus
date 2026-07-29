@@ -2,8 +2,15 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createHash } from 'crypto'
 
 const ROLES = ['jose', 'admin', 'director']
+
+// Clave especial de Rojas para desbloquear el reparto (hash SHA-256 con sal).
+const CLAVE_SALT = 'la-oriental-reparto-v1'
+function hashClave(clave: string): string {
+  return createHash('sha256').update(CLAVE_SALT + clave).digest('hex')
+}
 
 async function guarded() {
   const supabase = await createClient()
@@ -48,8 +55,18 @@ export async function toggleCentro(id: string, activo: boolean) {
   return error ? { error: error.message } : { ok: true }
 }
 
+// Estado del candado del reparto (para la UI).
+export async function estadoReparto() {
+  const g = await guarded(); if ('error' in g) return g
+  const { data: cfg } = await g.svc.from('reparto_config').select('bloqueado_hasta, clave_hash').eq('id', 1).single()
+  const bloqueado = !!(cfg?.bloqueado_hasta && new Date(cfg.bloqueado_hasta) > new Date())
+  return { ok: true as const, bloqueadoHasta: (cfg?.bloqueado_hasta as string | null) ?? null, bloqueado, tieneClave: !!cfg?.clave_hash }
+}
+
 // Guarda el reparto de gastos comunes (% por centro de ingreso). Debe sumar 100.
-export async function guardarReparto(rows: { centro_costo_id: string; porcentaje: number }[]) {
+// Si hay clave configurada y el reparto está bloqueado (dentro del mes), exige
+// la clave de Rojas. Al guardar, vuelve a bloquear por un mes.
+export async function guardarReparto(rows: { centro_costo_id: string; porcentaje: number }[], clave?: string) {
   const g = await guarded(); if ('error' in g) return g
   const limpio = (rows ?? []).map(r => ({
     centro_costo_id: String(r.centro_costo_id),
@@ -57,9 +74,42 @@ export async function guardarReparto(rows: { centro_costo_id: string; porcentaje
   })).filter(r => r.centro_costo_id)
   const suma = limpio.reduce((s, r) => s + r.porcentaje, 0)
   if (Math.abs(suma - 100) > 0.01) return { error: `Los porcentajes deben sumar 100% (suman ${suma.toFixed(2)}%)` }
-  const now = new Date().toISOString()
+
+  const { data: cfg } = await g.svc.from('reparto_config').select('bloqueado_hasta, clave_hash').eq('id', 1).single()
+  const ahora = new Date()
+  const tieneClave = !!cfg?.clave_hash
+  const bloqueado = !!(cfg?.bloqueado_hasta && new Date(cfg.bloqueado_hasta) > ahora)
+  if (tieneClave && bloqueado) {
+    if (!clave || hashClave(clave) !== cfg!.clave_hash) {
+      const hasta = new Date(cfg!.bloqueado_hasta as string).toLocaleDateString('es-VE')
+      return { error: `El reparto está bloqueado hasta el ${hasta}. Ingresa la clave de Rojas para modificarlo.` }
+    }
+  }
+
+  const now = ahora.toISOString()
   const { error } = await g.svc.from('reparto_gastos_comunes')
     .upsert(limpio.map(r => ({ ...r, updated_at: now })), { onConflict: 'centro_costo_id' })
+  if (error) return { error: error.message }
+
+  // Vuelve a bloquear por un mes (solo tiene efecto si hay clave para desbloquear).
+  if (tieneClave) {
+    const hasta = new Date(ahora); hasta.setMonth(hasta.getMonth() + 1)
+    await g.svc.from('reparto_config').update({ bloqueado_hasta: hasta.toISOString(), updated_at: now }).eq('id', 1)
+  }
+  return { ok: true }
+}
+
+// Configura o cambia la clave especial de Rojas. Si ya existe, exige la actual.
+export async function configurarClaveReparto(nueva: string, actual?: string) {
+  const g = await guarded(); if ('error' in g) return g
+  const n = (nueva ?? '').trim()
+  if (n.length < 4) return { error: 'La clave debe tener al menos 4 caracteres' }
+  const { data: cfg } = await g.svc.from('reparto_config').select('clave_hash').eq('id', 1).single()
+  if (cfg?.clave_hash) {
+    if (!actual || hashClave(actual) !== cfg.clave_hash) return { error: 'La clave actual no es correcta' }
+  }
+  const { error } = await g.svc.from('reparto_config')
+    .update({ clave_hash: hashClave(n), updated_at: new Date().toISOString() }).eq('id', 1)
   return error ? { error: error.message } : { ok: true }
 }
 

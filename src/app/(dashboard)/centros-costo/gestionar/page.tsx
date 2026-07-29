@@ -18,5 +18,9 @@ export default async function GestionarCentrosPage() {
   const { data } = await svc.from('centros_costo').select('id, nombre, activo, orden, es_comun, genera_ingreso').order('orden')
   const { data: rep } = await svc.from('reparto_gastos_comunes').select('centro_costo_id, porcentaje')
   const reparto = (rep ?? []).map(r => ({ centro_costo_id: r.centro_costo_id as string, porcentaje: Number(r.porcentaje) }))
-  return <GestionarCentrosClient inicial={(data as CentroRow[]) ?? []} repartoInicial={reparto} />
+  const { data: cfg } = await svc.from('reparto_config').select('bloqueado_hasta, clave_hash').eq('id', 1).single()
+  const bloqueadoHasta = (cfg?.bloqueado_hasta as string | null) ?? null
+  const bloqueado = !!(bloqueadoHasta && new Date(bloqueadoHasta) > new Date())
+  const tieneClave = !!cfg?.clave_hash
+  return <GestionarCentrosClient inicial={(data as CentroRow[]) ?? []} repartoInicial={reparto} bloqueadoHasta={bloqueadoHasta} bloqueado={bloqueado} tieneClave={tieneClave} />
 }
