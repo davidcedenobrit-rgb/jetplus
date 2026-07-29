@@ -25,6 +25,7 @@ export type CrearEgresoPayload = {
   observaciones: string | null
   numero_sa: string | null
   centro_costo_id: string | null
+  es_comun?: boolean
   origen_capital: string | null
   tipo_movimiento: string | null
   proveedor_id: string | null
@@ -89,7 +90,10 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
   // Normalizar los campos nuevos (no forman parte del schema base de Zod)
   const tipoMovimiento = payload.tipo_movimiento === 'inversion' ? 'inversion' : 'gasto'
   const origenCapital = payload.origen_capital?.trim() || null
-  const centroCostoId = payload.centro_costo_id?.trim() || null
+  // Gasto común (gastos fijos): se reparte por % entre las líneas de ingreso, no
+  // va a un solo centro de costo.
+  const esComun = payload.es_comun === true
+  const centroCostoId = esComun ? null : (payload.centro_costo_id?.trim() || null)
   const proveedorId = payload.proveedor_id?.trim() || null
 
   // IVA: monto es el total. En facturas mixtas, `monto_exento` es la parte sin
@@ -158,6 +162,7 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       fecha_egreso:     parsed.data.fecha_egreso,
       area_responsable: parsed.data.area_responsable ?? null,
       centro_costo_id:  centroCostoId,
+      es_comun:         esComun,
       origen_capital:   origenCapital,
       tipo_movimiento:  tipoMovimiento,
       proveedor_id:     proveedorId,

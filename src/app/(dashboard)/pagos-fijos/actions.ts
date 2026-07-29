@@ -138,7 +138,8 @@ export async function registrarEgresoDePagoFijo(id: string): Promise<{ ok?: bool
     monto:            pf.monto,
     moneda:           pf.moneda ?? 'USD',
     beneficiario:     pf.beneficiario ?? null,
-    centro_costo_id:  pf.centro_costo_id ?? null,
+    centro_costo_id:  null, // gasto común: no va a un solo centro, se reparte por %
+    es_comun:         true,
     proveedor_id:     pf.proveedor_id ?? null,
     tipo_movimiento:  'gasto',
     fecha_egreso:     hoy,

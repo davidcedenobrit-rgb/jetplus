@@ -6,7 +6,7 @@ import { ArrowLeft, PieChart, TrendingUp, TrendingDown, FileDown, Settings } fro
 import Link from 'next/link'
 import { distribuirGastoComun, type RepartoRow } from '@/lib/gastos-comunes'
 
-type Mov = { monto: number; moneda: string; tasa: number | null; centro: string | null }
+type Mov = { monto: number; moneda: string; tasa: number | null; centro: string | null; esComun?: boolean }
 type CentroCosto = { id: string; nombre: string; es_comun?: boolean | null }
 
 const SIN = 'Sin centro de costo'
@@ -59,12 +59,12 @@ export default function CentrosCostoClient() {
         .neq('estado', 'anulado').neq('estado', 'rechazado')
         .gte('fecha_pago', desde).lte('fecha_pago', hasta).range(f, t)),
       fetchAll<Record<string, unknown>>((f, t) => supabase.from('egresos')
-        .select('monto, moneda, tasa_cambio, centro_costo_id, area_responsable')
+        .select('monto, moneda, tasa_cambio, centro_costo_id, area_responsable, es_comun')
         .neq('estado', 'anulado').neq('estado', 'rechazado')
         .gte('fecha_egreso', desde).lte('fecha_egreso', hasta).range(f, t)),
     ])
     setIngresos(ing.map(r => ({ monto: Number(r.monto ?? 0), moneda: String(r.moneda ?? 'USD'), tasa: r.tasa_cambio != null ? Number(r.tasa_cambio) : null, centro: (r.centro_costo_id as string) ?? null })))
-    setEgresos(egr.map(r => ({ monto: Number(r.monto ?? 0), moneda: String(r.moneda ?? 'USD'), tasa: r.tasa_cambio != null ? Number(r.tasa_cambio) : null, centro: (r.centro_costo_id as string) ?? (r.area_responsable as string) ?? null })))
+    setEgresos(egr.map(r => ({ monto: Number(r.monto ?? 0), moneda: String(r.moneda ?? 'USD'), tasa: r.tasa_cambio != null ? Number(r.tasa_cambio) : null, centro: (r.centro_costo_id as string) ?? (r.area_responsable as string) ?? null, esComun: Boolean(r.es_comun) })))
     setLoading(false)
   }, [desde, hasta])
 
@@ -76,16 +76,15 @@ export default function CentrosCostoClient() {
   }, [centros])
 
   const filas = useMemo(() => {
-    const comunes = new Set(centros.filter(c => c.es_comun).map(c => c.id))
     const m: Record<string, { ing: number; egr: number }> = {}
     for (const i of ingresos) {
       const k = nombreCentro(i.centro)
       ;(m[k] ??= { ing: 0, egr: 0 }).ing += usd(i.monto, i.moneda, i.tasa)
     }
-    // Egresos: los de centros comunes se acumulan para repartir; el resto directo
+    // Egresos: los comunes (gastos fijos) se acumulan para repartir; el resto directo
     let gastoComun = 0
     for (const e of egresos) {
-      if (e.centro && comunes.has(e.centro)) { gastoComun += usd(e.monto, e.moneda, e.tasa); continue }
+      if (e.esComun) { gastoComun += usd(e.monto, e.moneda, e.tasa); continue }
       const k = nombreCentro(e.centro)
       ;(m[k] ??= { ing: 0, egr: 0 }).egr += usd(e.monto, e.moneda, e.tasa)
     }
@@ -97,7 +96,7 @@ export default function CentrosCostoClient() {
     return Object.entries(m)
       .map(([centro, v]) => ({ centro, ...v, neto: v.ing - v.egr }))
       .sort((a, b) => b.neto - a.neto)
-  }, [ingresos, egresos, centros, reparto, nombreCentro])
+  }, [ingresos, egresos, reparto, nombreCentro])
 
   const tot = filas.reduce((s, f) => ({ ing: s.ing + f.ing, egr: s.egr + f.egr }), { ing: 0, egr: 0 })
 
@@ -202,7 +201,7 @@ export default function CentrosCostoClient() {
       <p className="text-[11px] text-oriental-gray mt-4">
         Consolida ingresos y egresos por centro de costo en el período. Montos convertidos a USD (VES con la tasa de cada registro).
         Los registros sin centro de costo aparecen como &quot;{SIN}&quot;. Excluye anulados y rechazados.
-        Los gastos comunes (Administración) se reparten por % entre los centros de ingreso según lo configurado en «Gestionar centros».
+        Los gastos comunes (gastos fijos: alquiler, luz, internet, vigilancia, nómina…) se reparten por % entre las líneas de ingreso según lo configurado en «Gestionar centros».
       </p>
     </div>
   )

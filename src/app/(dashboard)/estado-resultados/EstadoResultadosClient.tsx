@@ -15,7 +15,7 @@ type MovEgreso = {
   numero_egreso: string | null; beneficiario: string | null
   monto: number; moneda: string; tasa_cambio: number | null; fecha_egreso: string; estado: string
   categoria: string; tipo_movimiento: string | null; centro_costo_id: string | null; area_responsable: string | null
-  iva_aplica: boolean | null; base_imponible: number | null
+  iva_aplica: boolean | null; base_imponible: number | null; es_comun: boolean | null
 }
 type CentroCosto = { id: string; nombre: string; es_comun?: boolean | null; genera_ingreso?: boolean | null }
 type Doc = { ref: string; fecha: string; detalle: string; monto: number }
@@ -71,7 +71,7 @@ export default function EstadoResultadosClient() {
         .select('numero_recibo, monto, moneda, tasa_cambio, fecha_pago, estado, concepto, titular_fondos, iva_aplica, base_imponible, centro_costo_id')
         .gte('fecha_pago', desde).lte('fecha_pago', hasta).range(f, t)),
       fetchAll<MovEgreso>((f, t) => supabase.from('egresos')
-        .select('numero_egreso, beneficiario, monto, moneda, tasa_cambio, fecha_egreso, estado, categoria, tipo_movimiento, centro_costo_id, area_responsable, iva_aplica, base_imponible')
+        .select('numero_egreso, beneficiario, monto, moneda, tasa_cambio, fecha_egreso, estado, categoria, tipo_movimiento, centro_costo_id, area_responsable, iva_aplica, base_imponible, es_comun')
         .gte('fecha_egreso', desde).lte('fecha_egreso', hasta).range(f, t)),
     ])
     setIngresos(ing.filter(i => !EXCL.has(i.estado)))
@@ -135,10 +135,10 @@ export default function EstadoResultadosClient() {
     }
     const categorias = Object.values(gastoPorCat).sort((a, b) => b.total - a.total)
 
-    // Resultado por centro de costo. Los gastos de los centros "comunes"
-    // (Administración) no se cargan a su propio centro: se acumulan y se reparten
-    // por % entre los centros de ingreso, para ver la utilidad real por línea.
-    const comunes = new Set(centros.filter(c => c.es_comun).map(c => c.id))
+    // Resultado por centro de costo. Los gastos comunes (gastos fijos: alquiler,
+    // luz, internet, vigilancia, nómina…) no se cargan a un solo centro: se
+    // acumulan y se reparten por % entre las líneas de ingreso, para ver la
+    // utilidad real por línea.
     const porCentro: Record<string, { ing: number; gasto: number }> = {}
     for (const i of propios) {
       const k = centroNombre(i.centro_costo_id)
@@ -146,7 +146,7 @@ export default function EstadoResultadosClient() {
     }
     let gastoComun = 0
     for (const e of gastosOp) {
-      if (e.centro_costo_id && comunes.has(e.centro_costo_id)) { gastoComun += netoEgr(e); continue }
+      if (e.es_comun) { gastoComun += netoEgr(e); continue }
       const k = centroNombre(e.centro_costo_id, e.area_responsable)
       ;(porCentro[k] ??= { ing: 0, gasto: 0 }).gasto += netoEgr(e)
     }
@@ -301,7 +301,7 @@ export default function EstadoResultadosClient() {
 
           {data.gastoComun > 0 && (
             <p className="text-[11px] text-oriental-gray mt-2">
-              Incluye <span className="font-semibold">${fmt(data.gastoComun)}</span> de gastos comunes (Administración) repartidos por % entre los centros de ingreso. El reparto se configura en Centros de costo → Gestionar.
+              Incluye <span className="font-semibold">${fmt(data.gastoComun)}</span> de gastos comunes (gastos fijos: alquiler, luz, internet, vigilancia, nómina…) repartidos por % entre las líneas de ingreso. El % se configura en Centros de costo → Gestionar.
             </p>
           )}
 

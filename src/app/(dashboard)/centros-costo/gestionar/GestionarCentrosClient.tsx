@@ -125,7 +125,7 @@ export default function GestionarCentrosClient({ inicial, repartoInicial = [] }:
           <h2 className="font-bold text-oriental-black">Reparto de gastos comunes</h2>
         </div>
         <p className="text-xs text-oriental-gray mb-3">
-          Los gastos del centro común (Administración: alquiler, luz, internet, vigilancia, nómina común) se reparten con estos % entre los centros de ingreso. Deben sumar 100%.
+          Los gastos comunes (gastos fijos: alquiler, luz, agua, internet, vigilancia, nómina común) se reparten con estos % entre las líneas de ingreso cuando se pagan. Deben sumar 100%.
         </p>
         {centrosIngreso.length === 0 ? (
           <p className="text-sm text-oriental-gray">No hay centros de ingreso configurados.</p>

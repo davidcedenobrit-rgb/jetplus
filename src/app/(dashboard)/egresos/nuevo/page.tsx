@@ -36,6 +36,7 @@ export default function NuevoEgresoPage() {
 
   const [centros, setCentros] = useState<CentroCosto[]>([])
   const [centroCosto, setCentroCosto] = useState('')
+  const [esComun, setEsComun] = useState(false)
   const [origenCapital, setOrigenCapital] = useState('')
   const [tipoMovimiento, setTipoMovimiento] = useState<'gasto' | 'inversion'>('gasto')
 
@@ -134,7 +135,8 @@ export default function NuevoEgresoPage() {
       area_responsable: centroNombre,
       observaciones: observaciones || null,
       numero_sa: numeroSa || null,
-      centro_costo_id: centroCosto || null,
+      centro_costo_id: esComun ? null : (centroCosto || null),
+      es_comun: esComun,
       origen_capital: origenCapital.trim() || null,
       tipo_movimiento: tipoMovimiento,
       proveedor_id: proveedor?.id ?? null,
@@ -338,13 +340,17 @@ export default function NuevoEgresoPage() {
           <SectionHead n={4} icon={<Tag size={16} />} title="Clasificación" sub="Centro de costo, categoría y concepto" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="label">Centro de costo *</label>
-              <select className="select" value={centroCosto} onChange={e => setCentroCosto(e.target.value)} required>
+              <label className="label">Centro de costo {esComun ? '' : '*'}</label>
+              <select className="select" value={centroCosto} onChange={e => setCentroCosto(e.target.value)} required={!esComun} disabled={esComun}>
                 <option value="">Seleccionar...</option>
                 {centros.map(c => (
                   <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
               </select>
+              <label className="flex items-center gap-2 mt-2 text-xs text-oriental-gray cursor-pointer">
+                <input type="checkbox" checked={esComun} onChange={e => setEsComun(e.target.checked)} className="rounded" />
+                Gasto común (se reparte por % entre las líneas de ingreso)
+              </label>
             </div>
             <div>
               <label className="label">Categoría *</label>
