@@ -20,7 +20,9 @@ type CentroCosto = { id: string; nombre: string }
 
 const ESTADOS_EXCLUIDOS = new Set(['anulado', 'rechazado'])
 
-function usd(monto: number, moneda: string, tasa: number | null): number {
+// Convierte con la tasa de cada operación. Bs: USD→m*tasa, VES→m. USD: VES→m/tasa.
+function conv(monto: number, moneda: string, tasa: number | null, aBs: boolean): number {
+  if (aBs) return moneda === 'VES' ? monto : monto * (tasa && tasa > 0 ? tasa : 0)
   if (moneda === 'VES') return tasa && tasa > 0 ? monto / tasa : 0
   return monto
 }
@@ -62,6 +64,9 @@ export default function BalancePage() {
   const [ingresos, setIngresos] = useState<MovIngreso[]>([])
   const [egresos, setEgresos] = useState<MovEgreso[]>([])
   const [loading, setLoading] = useState(false)
+  const [moneda, setMoneda] = useState<'USD' | 'Bs'>('USD')
+  const aBs = moneda === 'Bs'
+  const simb = aBs ? 'Bs ' : '$'
 
   useEffect(() => {
     supabase.from('centros_costo').select('id, nombre').eq('activo', true).order('orden')
@@ -92,13 +97,13 @@ export default function BalancePage() {
   // ── Bases: ingreso propio neto de IVA (excluye fondos de terceros); egresos netos de IVA ──
   const esPropio = (i: MovIngreso): boolean => (i.titular_fondos ?? 'propio') === 'propio'
   // Monto neto de IVA: cuando el registro lleva IVA se usa la base imponible; si no, el monto.
-  const netoIng = (i: MovIngreso): number => usd(i.iva_aplica && i.base_imponible ? Number(i.base_imponible) : i.monto, i.moneda, i.tasa_cambio)
-  const netoEgr = (e: MovEgreso): number => usd(e.iva_aplica && e.base_imponible ? Number(e.base_imponible) : e.monto, e.moneda, e.tasa_cambio)
+  const netoIng = (i: MovIngreso): number => conv(i.iva_aplica && i.base_imponible ? Number(i.base_imponible) : i.monto, i.moneda, i.tasa_cambio, aBs)
+  const netoEgr = (e: MovEgreso): number => conv(e.iva_aplica && e.base_imponible ? Number(e.base_imponible) : e.monto, e.moneda, e.tasa_cambio, aBs)
 
   // Ingreso propio (lo que de verdad es de La Oriental), neto de IVA débito.
   const ingresoPropio = ingresos.filter(esPropio).reduce((s, i) => s + netoIng(i), 0)
   // Fondos de terceros en custodia (NO es ingreso) — se muestra aparte.
-  const fondosCustodia = ingresos.filter(i => !esPropio(i)).reduce((s, i) => s + usd(i.monto, i.moneda, i.tasa_cambio), 0)
+  const fondosCustodia = ingresos.filter(i => !esPropio(i)).reduce((s, i) => s + conv(i.monto, i.moneda, i.tasa_cambio, aBs), 0)
 
   const totalIngresos = ingresoPropio
   const totalEgresos = egresos.reduce((s, e) => s + netoEgr(e), 0)
@@ -174,6 +179,10 @@ export default function BalancePage() {
               onClick={() => { setFechaDesde(hoy.slice(0, 4) + '-01-01'); setFechaHasta(hoy) }}
               className="px-3 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-oriental-gray hover:bg-gray-50"
             >Este año</button>
+            <div className="ml-auto flex gap-1">
+              <button onClick={() => setMoneda('USD')} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${moneda === 'USD' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200'}`}>USD</button>
+              <button onClick={() => setMoneda('Bs')} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${moneda === 'Bs' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200'}`}>Bs</button>
+            </div>
           </div>
         </div>
       </div>
@@ -189,10 +198,10 @@ export default function BalancePage() {
                 <TrendingUp size={16} />
                 <p className="text-xs uppercase tracking-wider font-semibold">Ingreso propio</p>
               </div>
-              <p className="text-2xl font-bold text-oriental-black">${fmt(totalIngresos)}</p>
+              <p className="text-2xl font-bold text-oriental-black">{simb}{fmt(totalIngresos)}</p>
               <p className="text-[11px] text-oriental-gray mt-1">
                 Neto de IVA · solo La Oriental
-                {fondosCustodia > 0 && <span className="block text-amber-700 font-semibold">+ ${fmt(fondosCustodia)} en custodia (no es ingreso)</span>}
+                {fondosCustodia > 0 && <span className="block text-amber-700 font-semibold">+ {simb}{fmt(fondosCustodia)} en custodia (no es ingreso)</span>}
               </p>
             </div>
             <div className="card p-5">
@@ -200,9 +209,9 @@ export default function BalancePage() {
                 <TrendingDown size={16} />
                 <p className="text-xs uppercase tracking-wider font-semibold">Egresos</p>
               </div>
-              <p className="text-2xl font-bold text-oriental-black">${fmt(totalEgresos)}</p>
+              <p className="text-2xl font-bold text-oriental-black">{simb}{fmt(totalEgresos)}</p>
               <p className="text-[11px] text-oriental-gray mt-1">
-                Gasto ${fmt(totalGasto)} · Inversión ${fmt(totalInversion)}
+                Gasto {simb}{fmt(totalGasto)} · Inversión {simb}{fmt(totalInversion)}
               </p>
             </div>
             <div className={`card p-5 ${resultado >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
@@ -211,7 +220,7 @@ export default function BalancePage() {
                 <p className="text-xs uppercase tracking-wider font-semibold">Resultado</p>
               </div>
               <p className={`text-2xl font-bold ${resultado >= 0 ? 'text-green-800' : 'text-oriental-red'}`}>
-                {resultado < 0 ? '-' : ''}${fmt(Math.abs(resultado))}
+                {resultado < 0 ? '-' : ''}{simb}{fmt(Math.abs(resultado))}
               </p>
               <p className="text-[11px] text-oriental-gray mt-1">Ingreso propio − Egresos (neto de IVA)</p>
             </div>
@@ -241,9 +250,9 @@ export default function BalancePage() {
                     {centrosOrden.map(([nombre, v]) => (
                       <tr key={nombre} className="hover:bg-gray-50">
                         <td className="px-4 py-2.5 font-semibold text-oriental-black">{nombre}</td>
-                        <td className="px-4 py-2.5 text-right text-oriental-gray">${fmt(v.gasto)}</td>
-                        <td className="px-4 py-2.5 text-right text-oriental-gray">${fmt(v.inversion)}</td>
-                        <td className="px-4 py-2.5 text-right font-bold text-oriental-black">${fmt(v.total)}</td>
+                        <td className="px-4 py-2.5 text-right text-oriental-gray">{simb}{fmt(v.gasto)}</td>
+                        <td className="px-4 py-2.5 text-right text-oriental-gray">{simb}{fmt(v.inversion)}</td>
+                        <td className="px-4 py-2.5 text-right font-bold text-oriental-black">{simb}{fmt(v.total)}</td>
                         <td className="px-4 py-2.5 text-right text-oriental-gray text-xs">
                           {totalEgresos > 0 ? Math.round((v.total / totalEgresos) * 100) : 0}%
                         </td>
@@ -253,9 +262,9 @@ export default function BalancePage() {
                   <tfoot>
                     <tr className="bg-oriental-black text-white">
                       <td className="px-4 py-2.5 font-bold text-sm">Total egresos</td>
-                      <td className="px-4 py-2.5 text-right font-semibold">${fmt(totalGasto)}</td>
-                      <td className="px-4 py-2.5 text-right font-semibold">${fmt(totalInversion)}</td>
-                      <td className="px-4 py-2.5 text-right font-bold">${fmt(totalEgresos)}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold">{simb}{fmt(totalGasto)}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold">{simb}{fmt(totalInversion)}</td>
+                      <td className="px-4 py-2.5 text-right font-bold">{simb}{fmt(totalEgresos)}</td>
                       <td className="px-4 py-2.5 text-right">100%</td>
                     </tr>
                   </tfoot>
@@ -288,10 +297,10 @@ export default function BalancePage() {
                       return (
                         <tr key={mes} className="hover:bg-gray-50">
                           <td className="px-4 py-2.5 font-semibold text-oriental-black capitalize">{fmtMes(mes)}</td>
-                          <td className="px-4 py-2.5 text-right text-green-700">${fmt(v.ing)}</td>
-                          <td className="px-4 py-2.5 text-right text-oriental-red">${fmt(v.egr)}</td>
+                          <td className="px-4 py-2.5 text-right text-green-700">{simb}{fmt(v.ing)}</td>
+                          <td className="px-4 py-2.5 text-right text-oriental-red">{simb}{fmt(v.egr)}</td>
                           <td className={`px-4 py-2.5 text-right font-bold ${r >= 0 ? 'text-green-800' : 'text-oriental-red'}`}>
-                            {r < 0 ? '-' : ''}${fmt(Math.abs(r))}
+                            {r < 0 ? '-' : ''}{simb}{fmt(Math.abs(r))}
                           </td>
                         </tr>
                       )
@@ -303,7 +312,7 @@ export default function BalancePage() {
           </div>
 
           <p className="text-[11px] text-oriental-gray mt-4">
-            Los montos en bolívares se convierten a USD con la tasa registrada en cada movimiento. Se excluyen anulados y rechazados.
+            {aBs ? 'Cada monto se convierte a bolívares con la tasa BCV del día de la operación (no el total por la tasa de hoy).' : 'Los montos en bolívares se convierten a USD con la tasa registrada en cada movimiento.'} Se excluyen anulados y rechazados.
           </p>
         </>
       )}

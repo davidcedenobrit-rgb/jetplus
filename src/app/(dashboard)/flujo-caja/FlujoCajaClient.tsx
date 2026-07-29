@@ -7,7 +7,11 @@ import Link from 'next/link'
 
 type Mov = { monto: number; moneda: string; tasa_cambio: number | null; fecha: string }
 
-function usd(m: number, moneda: string, t: number | null): number { return moneda === 'VES' ? (t && t > 0 ? m / t : 0) : m }
+// Convierte con la tasa de cada operación. Bs: USD→m*tasa, VES→m. USD: VES→m/tasa.
+function conv(m: number, moneda: string, t: number | null, aBs: boolean): number {
+  if (aBs) return moneda === 'VES' ? m : m * (t && t > 0 ? t : 0)
+  return moneda === 'VES' ? (t && t > 0 ? m / t : 0) : m
+}
 function fmt(n: number): string { return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 function nombreMes(k: string) { const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('es-VE', { month: 'long', year: 'numeric' }) }
 async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
@@ -25,6 +29,9 @@ export default function FlujoCajaClient() {
   const [entradas, setEntradas] = useState<Mov[]>([])
   const [salidas, setSalidas] = useState<Mov[]>([])
   const [loading, setLoading] = useState(true)
+  const [moneda, setMoneda] = useState<'USD' | 'Bs'>('USD')
+  const aBs = moneda === 'Bs'
+  const simb = aBs ? 'Bs ' : '$'
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -49,8 +56,8 @@ export default function FlujoCajaClient() {
     const meses = new Set<string>()
     const entMes: Record<string, number> = {}
     const salMes: Record<string, number> = {}
-    for (const m of entradas) { const k = m.fecha.slice(0, 7); if (!k) continue; meses.add(k); entMes[k] = (entMes[k] ?? 0) + usd(m.monto, m.moneda, m.tasa_cambio) }
-    for (const m of salidas) { const k = m.fecha.slice(0, 7); if (!k) continue; meses.add(k); salMes[k] = (salMes[k] ?? 0) + usd(m.monto, m.moneda, m.tasa_cambio) }
+    for (const m of entradas) { const k = m.fecha.slice(0, 7); if (!k) continue; meses.add(k); entMes[k] = (entMes[k] ?? 0) + conv(m.monto, m.moneda, m.tasa_cambio, aBs) }
+    for (const m of salidas) { const k = m.fecha.slice(0, 7); if (!k) continue; meses.add(k); salMes[k] = (salMes[k] ?? 0) + conv(m.monto, m.moneda, m.tasa_cambio, aBs) }
     const orden = Array.from(meses).sort()
     let acum = 0
     const filas = orden.map(k => {
@@ -61,7 +68,7 @@ export default function FlujoCajaClient() {
     const totEnt = filas.reduce((s, f) => s + f.ent, 0)
     const totSal = filas.reduce((s, f) => s + f.sal, 0)
     return { filas, totEnt, totSal, neto: totEnt - totSal }
-  }, [entradas, salidas])
+  }, [entradas, salidas, aBs])
 
   function exportarCsv() {
     const rows = data.filas.map(f => [nombreMes(f.mes), f.ent.toFixed(2), f.sal.toFixed(2), f.neto.toFixed(2), f.acum.toFixed(2)])
@@ -79,7 +86,7 @@ export default function FlujoCajaClient() {
           <div className="w-10 h-10 bg-oriental-red/10 rounded-xl flex items-center justify-center"><Coins size={20} className="text-oriental-red" /></div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Flujo de caja</h1>
-            <p className="text-oriental-gray text-sm">Entradas y salidas reales de efectivo por mes (en USD)</p>
+            <p className="text-oriental-gray text-sm">Entradas y salidas reales de efectivo por mes (en {aBs ? 'bolívares' : 'USD'})</p>
           </div>
         </div>
       </div>
@@ -87,21 +94,27 @@ export default function FlujoCajaClient() {
       <div className="card p-4 mb-6 flex flex-wrap items-end gap-3">
         <div><label className="label">Desde</label><input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="input" /></div>
         <div><label className="label">Hasta</label><input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="input" /></div>
-        <button onClick={exportarCsv} disabled={data.filas.length === 0} className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50 disabled:opacity-50"><FileDown size={15} /> CSV</button>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex gap-1">
+            <button onClick={() => setMoneda('USD')} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${moneda === 'USD' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200'}`}>USD</button>
+            <button onClick={() => setMoneda('Bs')} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${moneda === 'Bs' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200'}`}>Bs</button>
+          </div>
+          <button onClick={exportarCsv} disabled={data.filas.length === 0} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50 disabled:opacity-50"><FileDown size={15} /> CSV</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="card p-4">
           <div className="flex items-center gap-1.5 text-green-700 mb-0.5"><TrendingUp size={15} /><p className="text-[11px] uppercase tracking-wider font-semibold">Entradas</p></div>
-          <p className="text-xl font-black text-oriental-black">${fmt(data.totEnt)}</p>
+          <p className="text-xl font-black text-oriental-black">{simb}{fmt(data.totEnt)}</p>
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-1.5 text-oriental-red mb-0.5"><TrendingDown size={15} /><p className="text-[11px] uppercase tracking-wider font-semibold">Salidas</p></div>
-          <p className="text-xl font-black text-oriental-black">${fmt(data.totSal)}</p>
+          <p className="text-xl font-black text-oriental-black">{simb}{fmt(data.totSal)}</p>
         </div>
         <div className={`card p-4 ${data.neto >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray">Flujo neto</p>
-          <p className={`text-xl font-black ${data.neto >= 0 ? 'text-green-800' : 'text-oriental-red'}`}>{data.neto < 0 ? '−' : ''}${fmt(Math.abs(data.neto))}</p>
+          <p className={`text-xl font-black ${data.neto >= 0 ? 'text-green-800' : 'text-oriental-red'}`}>{data.neto < 0 ? '−' : ''}{simb}{fmt(Math.abs(data.neto))}</p>
         </div>
       </div>
 
@@ -126,10 +139,10 @@ export default function FlujoCajaClient() {
                 ) : data.filas.map(f => (
                   <tr key={f.mes} className="hover:bg-gray-50">
                     <td className="px-4 py-2.5 font-semibold text-oriental-black capitalize">{nombreMes(f.mes)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-green-700">${fmt(f.ent)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-oriental-red">${fmt(f.sal)}</td>
-                    <td className={`px-4 py-2.5 text-right tabular-nums font-bold ${f.neto >= 0 ? 'text-oriental-black' : 'text-oriental-red'}`}>{f.neto < 0 ? '−' : ''}${fmt(Math.abs(f.neto))}</td>
-                    <td className={`px-4 py-2.5 text-right tabular-nums font-semibold ${f.acum >= 0 ? 'text-oriental-gray' : 'text-oriental-red'}`}>{f.acum < 0 ? '−' : ''}${fmt(Math.abs(f.acum))}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-green-700">{simb}{fmt(f.ent)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-oriental-red">{simb}{fmt(f.sal)}</td>
+                    <td className={`px-4 py-2.5 text-right tabular-nums font-bold ${f.neto >= 0 ? 'text-oriental-black' : 'text-oriental-red'}`}>{f.neto < 0 ? '−' : ''}{simb}{fmt(Math.abs(f.neto))}</td>
+                    <td className={`px-4 py-2.5 text-right tabular-nums font-semibold ${f.acum >= 0 ? 'text-oriental-gray' : 'text-oriental-red'}`}>{f.acum < 0 ? '−' : ''}{simb}{fmt(Math.abs(f.acum))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -137,9 +150,9 @@ export default function FlujoCajaClient() {
                 <tfoot>
                   <tr className="bg-oriental-black text-white">
                     <td className="px-4 py-2.5 font-bold">Total</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold">${fmt(data.totEnt)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold">${fmt(data.totSal)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums font-bold">{data.neto < 0 ? '−' : ''}${fmt(Math.abs(data.neto))}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold">{simb}{fmt(data.totEnt)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold">{simb}{fmt(data.totSal)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-bold">{data.neto < 0 ? '−' : ''}{simb}{fmt(Math.abs(data.neto))}</td>
                     <td className="px-4 py-2.5"></td>
                   </tr>
                 </tfoot>
@@ -150,7 +163,7 @@ export default function FlujoCajaClient() {
       )}
 
       <p className="text-[11px] text-oriental-gray mt-4">
-        Flujo de caja = movimiento real de efectivo. Entradas = todos los ingresos cobrados (incluye custodia de terceros, porque es dinero que entró); Salidas = todos los egresos pagados. Es caja, no resultado: no descuenta IVA. VES a USD con la tasa de cada registro. Excluye anulados y rechazados.
+        Flujo de caja = movimiento real de efectivo. Entradas = todos los ingresos cobrados (incluye custodia de terceros, porque es dinero que entró); Salidas = todos los egresos pagados. Es caja, no resultado: no descuenta IVA. {aBs ? 'Cada monto se convierte a bolívares con la tasa BCV del día de la operación.' : 'VES a USD con la tasa de cada registro.'} Excluye anulados y rechazados.
       </p>
     </div>
   )
