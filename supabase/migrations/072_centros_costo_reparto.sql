@@ -22,8 +22,9 @@ update centros_costo set nombre = 'Venta de repuestos'        where id = 'repues
 -- Directiva: solo gasto
 update centros_costo set genera_ingreso = false where id = 'directiva';
 
--- Administración: gasto común (se reparte, no cuenta como ingreso propio)
-update centros_costo set nombre = 'Administración (gasto común)', genera_ingreso = false, es_comun = true where id = 'administracion';
+-- Administración: gasto común (se reparte, no cuenta como ingreso propio).
+-- Se activa para poder asignarle los gastos comunes al registrarlos.
+update centros_costo set nombre = 'Administración (gasto común)', genera_ingreso = false, es_comun = true, activo = true where id = 'administracion';
 
 -- Vehimotors nunca genera ingreso propio
 update centros_costo set genera_ingreso = false where id = 'vehimotors';
