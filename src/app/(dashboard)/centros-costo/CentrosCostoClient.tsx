@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, PieChart, TrendingUp, TrendingDown, FileDown, Settings } from 'lucide-react'
 import Link from 'next/link'
+import { distribuirGastoComun, type RepartoRow } from '@/lib/gastos-comunes'
 
 type Mov = { monto: number; moneda: string; tasa: number | null; centro: string | null }
-type CentroCosto = { id: string; nombre: string }
+type CentroCosto = { id: string; nombre: string; es_comun?: boolean | null }
 
 const SIN = 'Sin centro de costo'
 
@@ -38,13 +39,16 @@ export default function CentrosCostoClient() {
   const [desde, setDesde] = useState(primerDiaMes)
   const [hasta, setHasta] = useState(hoy)
   const [centros, setCentros] = useState<CentroCosto[]>([])
+  const [reparto, setReparto] = useState<RepartoRow[]>([])
   const [ingresos, setIngresos] = useState<Mov[]>([])
   const [egresos, setEgresos] = useState<Mov[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.from('centros_costo').select('id, nombre').eq('activo', true).order('orden')
+    supabase.from('centros_costo').select('id, nombre, es_comun').eq('activo', true).order('orden')
       .then(({ data }) => setCentros((data as CentroCosto[]) ?? []))
+    supabase.from('reparto_gastos_comunes').select('centro_costo_id, porcentaje')
+      .then(({ data }) => setReparto(((data as { centro_costo_id: string; porcentaje: number }[]) ?? []).map(r => ({ centro_costo_id: r.centro_costo_id, porcentaje: Number(r.porcentaje) }))))
   }, [])
 
   const cargar = useCallback(async () => {
@@ -72,19 +76,28 @@ export default function CentrosCostoClient() {
   }, [centros])
 
   const filas = useMemo(() => {
+    const comunes = new Set(centros.filter(c => c.es_comun).map(c => c.id))
     const m: Record<string, { ing: number; egr: number }> = {}
     for (const i of ingresos) {
       const k = nombreCentro(i.centro)
       ;(m[k] ??= { ing: 0, egr: 0 }).ing += usd(i.monto, i.moneda, i.tasa)
     }
+    // Egresos: los de centros comunes se acumulan para repartir; el resto directo
+    let gastoComun = 0
     for (const e of egresos) {
+      if (e.centro && comunes.has(e.centro)) { gastoComun += usd(e.monto, e.moneda, e.tasa); continue }
       const k = nombreCentro(e.centro)
       ;(m[k] ??= { ing: 0, egr: 0 }).egr += usd(e.monto, e.moneda, e.tasa)
+    }
+    const dist = distribuirGastoComun(gastoComun, reparto)
+    for (const [cid, monto] of Object.entries(dist)) {
+      const k = nombreCentro(cid)
+      ;(m[k] ??= { ing: 0, egr: 0 }).egr += monto
     }
     return Object.entries(m)
       .map(([centro, v]) => ({ centro, ...v, neto: v.ing - v.egr }))
       .sort((a, b) => b.neto - a.neto)
-  }, [ingresos, egresos, nombreCentro])
+  }, [ingresos, egresos, centros, reparto, nombreCentro])
 
   const tot = filas.reduce((s, f) => ({ ing: s.ing + f.ing, egr: s.egr + f.egr }), { ing: 0, egr: 0 })
 
@@ -189,6 +202,7 @@ export default function CentrosCostoClient() {
       <p className="text-[11px] text-oriental-gray mt-4">
         Consolida ingresos y egresos por centro de costo en el período. Montos convertidos a USD (VES con la tasa de cada registro).
         Los registros sin centro de costo aparecen como &quot;{SIN}&quot;. Excluye anulados y rechazados.
+        Los gastos comunes (Administración) se reparten por % entre los centros de ingreso según lo configurado en «Gestionar centros».
       </p>
     </div>
   )

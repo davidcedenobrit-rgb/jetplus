@@ -3,12 +3,13 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, PieChart, Check, X, Pencil, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, Plus } from 'lucide-react'
-import { crearCentro, renombrarCentro, toggleCentro, moverCentro } from '../gestionar-actions'
+import { ArrowLeft, PieChart, Check, X, Pencil, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, Plus, Percent } from 'lucide-react'
+import { crearCentro, renombrarCentro, toggleCentro, moverCentro, guardarReparto } from '../gestionar-actions'
 
-export type CentroRow = { id: string; nombre: string; activo: boolean; orden: number | null }
+export type CentroRow = { id: string; nombre: string; activo: boolean; orden: number | null; es_comun?: boolean; genera_ingreso?: boolean }
+type RepartoRow = { centro_costo_id: string; porcentaje: number }
 
-export default function GestionarCentrosClient({ inicial }: { inicial: CentroRow[] }) {
+export default function GestionarCentrosClient({ inicial, repartoInicial = [] }: { inicial: CentroRow[]; repartoInicial?: RepartoRow[] }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [editando, setEditando] = useState<string | null>(null)
@@ -16,6 +17,27 @@ export default function GestionarCentrosClient({ inicial }: { inicial: CentroRow
   const [trabajando, setTrabajando] = useState<string | null>(null)
   const [nuevo, setNuevo] = useState('')
   const [creando, setCreando] = useState(false)
+
+  // Centros de ingreso (los que reciben el reparto de gastos comunes)
+  const centrosIngreso = inicial.filter(c => c.activo && c.genera_ingreso !== false && !c.es_comun)
+  const [reparto, setReparto] = useState<Record<string, number>>(() => {
+    const base: Record<string, number> = {}
+    for (const c of inicial) if (c.activo && c.genera_ingreso !== false && !c.es_comun) base[c.id] = 0
+    for (const r of repartoInicial) base[r.centro_costo_id] = r.porcentaje
+    return base
+  })
+  const [guardandoRep, setGuardandoRep] = useState(false)
+  const [repMsg, setRepMsg] = useState<string | null>(null)
+  const sumaRep = Object.values(reparto).reduce((s, v) => s + (Number(v) || 0), 0)
+
+  async function guardarRep() {
+    setGuardandoRep(true); setRepMsg(null)
+    const rows = centrosIngreso.map(c => ({ centro_costo_id: c.id, porcentaje: Number(reparto[c.id]) || 0 }))
+    const res = await guardarReparto(rows)
+    setGuardandoRep(false)
+    setRepMsg(res && 'error' in res && res.error ? res.error : '✓ Reparto guardado')
+    if (res && 'ok' in res) refrescar()
+  }
 
   const refrescar = () => startTransition(() => router.refresh())
 
@@ -94,6 +116,51 @@ export default function GestionarCentrosClient({ inicial }: { inicial: CentroRow
             )}
           </div>
         ))}
+      </div>
+
+      {/* Reparto de gastos comunes por % */}
+      <div className="card p-4 mt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Percent size={16} className="text-oriental-red" />
+          <h2 className="font-bold text-oriental-black">Reparto de gastos comunes</h2>
+        </div>
+        <p className="text-xs text-oriental-gray mb-3">
+          Los gastos del centro común (Administración: alquiler, luz, internet, vigilancia, nómina común) se reparten con estos % entre los centros de ingreso. Deben sumar 100%.
+        </p>
+        {centrosIngreso.length === 0 ? (
+          <p className="text-sm text-oriental-gray">No hay centros de ingreso configurados.</p>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {centrosIngreso.map(c => (
+                <div key={c.id} className="flex items-center gap-3">
+                  <span className="flex-1 text-sm text-oriental-black">{c.nombre}</span>
+                  <div className="relative w-28">
+                    <input
+                      type="number" min={0} max={100} step="0.01"
+                      value={reparto[c.id] ?? 0}
+                      onChange={e => setReparto(r => ({ ...r, [c.id]: e.target.value === '' ? 0 : Number(e.target.value) }))}
+                      className="input py-1.5 pr-7 text-right"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-oriental-gray text-sm">%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+              <span className={`text-sm font-semibold ${Math.abs(sumaRep - 100) < 0.01 ? 'text-green-700' : 'text-oriental-red'}`}>
+                Suma: {sumaRep.toFixed(2)}%
+              </span>
+              <div className="flex items-center gap-3">
+                {repMsg && <span className={`text-xs ${repMsg.startsWith('✓') ? 'text-green-700' : 'text-oriental-red'}`}>{repMsg}</span>}
+                <button onClick={guardarRep} disabled={guardandoRep || Math.abs(sumaRep - 100) > 0.01}
+                  className="btn-primary flex items-center gap-1.5 py-2 px-4 text-sm disabled:opacity-50">
+                  {guardandoRep ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Guardar reparto
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

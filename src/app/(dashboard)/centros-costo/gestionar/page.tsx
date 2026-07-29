@@ -15,6 +15,8 @@ export default async function GestionarCentrosPage() {
   if (!ROLES.includes(rol)) redirect('/dashboard')
 
   const svc = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const { data } = await svc.from('centros_costo').select('id, nombre, activo, orden').order('orden')
-  return <GestionarCentrosClient inicial={(data as CentroRow[]) ?? []} />
+  const { data } = await svc.from('centros_costo').select('id, nombre, activo, orden, es_comun, genera_ingreso').order('orden')
+  const { data: rep } = await svc.from('reparto_gastos_comunes').select('centro_costo_id, porcentaje')
+  const reparto = (rep ?? []).map(r => ({ centro_costo_id: r.centro_costo_id as string, porcentaje: Number(r.porcentaje) }))
+  return <GestionarCentrosClient inicial={(data as CentroRow[]) ?? []} repartoInicial={reparto} />
 }

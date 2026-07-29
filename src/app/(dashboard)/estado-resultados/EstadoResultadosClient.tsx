@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
+import { distribuirGastoComun, type RepartoRow } from '@/lib/gastos-comunes'
 import { ArrowLeft, FileBarChart2, Printer, FileDown, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
@@ -16,7 +17,7 @@ type MovEgreso = {
   categoria: string; tipo_movimiento: string | null; centro_costo_id: string | null; area_responsable: string | null
   iva_aplica: boolean | null; base_imponible: number | null
 }
-type CentroCosto = { id: string; nombre: string }
+type CentroCosto = { id: string; nombre: string; es_comun?: boolean | null; genera_ingreso?: boolean | null }
 type Doc = { ref: string; fecha: string; detalle: string; monto: number }
 type Linea = { nombre: string; total: number; docs: Doc[] }
 
@@ -51,13 +52,16 @@ export default function EstadoResultadosClient() {
   const [hasta, setHasta] = useState(hoy)
   const [vista, setVista] = useState<'oriental' | 'vehimotors'>('oriental')
   const [centros, setCentros] = useState<CentroCosto[]>([])
+  const [reparto, setReparto] = useState<RepartoRow[]>([])
   const [ingresos, setIngresos] = useState<MovIngreso[]>([])
   const [egresos, setEgresos] = useState<MovEgreso[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.from('centros_costo').select('id, nombre').eq('activo', true).order('orden')
+    supabase.from('centros_costo').select('id, nombre, es_comun, genera_ingreso').eq('activo', true).order('orden')
       .then(({ data }) => setCentros((data as CentroCosto[]) ?? []))
+    supabase.from('reparto_gastos_comunes').select('centro_costo_id, porcentaje')
+      .then(({ data }) => setReparto(((data as { centro_costo_id: string; porcentaje: number }[]) ?? []).map(r => ({ centro_costo_id: r.centro_costo_id, porcentaje: Number(r.porcentaje) }))))
   }, [])
 
   const cargar = useCallback(async () => {
@@ -131,22 +135,33 @@ export default function EstadoResultadosClient() {
     }
     const categorias = Object.values(gastoPorCat).sort((a, b) => b.total - a.total)
 
-    // Resultado por centro de costo
+    // Resultado por centro de costo. Los gastos de los centros "comunes"
+    // (Administración) no se cargan a su propio centro: se acumulan y se reparten
+    // por % entre los centros de ingreso, para ver la utilidad real por línea.
+    const comunes = new Set(centros.filter(c => c.es_comun).map(c => c.id))
     const porCentro: Record<string, { ing: number; gasto: number }> = {}
     for (const i of propios) {
       const k = centroNombre(i.centro_costo_id)
       ;(porCentro[k] ??= { ing: 0, gasto: 0 }).ing += netoIng(i)
     }
+    let gastoComun = 0
     for (const e of gastosOp) {
+      if (e.centro_costo_id && comunes.has(e.centro_costo_id)) { gastoComun += netoEgr(e); continue }
       const k = centroNombre(e.centro_costo_id, e.area_responsable)
       ;(porCentro[k] ??= { ing: 0, gasto: 0 }).gasto += netoEgr(e)
+    }
+    // Repartir el gasto común entre los centros de ingreso según el % configurado
+    const dist = distribuirGastoComun(gastoComun, reparto)
+    for (const [cid, monto] of Object.entries(dist)) {
+      const k = centroNombre(cid)
+      ;(porCentro[k] ??= { ing: 0, gasto: 0 }).gasto += monto
     }
     const centrosRows = Object.entries(porCentro)
       .map(([centro, v]) => ({ centro, ing: v.ing, gasto: v.gasto, res: v.ing - v.gasto }))
       .sort((a, b) => b.res - a.res)
 
-    return { totalIngresos, totalGastos, totalInversion, custodia, resultado, conceptos, categorias, centrosRows, custodiaConceptos }
-  }, [ingresos, egresos, centroNombre])
+    return { totalIngresos, totalGastos, totalInversion, custodia, resultado, conceptos, categorias, centrosRows, custodiaConceptos, gastoComun }
+  }, [ingresos, egresos, centros, reparto, centroNombre])
 
   function exportarCsv() {
     const rows: (string | number)[][] = [['ESTADO DE RESULTADOS', `${desde} a ${hasta}`], []]
@@ -283,6 +298,12 @@ export default function EstadoResultadosClient() {
               </table>
             </div>
           </div>
+
+          {data.gastoComun > 0 && (
+            <p className="text-[11px] text-oriental-gray mt-2">
+              Incluye <span className="font-semibold">${fmt(data.gastoComun)}</span> de gastos comunes (Administración) repartidos por % entre los centros de ingreso. El reparto se configura en Centros de costo → Gestionar.
+            </p>
+          )}
 
           <p className="text-[11px] text-oriental-gray mt-5">
             Resultado operativo = ingreso propio (neto de IVA, excluye custodia de terceros) − gastos operativos (neto de IVA). Las inversiones no restan del resultado (son activo). VES convertido a USD con la tasa de cada registro.

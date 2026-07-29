@@ -48,6 +48,21 @@ export async function toggleCentro(id: string, activo: boolean) {
   return error ? { error: error.message } : { ok: true }
 }
 
+// Guarda el reparto de gastos comunes (% por centro de ingreso). Debe sumar 100.
+export async function guardarReparto(rows: { centro_costo_id: string; porcentaje: number }[]) {
+  const g = await guarded(); if ('error' in g) return g
+  const limpio = (rows ?? []).map(r => ({
+    centro_costo_id: String(r.centro_costo_id),
+    porcentaje: Math.max(0, Math.round(Number(r.porcentaje) * 100) / 100),
+  })).filter(r => r.centro_costo_id)
+  const suma = limpio.reduce((s, r) => s + r.porcentaje, 0)
+  if (Math.abs(suma - 100) > 0.01) return { error: `Los porcentajes deben sumar 100% (suman ${suma.toFixed(2)}%)` }
+  const now = new Date().toISOString()
+  const { error } = await g.svc.from('reparto_gastos_comunes')
+    .upsert(limpio.map(r => ({ ...r, updated_at: now })), { onConflict: 'centro_costo_id' })
+  return error ? { error: error.message } : { ok: true }
+}
+
 export async function moverCentro(id: string, direccion: 'arriba' | 'abajo') {
   const g = await guarded(); if ('error' in g) return g
   const { data: lista } = await g.svc.from('centros_costo').select('id, orden').order('orden')
