@@ -84,6 +84,11 @@ export default function NuevoEgresoPage() {
       .eq('activo', true)
       .order('orden')
       .then(({ data }) => { if (data) setCategorias(data) })
+    // Prellenar la tasa con la BCV del día (editable si se pagó a otra tasa).
+    fetch('/api/cotizaciones/tasas')
+      .then(r => r.json())
+      .then(d => { if (Number(d?.tasa_bcv) > 0) setTasaCambio(prev => prev || String(d.tasa_bcv)) })
+      .catch(() => {})
   }, [])
 
   // Al elegir un proveedor, prellena su dirección y su banco (editables). La
@@ -227,9 +232,10 @@ export default function NuevoEgresoPage() {
               <input type="number" step="0.01" min="0" className="input font-semibold text-lg" placeholder="0.00" value={monto} onChange={e => setMonto(e.target.value)} required />
             </div>
             <div>
-              <label className="label">Tasa del día (Bs/$)</label>
+              <label className="label">Tasa de pago (Bs/$)</label>
               <input type="number" step="0.0001" min="0" className="input font-semibold text-lg"
                 placeholder="Ej: 98.50" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} />
+              <p className="text-[10px] text-oriental-gray mt-1">Viene la BCV del día; edítala si pagaste a otra tasa. Se usa para ver este egreso en bolívares en los reportes.</p>
             </div>
             {parseFloat(monto) > 0 && parseFloat(tasaCambio) > 0 && (
               <div className="md:col-span-2 -mt-1">
