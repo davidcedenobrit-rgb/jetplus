@@ -11,6 +11,23 @@ export const dynamic = 'force-dynamic'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
+// Respaldo por concepto cuando el ingreso no tiene crédito ligado.
+//  - reserva / inicial / contado / comisión → Ventas (comisiones)
+//  - cuota AC500 mensual / cuota de vehículo / financiamiento → Vehimotors (terceros)
+//  - accesorios / repuestos → Repuestos ; servicio / taller → Servicio
+//  - IVA y otros ambiguos → sin sugerencia (revisión manual)
+function sugerirPorConcepto(concepto: string | null): { centro: string | null; etiqueta: string } {
+  const s = (concepto ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  if (!s) return { centro: null, etiqueta: 'Sin concepto' }
+  if (s.includes('reserva')) return { centro: 'ventas', etiqueta: 'Reserva → Comisiones' }
+  if (s.includes('ac500') || s.includes('asegurate')) return { centro: 'vehimotors', etiqueta: 'Cuota AC500 → Vehimotors' }
+  if (s.includes('inicial') || s.includes('contado') || s.includes('comisi')) return { centro: 'ventas', etiqueta: 'Inicial/Contado → Comisiones' }
+  if (s.includes('cuota de veh') || s.includes('financ')) return { centro: 'vehimotors', etiqueta: 'Cuota de vehículo → Vehimotors' }
+  if (s.includes('accesorio') || s.includes('repuesto')) return { centro: 'repuestos', etiqueta: 'Repuestos' }
+  if (s.includes('servicio') || s.includes('taller') || s.includes('mano de obra')) return { centro: 'servicio', etiqueta: 'Servicio/Taller' }
+  return { centro: null, etiqueta: 'Revisar a mano' }
+}
+
 export type FilaSinCentro = {
   id: string
   numero: string
@@ -67,6 +84,8 @@ export default async function SinCentroPage() {
   const filas: FilaSinCentro[] = ingresos.map(i => {
     const dom = dominante.get(i.id)
     const sug = centroSugerido(dom?.plan ?? null, dom?.num ?? null)
+    // Si el crédito no da centro, se intenta por concepto.
+    const porConcepto = sug.centro ? null : sugerirPorConcepto(i.concepto ?? null)
     return {
       id: i.id,
       numero: i.numero_recibo,
@@ -77,8 +96,8 @@ export default async function SinCentroPage() {
       moneda: i.moneda,
       montoUsd: montoUsd(i),
       estado: i.estado,
-      origenEtiqueta: sug.etiqueta,
-      centroSugerido: sug.centro,
+      origenEtiqueta: sug.centro ? sug.etiqueta : (porConcepto?.etiqueta ?? sug.etiqueta),
+      centroSugerido: sug.centro ?? porConcepto?.centro ?? null,
     }
   })
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Check, Loader2, Sparkles } from 'lucide-react'
-import type { FilaSinCentro } from './page'
+import type { FilaEgresoSinCentro } from './page'
 
 const fmt = (n: number) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -11,54 +11,53 @@ const fmtFecha = (d: string | null) => {
   if (!d) return '—'
   try { return new Date(d + 'T00:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short' }) } catch { return d }
 }
+const COMUN = '__comun__'
 
-export default function SinCentroClient({ filas, centros }: { filas: FilaSinCentro[]; centros: { id: string; nombre: string }[] }) {
+export default function EgresosSinCentroClient({ filas, centros }: { filas: FilaEgresoSinCentro[]; centros: { id: string; nombre: string }[] }) {
   const router = useRouter()
   const [q, setQ] = useState('')
-  const [sel, setSel] = useState<Record<string, string>>({})   // id -> centroId elegido
+  const [sel, setSel] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<string>('')
   const [hechos, setHechos] = useState<Set<string>>(new Set())
   const [bulk, setBulk] = useState(false)
 
-  const nombreCentro = (id: string) => centros.find(c => c.id === id)?.nombre ?? id
+  const nombreCentro = (id: string | null) => id === COMUN ? 'Gasto común' : (centros.find(c => c.id === id)?.nombre ?? id ?? '—')
 
   const visibles = useMemo(() => {
     const nq = norm(q.trim())
     const base = filas.filter(f => !hechos.has(f.id))
     if (!nq) return base
-    return base.filter(f => norm(f.numero).includes(nq) || norm(f.cliente).includes(nq) || norm(f.origenEtiqueta).includes(nq))
+    return base.filter(f => norm(f.numero).includes(nq) || norm(f.beneficiario).includes(nq) || norm(f.etiqueta).includes(nq))
   }, [filas, q, hechos])
 
   const totalUsd = visibles.reduce((s, f) => s + f.montoUsd, 0)
 
-  async function aplicar(f: FilaSinCentro) {
-    const centroId = sel[f.id] ?? f.centroSugerido ?? ''
-    if (!centroId) return
-    setSaving(f.id)
-    try {
-      const r = await fetch('/api/ingresos/recalificar', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingresoId: f.id, centroId }),
-      })
-      if (r.ok) { setHechos(prev => new Set(prev).add(f.id)); router.refresh() }
-    } finally { setSaving('') }
+  async function enviar(id: string, centroId: string): Promise<boolean> {
+    const r = await fetch('/api/egresos/recalificar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ egresoId: id, centroId }),
+    })
+    return r.ok
   }
 
-  // Cuántos de los visibles tienen una sugerencia lista para aplicar
-  const conSugerencia = visibles.filter(f => (sel[f.id] ?? f.centroSugerido))
+  async function aplicar(f: FilaEgresoSinCentro) {
+    const centroId = sel[f.id] ?? f.sugerido ?? ''
+    if (!centroId) return
+    setSaving(f.id)
+    try { if (await enviar(f.id, centroId)) { setHechos(prev => new Set(prev).add(f.id)); router.refresh() } }
+    finally { setSaving('') }
+  }
+
+  const conSugerencia = visibles.filter(f => (sel[f.id] ?? f.sugerido))
   async function aplicarTodas() {
     if (!conSugerencia.length) return
     setBulk(true)
     const ok = new Set<string>()
     try {
       for (const f of conSugerencia) {
-        const centroId = sel[f.id] ?? f.centroSugerido ?? ''
+        const centroId = sel[f.id] ?? f.sugerido ?? ''
         if (!centroId) continue
-        const r = await fetch('/api/ingresos/recalificar', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ingresoId: f.id, centroId }),
-        })
-        if (r.ok) ok.add(f.id)
+        if (await enviar(f.id, centroId)) ok.add(f.id)
       }
       if (ok.size) { setHechos(prev => new Set([...prev, ...ok])); router.refresh() }
     } finally { setBulk(false) }
@@ -83,7 +82,7 @@ export default function SinCentroClient({ filas, centros }: { filas: FilaSinCent
 
       <div className="relative mb-4">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por recibo, cliente u origen…"
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por número, beneficiario o categoría…"
           className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-oriental-red" />
       </div>
 
@@ -103,7 +102,7 @@ export default function SinCentroClient({ filas, centros }: { filas: FilaSinCent
       {visibles.length === 0 ? (
         <div className="card p-12 text-center text-oriental-gray">
           <Check size={28} className="mx-auto text-green-400 mb-2" />
-          <p className="text-sm">No quedan ingresos sin centro de costo.</p>
+          <p className="text-sm">No quedan egresos sin centro de costo.</p>
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -111,9 +110,9 @@ export default function SinCentroClient({ filas, centros }: { filas: FilaSinCent
             <table className="w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50">
                 <tr>
-                  <th className="text-left px-3 py-2.5 font-medium text-oriental-gray text-xs">Recibo</th>
-                  <th className="text-left px-3 py-2.5 font-medium text-oriental-gray text-xs">Cliente</th>
-                  <th className="text-left px-3 py-2.5 font-medium text-oriental-gray text-xs">Origen</th>
+                  <th className="text-left px-3 py-2.5 font-medium text-oriental-gray text-xs">N°</th>
+                  <th className="text-left px-3 py-2.5 font-medium text-oriental-gray text-xs">Beneficiario</th>
+                  <th className="text-left px-3 py-2.5 font-medium text-oriental-gray text-xs">Categoría</th>
                   <th className="text-right px-3 py-2.5 font-medium text-oriental-gray text-xs">Monto</th>
                   <th className="text-left px-3 py-2.5 font-medium text-oriental-gray text-xs">Centro de costo</th>
                   <th className="px-3 py-2.5" />
@@ -121,7 +120,7 @@ export default function SinCentroClient({ filas, centros }: { filas: FilaSinCent
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {visibles.map(f => {
-                  const elegido = sel[f.id] ?? f.centroSugerido ?? ''
+                  const elegido = sel[f.id] ?? f.sugerido ?? ''
                   return (
                     <tr key={f.id} className="hover:bg-gray-50">
                       <td className="px-3 py-2.5 whitespace-nowrap">
@@ -129,13 +128,13 @@ export default function SinCentroClient({ filas, centros }: { filas: FilaSinCent
                         <p className="text-[10px] text-gray-400">{fmtFecha(f.fecha)}</p>
                       </td>
                       <td className="px-3 py-2.5">
-                        <p className="text-oriental-black text-xs font-medium">{f.cliente}</p>
+                        <p className="text-oriental-black text-xs font-medium">{f.beneficiario}</p>
                         {f.concepto && <p className="text-[10px] text-gray-400 truncate max-w-[180px]">{f.concepto}</p>}
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{f.origenEtiqueta}</span>
-                        {f.centroSugerido && (
-                          <p className="text-[10px] text-oriental-red mt-0.5 flex items-center gap-1"><Sparkles size={9} /> Sugerido: {nombreCentro(f.centroSugerido)}</p>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{f.categoria ?? '—'}</span>
+                        {f.sugerido && (
+                          <p className="text-[10px] text-oriental-red mt-0.5 flex items-center gap-1"><Sparkles size={9} /> Sugerido: {nombreCentro(f.sugerido)}</p>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-right font-bold text-oriental-black whitespace-nowrap">${fmt(f.montoUsd)}</td>
@@ -143,6 +142,7 @@ export default function SinCentroClient({ filas, centros }: { filas: FilaSinCent
                         <select value={elegido} onChange={e => setSel(p => ({ ...p, [f.id]: e.target.value }))}
                           className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:border-oriental-red">
                           <option value="">— Elegir —</option>
+                          <option value={COMUN}>Gasto común (se reparte por %)</option>
                           {centros.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                         </select>
                       </td>

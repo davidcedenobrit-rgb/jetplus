@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCurrency, formatDate, ESTADOS_EGRESO_LABEL, CATEGORIAS_EGRESO_LABEL } from '@/lib/utils'
-import { Plus, Search, FileBarChart2, ListChecks } from 'lucide-react'
+import { Plus, Search, FileBarChart2, ListChecks, Layers } from 'lucide-react'
 
 export default async function EgresosPage({
   searchParams,
@@ -53,6 +53,9 @@ export default async function EgresosPage({
           <p className="text-oriental-gray text-sm mt-1">{egresos?.length ?? 0} registros</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/egresos/sin-centro" className="btn-secondary flex items-center gap-2">
+            <Layers size={16} /> Sin centro de costo
+          </Link>
           <Link href="/egresos/categorias" className="btn-secondary flex items-center gap-2">
             <ListChecks size={16} /> Categorías
           </Link>
