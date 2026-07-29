@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Coins, TrendingUp, AlertTriangle, FileDown, Search } from 'lucide-react'
 import Link from 'next/link'
+import { cuotaEsPropia } from '@/lib/centros-costo'
 
-type Cuota = { credito_id: string; monto: number; monto_pagado: number | null; estado: string }
+type Cuota = { credito_id: string; monto: number; monto_pagado: number | null; estado: string; numero_cuota: number | null }
 type ClienteRel = { nombre: string; cedula_rif: string | null }
 type Credito = {
   id: string; placa: string | null; moneda: string | null; estado: string; plan_tipo: string | null
@@ -47,6 +48,7 @@ export default function CobranzaClient() {
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<'con_saldo' | 'vencidos' | 'todos'>('con_saldo')
+  const [titular, setTitular] = useState<'todas' | 'oriental' | 'vehimotors'>('todas')
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -55,7 +57,7 @@ export default function CobranzaClient() {
         .select('id, placa, moneda, estado, plan_tipo, monto_financiado, clientes(nombre, cedula_rif)')
         .range(f, t)),
       fetchAll<Cuota>((f, t) => supabase.from('cuotas')
-        .select('credito_id, monto, monto_pagado, estado')
+        .select('credito_id, monto, monto_pagado, estado, numero_cuota')
         .range(f, t)),
     ])
     setCreditos(cre)
@@ -65,36 +67,51 @@ export default function CobranzaClient() {
 
   useEffect(() => { cargar() }, [cargar])
 
+  // plan_tipo por crédito, para clasificar cada cuota como propia o de Vehimotors
+  const planById = useMemo(() => {
+    const m: Record<string, string | null> = {}
+    for (const c of creditos) m[c.id] = c.plan_tipo
+    return m
+  }, [creditos])
+
   const porCredito = useMemo(() => {
-    const map: Record<string, { total: number; porCobrar: number; vencido: number; cuotasPend: number }> = {}
+    const map: Record<string, { total: number; porCobrar: number; vencido: number; cuotasPend: number; porCobrarProp: number; porCobrarVeh: number; vencidoProp: number; vencidoVeh: number }> = {}
     for (const q of cuotas) {
-      const m = (map[q.credito_id] ??= { total: 0, porCobrar: 0, vencido: 0, cuotasPend: 0 })
+      const m = (map[q.credito_id] ??= { total: 0, porCobrar: 0, vencido: 0, cuotasPend: 0, porCobrarProp: 0, porCobrarVeh: 0, vencidoProp: 0, vencidoVeh: 0 })
       const monto = Number(q.monto)
       const pagado = Number(q.monto_pagado ?? 0)
       m.total += monto
       if (POR_COBRAR.has(q.estado)) {
         const saldo = Math.max(0, monto - pagado)
+        const propia = cuotaEsPropia(planById[q.credito_id], q.numero_cuota)
         m.porCobrar += saldo
+        if (propia) m.porCobrarProp += saldo; else m.porCobrarVeh += saldo
         if (saldo > 0) m.cuotasPend += 1
-        if (q.estado === 'vencida') m.vencido += saldo
+        if (q.estado === 'vencida') {
+          m.vencido += saldo
+          if (propia) m.vencidoProp += saldo; else m.vencidoVeh += saldo
+        }
       }
     }
     return map
-  }, [cuotas])
+  }, [cuotas, planById])
 
   const filas = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
     return creditos
       .map(c => {
-        const agg = porCredito[c.id] ?? { total: 0, porCobrar: 0, vencido: 0, cuotasPend: 0 }
+        const agg = porCredito[c.id] ?? { total: 0, porCobrar: 0, vencido: 0, cuotasPend: 0, porCobrarProp: 0, porCobrarVeh: 0, vencidoProp: 0, vencidoVeh: 0 }
         const total = agg.total || Number(c.monto_financiado ?? 0)
         const cobrado = Math.max(0, total - agg.porCobrar)
         const pct = total > 0 ? Math.round((cobrado / total) * 100) : 0
         const cli = primerCliente(c)
+        // Monto por cobrar/vencido según el titular seleccionado
+        const porCobrar = titular === 'oriental' ? agg.porCobrarProp : titular === 'vehimotors' ? agg.porCobrarVeh : agg.porCobrar
+        const vencido = titular === 'oriental' ? agg.vencidoProp : titular === 'vehimotors' ? agg.vencidoVeh : agg.vencido
         return {
           id: c.id, cliente: cli?.nombre ?? 'Sin cliente', cedula: cli?.cedula_rif ?? '',
           placa: c.placa, plan: c.plan_tipo, estado: c.estado,
-          total, cobrado, porCobrar: agg.porCobrar, vencido: agg.vencido, cuotasPend: agg.cuotasPend, pct,
+          total, cobrado, porCobrar, vencido, cuotasPend: agg.cuotasPend, pct,
         }
       })
       .filter(r => {
@@ -107,11 +124,22 @@ export default function CobranzaClient() {
         return true
       })
       .sort((a, b) => b.vencido - a.vencido || b.porCobrar - a.porCobrar)
-  }, [creditos, porCredito, busqueda, filtro])
+  }, [creditos, porCredito, busqueda, filtro, titular])
 
   const tot = useMemo(() => filas.reduce((s, r) => ({
     total: s.total + r.total, cobrado: s.cobrado + r.cobrado, porCobrar: s.porCobrar + r.porCobrar, vencido: s.vencido + r.vencido,
   }), { total: 0, cobrado: 0, porCobrar: 0, vencido: 0 }), [filas])
+
+  // Separación global por titular (independiente del filtro), para los KPIs
+  const split = useMemo(() => {
+    let orientalPC = 0, vehPC = 0, orientalV = 0, vehV = 0
+    for (const k in porCredito) {
+      const a = porCredito[k]
+      orientalPC += a.porCobrarProp; vehPC += a.porCobrarVeh
+      orientalV += a.vencidoProp; vehV += a.vencidoVeh
+    }
+    return { orientalPC, vehPC, orientalV, vehV }
+  }, [porCredito])
 
   function exportarCsv() {
     const rows = filas.map(r => [r.cliente, r.cedula, r.placa ?? '', planLabel(r.plan), r.total.toFixed(2), r.cobrado.toFixed(2), r.porCobrar.toFixed(2), r.vencido.toFixed(2), `${r.pct}%`])
@@ -151,11 +179,13 @@ export default function CobranzaClient() {
         </div>
         <div className="card p-4">
           <p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray">Por cobrar</p>
-          <p className="text-xl font-black text-oriental-black">${fmt(tot.porCobrar)}</p>
+          <p className="text-sm font-black text-green-800">La Oriental ${fmt(split.orientalPC)}</p>
+          <p className="text-sm font-black text-amber-700">Vehimotors ${fmt(split.vehPC)}</p>
         </div>
         <div className="card p-4 bg-red-50 border-red-200">
           <div className="flex items-center gap-1.5 text-oriental-red mb-0.5"><AlertTriangle size={14} /><p className="text-[11px] uppercase tracking-wider font-semibold">Vencido</p></div>
-          <p className="text-xl font-black text-oriental-red">${fmt(tot.vencido)}</p>
+          <p className="text-sm font-black text-oriental-red">La Oriental ${fmt(split.orientalV)}</p>
+          <p className="text-sm font-black text-amber-700">Vehimotors ${fmt(split.vehV)}</p>
         </div>
       </div>
 
@@ -165,7 +195,11 @@ export default function CobranzaClient() {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-oriental-gray" />
           <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar por cliente, cédula o placa…" className="input pl-9" />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
+          {([['todas', 'Ambos'], ['oriental', 'La Oriental'], ['vehimotors', 'Vehimotors']] as const).map(([v, l]) => (
+            <button key={v} onClick={() => setTitular(v)} className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${titular === v ? (v === 'vehimotors' ? 'bg-amber-600 text-white border-amber-600' : v === 'oriental' ? 'bg-green-700 text-white border-green-700' : 'bg-oriental-black text-white border-oriental-black') : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>{l}</button>
+          ))}
+          <span className="w-px bg-gray-200 mx-0.5" />
           {([['con_saldo', 'Con saldo'], ['vencidos', 'Vencidos'], ['todos', 'Todos']] as const).map(([v, l]) => (
             <button key={v} onClick={() => setFiltro(v)} className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${filtro === v ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>{l}</button>
           ))}
@@ -236,6 +270,7 @@ export default function CobranzaClient() {
 
       <p className="text-[11px] text-oriental-gray mt-4">
         Cobrado = financiado − saldo pendiente de cuotas. &quot;Por cobrar&quot; incluye cuotas pendientes, vencidas y con abono parcial. Montos en la moneda del crédito (mayoría USD).
+        Las cuotas se separan por titular: <span className="font-semibold">La Oriental</span> (inicial, reserva $500, cuota especial) y <span className="font-semibold">Vehimotors</span> (financiamiento Vehimotors y mensuales del plan Asegúrate $500, que son fondos de terceros). El filtro de arriba cambia qué titular se muestra en la tabla.
       </p>
     </div>
   )

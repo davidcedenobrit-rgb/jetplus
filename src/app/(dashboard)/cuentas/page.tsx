@@ -2,19 +2,22 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, TrendingDown, TrendingUp, AlertTriangle, User } from 'lucide-react'
+import { ArrowLeft, TrendingDown, TrendingUp, User } from 'lucide-react'
 import Link from 'next/link'
 import CuentasPorPagarTab, { type CxP } from './CuentasPorPagarTab'
+import { cuotaEsPropia } from '@/lib/centros-costo'
 
 // Estados de cuota que representan saldo por cobrar
 const POR_COBRAR = new Set(['pendiente', 'vencida', 'abono_parcial'])
 
 type Cuota = {
   id: string; estado: string; fecha_vencimiento: string; monto: number
-  monto_pagado: number | null; credito_id: string
+  monto_pagado: number | null; credito_id: string; numero_cuota: number | null
 }
 type ClienteRel = { nombre: string; cedula_rif: string | null }
-type Credito = { id: string; placa: string | null; clientes: ClienteRel | ClienteRel[] | null }
+type Credito = { id: string; placa: string | null; plan_tipo: string | null; clientes: ClienteRel | ClienteRel[] | null }
+
+type Titular = 'oriental' | 'vehimotors'
 
 function primerCliente(c: Credito | undefined): ClienteRel | null {
   if (!c?.clientes) return null
@@ -43,6 +46,7 @@ async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ da
 export default function CuentasPage() {
   const supabase = createClient()
   const [tab, setTab] = useState<'pagar' | 'cobrar'>('pagar')
+  const [titular, setTitular] = useState<Titular>('oriental')
   const [cxp, setCxp] = useState<CxP[]>([])
   const [cuotas, setCuotas] = useState<Cuota[]>([])
   const [creditos, setCreditos] = useState<Record<string, Credito>>({})
@@ -57,10 +61,10 @@ export default function CuentasPage() {
         .order('fecha_limite', { ascending: true, nullsFirst: false })
         .range(f, t)),
       fetchAll<Cuota>((f, t) => supabase.from('cuotas')
-        .select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id')
+        .select('id, estado, fecha_vencimiento, monto, monto_pagado, credito_id, numero_cuota')
         .range(f, t)),
       fetchAll<Credito>((f, t) => supabase.from('creditos')
-        .select('id, placa, clientes(nombre, cedula_rif)')
+        .select('id, placa, plan_tipo, clientes(nombre, cedula_rif)')
         .range(f, t)),
     ])
     setCxp(cxpData)
@@ -86,17 +90,32 @@ export default function CuentasPage() {
     const d = (new Date(c.fecha_limite + 'T00:00:00').getTime() - new Date(hoy + 'T00:00:00').getTime()) / 86400000
     return d <= 7
   }).length
+  // Cada cuota se clasifica en "propia" (cobrable por La Oriental) o de
+  // Vehimotors (fondos de terceros: financiamiento Vehimotors y mensuales AC500).
   const cxc = cuotas.map(c => {
     const saldo = Math.max(0, c.monto - (c.monto_pagado ?? 0))
     const cred = creditos[c.credito_id]
     const vencida = c.estado === 'vencida' || c.fecha_vencimiento < hoy
-    return { ...c, saldo, cred, vencida }
+    const esPropia = cuotaEsPropia(cred?.plan_tipo, c.numero_cuota)
+    return { ...c, saldo, cred, vencida, esPropia }
   }).filter(c => c.saldo > 0)
-  const totalPorCobrar = cxc.reduce((s, c) => s + c.saldo, 0)
-  const totalVencido = cxc.filter(c => c.vencida).reduce((s, c) => s + c.saldo, 0)
+
+  // Totales separados por titular (siempre se calculan ambos para los KPIs)
+  const sum = (arr: typeof cxc) => arr.reduce((s, c) => s + c.saldo, 0)
+  const orientalCuotas = cxc.filter(c => c.esPropia)
+  const vehimotorsCuotas = cxc.filter(c => !c.esPropia)
+  const porCobrarOriental = sum(orientalCuotas)
+  const porCobrarVehimotors = sum(vehimotorsCuotas)
+  const vencidoOriental = sum(orientalCuotas.filter(c => c.vencida))
+  const vencidoVehimotors = sum(vehimotorsCuotas.filter(c => c.vencida))
+
+  // La tabla por cliente muestra el titular seleccionado
+  const cxcSel = titular === 'oriental' ? orientalCuotas : vehimotorsCuotas
+  const totalPorCobrar = titular === 'oriental' ? porCobrarOriental : porCobrarVehimotors
+  const totalVencido = titular === 'oriental' ? vencidoOriental : vencidoVehimotors
 
   const cxcPorCliente: Record<string, { nombre: string; placa: string | null; saldo: number; vencido: number; cuotas: number }> = {}
-  for (const c of cxc) {
+  for (const c of cxcSel) {
     const key = primerCliente(c.cred)?.nombre ?? `Crédito ${c.credito_id.slice(0, 8)}`
     if (!cxcPorCliente[key]) cxcPorCliente[key] = { nombre: key, placa: c.cred?.placa ?? null, saldo: 0, vencido: 0, cuotas: 0 }
     cxcPorCliente[key].saldo += c.saldo
@@ -129,14 +148,14 @@ export default function CuentasPage() {
           </p>
         </div>
         <div className="card p-5">
-          <div className="flex items-center gap-2 text-green-700 mb-1"><TrendingUp size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por cobrar</p></div>
-          <p className="text-2xl font-bold text-oriental-black">${fmt(totalPorCobrar)}</p>
-          <p className="text-[11px] text-oriental-gray mt-1">{cxc.length} cuotas</p>
+          <div className="flex items-center gap-2 text-green-700 mb-1"><TrendingUp size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por cobrar La Oriental</p></div>
+          <p className="text-2xl font-bold text-oriental-black">${fmt(porCobrarOriental)}</p>
+          <p className="text-[11px] text-oriental-gray mt-1">{orientalCuotas.length} cuotas propias</p>
         </div>
-        <div className="card p-5 bg-red-50 border-red-200">
-          <div className="flex items-center gap-2 text-oriental-red mb-1"><AlertTriangle size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Vencido por cobrar</p></div>
-          <p className="text-2xl font-bold text-oriental-red">${fmt(totalVencido)}</p>
-          <p className="text-[11px] text-oriental-gray mt-1">{cxc.filter(c => c.vencida).length} cuotas vencidas</p>
+        <div className="card p-5 bg-amber-50 border-amber-200">
+          <div className="flex items-center gap-2 text-amber-700 mb-1"><TrendingUp size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por cobrar Vehimotors</p></div>
+          <p className="text-2xl font-bold text-amber-800">${fmt(porCobrarVehimotors)}</p>
+          <p className="text-[11px] text-oriental-gray mt-1">{vehimotorsCuotas.length} cuotas de terceros (no es de La Oriental)</p>
         </div>
       </div>
 
@@ -155,10 +174,23 @@ export default function CuentasPage() {
       ) : tab === 'pagar' ? (
         <CuentasPorPagarTab items={cxp} reload={cargar} />
       ) : (
+        <>
+        {/* Selector de titular: cuentas por cobrar de La Oriental vs de Vehimotors */}
+        <div className="flex items-center gap-2 mb-4">
+          <button onClick={() => setTitular('oriental')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${titular === 'oriental' ? 'bg-green-700 text-white border-green-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
+            La Oriental · ${fmt(porCobrarOriental)}
+          </button>
+          <button onClick={() => setTitular('vehimotors')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${titular === 'vehimotors' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
+            Vehimotors · ${fmt(porCobrarVehimotors)}
+          </button>
+          <span className="text-[11px] text-oriental-gray ml-1">Vencido: <span className="font-semibold text-oriental-red">${fmt(totalVencido)}</span></span>
+        </div>
         <div className="card overflow-hidden">
           <div className="px-4 py-3 bg-oriental-bg border-b border-gray-200 flex items-center gap-2">
             <User size={15} className="text-oriental-gray" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-oriental-black">Por cliente</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-oriental-black">
+              Por cliente — {titular === 'oriental' ? 'La Oriental' : 'Vehimotors (fondos de terceros)'}
+            </h2>
           </div>
           {clientesOrden.length === 0 ? (
             <p className="px-4 py-8 text-sm text-oriental-gray text-center">No hay cuotas por cobrar</p>
@@ -196,11 +228,14 @@ export default function CuentasPage() {
             </div>
           )}
         </div>
+        </>
       )}
 
       <p className="text-[11px] text-oriental-gray mt-4">
         Por pagar: obligaciones a proveedores que se cargan a mano y salen de la lista al marcarlas como pagadas
         (al pagar se registra el egreso automáticamente). Por cobrar: cuotas de crédito pendientes, vencidas o con abono parcial. Montos en USD.
+        Las cuotas se separan por titular: <span className="font-semibold">La Oriental</span> (inicial, reserva $500, cuota especial) vs
+        <span className="font-semibold"> Vehimotors</span> (financiamiento Vehimotors y cuotas mensuales del plan Asegúrate $500), que son fondos de terceros y no son cuentas por cobrar de La Oriental.
       </p>
     </div>
   )

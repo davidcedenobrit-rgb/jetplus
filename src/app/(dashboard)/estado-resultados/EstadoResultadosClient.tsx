@@ -49,6 +49,7 @@ export default function EstadoResultadosClient() {
 
   const [desde, setDesde] = useState(inicioAnio)
   const [hasta, setHasta] = useState(hoy)
+  const [vista, setVista] = useState<'oriental' | 'vehimotors'>('oriental')
   const [centros, setCentros] = useState<CentroCosto[]>([])
   const [ingresos, setIngresos] = useState<MovIngreso[]>([])
   const [egresos, setEgresos] = useState<MovEgreso[]>([])
@@ -89,11 +90,24 @@ export default function EstadoResultadosClient() {
     const gastosOp = egresos.filter(e => e.tipo_movimiento !== 'inversion')
     const inversiones = egresos.filter(e => e.tipo_movimiento === 'inversion')
 
+    const noPropios = ingresos.filter(i => !esPropio(i))
     const totalIngresos = propios.reduce((s, i) => s + netoIng(i), 0)
     const totalGastos = gastosOp.reduce((s, e) => s + netoEgr(e), 0)
     const totalInversion = inversiones.reduce((s, e) => s + netoEgr(e), 0)
-    const custodia = ingresos.filter(i => !esPropio(i)).reduce((s, i) => s + usd(i.monto, i.moneda, i.tasa_cambio), 0)
+    const custodia = noPropios.reduce((s, i) => s + usd(i.monto, i.moneda, i.tasa_cambio), 0)
     const resultado = totalIngresos - totalGastos
+
+    // Detalle de fondos de terceros / Vehimotors (para la vista "Con Vehimotors").
+    // No forman parte del resultado de La Oriental; se muestran por separado.
+    const custPorConcepto: Record<string, Linea> = {}
+    for (const i of noPropios) {
+      const k = i.concepto?.trim() || 'Otros'
+      const l = (custPorConcepto[k] ??= { nombre: k, total: 0, docs: [] })
+      const m = usd(i.monto, i.moneda, i.tasa_cambio)
+      l.total += m
+      l.docs.push({ ref: i.numero_recibo ?? '—', fecha: (i.fecha_pago ?? '').slice(0, 10), detalle: i.titular_fondos === 'tercero' ? 'Tercero' : 'Vehimotors', monto: m })
+    }
+    const custodiaConceptos = Object.values(custPorConcepto).sort((a, b) => b.total - a.total)
 
     // Ingresos por concepto (con detalle de documentos)
     const ingPorConcepto: Record<string, Linea> = {}
@@ -131,7 +145,7 @@ export default function EstadoResultadosClient() {
       .map(([centro, v]) => ({ centro, ing: v.ing, gasto: v.gasto, res: v.ing - v.gasto }))
       .sort((a, b) => b.res - a.res)
 
-    return { totalIngresos, totalGastos, totalInversion, custodia, resultado, conceptos, categorias, centrosRows }
+    return { totalIngresos, totalGastos, totalInversion, custodia, resultado, conceptos, categorias, centrosRows, custodiaConceptos }
   }, [ingresos, egresos, centroNombre])
 
   function exportarCsv() {
@@ -143,6 +157,11 @@ export default function EstadoResultadosClient() {
     rows.push(['RESULTADO OPERATIVO', data.resultado.toFixed(2)], [])
     rows.push(['Memo — Inversiones (no afecta resultado)', data.totalInversion.toFixed(2)])
     rows.push(['Memo — Fondos de terceros en custodia', data.custodia.toFixed(2)], [])
+    if (vista === 'vehimotors') {
+      rows.push(['FONDOS DE VEHIMOTORS / TERCEROS (custodia, no es ingreso de La Oriental)', data.custodia.toFixed(2)])
+      data.custodiaConceptos.forEach(l => rows.push([`  ${l.nombre}`, l.total.toFixed(2)]))
+      rows.push([])
+    }
     rows.push(['Por centro de costo', 'Ingresos', 'Gastos', 'Resultado'])
     data.centrosRows.forEach(r => rows.push([r.centro, r.ing.toFixed(2), r.gasto.toFixed(2), r.res.toFixed(2)]))
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -179,6 +198,13 @@ export default function EstadoResultadosClient() {
         </div>
       </div>
 
+      {/* Vista: solo La Oriental vs con Vehimotors (para presentar a Carla / Carlos) */}
+      <div className="flex items-center gap-2 mb-4 no-print">
+        <span className="text-xs font-semibold text-oriental-gray">Vista:</span>
+        <button onClick={() => setVista('oriental')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${vista === 'oriental' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>Solo La Oriental</button>
+        <button onClick={() => setVista('vehimotors')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${vista === 'vehimotors' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>Con Vehimotors</button>
+      </div>
+
       {loading ? (
         <div className="card p-12 text-center text-oriental-gray text-sm">Cargando…</div>
       ) : (
@@ -205,6 +231,31 @@ export default function EstadoResultadosClient() {
             <div className="flex justify-between"><span className="text-oriental-gray">Inversiones del período</span><span className="font-semibold text-oriental-black">${fmt(data.totalInversion)}</span></div>
             <div className="flex justify-between"><span className="text-oriental-gray">Fondos de terceros en custodia</span><span className="font-semibold text-amber-700">${fmt(data.custodia)}</span></div>
           </div>
+
+          {/* Vista "Con Vehimotors": detalle de los fondos de terceros, por separado */}
+          {vista === 'vehimotors' && (
+            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-amber-200">
+                <span className="font-bold text-amber-900">Fondos de Vehimotors / terceros (custodia)</span>
+                <span className="font-black text-amber-800">${fmt(data.custodia)}</span>
+              </div>
+              {data.custodiaConceptos.length === 0 ? (
+                <p className="py-2 text-xs text-oriental-gray">Sin fondos de terceros en el período</p>
+              ) : (
+                <div className="space-y-1">
+                  {data.custodiaConceptos.map(l => (
+                    <div key={l.nombre} className="flex items-center justify-between py-1 text-sm">
+                      <span className="text-oriental-gray">{l.nombre} <span className="text-[10px] text-gray-400">({l.docs.length})</span></span>
+                      <span className="tabular-nums text-amber-900">${fmt(l.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[11px] text-amber-800/80 mt-3">
+                Dinero cobrado por cuenta de Vehimotors (y otros terceros) que pasa por La Oriental en custodia. <span className="font-semibold">No es ingreso ni resultado de La Oriental</span>; se muestra aparte solo para presentarle a Carla y Carlos el movimiento completo.
+              </p>
+            </div>
+          )}
 
           {/* Por centro de costo */}
           <div className="mt-6">
