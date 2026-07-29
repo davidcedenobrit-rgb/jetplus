@@ -5,6 +5,7 @@ import { EgresoSchema } from '@/lib/validations'
 import { permitido } from '@/lib/rate-limit'
 import { desglosarIva, IVA_TASA_DEFAULT } from '@/lib/iva'
 import { periodoDeFecha, siguienteComprobante, calcRetIva } from '@/lib/retencion-iva'
+import { calcRetIslr, siguienteComprobanteIslr } from '@/lib/retencion-islr'
 
 export type CrearEgresoPayload = {
   categoria: string
@@ -40,6 +41,10 @@ export type CrearEgresoPayload = {
   ret_iva_aplica?: boolean
   ret_iva_pct?: number | null             // 75 | 100
   ret_iva_fecha_emision?: string | null
+  // Retención de ISLR
+  ret_islr_aplica?: boolean
+  ret_islr_codigo?: string | null         // 055 | 002
+  ret_islr_fecha_emision?: string | null
   comprobantes: { url: string; nombre: string }[]
 }
 
@@ -137,6 +142,38 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
     retIvaComprobante = await siguienteComprobante(admin, retIvaPeriodo)
   }
 
+  // Retención de ISLR: sobre la base imponible (sin IVA), según el concepto
+  // elegido (055 servicios PJ 2%, 002 PNR 3% − sustraendo). El % y el sustraendo
+  // se toman del catálogo islr_conceptos (autoridad del servidor).
+  const retIslrAplica = !!payload.ret_islr_aplica
+  let retIslrCodigo: string | null = null
+  let retIslrConcepto: string | null = null
+  let retIslrPct: number | null = null
+  let retIslrSustraendo: number | null = null
+  let retIslrBase: number | null = null
+  let retIslrMonto: number | null = null
+  let retIslrComprobante: string | null = null
+  let retIslrPeriodo: string | null = null
+  let retIslrFechaEmision: string | null = null
+  if (retIslrAplica) {
+    const codigo = payload.ret_islr_codigo?.trim() || null
+    if (!codigo) return { error: 'Selecciona el concepto de retención de ISLR.' }
+    if (!fechaFactura || !numeroFactura || !numeroControl) {
+      return { error: 'La retención de ISLR requiere fecha, número y número de control de la factura.' }
+    }
+    const { data: conc } = await admin.from('islr_conceptos').select('codigo, nombre, porcentaje, sustraendo').eq('codigo', codigo).maybeSingle()
+    if (!conc) return { error: 'Concepto de ISLR no válido.' }
+    retIslrCodigo = conc.codigo
+    retIslrConcepto = conc.nombre
+    retIslrPct = Number(conc.porcentaje)
+    retIslrSustraendo = Number(conc.sustraendo) || 0
+    retIslrBase = baseImponible ?? parsed.data.monto
+    retIslrMonto = calcRetIslr(retIslrBase, retIslrPct, retIslrSustraendo)
+    retIslrFechaEmision = payload.ret_islr_fecha_emision?.trim() || new Date().toISOString().slice(0, 10)
+    retIslrPeriodo = periodoDeFecha(retIslrFechaEmision)
+    retIslrComprobante = await siguienteComprobanteIslr(admin, retIslrPeriodo)
+  }
+
   const year = new Date().getFullYear()
   const buf = new Uint32Array(1)
   crypto.getRandomValues(buf)
@@ -187,6 +224,16 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       ret_iva_comprobante: retIvaComprobante,
       ret_iva_periodo:  retIvaPeriodo,
       ret_iva_fecha_emision: retIvaFechaEmision,
+      ret_islr_aplica:  retIslrAplica,
+      ret_islr_codigo:  retIslrCodigo,
+      ret_islr_concepto: retIslrConcepto,
+      ret_islr_pct:     retIslrPct,
+      ret_islr_sustraendo: retIslrSustraendo,
+      ret_islr_base:    retIslrBase,
+      ret_islr_monto:   retIslrMonto,
+      ret_islr_comprobante: retIslrComprobante,
+      ret_islr_periodo: retIslrPeriodo,
+      ret_islr_fecha_emision: retIslrFechaEmision,
       estado:           'pendiente_aprobacion',
       registrado_por:   user.id,
     })

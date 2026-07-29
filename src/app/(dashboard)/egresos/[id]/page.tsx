@@ -7,6 +7,7 @@ import EgresoActionButtons from './EgresoActionButtons'
 import EgresoTasaEditor from './EgresoTasaEditor'
 import ComprobantesGallery from '@/components/ComprobantesGallery'
 import RetencionCard from './RetencionCard'
+import RetencionIslrCard from './RetencionIslrCard'
 
 const ROLES_EDITAR_TASA = ['jose', 'admin', 'director', 'leysdem', 'mary', 'arianna']
 
@@ -242,6 +243,10 @@ export default async function EgresoDetallePage({
 
           {egreso.ret_iva_aplica && egreso.ret_iva_comprobante && (
             <RetencionCard egreso={egreso} correoProveedor={correoProveedor} />
+          )}
+
+          {egreso.ret_islr_aplica && egreso.ret_islr_comprobante && (
+            <RetencionIslrCard egreso={egreso} />
           )}
 
           {/* Timeline */}

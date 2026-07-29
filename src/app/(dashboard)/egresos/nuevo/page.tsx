@@ -67,6 +67,10 @@ export default function NuevoEgresoPage() {
   const [retIvaAplica, setRetIvaAplica] = useState(false)
   const [retIvaPct, setRetIvaPct] = useState<'75' | '100'>('75')
   const [retIvaFechaEmision, setRetIvaFechaEmision] = useState(new Date().toISOString().split('T')[0])
+  const [retIslrAplica, setRetIslrAplica] = useState(false)
+  const [retIslrCodigo, setRetIslrCodigo] = useState('')
+  const [retIslrFechaEmision, setRetIslrFechaEmision] = useState(new Date().toISOString().split('T')[0])
+  const [islrConceptos, setIslrConceptos] = useState<{ codigo: string; nombre: string; porcentaje: number; sustraendo: number }[]>([])
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [categorias, setCategorias] = useState<{ clave: string; nombre: string }[]>([])
 
@@ -89,6 +93,12 @@ export default function NuevoEgresoPage() {
       .then(r => r.json())
       .then(d => { if (Number(d?.tasa_bcv) > 0) setTasaCambio(prev => prev || String(d.tasa_bcv)) })
       .catch(() => {})
+    supabase
+      .from('islr_conceptos')
+      .select('codigo, nombre, porcentaje, sustraendo')
+      .eq('activo', true)
+      .order('orden')
+      .then(({ data }) => { if (data) setIslrConceptos(data as any) })
   }, [])
 
   // Al elegir un proveedor, prellena su dirección y su banco (editables). La
@@ -155,6 +165,9 @@ export default function NuevoEgresoPage() {
       ret_iva_aplica: retIvaAplica,
       ret_iva_pct: retIvaAplica ? Number(retIvaPct) : null,
       ret_iva_fecha_emision: retIvaAplica ? retIvaFechaEmision : null,
+      ret_islr_aplica: retIslrAplica,
+      ret_islr_codigo: retIslrAplica ? (retIslrCodigo || null) : null,
+      ret_islr_fecha_emision: retIslrAplica ? retIslrFechaEmision : null,
       comprobantes,
     })
 
@@ -317,6 +330,63 @@ export default function NuevoEgresoPage() {
                     <label className="label">Fecha de emisión del comprobante</label>
                     <input type="date" className="input max-w-xs" value={retIvaFechaEmision} onChange={e => setRetIvaFechaEmision(e.target.value)} />
                     <p className="text-[11px] text-oriental-gray mt-1">Por defecto hoy. La puedes editar (define el período fiscal y la numeración). El N° de comprobante se genera automáticamente.</p>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+
+        {/* 2b ── RETENCIÓN DE ISLR (comprobante) ── */}
+        <div className="card p-0 overflow-hidden border border-indigo-200">
+          <div className="bg-gradient-to-r from-indigo-700 to-indigo-600 px-6 py-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center flex-shrink-0"><ReceiptText size={16} /></div>
+            <div>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><span className="text-indigo-200">2b.</span> Retención de ISLR</h2>
+              <p className="text-[11px] text-indigo-100">Comprobante de retención de Impuesto sobre la Renta (SENIAT)</p>
+            </div>
+          </div>
+          <div className="p-6">
+            <label className={`flex items-center gap-3 rounded-xl border-2 p-3 cursor-pointer transition-colors ${retIslrAplica ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'}`}>
+              <input type="checkbox" checked={retIslrAplica} onChange={e => setRetIslrAplica(e.target.checked)} className="w-5 h-5 accent-indigo-600" />
+              <span className="text-sm font-semibold text-oriental-black">Aplica retención de ISLR — emitir comprobante al proveedor</span>
+            </label>
+            {retIslrAplica && (() => {
+              const conc = islrConceptos.find(c => c.codigo === retIslrCodigo)
+              const total = parseFloat(monto) || 0
+              const exentoNum = Math.max(0, Math.min(parseFloat(montoExento) || 0, total))
+              const gravado = Math.max(0, total - exentoNum)
+              const tasaNum = parseFloat(ivaTasa) || 0
+              const base = ivaAplica && gravado > 0 && tasaNum > 0 ? desglosarIva(gravado, tasaNum).base : total
+              const pct = conc ? Number(conc.porcentaje) : 0
+              const sustr = conc ? Number(conc.sustraendo) : 0
+              const retenido = Math.max(0, Math.round((base * pct / 100 - sustr) * 100) / 100)
+              const f = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              return (
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="label">Concepto de retención</label>
+                    <select className="select max-w-md" value={retIslrCodigo} onChange={e => setRetIslrCodigo(e.target.value)}>
+                      <option value="">Seleccionar concepto…</option>
+                      {islrConceptos.map(c => (
+                        <option key={c.codigo} value={c.codigo}>COD-{c.codigo} · {c.nombre} ({Number(c.porcentaje)}%{Number(c.sustraendo) > 0 ? ` − ${f(Number(c.sustraendo))}` : ''})</option>
+                      ))}
+                    </select>
+                  </div>
+                  {conc && (
+                    <div className="rounded-xl border border-indigo-200 overflow-hidden">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-indigo-100">
+                        <Detalle label="Base (sin IVA)" value={`${moneda} ${f(base)}`} />
+                        <Detalle label="% Retención" value={`${pct}%`} />
+                        <Detalle label="Sustraendo" value={`${moneda} ${f(sustr)}`} />
+                        <Detalle label="Retenido ISLR" value={`${moneda} ${f(retenido)}`} fuerte />
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label className="label">Fecha de emisión del comprobante</label>
+                    <input type="date" className="input max-w-xs" value={retIslrFechaEmision} onChange={e => setRetIslrFechaEmision(e.target.value)} />
+                    <p className="text-[11px] text-oriental-gray mt-1">Requiere fecha, N° y N° de control de la factura (sección 1). El N° de comprobante se genera automáticamente.</p>
                   </div>
                 </div>
               )
