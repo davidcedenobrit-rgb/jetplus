@@ -189,6 +189,7 @@ export default function ReporteCobrosClient() {
         <>
           {/* Calendario */}
           <div className="card p-4 mb-6">
+            <h2 className="text-center font-bold text-oriental-black mb-3">{MESES[mes - 1]} {anio}</h2>
             <div className="grid grid-cols-7 gap-1 mb-1">
               {DIAS.map(d => <div key={d} className="text-center text-[10px] font-bold uppercase text-oriental-gray py-1">{d}</div>)}
             </div>
@@ -239,7 +240,7 @@ export default function ReporteCobrosClient() {
               return (
                 <div className="mt-3 border-t border-gray-100 pt-3">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-bold text-oriental-black text-sm">Cobros del {diaSel} de {MESES[mes - 1]} — <span className="text-green-700">${fmt(totalDia)}</span></h3>
+                    <h3 className="font-bold text-oriental-black text-sm">Cobros del {diaSel} de {MESES[mes - 1]} {anio} — <span className="text-green-700">${fmt(totalDia)}</span></h3>
                     <button onClick={() => setDiaSel(null)} className="text-xs text-oriental-gray hover:text-oriental-black">Cerrar ✕</button>
                   </div>
                   {delDia.length === 0 ? <p className="text-sm text-oriental-gray">Sin cobros ese día.</p> : (

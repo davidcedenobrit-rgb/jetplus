@@ -61,10 +61,13 @@ export default function ReporteVentasClient() {
       const modalidad = plan ? (MODALIDAD[plan] ? plan : 'otro')
         : (v.tipo_compra === 'contado' ? 'contado' : 'otro')
       const div = divMap[v.id]
+      // Venta nueva = tiene división contable definida o es Asegúrate 500;
+      // el resto son ventas antiguas (carga de crédito de clientes previos).
+      const esNueva = !!div || plan === 'asegurate_500'
       return {
         id: v.id, marca: v.marca ?? '—', modelo: v.modelo ?? '—',
         fecha: String(v.fecha_entrega ?? v.created_at ?? '').slice(0, 10),
-        modalidad, vendedora: div?.vendedora || 'Sin asignar',
+        modalidad, esNueva, vendedora: div?.vendedora || 'Sin asignar',
         monto: Number(div?.monto_proforma ?? v.precio_total ?? 0),
       }
     })
@@ -90,6 +93,8 @@ export default function ReporteVentasClient() {
   const porMarcaModelo = useMemo(() => agg(r => `${r.marca} ${r.modelo}`), [filtradas])
   const porModalidad = useMemo(() => agg(r => MODALIDAD[r.modalidad] ?? r.modalidad), [filtradas])
   const porVendedora = useMemo(() => agg(r => r.vendedora), [filtradas])
+  const porTipo = useMemo(() => agg(r => r.esNueva ? 'Nueva' : 'Antigua (carga de crédito)'), [filtradas])
+  const detalle = useMemo(() => filtradas.slice().sort((a, b) => b.fecha.localeCompare(a.fecha)), [filtradas])
   const totalMonto = filtradas.reduce((s, r) => s + r.monto, 0)
 
   const periodo = mes === 0 ? `${anio}` : `${MESES[mes - 1]} ${anio}`
@@ -98,9 +103,11 @@ export default function ReporteVentasClient() {
     titulo: 'Reporte de ventas', periodo,
     kpis: [{ label: 'Vehículos vendidos', value: String(filtradas.length) }, { label: 'Monto total (proforma)', value: `$${fmt(totalMonto)}` }],
     secciones: [
-      { titulo: 'Por marca y modelo', headers: ['Marca / Modelo', 'Unidades', 'Monto USD'], rows: porMarcaModelo.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
+      { titulo: 'Por tipo (nueva / antigua)', headers: ['Tipo', 'Unidades', 'Monto USD'], rows: porTipo.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
       { titulo: 'Por modalidad de venta', headers: ['Modalidad', 'Unidades', 'Monto USD'], rows: porModalidad.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
+      { titulo: 'Por marca y modelo', headers: ['Marca / Modelo', 'Unidades', 'Monto USD'], rows: porMarcaModelo.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
       { titulo: 'Por vendedora', headers: ['Vendedora', 'Unidades', 'Monto USD'], rows: porVendedora.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
+      { titulo: 'Detalle de ventas', headers: ['Vehículo', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], rows: detalle.map(r => [`${r.marca} ${r.modelo}`, r.fecha, r.vendedora, r.esNueva ? 'Nueva' : 'Antigua', MODALIDAD[r.modalidad] ?? r.modalidad, `$${fmt(r.monto)}`]) },
     ],
   })
 
@@ -112,7 +119,7 @@ export default function ReporteVentasClient() {
           <div className="w-10 h-10 bg-oriental-red/10 rounded-xl flex items-center justify-center"><ShoppingBag size={20} className="text-oriental-red" /></div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Reporte de ventas</h1>
-            <p className="text-oriental-gray text-sm">Por marca/modelo, modalidad y vendedora — {periodo}</p>
+            <p className="text-oriental-gray text-sm">Tipo (nueva/antigua), modalidad, vendedora y detalle — {periodo}</p>
           </div>
         </div>
         <ExportBar build={buildPayload} />
@@ -145,12 +152,46 @@ export default function ReporteVentasClient() {
         <div className="card p-12 text-center text-oriental-gray text-sm">Sin ventas en {periodo}.</div>
       ) : (
         <div className="space-y-5">
-          <Bloque titulo="Por marca y modelo" headers={['Marca / Modelo', 'Unid.', 'Monto']} rows={porMarcaModelo}
-            onCsv={() => csv(`ventas_marca_${periodo}`, ['Marca/Modelo', 'Unidades', 'Monto USD'], porMarcaModelo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+          <Bloque titulo="Por tipo de venta (nueva / antigua)" headers={['Tipo', 'Unid.', 'Monto']} rows={porTipo}
+            onCsv={() => csv(`ventas_tipo_${periodo}`, ['Tipo', 'Unidades', 'Monto USD'], porTipo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
           <Bloque titulo="Por modalidad de venta" headers={['Modalidad', 'Unid.', 'Monto']} rows={porModalidad}
             onCsv={() => csv(`ventas_modalidad_${periodo}`, ['Modalidad', 'Unidades', 'Monto USD'], porModalidad.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+          <Bloque titulo="Por marca y modelo" headers={['Marca / Modelo', 'Unid.', 'Monto']} rows={porMarcaModelo}
+            onCsv={() => csv(`ventas_marca_${periodo}`, ['Marca/Modelo', 'Unidades', 'Monto USD'], porMarcaModelo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
           <Bloque titulo="Por vendedora" headers={['Vendedora', 'Unid.', 'Monto']} rows={porVendedora}
             onCsv={() => csv(`ventas_vendedora_${periodo}`, ['Vendedora', 'Unidades', 'Monto USD'], porVendedora.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+
+          {/* Detalle de cada venta */}
+          <section className="card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-bold text-oriental-black text-sm">Detalle de ventas ({detalle.length})</h2>
+              <button onClick={() => csv(`ventas_detalle_${periodo}`, ['Vehículo', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], detalle.map(r => [`${r.marca} ${r.modelo}`, r.fecha, r.vendedora, r.esNueva ? 'Nueva' : 'Antigua', MODALIDAD[r.modalidad] ?? r.modalidad, r.monto.toFixed(2)]))}
+                className="text-xs font-semibold text-oriental-gray border border-gray-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 hover:bg-gray-50"><FileDown size={13} /> CSV</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50"><tr>
+                  {['Vehículo', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto'].map((h, i) => (
+                    <th key={i} className={`px-3 py-2 text-[11px] font-semibold text-oriental-gray ${i === 5 ? 'text-right' : 'text-left'}`}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-gray-50">
+                  {detalle.map(r => (
+                    <tr key={r.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 text-oriental-black font-medium">{r.marca} {r.modelo}</td>
+                      <td className="px-3 py-2 text-oriental-gray text-xs whitespace-nowrap">{r.fecha}</td>
+                      <td className="px-3 py-2 text-oriental-gray">{r.vendedora}</td>
+                      <td className="px-3 py-2">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.esNueva ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{r.esNueva ? 'Nueva' : 'Antigua'}</span>
+                      </td>
+                      <td className="px-3 py-2 text-oriental-gray text-xs">{MODALIDAD[r.modalidad] ?? r.modalidad}</td>
+                      <td className="px-3 py-2 text-right tabular-nums font-semibold">${fmt(r.monto)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       )}
     </div>
