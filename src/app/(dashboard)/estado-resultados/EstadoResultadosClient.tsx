@@ -23,9 +23,13 @@ type Linea = { nombre: string; total: number; docs: Doc[] }
 
 const EXCL = new Set(['anulado', 'rechazado'])
 
-function usd(m: number, moneda: string, tasa: number | null): number {
-  if (moneda === 'VES') return tasa && tasa > 0 ? m / tasa : 0
-  return m
+// Convierte un monto a la moneda de la vista usando la tasa de CADA operación
+// (la tasa BCV del día en que se registró), no una tasa única sobre el total.
+//  - Vista USD: VES → monto / tasa ; USD → monto.
+//  - Vista Bs:  USD → monto * tasa ; VES → monto (ya está en Bs).
+function conv(m: number, moneda: string, tasa: number | null, aBs: boolean): number {
+  if (aBs) return moneda === 'VES' ? m : m * (tasa && tasa > 0 ? tasa : 0)
+  return moneda === 'VES' ? (tasa && tasa > 0 ? m / tasa : 0) : m
 }
 function fmt(n: number): string {
   return n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -51,6 +55,7 @@ export default function EstadoResultadosClient() {
   const [desde, setDesde] = useState(inicioAnio)
   const [hasta, setHasta] = useState(hoy)
   const [vista, setVista] = useState<'oriental' | 'vehimotors'>('oriental')
+  const [moneda, setMoneda] = useState<'USD' | 'Bs'>('USD')
   const [centros, setCentros] = useState<CentroCosto[]>([])
   const [reparto, setReparto] = useState<RepartoRow[]>([])
   const [ingresos, setIngresos] = useState<MovIngreso[]>([])
@@ -81,9 +86,11 @@ export default function EstadoResultadosClient() {
 
   useEffect(() => { cargar() }, [cargar])
 
+  const aBs = moneda === 'Bs'
+  const simb = aBs ? 'Bs ' : '$'
   const esPropio = (i: MovIngreso) => (i.titular_fondos ?? 'propio') === 'propio'
-  const netoIng = (i: MovIngreso) => usd(i.iva_aplica && i.base_imponible ? Number(i.base_imponible) : i.monto, i.moneda, i.tasa_cambio)
-  const netoEgr = (e: MovEgreso) => usd(e.iva_aplica && e.base_imponible ? Number(e.base_imponible) : e.monto, e.moneda, e.tasa_cambio)
+  const netoIng = (i: MovIngreso) => conv(i.iva_aplica && i.base_imponible ? Number(i.base_imponible) : i.monto, i.moneda, i.tasa_cambio, aBs)
+  const netoEgr = (e: MovEgreso) => conv(e.iva_aplica && e.base_imponible ? Number(e.base_imponible) : e.monto, e.moneda, e.tasa_cambio, aBs)
   const centroNombre = useCallback((id: string | null, area?: string | null): string => {
     if (id) return centros.find(c => c.id === id)?.nombre ?? id
     return area?.trim() || 'Sin centro de costo'
@@ -98,7 +105,7 @@ export default function EstadoResultadosClient() {
     const totalIngresos = propios.reduce((s, i) => s + netoIng(i), 0)
     const totalGastos = gastosOp.reduce((s, e) => s + netoEgr(e), 0)
     const totalInversion = inversiones.reduce((s, e) => s + netoEgr(e), 0)
-    const custodia = noPropios.reduce((s, i) => s + usd(i.monto, i.moneda, i.tasa_cambio), 0)
+    const custodia = noPropios.reduce((s, i) => s + conv(i.monto, i.moneda, i.tasa_cambio, aBs), 0)
     const resultado = totalIngresos - totalGastos
 
     // Detalle de fondos de terceros / Vehimotors (para la vista "Con Vehimotors").
@@ -107,7 +114,7 @@ export default function EstadoResultadosClient() {
     for (const i of noPropios) {
       const k = i.concepto?.trim() || 'Otros'
       const l = (custPorConcepto[k] ??= { nombre: k, total: 0, docs: [] })
-      const m = usd(i.monto, i.moneda, i.tasa_cambio)
+      const m = conv(i.monto, i.moneda, i.tasa_cambio, aBs)
       l.total += m
       l.docs.push({ ref: i.numero_recibo ?? '—', fecha: (i.fecha_pago ?? '').slice(0, 10), detalle: i.titular_fondos === 'tercero' ? 'Tercero' : 'Vehimotors', monto: m })
     }
@@ -161,10 +168,10 @@ export default function EstadoResultadosClient() {
       .sort((a, b) => b.res - a.res)
 
     return { totalIngresos, totalGastos, totalInversion, custodia, resultado, conceptos, categorias, centrosRows, custodiaConceptos, gastoComun }
-  }, [ingresos, egresos, centros, reparto, centroNombre])
+  }, [ingresos, egresos, centros, reparto, centroNombre, aBs])
 
   function exportarCsv() {
-    const rows: (string | number)[][] = [['ESTADO DE RESULTADOS', `${desde} a ${hasta}`], []]
+    const rows: (string | number)[][] = [['ESTADO DE RESULTADOS', `${desde} a ${hasta}`], [`Moneda: ${moneda === 'Bs' ? 'Bolívares (tasa BCV de cada operación)' : 'USD'}`], []]
     rows.push(['Ingresos operativos (propios, neto IVA)', data.totalIngresos.toFixed(2)])
     data.conceptos.forEach(l => rows.push([`  ${l.nombre}`, l.total.toFixed(2)]))
     rows.push(['Gastos operativos', data.totalGastos.toFixed(2)])
@@ -182,7 +189,7 @@ export default function EstadoResultadosClient() {
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
-    a.href = url; a.download = `estado-resultados-${desde}_${hasta}.csv`; a.click()
+    a.href = url; a.download = `estado-resultados-${moneda.toLowerCase()}-${desde}_${hasta}.csv`; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -196,7 +203,7 @@ export default function EstadoResultadosClient() {
           <div className="w-10 h-10 bg-oriental-red/10 rounded-xl flex items-center justify-center"><FileBarChart2 size={20} className="text-oriental-red" /></div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Estado de resultados</h1>
-            <p className="text-oriental-gray text-sm">Resultado operativo por período y por centro de costo (en USD)</p>
+            <p className="text-oriental-gray text-sm">Resultado operativo por período y por centro de costo (en {moneda === 'Bs' ? 'bolívares' : 'USD'})</p>
           </div>
         </div>
       </div>
@@ -218,6 +225,10 @@ export default function EstadoResultadosClient() {
         <span className="text-xs font-semibold text-oriental-gray">Vista:</span>
         <button onClick={() => setVista('oriental')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${vista === 'oriental' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>Solo La Oriental</button>
         <button onClick={() => setVista('vehimotors')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${vista === 'vehimotors' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>Con Vehimotors</button>
+        <span className="w-px h-5 bg-gray-200 mx-1" />
+        <span className="text-xs font-semibold text-oriental-gray">Moneda:</span>
+        <button onClick={() => setMoneda('USD')} className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${moneda === 'USD' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>USD</button>
+        <button onClick={() => setMoneda('Bs')} className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${moneda === 'Bs' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>Bs</button>
       </div>
 
       {loading ? (
@@ -226,25 +237,25 @@ export default function EstadoResultadosClient() {
         <div className="card p-6 lg:p-8">
           <div className="text-center mb-6 pb-4 border-b border-gray-200">
             <h2 className="text-lg font-bold text-oriental-black">Estado de Resultados</h2>
-            <p className="text-xs text-oriental-gray">Del {desde} al {hasta} · valores en USD, netos de IVA</p>
+            <p className="text-xs text-oriental-gray">Del {desde} al {hasta} · valores en {moneda === 'Bs' ? 'bolívares (tasa BCV de cada operación)' : 'USD'}, netos de IVA</p>
           </div>
 
           {/* Ingresos */}
-          <Seccion titulo="Ingresos operativos" total={data.totalIngresos} tono="pos" filas={data.conceptos} />
+          <Seccion titulo="Ingresos operativos" total={data.totalIngresos} tono="pos" filas={data.conceptos} simb={simb} />
           {/* Gastos */}
-          <Seccion titulo="Gastos operativos" total={data.totalGastos} tono="neg" filas={data.categorias} signo="−" />
+          <Seccion titulo="Gastos operativos" total={data.totalGastos} tono="neg" filas={data.categorias} signo="−" simb={simb} />
 
           {/* Resultado */}
           <div className={`flex items-center justify-between mt-4 py-3 px-4 rounded-lg ${data.resultado >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
             <span className="font-bold text-oriental-black">RESULTADO OPERATIVO</span>
-            <span className={`text-xl font-black ${data.resultado >= 0 ? 'text-green-800' : 'text-oriental-red'}`}>{data.resultado < 0 ? '−' : ''}${fmt(Math.abs(data.resultado))}</span>
+            <span className={`text-xl font-black ${data.resultado >= 0 ? 'text-green-800' : 'text-oriental-red'}`}>{data.resultado < 0 ? '−' : ''}{simb}{fmt(Math.abs(data.resultado))}</span>
           </div>
 
           {/* Memo */}
           <div className="mt-5 pt-4 border-t border-gray-100 space-y-1.5 text-sm">
             <p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray mb-1">Partidas informativas (no afectan el resultado)</p>
-            <div className="flex justify-between"><span className="text-oriental-gray">Inversiones del período</span><span className="font-semibold text-oriental-black">${fmt(data.totalInversion)}</span></div>
-            <div className="flex justify-between"><span className="text-oriental-gray">Fondos de terceros en custodia</span><span className="font-semibold text-amber-700">${fmt(data.custodia)}</span></div>
+            <div className="flex justify-between"><span className="text-oriental-gray">Inversiones del período</span><span className="font-semibold text-oriental-black">{simb}{fmt(data.totalInversion)}</span></div>
+            <div className="flex justify-between"><span className="text-oriental-gray">Fondos de terceros en custodia</span><span className="font-semibold text-amber-700">{simb}{fmt(data.custodia)}</span></div>
           </div>
 
           {/* Vista "Con Vehimotors": detalle de los fondos de terceros, por separado */}
@@ -252,7 +263,7 @@ export default function EstadoResultadosClient() {
             <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-amber-200">
                 <span className="font-bold text-amber-900">Fondos de Vehimotors / terceros (custodia)</span>
-                <span className="font-black text-amber-800">${fmt(data.custodia)}</span>
+                <span className="font-black text-amber-800">{simb}{fmt(data.custodia)}</span>
               </div>
               {data.custodiaConceptos.length === 0 ? (
                 <p className="py-2 text-xs text-oriental-gray">Sin fondos de terceros en el período</p>
@@ -261,7 +272,7 @@ export default function EstadoResultadosClient() {
                   {data.custodiaConceptos.map(l => (
                     <div key={l.nombre} className="flex items-center justify-between py-1 text-sm">
                       <span className="text-oriental-gray">{l.nombre} <span className="text-[10px] text-gray-400">({l.docs.length})</span></span>
-                      <span className="tabular-nums text-amber-900">${fmt(l.total)}</span>
+                      <span className="tabular-nums text-amber-900">{simb}{fmt(l.total)}</span>
                     </div>
                   ))}
                 </div>
@@ -289,9 +300,9 @@ export default function EstadoResultadosClient() {
                   {data.centrosRows.map(r => (
                     <tr key={r.centro}>
                       <td className="py-2 font-semibold text-oriental-black">{r.centro}</td>
-                      <td className="py-2 text-right tabular-nums text-green-700">${fmt(r.ing)}</td>
-                      <td className="py-2 text-right tabular-nums text-oriental-red">${fmt(r.gasto)}</td>
-                      <td className={`py-2 text-right tabular-nums font-bold ${r.res >= 0 ? 'text-oriental-black' : 'text-oriental-red'}`}>{r.res < 0 ? '−' : ''}${fmt(Math.abs(r.res))}</td>
+                      <td className="py-2 text-right tabular-nums text-green-700">{simb}{fmt(r.ing)}</td>
+                      <td className="py-2 text-right tabular-nums text-oriental-red">{simb}{fmt(r.gasto)}</td>
+                      <td className={`py-2 text-right tabular-nums font-bold ${r.res >= 0 ? 'text-oriental-black' : 'text-oriental-red'}`}>{r.res < 0 ? '−' : ''}{simb}{fmt(Math.abs(r.res))}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -301,12 +312,12 @@ export default function EstadoResultadosClient() {
 
           {data.gastoComun > 0 && (
             <p className="text-[11px] text-oriental-gray mt-2">
-              Incluye <span className="font-semibold">${fmt(data.gastoComun)}</span> de gastos comunes (gastos fijos: alquiler, luz, internet, vigilancia, nómina…) repartidos por % entre las líneas de ingreso. El % se configura en Centros de costo → Gestionar.
+              Incluye <span className="font-semibold">{simb}{fmt(data.gastoComun)}</span> de gastos comunes (gastos fijos: alquiler, luz, internet, vigilancia, nómina…) repartidos por % entre las líneas de ingreso. El % se configura en Centros de costo → Gestionar.
             </p>
           )}
 
           <p className="text-[11px] text-oriental-gray mt-5">
-            Resultado operativo = ingreso propio (neto de IVA, excluye custodia de terceros) − gastos operativos (neto de IVA). Las inversiones no restan del resultado (son activo). VES convertido a USD con la tasa de cada registro.
+            Resultado operativo = ingreso propio (neto de IVA, excluye custodia de terceros) − gastos operativos (neto de IVA). Las inversiones no restan del resultado (son activo). {moneda === 'Bs' ? 'Cada monto se convierte a bolívares con la tasa BCV del día de la operación (no el total por la tasa de hoy).' : 'VES convertido a USD con la tasa de cada registro.'}
           </p>
         </div>
       )}
@@ -314,13 +325,13 @@ export default function EstadoResultadosClient() {
   )
 }
 
-function Seccion({ titulo, total, tono, filas, signo }: { titulo: string; total: number; tono: 'pos' | 'neg'; filas: Linea[]; signo?: string }) {
+function Seccion({ titulo, total, tono, filas, signo, simb }: { titulo: string; total: number; tono: 'pos' | 'neg'; filas: Linea[]; signo?: string; simb: string }) {
   const [abierto, setAbierto] = useState<string | null>(null)
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between py-2 border-b border-gray-200">
         <span className="font-bold text-oriental-black">{titulo}</span>
-        <span className={`font-bold ${tono === 'pos' ? 'text-green-700' : 'text-oriental-red'}`}>{signo ?? ''}${fmt(total)}</span>
+        <span className={`font-bold ${tono === 'pos' ? 'text-green-700' : 'text-oriental-red'}`}>{signo ?? ''}{simb}{fmt(total)}</span>
       </div>
       <div className="pl-2">
         {filas.length === 0 ? (
@@ -334,14 +345,14 @@ function Seccion({ titulo, total, tono, filas, signo }: { titulo: string; total:
                   <ChevronRight size={13} className={`text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} />
                   {l.nombre} <span className="text-[10px] text-gray-400">({l.docs.length})</span>
                 </span>
-                <span className="tabular-nums text-oriental-black">${fmt(l.total)}</span>
+                <span className="tabular-nums text-oriental-black">{simb}{fmt(l.total)}</span>
               </button>
               {open && (
                 <div className="ml-5 mb-2 border-l-2 border-gray-100 pl-3">
                   {l.docs.slice().sort((a, b) => b.fecha.localeCompare(a.fecha)).map((d, i) => (
                     <div key={i} className="flex items-center justify-between py-1 text-xs text-oriental-gray">
                       <span><span className="font-mono">{d.ref}</span> · {d.fecha}{d.detalle ? ` · ${d.detalle}` : ''}</span>
-                      <span className="tabular-nums">${fmt(d.monto)}</span>
+                      <span className="tabular-nums">{simb}{fmt(d.monto)}</span>
                     </div>
                   ))}
                 </div>
