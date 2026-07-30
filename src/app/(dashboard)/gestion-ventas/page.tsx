@@ -47,6 +47,8 @@ export default async function GestionVentasPage() {
     return { marca, modelo, unidades }
   })
   const puedeEditar = ['jose', 'admin', 'director'].includes(rol)
+  // El "pote" de directiva es reservado: solo Rojas (rol jose) lo ve.
+  const esRojas = rol === 'jose'
 
   const [vehiculos, creditos, acuerdos, proformas, divisiones, showroomVend] = await Promise.all([
     fetchAllRows<any>((from, to) => supabase
@@ -126,6 +128,13 @@ export default async function GestionVentasPage() {
       poliza_vida: Number(div?.poliza_vida ?? 0),
       obsequio_clientes: Number(div?.obsequio_clientes ?? 0),
       alfombras: Number(div?.alfombras ?? 0),
+      tipo_venta: div?.tipo_venta ?? null,
+      vendedor_pct: Number(div?.vendedor_pct ?? 0),
+      comision_vendedor: Number(div?.comision_vendedor ?? 0),
+      egreso_directiva: Number(div?.egreso_directiva ?? 0),
+      vendedores_split: Array.isArray(div?.vendedores_split) ? div.vendedores_split : null,
+      ingreso_centro_costo: Number(div?.ingreso_centro_costo ?? 0),
+      pote_directiva: Number(div?.pote_directiva ?? 0),
       // Vendedora ya definida en la división, o la sugerida por la proforma
       // (viene de la cotización, para no re-escribirla a mano).
       vendedora: div?.vendedora
@@ -144,6 +153,7 @@ export default async function GestionVentasPage() {
       showroomStock={showroomStock}
       tasas={tasas}
       puedeEditar={puedeEditar}
+      esRojas={esRojas}
     />
   )
 }
