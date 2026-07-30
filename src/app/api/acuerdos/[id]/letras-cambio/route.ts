@@ -45,7 +45,7 @@ export async function GET(
     .from('acuerdos_inicial')
     .select(`
       id, monto_acordado, fecha_limite, created_at, cliente_id,
-      clientes ( nombre, cedula_rif, direccion, ciudad, telefono, correo )
+      clientes ( nombre, cedula_rif, direccion, ciudad, telefono, correo, tipo, identificacion_juridica )
     `)
     .eq('id', acuerdoId)
     .single()
@@ -104,6 +104,8 @@ export async function GET(
     deudorDireccion: cliente.direccion ?? '',
     deudorTelefono: cliente.telefono ?? '',
     deudorCorreo: cliente.correo ?? '',
+    deudorEsJuridica: cliente.tipo === 'juridico',
+    deudorIdentJuridica: cliente.identificacion_juridica ?? null,
     fiadorNombre,
     fiadorCedula,
     letras,

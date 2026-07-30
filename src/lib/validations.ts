@@ -102,6 +102,7 @@ export const ClienteSchema = z.object({
   direccion: z.string().max(500).optional().nullable(),
   ciudad: z.string().max(100).optional().nullable(),
   observaciones: z.string().max(500).optional().nullable(),
+  identificacion_juridica: z.string().max(600).optional().nullable(),
 })
 
 export const VehiculoSchema = z.object({

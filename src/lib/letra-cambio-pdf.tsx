@@ -77,6 +77,8 @@ export interface LetraCambioData {
   deudorDireccion: string
   deudorTelefono: string
   deudorCorreo: string
+  deudorEsJuridica?: boolean            // cliente = persona jurídica (empresa)
+  deudorIdentJuridica?: string | null   // "inscrita por ante el Registro Mercantil…, bajo el Nº…, Tomo…"
   fiadorNombre?: string | null
   fiadorCedula?: string | null
   membrete?: MembreteData
@@ -100,6 +102,8 @@ function fmtFechaLarga(iso: string): { dia: number; diaLetras: string; mes: stri
 export function LetraCambioPDF({ data }: { data: LetraCambioData }) {
   const emision = fmtFechaLarga(data.fechaEmision)
   const totalLetras = data.letras.length
+  // Cliente jurídico: por bandera explícita o porque el RIF empieza en J/G.
+  const esJuridica = data.deudorEsJuridica === true || /^\s*[JGjg]-?\d/.test(data.deudorCedula || '')
 
   return (
     <Document
@@ -138,9 +142,21 @@ export function LetraCambioPDF({ data }: { data: LetraCambioData }) {
               </View>
 
               <Text style={s.paragraph}>
-                Por esta Letra de Cambio, <Text style={s.bold}>{data.deudorNombre}</Text>, venezolano(a),
-                mayor de edad, titular de la cédula de identidad Nº <Text style={s.bold}>V- {data.deudorCedula}</Text>,
-                de este domicilio: {data.deudorDireccion || '____________________________________________'},
+                {esJuridica ? (
+                  <>
+                    Por esta Letra de Cambio, la Sociedad Mercantil <Text style={s.bold}>{data.deudorNombre}</Text>,{' '}
+                    {data.deudorIdentJuridica?.trim()
+                      ? `${data.deudorIdentJuridica.trim()}, `
+                      : 'inscrita por ante el Registro Mercantil de la Circunscripción Judicial del Estado ____________, en fecha ____________, bajo el Nº ____, Tomo ____, '}
+                    con Registro Único de Información Fiscal RIF Nº <Text style={s.bold}>{data.deudorCedula}</Text>,
+                  </>
+                ) : (
+                  <>
+                    Por esta Letra de Cambio, <Text style={s.bold}>{data.deudorNombre}</Text>, venezolano(a),
+                    mayor de edad, titular de la cédula de identidad Nº <Text style={s.bold}>V- {data.deudorCedula}</Text>,
+                  </>
+                )}
+                {' '}de este domicilio: {data.deudorDireccion || '____________________________________________'},
                 Teléfono {data.deudorTelefono || '_______________'}, correo: {data.deudorCorreo || '_______________'},
                 se servirá mandar a pagar <Text style={s.bold}>SIN AVISO Y SIN PROTESTO</Text>, en la ciudad de {data.ciudad},
                 Estado Monagas, República Bolivariana de Venezuela, el día{' '}
@@ -158,7 +174,7 @@ export function LetraCambioPDF({ data }: { data: LetraCambioData }) {
 
               <Text style={s.paragraph}>
                 <Text style={s.bold}>VALOR ENTENDIDO</Text> que se cargará en cuenta a:{' '}
-                <Text style={s.bold}>{data.deudorNombre}</Text>, C.I. Nº V- {data.deudorCedula}, de este domicilio:{' '}
+                <Text style={s.bold}>{data.deudorNombre}</Text>, {esJuridica ? 'RIF Nº' : 'C.I. Nº V-'} {data.deudorCedula}, de este domicilio:{' '}
                 {data.deudorDireccion || '____________________________________________'}, Teléfono {data.deudorTelefono || '_______________'},
                 correo: {data.deudorCorreo || '_______________'}.
               </Text>

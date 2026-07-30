@@ -25,6 +25,7 @@ export default function EditarClientePage() {
   const [direccion, setDireccion] = useState('')
   const [ciudad, setCiudad] = useState('')
   const [observaciones, setObservaciones] = useState('')
+  const [identJuridica, setIdentJuridica] = useState('')
 
   useEffect(() => {
     supabase.from('clientes').select('*').eq('id', id).single().then(({ data }) => {
@@ -38,6 +39,7 @@ export default function EditarClientePage() {
       setDireccion(data.direccion ?? '')
       setCiudad(data.ciudad ?? '')
       setObservaciones(data.observaciones ?? '')
+      setIdentJuridica(data.identificacion_juridica ?? '')
       setLoading(false)
     })
   }, [id])
@@ -57,6 +59,7 @@ export default function EditarClientePage() {
       direccion:    direccion.trim() || null,
       ciudad:       ciudad.trim() || null,
       observaciones: observaciones.trim() || null,
+      identificacion_juridica: tipo === 'juridico' ? (identJuridica.trim() || null) : null,
       updated_at:   new Date().toISOString(),
     }).eq('id', id)
 
@@ -96,6 +99,14 @@ export default function EditarClientePage() {
               </button>
             ))}
           </div>
+          {tipo === 'juridico' && (
+            <div className="mt-4">
+              <label className="label">Identificación jurídica (registro mercantil) — para la letra de cambio</label>
+              <textarea className="input" rows={3} value={identJuridica} onChange={e => setIdentJuridica(e.target.value)}
+                placeholder="Ej: inscrita por ante el Registro Mercantil de la Circunscripción Judicial del Estado Monagas, en fecha cuatro (04) de julio de 2.024, bajo el Nº 24, Tomo 34-A, RM MAT" />
+              <p className="text-[11px] text-oriental-gray mt-1">Se escribe tal cual aparece en el documento del cliente. La letra lo mostrará como: «la Sociedad Mercantil {nombre || 'NOMBRE'}, [este texto], con RIF Nº {cedulaRif || 'J-…'}».</p>
+            </div>
+          )}
         </div>
 
         {/* Datos */}

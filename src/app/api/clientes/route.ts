@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   const supabase = await createAdminClient()
   const body = await req.json()
 
-  const { nombre, cedula_rif, tipo, telefono, whatsapp, correo, direccion, ciudad, observaciones } = body
+  const { nombre, cedula_rif, tipo, telefono, whatsapp, correo, direccion, ciudad, observaciones, identificacion_juridica } = body
 
   if (!nombre || !cedula_rif) {
     return NextResponse.json({ error: 'Nombre y cédula/RIF son obligatorios' }, { status: 400 })
@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       direccion: direccion || null,
       ciudad: ciudad || null,
       observaciones: observaciones || null,
+      identificacion_juridica: (tipo === 'juridico' && identificacion_juridica) ? String(identificacion_juridica).trim() : null,
       activo: true,
     })
     .select('id')

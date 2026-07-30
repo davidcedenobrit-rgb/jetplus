@@ -26,6 +26,7 @@ export default function NuevoClientePage() {
   const [direccion, setDireccion] = useState('')
   const [ciudad, setCiudad] = useState('')
   const [observaciones, setObservaciones] = useState('')
+  const [identJuridica, setIdentJuridica] = useState('')
 
   // Showroom
   const [vehiculosShowroom, setVehiculosShowroom] = useState<VehiculoShowroom[]>([])
@@ -70,6 +71,7 @@ export default function NuevoClientePage() {
       telefono: telefono || null, whatsapp: whatsapp || null,
       correo: correo || null, direccion: direccion || null,
       ciudad: ciudad || null, observaciones: observaciones || null,
+      identificacion_juridica: tipo === 'juridico' ? (identJuridica || null) : null,
     })
     if (!parsed.success) {
       setError(parsed.error.errors[0]?.message ?? 'Datos inválidos')
@@ -237,6 +239,14 @@ export default function NuevoClientePage() {
               </button>
             ))}
           </div>
+          {tipo === 'juridico' && (
+            <div className="mt-4">
+              <label className="label">Identificación jurídica (registro mercantil) — para la letra de cambio</label>
+              <textarea className="textarea" rows={3} value={identJuridica} onChange={e => setIdentJuridica(e.target.value)}
+                placeholder="Ej: inscrita por ante el Registro Mercantil de la Circunscripción Judicial del Estado Monagas, en fecha cuatro (04) de julio de 2.024, bajo el Nº 24, Tomo 34-A, RM MAT" />
+              <p className="text-[11px] text-oriental-gray mt-1">Tal cual aparece en el documento del cliente. La letra la mostrará como «la Sociedad Mercantil …, [este texto], con RIF Nº …».</p>
+            </div>
+          )}
         </div>
 
         {/* Datos */}
