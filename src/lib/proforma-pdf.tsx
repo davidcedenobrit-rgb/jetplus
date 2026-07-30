@@ -23,12 +23,12 @@ const s = StyleSheet.create({
   selloImg: { width: 46, height: 46, objectFit: 'contain', marginBottom: 2 },
 
   header: { backgroundColor: '#fff', borderBottom: `1pt solid ${BORDER}`, padding: '12pt 28pt 10pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  logoWrap: { flexShrink: 0 },
-  logo: { width: 240, height: 48, objectFit: 'contain' },
-  companyBlock: { alignItems: 'flex-end' },
-  companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2 },
-  companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-  companyLine: { fontSize: 7.5, color: GRAY },
+  logoWrap: { flexShrink: 0, width: 180 },
+  logo: { width: 180, height: 42, objectFit: 'contain', objectPositionX: 0 },
+  companyBlock: { flex: 1, alignItems: 'flex-end', paddingLeft: 18 },
+  companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK, marginBottom: 2, textAlign: 'right' },
+  companyRif: { fontSize: 8, color: RED, fontFamily: 'Helvetica-Bold', marginBottom: 2, textAlign: 'right' },
+  companyLine: { fontSize: 7.5, color: GRAY, textAlign: 'right' },
 
   body: { padding: '14pt 28pt' },
 
