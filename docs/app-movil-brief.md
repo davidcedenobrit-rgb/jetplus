@@ -11,6 +11,12 @@ Llevar el **Centro de Mando La Oriental** (hoy web) a una **app móvil nativa**
 para **Play Store** y **App Store**. Los certificados/cuentas de desarrollador
 ya están pagados por Rojas (Google Play: pago único ~$25; Apple: ~$99/año).
 
+> **ALCANCE v1: SOLO LA ORIENTAL.** La primera versión de la app se hace
+> únicamente para el concesionario **La Oriental** (Supabase
+> `twrskadsskiiskrqdvaj`). **Ki Auto queda para después.** No hay selector de
+> concesionario en v1: la app apunta fijo a La Oriental. Dejar el código
+> preparado para agregar Ki Auto más adelante, pero **no** construirlo ahora.
+
 La app debe:
 - Reusar el **mismo backend Supabase** (no duplicar datos).
 - Servir a **dos públicos**:
@@ -43,11 +49,12 @@ La app debe:
   (Next.js 15 App Router, React 19, Supabase, Tailwind 3, @react-pdf/renderer).
 - **App móvil (nueva):** `davidcedenobrit-rgb/laoriental-app` (ya creado; vacío o base).
 
-### Backend Supabase (2 bases, mismo esquema — multi-concesionario)
-| Concesionario | Project ID | URL | Dominio web |
-|---|---|---|---|
-| **La Oriental** | `twrskadsskiiskrqdvaj` (sa-east-1) | https://twrskadsskiiskrqdvaj.supabase.co | centrodemando.laoriental.co |
-| **Ki Auto** | `aleuxivmrdjwdzyyudne` (sa-east-1) | https://aleuxivmrdjwdzyyudne.supabase.co | centrodemandokiauto.laoriental.co |
+### Backend Supabase (mismo esquema en ambas bases)
+**Para la app v1 usar SOLO La Oriental.** Ki Auto se lista solo como referencia futura.
+| Concesionario | Project ID | URL | Dominio web | App v1 |
+|---|---|---|---|---|
+| **La Oriental** | `twrskadsskiiskrqdvaj` (sa-east-1) | https://twrskadsskiiskrqdvaj.supabase.co | centrodemando.laoriental.co | **SÍ** |
+| Ki Auto | `aleuxivmrdjwdzyyudne` (sa-east-1) | https://aleuxivmrdjwdzyyudne.supabase.co | centrodemandokiauto.laoriental.co | No (futuro) |
 
 - Auth: Supabase Auth (email + clave). El **rol** va en `user.app_metadata.rol`.
 - Las migraciones se aplican **a AMBAS bases** (cada archivo lo indica).
@@ -96,8 +103,8 @@ La app debe:
 
 ## 4. Alcance de la app (propuesta de fases)
 
-### App Staff/Directiva (v1)
-- Login (Supabase Auth) + selección de concesionario (La Oriental / Ki Auto).
+### App Staff/Directiva (v1 — solo La Oriental)
+- Login (Supabase Auth). **Sin selector de concesionario**: apunta fijo a La Oriental.
 - Dashboard: KPIs del mes (cobrado, egresos, por cobrar, efectivo en calle).
 - Cobranza: cartera + calendario de cobros por quincena (a quién cobrar hoy).
 - Ventas: reporte por tipo/modalidad/vendedora + detalle.
@@ -114,7 +121,8 @@ La app debe:
 ---
 
 ## 5. Backend pendiente para la app (Fase 0 — antes del móvil)
-Aplicar en **ambas bases**:
+Aplicar **solo en la base de La Oriental** (`twrskadsskiiskrqdvaj`) para el v1.
+Cuando se sume Ki Auto, se replica en su base.
 1. **Rol `cliente`** con **RLS** que limite a cada cliente a ver **solo sus**
    créditos/cuotas (hoy casi todo el acceso es vía service role del lado web; para
    el móvil con anon key hace falta RLS por usuario para el rol cliente).
@@ -144,29 +152,31 @@ Aplicar en **ambas bases**:
 
 ## 7. Datos concretos para arrancar la nueva sesión
 - Repo a usar: **`davidcedenobrit-rgb/laoriental-app`** (agregarlo a la sesión).
-- Backend: reusar Supabase de arriba (URLs en la tabla). Sacar la **anon key** del
-  dashboard de cada proyecto (o vía MCP `get_publishable_keys`).
+- Backend v1: **solo La Oriental** → `https://twrskadsskiiskrqdvaj.supabase.co`.
+  Sacar la **anon key** del dashboard del proyecto (o vía MCP `get_publishable_keys`).
 - Reusar del repo web: helpers de `src/lib/` (cálculos), paleta de color, textos.
 - Variables de entorno del móvil (Expo): `EXPO_PUBLIC_SUPABASE_URL`,
-  `EXPO_PUBLIC_SUPABASE_ANON_KEY` (una config por concesionario).
+  `EXPO_PUBLIC_SUPABASE_ANON_KEY` (config fija de La Oriental para v1).
 
 ## 8. Reglas para la nueva sesión
+- **v1 solo La Oriental** (no construir Ki Auto todavía; dejar el código preparado).
 - Desarrollar en una rama, commitear y pushear (no tocar `main`/producción sin OK).
-- Migraciones → **a las dos bases**.
+- Migraciones → **solo a la base de La Oriental** en v1 (Ki Auto se replica después).
 - Confidencialidad y seguridad SIEMPRE (skill de seguridad).
 - Mantener la línea gráfica La Oriental (rojo #C41E3A / negro #111827).
 
 ---
 
 ## 9. Primer prompt sugerido para la nueva sesión
-> "Vamos a construir la app móvil del Centro de Mando La Oriental (Android + iOS)
-> con Expo + Supabase, reusando el backend existente. Agrega el repo
-> `davidcedenobrit-rgb/laoriental-app`. Empecemos por: (1) Fase 0 backend —
-> rol `cliente` con RLS y tabla `push_tokens` en ambas bases; (2) scaffolding
-> Expo (expo-router, NativeWind, supabase-js, expo-notifications) con login y
-> selección de concesionario; (3) Dashboard staff con KPIs. Certificados de
-> Play Store y App Store ya pagados. Mantén branding (rojo #C41E3A / negro) y
-> confidencialidad."
+> "Vamos a construir la app móvil del Centro de Mando **La Oriental** (Android + iOS)
+> con Expo + Supabase, reusando el backend existente. **Solo La Oriental por ahora
+> (Ki Auto después).** Agrega el repo `davidcedenobrit-rgb/laoriental-app`.
+> Empecemos por: (1) Fase 0 backend — rol `cliente` con RLS y tabla `push_tokens`
+> **solo en la base de La Oriental** (`twrskadsskiiskrqdvaj`); (2) scaffolding
+> Expo (expo-router, NativeWind, supabase-js, expo-notifications) con login,
+> apuntando fijo a La Oriental (sin selector de concesionario); (3) Dashboard
+> staff con KPIs. Certificados de Play Store y App Store ya pagados. Mantén
+> branding (rojo #C41E3A / negro) y confidencialidad."
 
 ---
 
