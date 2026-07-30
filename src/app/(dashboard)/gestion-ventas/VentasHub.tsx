@@ -42,15 +42,47 @@ type Venta = {
   vendedora: string
   reportado_vm: boolean
   div_notas: string
+  // Nuevo modelo de división contable
+  tipo_venta: string | null
+  comision_vendedores_pct: number
+  comision_vendedores_monto: number
+  comision_directiva_pct: number
+  comision_directiva_monto: number
+  vendedores_split: { nombre: string; pct: number }[] | null
+  pote_directiva: number
 }
 
+const TIPOS_VENTA: { key: string; label: string }[] = [
+  { key: 'contado', label: 'Contado' },
+  { key: 'credito_vehimotors', label: 'Crédito Vehimotors' },
+  { key: 'credito_banca_nacional', label: 'Crédito banca nacional' },
+  { key: 'credito_financiadora_interno', label: 'Crédito financiadora interno' },
+]
+const tipoVentaLabel = (k: string | null) => TIPOS_VENTA.find(t => t.key === k)?.label ?? '—'
+
 // Fórmula de la división contable de una venta.
+//   Monto comisión de venta = precio × % comisión de venta
+//   Monto base de La Oriental = precio − monto comisión de venta
+//   Comisión de vendedores = base × % vendedores   (pool repartido entre los vendedores)
+//   Comisión de directiva  = base × % directiva
+//   Egresos de La Oriental = comisión vendedores + comisión directiva + pólizas/obsequio/alfombras
+//   Neto de directiva ("la bolsa") = base − egresos de La Oriental  (reservado)
 function calcDivision(v: Venta) {
-  const ingresoBruto = Number(v.monto_proforma || 0) - Number(v.pago_vehimotors || 0)
-  const directivaBruta = ingresoBruto - Number(v.comision_monto || 0)
-  const egresos = Number(v.poliza_carro || 0) + Number(v.poliza_vida || 0) + Number(v.obsequio_clientes || 0) + Number(v.alfombras || 0)
-  const remanente = directivaBruta - egresos
-  return { ingresoBruto, directivaBruta, egresos, remanente }
+  const precio = Number(v.precio_venta || 0)
+  const comisionVentaMonto = v.comision_monto
+    ? Number(v.comision_monto)
+    : Math.round(precio * Number(v.comision_pct || 0)) / 100
+  const montoBase = precio - comisionVentaMonto
+  const comisionVendedores = v.comision_vendedores_monto
+    ? Number(v.comision_vendedores_monto)
+    : Math.round(montoBase * Number(v.comision_vendedores_pct || 0)) / 100
+  const comisionDirectiva = v.comision_directiva_monto
+    ? Number(v.comision_directiva_monto)
+    : Math.round(montoBase * Number(v.comision_directiva_pct || 0)) / 100
+  const egresosMenores = Number(v.poliza_carro || 0) + Number(v.poliza_vida || 0) + Number(v.obsequio_clientes || 0) + Number(v.alfombras || 0)
+  const egresosOriental = comisionVendedores + comisionDirectiva + egresosMenores
+  const poteDirectiva = montoBase - egresosOriental
+  return { precio, comisionVentaMonto, montoBase, comisionVendedores, comisionDirectiva, egresosMenores, egresosOriental, poteDirectiva }
 }
 
 const ETAPA_CFG: Record<string, string> = {
@@ -78,13 +110,14 @@ type Vista = 'registradas' | 'registrar' | 'cotizaciones' | 'proformas' | 'gener
 const VISTAS_VALIDAS: Vista[] = ['registradas', 'registrar', 'cotizaciones', 'proformas', 'generar', 'banca', 'tasas', 'historial', 'division']
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac500 = [], showroomStock = [], tasas = { bcv: 0, usdt: 0 }, puedeEditar = false }: {
+export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac500 = [], showroomStock = [], tasas = { bcv: 0, usdt: 0 }, puedeEditar = false, esRojas = false }: {
   ventas: Venta[]
   catalogo?: any[]
   ac500?: any[]
   showroomStock?: { marca: string; modelo: string; unidades: number }[]
   tasas?: { bcv: number; usdt: number }
   puedeEditar?: boolean
+  esRojas?: boolean
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -125,12 +158,12 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
   const totales = useMemo(() => {
     return divFiltradas.reduce((acc, v) => {
       const d = calcDivision(v)
-      acc.proforma += Number(v.monto_proforma || 0)
-      acc.vm += Number(v.pago_vehimotors || 0)
-      acc.directiva += d.remanente
-      acc.comision += Number(v.comision_monto || 0)
+      acc.precio += d.precio
+      acc.base += d.montoBase
+      acc.comisionVend += d.comisionVendedores
+      acc.pote += d.poteDirectiva
       return acc
-    }, { proforma: 0, vm: 0, directiva: 0, comision: 0 })
+    }, { precio: 0, base: 0, comisionVend: 0, pote: 0 })
   }, [divFiltradas])
 
   function onSaved(div: any) {
@@ -146,6 +179,13 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
       poliza_vida: Number(div.poliza_vida ?? 0),
       obsequio_clientes: Number(div.obsequio_clientes ?? 0),
       alfombras: Number(div.alfombras ?? 0),
+      tipo_venta: div.tipo_venta ?? null,
+      comision_vendedores_pct: Number(div.comision_vendedores_pct ?? 0),
+      comision_vendedores_monto: Number(div.comision_vendedores_monto ?? 0),
+      comision_directiva_pct: Number(div.comision_directiva_pct ?? 0),
+      comision_directiva_monto: Number(div.comision_directiva_monto ?? 0),
+      vendedores_split: Array.isArray(div.vendedores_split) ? div.vendedores_split : null,
+      pote_directiva: Number(div.pote_directiva ?? 0),
       vendedora: div.vendedora ?? '',
       reportado_vm: !!div.reportado_vm,
       div_notas: div.notas ?? '',
@@ -302,10 +342,10 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
         /* División contable */
         <div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-            <TotalCard label="Monto proforma" value={totales.proforma} color="text-oriental-black" />
-            <TotalCard label="Pago a Vehimotors" value={totales.vm} color="text-red-600" />
-            <TotalCard label="Remanente directiva" value={totales.directiva} color="text-green-700" />
-            <TotalCard label="Comisiones" value={totales.comision} color="text-indigo-700" />
+            <TotalCard label="Precio de venta" value={totales.precio} color="text-oriental-black" />
+            <TotalCard label="Monto base La Oriental" value={totales.base} color="text-indigo-700" />
+            <TotalCard label="Comisión vendedores" value={totales.comisionVend} color="text-red-600" />
+            {esRojas && <TotalCard label="La bolsa (neto directiva)" value={totales.pote} color="text-green-700" />}
           </div>
 
           {divFiltradas.length === 0 ? (
@@ -321,10 +361,11 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-oriental-black text-sm truncate">{v.marca} {v.modelo}</span>
                           {v.placa && <span className="font-mono text-[11px] text-gray-400">{v.placa}</span>}
+                          {v.tipo_venta && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700">{tipoVentaLabel(v.tipo_venta)}</span>}
                           {!v.div_definida && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sin definir</span>}
                           {v.reportado_vm && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-700">Reportado VM</span>}
                         </div>
-                        <p className="text-gray-500 text-xs truncate">{v.cliente_nombre}{v.vendedora ? ` · Vendedora: ${v.vendedora}` : ''}</p>
+                        <p className="text-gray-500 text-xs truncate">{v.cliente_nombre}{v.vendedora ? ` · Vendedor(es): ${v.vendedora}` : ''}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Link href={`/vehimotors/reportar?vehiculoId=${v.id}`}
@@ -338,14 +379,19 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
                       </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-                      <Celda label="Monto proforma" value={`$${fmt(v.monto_proforma)}`} />
-                      <Celda label="Pago VM" value={`$${fmt(v.pago_vehimotors)}`} rojo />
-                      <Celda label="Ingreso bruto" value={`$${fmt(d.ingresoBruto)}`} />
-                      <Celda label={`Comisión${v.comision_pct ? ` (${v.comision_pct}%)` : ''}`} value={`$${fmt(v.comision_monto)}`} />
-                      <Celda label="Remanente directiva" value={`$${fmt(d.remanente)}`} verde />
+                      <Celda label="Precio de venta" value={`$${fmt(d.precio)}`} />
+                      <Celda label={`Comisión venta${v.comision_pct ? ` (${v.comision_pct}%)` : ''}`} value={`$${fmt(d.comisionVentaMonto)}`} />
+                      <Celda label="Monto base La Oriental" value={`$${fmt(d.montoBase)}`} />
+                      <Celda label={`Com. vendedores${v.comision_vendedores_pct ? ` (${v.comision_vendedores_pct}%)` : ''}`} value={`$${fmt(d.comisionVendedores)}`} rojo />
+                      {esRojas
+                        ? <Celda label="La bolsa (directiva)" value={`$${fmt(d.poteDirectiva)}`} verde />
+                        : <Celda label={`Com. directiva${v.comision_directiva_pct ? ` (${v.comision_directiva_pct}%)` : ''}`} value={`$${fmt(d.comisionDirectiva)}`} />}
                     </div>
-                    {d.egresos > 0 && (
-                      <p className="text-[10px] text-gray-400 mt-1.5">Egresos directiva (pólizas, obsequio, alfombras): ${fmt(d.egresos)}</p>
+                    {(d.comisionDirectiva > 0 || d.egresosMenores > 0) && (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[10px] text-gray-400">
+                        {d.comisionDirectiva > 0 && <span>Comisión directiva: ${fmt(d.comisionDirectiva)}</span>}
+                        {d.egresosMenores > 0 && <span>Pólizas / obsequio / alfombras: ${fmt(d.egresosMenores)}</span>}
+                      </div>
                     )}
                   </div>
                 )
@@ -355,7 +401,7 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
         </div>
       )}
 
-      {editar && <DivisionModal venta={editar} onClose={() => setEditar(null)} onSaved={onSaved} />}
+      {editar && <DivisionModal venta={editar} esRojas={esRojas} onClose={() => setEditar(null)} onSaved={onSaved} />}
     </div>
   )
 }
@@ -378,21 +424,32 @@ function Celda({ label, value, rojo, verde }: { label: string; value: string; ro
   )
 }
 
-function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () => void; onSaved: (div: any) => void }) {
+type VendSplit = { nombre: string; pct: string }
+
+function DivisionModal({ venta, esRojas = false, onClose, onSaved }: { venta: Venta; esRojas?: boolean; onClose: () => void; onSaved: (div: any) => void }) {
+  const [tipoVenta, setTipoVenta] = useState<string>(venta.tipo_venta || '')
   const [precioVenta, setPrecioVenta] = useState(String(venta.precio_venta || ''))
   const [comisionPct, setComisionPct] = useState(String(venta.comision_pct || ''))
+  const [comVendPct, setComVendPct] = useState(String(venta.comision_vendedores_pct || ''))
+  const [comDirPct, setComDirPct] = useState(String(venta.comision_directiva_pct || ''))
   const [montoProforma, setMontoProforma] = useState(String(venta.monto_proforma || ''))
   const [pagoVM, setPagoVM] = useState(String(venta.pago_vehimotors || ''))
   const [polizaCarro, setPolizaCarro] = useState(String(venta.poliza_carro || ''))
   const [polizaVida, setPolizaVida] = useState(String(venta.poliza_vida || ''))
   const [obsequio, setObsequio] = useState(String(venta.obsequio_clientes || ''))
   const [alfombras, setAlfombras] = useState(String(venta.alfombras || ''))
-  // Vendedoras: base de datos (Rojas las carga) + áreas fijas. Se puede elegir 1 o 2.
+  // Vendedores: base de datos (Rojas los carga) + áreas fijas. Rojas elige los que quiera
+  // y reparte el monto de comisión de vendedores (que es el 100%) entre ellos por %.
   const AREAS = ['Dpto. de Mercadeo', 'Taller', 'Dpto. Administrativo', 'Directiva']
   const [vendedorasBd, setVendedorasBd] = useState<string[]>([])
-  const [selVend, setSelVend] = useState<string[]>(
-    (venta.vendedora || '').split(/\s*(?:\/|,)\s*/).map(s => s.trim()).filter(Boolean)
-  )
+  const [vendedores, setVendedores] = useState<VendSplit[]>(() => {
+    if (Array.isArray(venta.vendedores_split) && venta.vendedores_split.length) {
+      return venta.vendedores_split.map(v => ({ nombre: String(v.nombre), pct: String(v.pct ?? '') }))
+    }
+    const nombres = (venta.vendedora || '').split(/\s*(?:\/|,)\s*/).map(s => s.trim()).filter(Boolean)
+    if (nombres.length === 1) return [{ nombre: nombres[0], pct: '100' }]
+    return nombres.map(n => ({ nombre: n, pct: '' }))
+  })
   const [reportadoVm, setReportadoVm] = useState(venta.reportado_vm)
   const [notas, setNotas] = useState(venta.div_notas || '')
   const [saving, setSaving] = useState(false)
@@ -404,33 +461,39 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
     }).catch(() => {})
   }, [])
 
-  // Opciones: vendedoras de BD + áreas + cualquier valor ya guardado que no esté en la lista
   const opcionesVend = useMemo(() => {
     const base = [...vendedorasBd, ...AREAS]
-    const extra = selVend.filter(v => !base.includes(v))
+    const extra = vendedores.map(v => v.nombre).filter(n => !base.includes(n))
     return [...base, ...extra]
-  }, [vendedorasBd, selVend])
+  }, [vendedorasBd, vendedores])
 
   function toggleVend(nombre: string) {
-    setSelVend(prev => {
-      if (prev.includes(nombre)) return prev.filter(v => v !== nombre)
-      if (prev.length >= 2) return prev // máximo 2
-      return [...prev, nombre]
+    setVendedores(prev => {
+      if (prev.some(v => v.nombre === nombre)) return prev.filter(v => v.nombre !== nombre)
+      return [...prev, { nombre, pct: '' }]
     })
   }
-  const vendedora = selVend.join(' / ')
+  function setVendPct(nombre: string, pct: string) {
+    setVendedores(prev => prev.map(v => v.nombre === nombre ? { ...v, pct } : v))
+  }
+  const vendedora = vendedores.map(v => v.nombre).join(' / ')
 
-  const nf = (s: string) => parseFloat(s.replace(',', '.')) || 0
-  const x = nf(precioVenta)            // precio base del carro
-  const pct = nf(comisionPct)
-  const comisionMonto = Math.round(x * pct) / 100
-  const proforma = nf(montoProforma)
-  const y = nf(pagoVM)                 // pagado a Vehimotors
+  const nf = (s: string) => parseFloat(String(s).replace(',', '.')) || 0
+  const x = nf(precioVenta)                                  // precio de venta
+  const pctVenta = nf(comisionPct)                           // % comisión de venta
+  const comisionVentaMonto = Math.round(x * pctVenta) / 100  // monto comisión de venta
+  const montoBase = x - comisionVentaMonto                   // monto base de La Oriental
+  const pctVend = nf(comVendPct)
+  const comVendMonto = Math.round(montoBase * pctVend) / 100 // pool de comisión de vendedores (100%)
+  const pctDir = nf(comDirPct)
+  const comDirMonto = Math.round(montoBase * pctDir) / 100   // comisión de directiva
   const egr = { pc: nf(polizaCarro), pv: nf(polizaVida), ob: nf(obsequio), al: nf(alfombras) }
-  const egresos = egr.pc + egr.pv + egr.ob + egr.al
-  const ingresoBruto = proforma - y
-  const directivaBruta = ingresoBruto - comisionMonto
-  const remanente = directivaBruta - egresos
+  const egresosMenores = egr.pc + egr.pv + egr.ob + egr.al
+  const egresosOriental = comVendMonto + comDirMonto + egresosMenores
+  const poteDirectiva = Math.round((montoBase - egresosOriental) * 100) / 100
+  const sumaPctVend = Math.round(vendedores.reduce((s, v) => s + nf(v.pct), 0) * 100) / 100
+  const proforma = nf(montoProforma)
+  const y = nf(pagoVM)
 
   async function guardar() {
     setSaving(true); setError('')
@@ -439,7 +502,10 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           vehiculoId: venta.id, proformaId: venta.proforma_id, cotizacionId: venta.cotizacion_id, clienteId: venta.cliente_id,
-          precioVenta: x, comisionPct: pct, comisionMonto,
+          tipoVenta: tipoVenta || null,
+          precioVenta: x, comisionPct: pctVenta,
+          comisionVendedoresPct: pctVend, comisionDirectivaPct: pctDir,
+          vendedoresSplit: vendedores.map(v => ({ nombre: v.nombre, pct: nf(v.pct) })),
           montoProforma: proforma, pagoVehimotors: y,
           polizaCarro: egr.pc, polizaVida: egr.pv, obsequioClientes: egr.ob, alfombras: egr.al,
           vendedora, reportadoVm, notas,
@@ -452,6 +518,7 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
   }
 
   const inp = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-oriental-red'
+  const inpRO = 'w-full px-3 py-2 border border-gray-100 rounded-lg text-sm text-right bg-gray-50 text-gray-700 font-bold'
   const lbl = 'block text-[11px] font-semibold text-gray-500 mb-1'
 
   return (
@@ -469,31 +536,95 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
         <div className="p-5 space-y-3">
           {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs text-red-800">{error}</div>}
 
+          {/* 1. Tipo de venta */}
+          <div>
+            <label className={lbl}>Tipo de venta</label>
+            <div className="flex flex-wrap gap-1.5">
+              {TIPOS_VENTA.map(t => (
+                <button key={t.key} type="button" onClick={() => setTipoVenta(t.key)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${tipoVenta === t.key ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-oriental-black'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 2-3. Precio de venta + % comisión de venta (refleja monto) */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={lbl}>Precio de venta (X) $ <span className="font-normal text-gray-400">precio base</span></label>
+              <label className={lbl}>Precio de venta $</label>
               <input className={inp} inputMode="decimal" value={precioVenta} onChange={e => setPrecioVenta(e.target.value)} />
             </div>
             <div>
-              <label className={lbl}>Comisión de venta (% sobre X)</label>
+              <label className={lbl}>% Comisión de venta</label>
               <input className={inp} inputMode="decimal" value={comisionPct} onChange={e => setComisionPct(e.target.value)} />
             </div>
           </div>
           <div className="flex justify-between text-[11px] text-gray-500 -mt-1 px-1">
-            <span>Monto comisión</span><span className="font-bold text-indigo-700">${fmt(comisionMonto)}</span>
+            <span>Monto comisión de venta</span><span className="font-bold text-indigo-700">${fmt(comisionVentaMonto)}</span>
           </div>
 
+          {/* 4. Monto base de La Oriental */}
           <div>
-            <label className={lbl}>Monto de proforma $ <span className="font-normal text-gray-400">P. BASE — sin IVA ni placa</span></label>
-            <input className={inp} inputMode="decimal" value={montoProforma} onChange={e => setMontoProforma(e.target.value)} />
-          </div>
-          <div>
-            <label className={lbl}>Pagado a Vehimotors $</label>
-            <input className={inp} inputMode="decimal" value={pagoVM} onChange={e => setPagoVM(e.target.value)} />
+            <label className={lbl}>Monto base de La Oriental $ <span className="font-normal text-gray-400">= precio − comisión de venta</span></label>
+            <input className={inpRO} value={fmt(montoBase)} readOnly tabIndex={-1} />
           </div>
 
+          {/* 5-6. % Comisión de vendedores y directiva (reflejan monto sobre la base) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>% Comisión de vendedores</label>
+              <input className={inp} inputMode="decimal" value={comVendPct} onChange={e => setComVendPct(e.target.value)} />
+              <p className="text-[11px] text-right mt-1 font-bold text-red-600">${fmt(comVendMonto)}</p>
+            </div>
+            <div>
+              <label className={lbl}>% Comisión de directiva</label>
+              <input className={inp} inputMode="decimal" value={comDirPct} onChange={e => setComDirPct(e.target.value)} />
+              <p className="text-[11px] text-right mt-1 font-bold text-amber-600">${fmt(comDirMonto)}</p>
+            </div>
+          </div>
+
+          {/* 7. Vendedores + reparto del pool */}
           <div>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Egresos de directiva</p>
+            <label className={lbl}>Vendedores — reparte el monto de comisión (100%) entre los que elijas</label>
+            <div className="flex flex-wrap gap-1.5">
+              {opcionesVend.map(nombre => {
+                const on = vendedores.some(v => v.nombre === nombre)
+                return (
+                  <button key={nombre} type="button" onClick={() => toggleVend(nombre)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${on ? 'bg-oriental-red text-white border-oriental-red' : 'bg-white text-oriental-gray border-gray-200 hover:border-oriental-red'}`}>
+                    {nombre}
+                  </button>
+                )
+              })}
+            </div>
+            {vendedorasBd.length === 0 && <p className="text-[11px] text-amber-600 mt-1">No hay vendedores cargados. Rojas los agrega en Base de datos → Vendedoras.</p>}
+            {vendedores.length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                {vendedores.map(v => {
+                  const montoV = Math.round(comVendMonto * nf(v.pct)) / 100
+                  return (
+                    <div key={v.nombre} className="flex items-center gap-2">
+                      <span className="flex-1 text-xs font-semibold text-oriental-black truncate">{v.nombre}</span>
+                      <div className="relative w-20">
+                        <input className="w-full px-2 py-1.5 pr-6 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-oriental-red"
+                          inputMode="decimal" placeholder="0" value={v.pct} onChange={e => setVendPct(v.nombre, e.target.value)} />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                      </div>
+                      <span className="w-20 text-right text-xs font-bold text-red-600">${fmt(montoV)}</span>
+                    </div>
+                  )
+                })}
+                <div className={`flex justify-between text-[11px] px-1 pt-0.5 ${sumaPctVend === 100 ? 'text-gray-500' : 'text-amber-600 font-semibold'}`}>
+                  <span>{sumaPctVend === 100 ? 'Reparto completo' : 'El reparto debe sumar 100%'}</span><span className="font-bold">{fmt(sumaPctVend)}%</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Otros egresos */}
+          <div>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Otros egresos</p>
             <div className="grid grid-cols-2 gap-2">
               <div><label className={lbl}>Póliza de carro $</label><input className={inp} inputMode="decimal" value={polizaCarro} onChange={e => setPolizaCarro(e.target.value)} /></div>
               <div><label className={lbl}>Póliza de vida $</label><input className={inp} inputMode="decimal" value={polizaVida} onChange={e => setPolizaVida(e.target.value)} /></div>
@@ -502,32 +633,42 @@ function DivisionModal({ venta, onClose, onSaved }: { venta: Venta; onClose: () 
             </div>
           </div>
 
-          <div>
-            <label className={lbl}>Vendedora(s) — elige 1 o 2</label>
-            <div className="flex flex-wrap gap-1.5">
-              {opcionesVend.map(nombre => {
-                const on = selVend.includes(nombre)
-                const dis = !on && selVend.length >= 2
-                return (
-                  <button key={nombre} type="button" onClick={() => toggleVend(nombre)} disabled={dis}
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${on ? 'bg-oriental-red text-white border-oriental-red' : dis ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed' : 'bg-white text-oriental-gray border-gray-200 hover:border-oriental-red'}`}>
-                    {nombre}
-                  </button>
-                )
-              })}
+          {/* Datos Vehimotors (continuidad de reportes) */}
+          <details className="rounded-lg border border-gray-100">
+            <summary className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2 cursor-pointer select-none">Datos Vehimotors (opcional)</summary>
+            <div className="grid grid-cols-2 gap-2 px-3 pb-3">
+              <div><label className={lbl}>Monto de proforma $</label><input className={inp} inputMode="decimal" value={montoProforma} onChange={e => setMontoProforma(e.target.value)} /></div>
+              <div><label className={lbl}>Pagado a Vehimotors $</label><input className={inp} inputMode="decimal" value={pagoVM} onChange={e => setPagoVM(e.target.value)} /></div>
             </div>
-            {vendedorasBd.length === 0 && <p className="text-[11px] text-amber-600 mt-1">No hay vendedoras cargadas. Rojas las agrega en Base de datos → Vendedoras.</p>}
-            {selVend.length > 0 && <p className="text-[11px] text-oriental-gray mt-1">Seleccionadas: <b className="text-oriental-black">{selVend.join(' / ')}</b></p>}
-          </div>
+          </details>
 
+          {/* Resumen */}
           <div className="rounded-xl bg-gray-900 p-4 text-white space-y-1.5 text-sm">
-            <div className="flex justify-between text-gray-300"><span>Monto de proforma (P. BASE)</span><span className="font-mono">${fmt(proforma)}</span></div>
-            <div className="flex justify-between text-gray-300"><span>− Pagado a Vehimotors</span><span className="font-mono">${fmt(y)}</span></div>
-            <div className="flex justify-between text-gray-100 border-t border-gray-700 pt-1.5"><span>= Ingreso bruto La Oriental</span><span className="font-mono">${fmt(ingresoBruto)}</span></div>
-            <div className="flex justify-between text-indigo-300"><span>− Comisión de venta ({pct || 0}%)</span><span className="font-mono">${fmt(comisionMonto)}</span></div>
-            <div className="flex justify-between text-gray-100"><span>= A directiva</span><span className="font-mono">${fmt(directivaBruta)}</span></div>
-            {egresos > 0 && <div className="flex justify-between text-amber-300"><span>− Egresos (pólizas, obsequio, alfombras)</span><span className="font-mono">${fmt(egresos)}</span></div>}
-            <div className="flex justify-between font-bold text-green-400 border-t border-gray-700 pt-1.5"><span>= Remanente directiva</span><span className="font-mono">${fmt(remanente)}</span></div>
+            <div className="flex justify-between text-gray-300"><span>Precio de venta</span><span className="font-mono">${fmt(x)}</span></div>
+            <div className="flex justify-between text-indigo-300"><span>− Comisión de venta ({fmt(pctVenta)}%)</span><span className="font-mono">${fmt(comisionVentaMonto)}</span></div>
+            <div className="flex justify-between text-gray-100 border-t border-gray-700 pt-1.5"><span>= Monto base La Oriental</span><span className="font-mono">${fmt(montoBase)}</span></div>
+
+            <div className="pt-1.5 mt-1 border-t border-gray-700">
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Egresos de La Oriental</p>
+              {vendedores.filter(v => nf(v.pct) > 0).map(v => (
+                <div key={v.nombre} className="flex justify-between text-gray-300"><span>Comisión venta · {v.nombre} ({fmt(nf(v.pct))}%)</span><span className="font-mono">${fmt(Math.round(comVendMonto * nf(v.pct)) / 100)}</span></div>
+              ))}
+              {comVendMonto > 0 && vendedores.filter(v => nf(v.pct) > 0).length === 0 && (
+                <div className="flex justify-between text-gray-300"><span>Comisión de vendedores ({fmt(pctVend)}%)</span><span className="font-mono">${fmt(comVendMonto)}</span></div>
+              )}
+              {comDirMonto > 0 && <div className="flex justify-between text-gray-300"><span>Comisión de directiva ({fmt(pctDir)}%)</span><span className="font-mono">${fmt(comDirMonto)}</span></div>}
+              {egr.pc > 0 && <div className="flex justify-between text-gray-300"><span>Póliza de carro</span><span className="font-mono">${fmt(egr.pc)}</span></div>}
+              {egr.pv > 0 && <div className="flex justify-between text-gray-300"><span>Póliza de vida</span><span className="font-mono">${fmt(egr.pv)}</span></div>}
+              {egr.ob > 0 && <div className="flex justify-between text-gray-300"><span>Obsequio a clientes</span><span className="font-mono">${fmt(egr.ob)}</span></div>}
+              {egr.al > 0 && <div className="flex justify-between text-gray-300"><span>Alfombras</span><span className="font-mono">${fmt(egr.al)}</span></div>}
+              <div className="flex justify-between text-gray-100 border-t border-gray-700 pt-1.5 mt-1"><span>= Total egresos La Oriental</span><span className="font-mono">${fmt(egresosOriental)}</span></div>
+            </div>
+
+            {esRojas ? (
+              <div className="flex justify-between font-bold text-green-400 border-t border-gray-700 pt-1.5"><span>= La bolsa (neto directiva)</span><span className="font-mono">${fmt(poteDirectiva)}</span></div>
+            ) : (
+              <div className="flex justify-between text-[11px] text-gray-500 border-t border-gray-700 pt-1.5"><span>Neto de directiva</span><span className="font-mono">— reservado —</span></div>
+            )}
           </div>
 
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">

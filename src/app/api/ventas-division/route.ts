@@ -22,13 +22,32 @@ export async function POST(req: Request) {
 
   const precioVenta = num(b.precioVenta)
   const pagoVM = num(b.pagoVehimotors)
-  const comisionPct = num(b.comisionPct)
-  const comisionMonto = b.comisionMonto != null ? num(b.comisionMonto) : Math.round(precioVenta * comisionPct) / 100
+  const comisionPct = num(b.comisionPct)                              // % comisión de venta
+  const comisionMonto = Math.round(precioVenta * comisionPct) / 100   // monto comisión de venta
   const montoProforma = num(b.montoProforma)
   const polizaCarro = num(b.polizaCarro)
   const polizaVida = num(b.polizaVida)
   const obsequioClientes = num(b.obsequioClientes)
   const alfombras = num(b.alfombras)
+
+  // Nuevo modelo: base, comisiones (vendedores/directiva) y "la bolsa" (neto directiva)
+  const TIPOS_VENTA = ['contado', 'credito_vehimotors', 'credito_banca_nacional', 'credito_financiadora_interno']
+  const tipoVenta = TIPOS_VENTA.includes(b.tipoVenta) ? b.tipoVenta : null
+  const montoBase = precioVenta - comisionMonto                       // monto base de La Oriental
+  const comisionVendedoresPct = num(b.comisionVendedoresPct)
+  const comisionVendedoresMonto = Math.round(montoBase * comisionVendedoresPct) / 100
+  const comisionDirectivaPct = num(b.comisionDirectivaPct)
+  const comisionDirectivaMonto = Math.round(montoBase * comisionDirectivaPct) / 100
+  // Reparto del pool de comisión de vendedores: [{ nombre, pct }] (pct = % del pool, suma 100).
+  const vendedoresSplit: { nombre: string; pct: number }[] = Array.isArray(b.vendedoresSplit)
+    ? b.vendedoresSplit
+        .map((v: any) => ({ nombre: String(v?.nombre ?? '').trim(), pct: num(v?.pct) }))
+        .filter((v: any) => v.nombre)
+    : []
+  // Egresos de La Oriental (van a contabilidad) = comisión vendedores + comisión directiva + pólizas/obsequio/alfombras
+  const egresosOriental = comisionVendedoresMonto + comisionDirectivaMonto + polizaCarro + polizaVida + obsequioClientes + alfombras
+  // Neto de directiva ("la bolsa"), reservado.
+  const poteDirectiva = Math.round((montoBase - egresosOriental) * 100) / 100
 
   // Referencias opcionales (proforma/cotización/cliente) desde la proforma de la venta.
   let proformaId: string | null = b.proformaId ?? null
@@ -59,6 +78,13 @@ export async function POST(req: Request) {
     poliza_vida: polizaVida,
     obsequio_clientes: obsequioClientes,
     alfombras: alfombras,
+    tipo_venta: tipoVenta,
+    comision_vendedores_pct: comisionVendedoresPct,
+    comision_vendedores_monto: comisionVendedoresMonto,
+    comision_directiva_pct: comisionDirectivaPct,
+    comision_directiva_monto: comisionDirectivaMonto,
+    vendedores_split: vendedoresSplit.length ? vendedoresSplit : null,
+    pote_directiva: poteDirectiva,
     vendedora: (b.vendedora ?? '').toString().trim() || null,
     reportado_vm: !!b.reportadoVm,
     notas: (b.notas ?? '').toString().trim() || null,
