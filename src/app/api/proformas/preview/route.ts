@@ -47,6 +47,8 @@ export async function GET(req: Request) {
     estado: ac.estado,
   } : null
 
+  const tasa = num(cot.personalizado_tasa_pct) || num(est.tasaPct) || 0
+
   return NextResponse.json({
     vehiculo: `${cot.marca ?? ''} ${cot.modelo ?? ''}`.trim(),
     modalidad,
@@ -55,6 +57,7 @@ export async function GET(req: Request) {
     financiado,
     cuotaMensual,
     meses,
+    tasa,
     acuerdo,
   })
 }

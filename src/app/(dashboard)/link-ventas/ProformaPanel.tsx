@@ -41,6 +41,15 @@ export default function ProformaPanel({
   const [preview, setPreview] = useState<any | null>(null)
   const [montos, setMontos] = useState({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
   const setMonto = (k: keyof typeof montos, v: string) => setMontos(p => ({ ...p, [k]: v }))
+  // Tasa % anual del crédito Vehimotor (viene predeterminada de la cotización).
+  const [tasa, setTasa] = useState('')
+  // Cuota amortizada: financiado + N cuotas + tasa % anual.
+  const calcCuota = (fin: number, nc: number, t: number) => {
+    if (nc <= 0) return 0
+    const r = t / 100 / 12
+    return r > 0 ? r2(fin * r * Math.pow(1 + r, nc) / (Math.pow(1 + r, nc) - 1)) : r2(fin / nc)
+  }
+  const recalcCuota = (fin: number, nc: number, t: number) => setMonto('cuotaMensual', String(calcCuota(fin, nc, t)))
   // INICIAL flexible: lista de abonos (monto + a los N días). Ej: 7.000 (día 0),
   // 3.000 (día 15), 5.000 (día 30), 5.000 (día 45).
   const [abonos, setAbonos] = useState<{ monto: string; dias: string }[]>([{ monto: '', dias: '0' }])
@@ -112,7 +121,7 @@ export default function ProformaPanel({
     setAprobadoBanco(''); setRestanteMetodo('contado')
     setShowroomId(''); setUnidades([]); setPreview(null)
     setMontos({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
-    setAbonos([{ monto: '', dias: '0' }]); setTextoManual(false)
+    setAbonos([{ monto: '', dias: '0' }]); setTextoManual(false); setTasa('')
     fetch(`/api/showroom/disponibles?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : []).then(d => setUnidades(Array.isArray(d) ? d : [])).catch(() => {})
 
     // MODO EDICIÓN: trae la proforma completa y precarga TODO.
@@ -144,12 +153,15 @@ export default function ProformaPanel({
         setTextoManual(true)
         setShowroomId(pf.showroom_id ?? veh.showroom_id ?? '')
       }).catch(() => {})
+      // Tasa por defecto (de la cotización) para el recálculo.
+      fetch(`/api/proformas/preview?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : null).then(d => { if (d && d.tasa != null) setTasa(String(d.tasa || '')) }).catch(() => {})
       return
     }
 
     fetch(`/api/proformas/preview?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : null).then(d => {
       if (d && !d.error) {
         setPreview(d)
+        setTasa(String(d.tasa || ''))
         setMontos({ precioBase: String(r2(d.precioBase)), inicial: String(r2(d.inicial)), financiado: String(r2(d.financiado)), cuotaMensual: String(r2(d.cuotaMensual)), meses: String(d.meses || '') })
         // Si ya hay acuerdo de cobro, precargar los abonos del inicial.
         if (d.acuerdo && d.inicial > 0) {
@@ -347,14 +359,20 @@ export default function ProformaPanel({
                       {preview.modalidad !== 'contado' && (
                         <div className="rounded-lg bg-white border border-indigo-200 p-2.5">
                           <label className="text-[11px] font-bold text-indigo-700">Crédito Vehimotor (después del inicial)</label>
-                          <div className="grid grid-cols-3 gap-2 mt-1.5">
+                          <div className="grid grid-cols-4 gap-2 mt-1.5">
                             <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Financiado ($)</label>
-                              <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right" value={montos.financiado} onChange={e => setMonto('financiado', e.target.value)} /></div>
+                              <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right"
+                                value={montos.financiado} onChange={e => { setMonto('financiado', e.target.value); recalcCuota(nz(e.target.value), Math.round(nz(montos.meses)), nz(tasa)) }} /></div>
                             <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">N° cuotas</label>
-                              <input inputMode="numeric" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right" value={montos.meses} onChange={e => setMonto('meses', e.target.value)} /></div>
-                            <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Cuota ($)</label>
-                              <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right" value={montos.cuotaMensual} onChange={e => setMonto('cuotaMensual', e.target.value)} /></div>
+                              <input inputMode="numeric" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right"
+                                value={montos.meses} onChange={e => { setMonto('meses', e.target.value); recalcCuota(nz(montos.financiado), Math.round(nz(e.target.value)), nz(tasa)) }} /></div>
+                            <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Tasa % anual</label>
+                              <input inputMode="decimal" className="w-full px-2 py-1.5 border border-indigo-300 rounded text-sm text-right bg-indigo-50"
+                                value={tasa} onChange={e => { setTasa(e.target.value); recalcCuota(nz(montos.financiado), Math.round(nz(montos.meses)), nz(e.target.value)) }} /></div>
+                            <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Cuota ($) auto</label>
+                              <input readOnly className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right bg-gray-100 font-bold" value={montos.cuotaMensual} /></div>
                           </div>
+                          <p className="text-[10px] text-gray-400 mt-1">La cuota se calcula sola con la tasa. {nz(tasa) > 0 ? `Tasa ${nz(tasa)}% anual.` : 'Sin interés (tasa 0).'}</p>
                         </div>
                       )}
 
