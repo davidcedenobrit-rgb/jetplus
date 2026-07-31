@@ -162,6 +162,7 @@ export interface CotizacionPDFData {
   retencionPct?: number | null
   marca: string
   modelo: string
+  color?: string | null
   cantidad?: number
   precioBase: number
   modalidad: 'contado' | 'credito_24'
@@ -309,7 +310,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           </View>
           <View style={s.tableRow}>
             <Text style={[s.tableCell, s.colMarca]}>{data.marca}</Text>
-            <Text style={[s.tableCell, s.colModelo]}>{data.modelo}</Text>
+            <Text style={[s.tableCell, s.colModelo]}>{data.modelo}{data.color ? ` · Color: ${data.color}` : ''}</Text>
             <Text style={[s.tableCell, s.colCant, { textAlign: 'center' }]}>{cantidad}</Text>
             <Text style={[s.tableCell, s.colPrecio, { textAlign: 'right' }]}>{fmt(esAC500 ? data.ac500Schedule?.reserva : data.precioBase)}</Text>
             <Text style={[s.tableCell, s.colImporte, { textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{fmt(importeUnit * cantidad)}</Text>

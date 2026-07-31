@@ -182,7 +182,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
   const [ac500Directo, setAc500Directo] = useState(esPrecompra)
   const [modalidad, setModalidad] = useState<Modalidad>(esPrecompra ? 'credito_24' : 'contado')
   const [plan, setPlan] = useState<Plan>(esPrecompra ? 'ac500' : 'vehimotors')
-  const [form, setForm] = useState({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false, retencionPct: '75', tipoPersona: 'natural' })
+  const [form, setForm] = useState({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false, retencionPct: '75', tipoPersona: 'natural', clienteCedula: '', clienteRif: '', color: '' })
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
   const [cotIdCreada, setCotIdCreada] = useState('')
@@ -442,6 +442,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
           clienteDireccion: form.clienteDireccion || null, clienteCiudadEstado: form.clienteCiudadEstado || null,
           clienteCodigoPostal: form.clienteCodigoPostal || null, agenteRetencion: form.agenteRetencion,
           retencionPct: form.agenteRetencion ? (num(form.retencionPct) ?? 75) : null,
+          clienteCedula: form.clienteCedula || null, clienteRif: form.clienteRif || null,
+          color: form.color || null,
           modalidad: modalidadEnvio,
           plan: planEnvio,
           cantidad,
@@ -462,7 +464,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
     // En Precompra la cotización siempre es Asegúrate $500: se reinicia en ese flujo.
     setStep(esPrecompra ? 'form' : 'vehiculo'); setVehiculoSel(null); setAc500Directo(esPrecompra)
     setModalidad(esPrecompra ? 'credito_24' : 'contado'); setPlan(esPrecompra ? 'ac500' : 'vehimotors')
-    setForm({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false, retencionPct: '75', tipoPersona: 'natural' })
+    setForm({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false, retencionPct: '75', tipoPersona: 'natural', clienteCedula: '', clienteRif: '', color: '' })
     setErrorMsg(''); setNumeroCot(''); setCotIdCreada('')
     setPlanAC500Sel(null); setPlanesAC500([])
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
@@ -977,6 +979,27 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
                 <input className={inputCls} value={form.clienteTelefono} onChange={e => setForm(p => ({ ...p, clienteTelefono: e.target.value }))} placeholder="0414-..." />
               </div>
             </div>
+
+            {/* Precompra (AC500): identidad completa + color para arrastrar a la proforma/anexo */}
+            {esPrecompra && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Cédula del firmante</label>
+                    <input className={inputCls} value={form.clienteCedula} onChange={e => setForm(p => ({ ...p, clienteCedula: e.target.value }))} placeholder="V-12345678" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{form.tipoPersona === 'juridica' ? 'RIF de la empresa' : 'RIF'}</label>
+                    <input className={inputCls} value={form.clienteRif} onChange={e => setForm(p => ({ ...p, clienteRif: e.target.value }))} placeholder={form.tipoPersona === 'juridica' ? 'J-12345678-9' : 'V-12345678-9'} />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Color(es) elegido(s)</label>
+                  <input className={inputCls} value={form.color} onChange={e => setForm(p => ({ ...p, color: e.target.value }))} placeholder="Ej: Blanco perla / Negro" />
+                  <p className="text-[10px] text-gray-400 mt-1">Se arrastra a la proforma y al anexo.</p>
+                </div>
+              </>
+            )}
             <div>
               <label className={labelCls}>Correo electrónico <span className="text-gray-400 font-normal">(opcional)</span></label>
               <input className={inputCls} type="email" value={form.clienteCorreo} onChange={e => setForm(p => ({ ...p, clienteCorreo: e.target.value }))} placeholder="cliente@email.com" />

@@ -62,6 +62,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     retencionPct: cot.retencion_pct != null ? Number(cot.retencion_pct) : null,
     marca: cot.marca,
     modelo: cot.modelo,
+    color: cot.color ?? undefined,
     cantidad: Number(cot.cantidad) || 1,
     precioBase: Number(cot.precio_base),
     modalidad: cot.modalidad,
