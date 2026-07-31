@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShieldCheck, FilePlus2, ClipboardList } from 'lucide-react'
+import { ShieldCheck, FilePlus2, ClipboardList, FileText, Vault, Send } from 'lucide-react'
 import CotizacionCDMTab from '../link-ventas/CotizacionCDMTab'
 import PrecompraProformas from './PrecompraProformas'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type Vista = 'cotizar' | 'proformas'
+type Vista = 'cotizar' | 'cotizaciones' | 'proforma' | 'venta' | 'anexos'
 
 export default function PrecompraHub({ catalogo = [], showroomStock = [], tasas = { bcv: 0, usdt: 0 } }: {
   catalogo?: any[]
@@ -25,7 +25,7 @@ export default function PrecompraHub({ catalogo = [], showroomStock = [], tasas 
           <h1 className="text-2xl font-bold text-oriental-black flex items-center gap-2">
             <ShieldCheck size={22} className="text-blue-800" /> Precompra — Asegúrate con $500
           </h1>
-          <p className="text-oriental-gray text-sm mt-1">Compra programada: cotización, proforma y anexo del plan Asegúrate con $500</p>
+          <p className="text-oriental-gray text-sm mt-1">Flujo: cotización → proforma → registro de venta → anexos a Caracas</p>
         </div>
         <button onClick={() => router.push('/vehiculos/nuevo?plan=ac500')}
           className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-800 hover:bg-blue-900 text-white text-sm font-bold transition-colors">
@@ -36,7 +36,10 @@ export default function PrecompraHub({ catalogo = [], showroomStock = [], tasas 
       <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
         {([
           ['cotizar', 'Generar cotización', FilePlus2],
-          ['proformas', 'Proformas y anexos', ClipboardList],
+          ['cotizaciones', 'Cotizaciones', ClipboardList],
+          ['proforma', 'Proformas', FileText],
+          ['venta', 'Registro de venta', Vault],
+          ['anexos', 'Anexos (Caracas)', Send],
         ] as const).map(([k, label, Icon]) => (
           <button key={k} onClick={() => setVista(k)}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap ${
@@ -47,18 +50,52 @@ export default function PrecompraHub({ catalogo = [], showroomStock = [], tasas 
         ))}
       </div>
 
-      {vista === 'cotizar' ? (
+      {vista === 'cotizar' && (
         <div>
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
             <p className="text-xs text-blue-700 leading-relaxed">
-              Genera la cotización del plan <b>Asegúrate $500</b> (6 o 9 meses): elige el modelo y trae su plan de una vez.
-              Captura color(es), cédula y RIF para que se arrastren a la proforma y al anexo. Cuando el cliente reserve, pasa a proforma.
+              Paso 1. Genera la cotización del plan <b>Asegúrate $500</b> (6 o 9 meses): elige el modelo y trae su plan de una vez.
+              Captura color(es), cédula y RIF para que se arrastren a la proforma y al anexo. Luego pasa a <b>Cotizaciones</b> para convertirla en proforma.
             </p>
           </div>
           <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} tasas={tasas} modo="ac500" />
         </div>
-      ) : (
-        <PrecompraProformas />
+      )}
+
+      {vista === 'cotizaciones' && (
+        <div>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
+            <p className="text-xs text-blue-700 leading-relaxed">Paso 2. Aquí ves todas las cotizaciones Asegúrate $500. Cuando el cliente reserve, conviértela en <b>proforma</b>.</p>
+          </div>
+          <PrecompraProformas seccion="cotizaciones" />
+        </div>
+      )}
+
+      {vista === 'proforma' && (
+        <div>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
+            <p className="text-xs text-blue-700 leading-relaxed">Paso 3. Completa los datos de la proforma, sube los documentos del cliente y toma la firma digital.</p>
+          </div>
+          <PrecompraProformas seccion="proforma" />
+        </div>
+      )}
+
+      {vista === 'venta' && (
+        <div>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
+            <p className="text-xs text-blue-700 leading-relaxed">Paso 4. Registra el pago de la cuota 1 (reserva): los $500 caen en la bóveda y la comisión va a contabilidad. Abajo ves el depósito que va a Vehimotors.</p>
+          </div>
+          <PrecompraProformas seccion="venta" />
+        </div>
+      )}
+
+      {vista === 'anexos' && (
+        <div>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
+            <p className="text-xs text-blue-700 leading-relaxed">Paso 5. Genera el Anexo A (Oriental / Vehimotors) y envíalo a Caracas por correo, junto con los documentos del cliente.</p>
+          </div>
+          <PrecompraProformas seccion="anexos" />
+        </div>
       )}
     </div>
   )

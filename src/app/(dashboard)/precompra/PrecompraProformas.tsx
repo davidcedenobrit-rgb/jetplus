@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2, PenLine, Send, Vault, Calculator } from 'lucide-react'
 import { porcentajeContabilidadAC500, baseContabilidadAC500 } from '@/lib/ac500-porcentaje'
 
@@ -11,7 +11,9 @@ const fmtFecha = (s: string | null) => { if (!s) return '—'; try { return new 
 const DOC_TIPOS_NATURAL = ['Cédula', 'RIF', 'Comprobante de reserva']
 const DOC_TIPOS_JURIDICA = ['RIF de la empresa', 'Registro mercantil', 'Cédula del firmante', 'RIF del firmante', 'Comprobante de reserva']
 
-export default function PrecompraProformas() {
+type Seccion = 'cotizaciones' | 'proforma' | 'venta' | 'anexos'
+
+export default function PrecompraProformas({ seccion = 'proforma' }: { seccion?: Seccion }) {
   const [cots, setCots] = useState<any[]>([])
   const [proformas, setProformas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -29,53 +31,60 @@ export default function PrecompraProformas() {
   }
   useEffect(() => { cargar() }, [])
 
-  const cotsPendientes = useMemo(() => cots.filter(c => !c.tiene_proforma), [cots])
-
   if (loading) return <div className="py-16 text-center text-gray-400"><Loader2 className="animate-spin inline" size={20} /></div>
 
-  return (
-    <div className="space-y-8">
-      {/* Cotizaciones AC500 → generar proforma */}
+  // ── Paso 2: Cotizaciones (ver todas + convertir a proforma) ──
+  if (seccion === 'cotizaciones') {
+    return (
       <div>
-        <h3 className="text-sm font-bold text-oriental-black mb-2">Cotizaciones Asegúrate $500 sin proforma</h3>
-        {cotsPendientes.length === 0 ? (
-          <p className="text-sm text-gray-400">No hay cotizaciones pendientes. Genera una en la pestaña «Generar cotización».</p>
+        <h3 className="text-sm font-bold text-oriental-black mb-2">Cotizaciones Asegúrate $500</h3>
+        {cots.length === 0 ? (
+          <p className="text-sm text-gray-400">Aún no hay cotizaciones. Genera una en la pestaña «Generar cotización».</p>
         ) : (
           <div className="space-y-2">
-            {cotsPendientes.map(c => (
+            {cots.map(c => (
               <div key={c.id} className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl p-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-oriental-black truncate">{c.cliente_nombre} <span className="text-gray-400 font-normal">· {c.numero}</span></p>
                   <p className="text-xs text-gray-500 truncate">{c.marca} {c.modelo}{c.ac500_meses ? ` · ${c.ac500_meses} meses` : ''} · {fmtFecha(c.fecha)}</p>
                 </div>
-                <button onClick={() => setEditar({ tipo: 'cotizacion', ...c })}
-                  className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-800 text-white text-xs font-bold hover:bg-blue-900">
-                  Generar proforma
-                </button>
+                {c.tiene_proforma ? (
+                  <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-green-50 text-green-700 border border-green-200"><CheckCircle2 size={12} /> Con proforma</span>
+                ) : (
+                  <button onClick={() => setEditar({ tipo: 'cotizacion', ...c })}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-800 text-white text-xs font-bold hover:bg-blue-900">
+                    Generar proforma
+                  </button>
+                )}
               </div>
             ))}
           </div>
         )}
+        {editar && <ProformaModal registro={editar} onClose={() => setEditar(null)} onSaved={() => { setEditar(null); cargar() }} />}
       </div>
+    )
+  }
 
-      {/* Proformas AC500 */}
-      <div>
-        <h3 className="text-sm font-bold text-oriental-black mb-2">Proformas de compra programada</h3>
-        {proformas.length === 0 ? (
-          <p className="text-sm text-gray-400">Aún no hay proformas.</p>
-        ) : (
-          <div className="space-y-3">
-            {proformas.map(p => <ProformaCard key={p.id} p={p} onEdit={() => setEditar({ tipo: 'proforma', ...p })} onChange={cargar} />)}
-          </div>
-        )}
-      </div>
+  // ── Pasos 3/4/5: Proformas / Registro de venta / Anexos ──
+  const titulo = seccion === 'venta' ? 'Registro de venta y reserva' : seccion === 'anexos' ? 'Anexos para Caracas' : 'Proformas de compra programada'
+  const vacio = seccion === 'venta' ? 'No hay proformas para registrar venta.' : seccion === 'anexos' ? 'No hay proformas para generar anexos.' : 'Aún no hay proformas. Convierte una cotización en la pestaña «Cotizaciones».'
 
+  return (
+    <div>
+      <h3 className="text-sm font-bold text-oriental-black mb-2">{titulo}</h3>
+      {proformas.length === 0 ? (
+        <p className="text-sm text-gray-400">{vacio}</p>
+      ) : (
+        <div className="space-y-3">
+          {proformas.map(p => <ProformaCard key={p.id} p={p} seccion={seccion} onEdit={() => setEditar({ tipo: 'proforma', ...p })} onChange={cargar} />)}
+        </div>
+      )}
       {editar && <ProformaModal registro={editar} onClose={() => setEditar(null)} onSaved={() => { setEditar(null); cargar() }} />}
     </div>
   )
 }
 
-function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onChange: () => void }) {
+function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; seccion?: Seccion; onEdit: () => void; onChange: () => void }) {
   const [subiendo, setSubiendo] = useState<string>('')
   const [firmando, setFirmando] = useState(false)
   const [correo, setCorreo] = useState(p.correo_destino || '')
@@ -117,76 +126,65 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
     else alert((await r.json().catch(() => ({}))).error ?? 'No se pudo subir')
   }
 
+  const pct = porcentajeContabilidadAC500(p.marca, p.modelo)
+  const base = baseContabilidadAC500(p.cuotas)
+  const comision = Math.round(base * pct / 100 * 100) / 100
+  const cuota1 = Array.isArray(p.cuotas) ? Number(p.cuotas[0]) || 0 : 0
+  const reserva = Number(p.reserva ?? 500) || 500
+  const deposito = Math.round((cuota1 - reserva - comision) * 100) / 100
+
   return (
     <div className="border border-gray-200 rounded-xl p-4">
-      <div className="flex items-start justify-between gap-2 mb-2">
+      {/* Cabecera (siempre) */}
+      <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-oriental-black text-sm truncate">{p.cliente_nombre}</span>
             {p.ciclo && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-50 text-blue-700">Ciclo #{p.ciclo}</span>}
             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-600">{p.estado}</span>
+            {p.cuota1_pagada && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-50 text-green-700 inline-flex items-center gap-1"><Vault size={10} /> Venta registrada</span>}
           </div>
           <p className="text-xs text-gray-500 truncate">{p.marca} {p.modelo}{p.colores ? ` · ${p.colores}` : ''} · Total ${fmt(p.total_pagar)}</p>
           {p.vendedor_nombre && <p className="text-[11px] text-gray-400 truncate">Vendedor: {p.vendedor_nombre}</p>}
         </div>
-        <button onClick={onEdit} className="shrink-0 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50">Editar datos</button>
-      </div>
-
-      {/* Documentos */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {tipos.map(t => (
-          <label key={t} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border cursor-pointer transition-colors ${tieneDoc(t) ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-500 border-gray-200 hover:border-blue-400'}`}>
-            {subiendo === t ? <Loader2 size={11} className="animate-spin" /> : tieneDoc(t) ? <CheckCircle2 size={11} /> : <Upload size={11} />}
-            {t}
-            <input type="file" className="hidden" accept="image/*,application/pdf"
-              onChange={e => { const f = e.target.files?.[0]; if (f) subir(t, f); e.currentTarget.value = '' }} />
-          </label>
-        ))}
-      </div>
-      {docs.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {docs.map((d, i) => (
-            <a key={i} href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-blue-700 hover:underline">
-              <FileText size={11} /> {d.tipo}
-            </a>
-          ))}
-        </div>
-      )}
-
-      {/* Firma + Anexos */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <button onClick={() => setFirmando(true)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${p.firma_cliente ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-blue-800 border-blue-300 hover:bg-blue-50'}`}>
-          {p.firma_cliente ? <CheckCircle2 size={13} /> : <PenLine size={13} />} {p.firma_cliente ? 'Firmado' : 'Firmar digital'}
-        </button>
-        <a href={`/api/precompra/proforma/${p.id}/anexo?variante=oriental`} target="_blank" rel="noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-red-700">
-          <FileDown size={13} /> Anexo A Oriental
-        </a>
-        <a href={`/api/precompra/proforma/${p.id}/anexo?variante=vehimotors`} target="_blank" rel="noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-black text-white text-xs font-bold hover:bg-gray-800">
-          <FileDown size={13} /> Anexo A Vehimotors
-        </a>
-        {p.cuota1_pagada ? (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-bold">
-            <Vault size={13} /> Cuota 1 pagada · $500 bóveda{p.monto_contabilidad != null ? ` · ${p.pct_contabilidad}% contab. $${fmt(p.monto_contabilidad)}` : ''}
-          </span>
-        ) : (
-          <button onClick={cobrarCuota1} disabled={cobrando}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 disabled:opacity-50">
-            {cobrando ? <Loader2 size={13} className="animate-spin" /> : <Vault size={13} />} Registrar pago cuota 1
-          </button>
+        {seccion === 'proforma' && (
+          <button onClick={onEdit} className="shrink-0 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50">Editar datos</button>
         )}
       </div>
-      {(() => {
-        const pct = porcentajeContabilidadAC500(p.marca, p.modelo)
-        const base = baseContabilidadAC500(p.cuotas)
-        const comision = Math.round(base * pct / 100 * 100) / 100
-        const cuota1 = Array.isArray(p.cuotas) ? Number(p.cuotas[0]) || 0 : 0
-        const reserva = Number(p.reserva ?? 500) || 500
-        const deposito = Math.round((cuota1 - reserva - comision) * 100) / 100
-        return (
-          <div className="mb-3 -mt-1 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[12px]">
+
+      {/* ── Paso 3: Proforma (datos, documentos, firma) ── */}
+      {seccion === 'proforma' && (
+        <>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {tipos.map(t => (
+              <label key={t} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border cursor-pointer transition-colors ${tieneDoc(t) ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-500 border-gray-200 hover:border-blue-400'}`}>
+                {subiendo === t ? <Loader2 size={11} className="animate-spin" /> : tieneDoc(t) ? <CheckCircle2 size={11} /> : <Upload size={11} />}
+                {t}
+                <input type="file" className="hidden" accept="image/*,application/pdf"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) subir(t, f); e.currentTarget.value = '' }} />
+              </label>
+            ))}
+          </div>
+          {docs.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {docs.map((d, i) => (
+                <a key={i} href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-blue-700 hover:underline">
+                  <FileText size={11} /> {d.tipo}
+                </a>
+              ))}
+            </div>
+          )}
+          <button onClick={() => setFirmando(true)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${p.firma_cliente ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-blue-800 border-blue-300 hover:bg-blue-50'}`}>
+            {p.firma_cliente ? <CheckCircle2 size={13} /> : <PenLine size={13} />} {p.firma_cliente ? 'Firmado' : 'Firmar digital'}
+          </button>
+        </>
+      )}
+
+      {/* ── Paso 4: Registro de venta y reserva ── */}
+      {seccion === 'venta' && (
+        <>
+          <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[12px]">
             <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 flex items-center gap-1 mb-1.5">
               <Calculator size={11} /> Reparto de la cuota 1
             </p>
@@ -195,21 +193,51 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
             <div className="flex justify-between"><span className="text-gray-500">− Comisión {pct}% (sobre ${fmt(base)}, c1-c5)</span><span className="text-gray-600">${fmt(comision)}</span></div>
             <div className="flex justify-between border-t border-gray-200 mt-1 pt-1 font-bold"><span className="text-blue-900">Total depósito a Vehimotors</span><span className="text-blue-900">${fmt(deposito)}</span></div>
           </div>
-        )
-      })()}
+          {p.cuota1_pagada ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-bold">
+              <Vault size={13} /> Cuota 1 pagada · $500 bóveda{p.monto_contabilidad != null ? ` · ${p.pct_contabilidad}% contab. $${fmt(p.monto_contabilidad)}` : ''}
+            </span>
+          ) : (
+            <button onClick={cobrarCuota1} disabled={cobrando}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 disabled:opacity-50">
+              {cobrando ? <Loader2 size={13} className="animate-spin" /> : <Vault size={13} />} Registrar pago cuota 1
+            </button>
+          )}
+        </>
+      )}
 
-      {/* Envío a Vehimotors (correo abierto) */}
-      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center border-t border-gray-100 pt-3">
-        <input value={correo} onChange={e => setCorreo(e.target.value)} placeholder="Correo de Vehimotors (Marilyn)…"
-          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red" />
-        <button onClick={enviar} disabled={enviando}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-blue-800 text-white text-xs font-bold hover:bg-blue-900 disabled:opacity-50">
-          {enviando ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar a Vehimotors
-        </button>
-      </div>
-      {msg && <p className={`text-[11px] mt-1 ${msg.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
-      {p.enviado_at && <p className="text-[10px] text-gray-400 mt-1">Último envío: {fmtFecha(p.enviado_at)} → {p.enviado_a}</p>}
+      {/* ── Paso 5: Anexos para Caracas ── */}
+      {seccion === 'anexos' && (
+        <>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {!p.firma_cliente && (
+              <button onClick={() => setFirmando(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border bg-white text-blue-800 border-blue-300 hover:bg-blue-50">
+                <PenLine size={13} /> Firmar digital
+              </button>
+            )}
+            <a href={`/api/precompra/proforma/${p.id}/anexo?variante=oriental`} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-red-700">
+              <FileDown size={13} /> Anexo A Oriental
+            </a>
+            <a href={`/api/precompra/proforma/${p.id}/anexo?variante=vehimotors`} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-black text-white text-xs font-bold hover:bg-gray-800">
+              <FileDown size={13} /> Anexo A Vehimotors
+            </a>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center border-t border-gray-100 pt-3">
+            <input value={correo} onChange={e => setCorreo(e.target.value)} placeholder="Correo de Vehimotors / Caracas…"
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red" />
+            <button onClick={enviar} disabled={enviando}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-blue-800 text-white text-xs font-bold hover:bg-blue-900 disabled:opacity-50">
+              {enviando ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar a Caracas
+            </button>
+          </div>
+          {p.enviado_at && <p className="text-[10px] text-gray-400 mt-1">Último envío: {fmtFecha(p.enviado_at)} → {p.enviado_a}</p>}
+        </>
+      )}
 
+      {msg && <p className={`text-[11px] mt-2 ${msg.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
       {firmando && <FirmaModal proformaId={p.id} onClose={() => setFirmando(false)} onSaved={() => { setFirmando(false); onChange() }} />}
     </div>
   )
