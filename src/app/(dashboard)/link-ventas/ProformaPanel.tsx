@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { FileText, X, Loader2, ExternalLink } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { FileText, X, Loader2, ExternalLink, Calculator } from 'lucide-react'
 
 const fmt = (n: number) => Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
+const nz = (s: string) => parseFloat(String(s).replace(',', '.')) || 0
 
 // Genera una PROFORMA a partir de una cotización aceptada (flujo nuevo:
 // cotización → aprobación → PROFORMA → venta). La proforma es la cotización
@@ -36,6 +38,51 @@ export default function ProformaPanel({
   const [preview, setPreview] = useState<any | null>(null)
   const [montos, setMontos] = useState({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
   const setMonto = (k: keyof typeof montos, v: string) => setMontos(p => ({ ...p, [k]: v }))
+  // INICIAL flexible: lista de abonos (monto + a los N días). Ej: 7.000 (día 0),
+  // 3.000 (día 15), 5.000 (día 30), 5.000 (día 45).
+  const [abonos, setAbonos] = useState<{ monto: string; dias: string }[]>([{ monto: '', dias: '0' }])
+  const [textoManual, setTextoManual] = useState(false)
+  const addAbono = () => setAbonos(a => [...a, { monto: '', dias: '' }])
+  const rmAbono = (i: number) => setAbonos(a => a.length > 1 ? a.filter((_, j) => j !== i) : a)
+  const setAbono = (i: number, k: 'monto' | 'dias', v: string) => setAbonos(a => a.map((r, j) => j === i ? { ...r, [k]: v } : r))
+  const dividirResto = (n: number) => {
+    const falta = r2(nz(montos.inicial) - r2(abonos.reduce((s, r) => s + nz(r.monto), 0)))
+    if (falta <= 0 || n < 1) return
+    const cuota = r2(falta / n)
+    const baseDias = Math.max(0, ...abonos.map(a => Math.round(nz(a.dias)) || 0))
+    setAbonos(a => [...a, ...Array.from({ length: n }, (_, i) => ({ monto: String(cuota), dias: String(baseDias + (i + 1) * 30) }))])
+  }
+
+  // Cálculos (en vivo)
+  const inicialTotal = nz(montos.inicial)
+  const sumAbonos = r2(abonos.reduce((s, r) => s + nz(r.monto), 0))
+  const faltaInicial = r2(inicialTotal - sumAbonos)
+  const vhFinanciado = nz(montos.financiado)
+  const vhCuotas = Math.max(0, Math.round(nz(montos.meses)))
+  const vhCuotaMonto = vhCuotas > 0 ? (nz(montos.cuotaMensual) || r2(vhFinanciado / vhCuotas)) : 0
+
+  // Cronograma combinado: abonos del inicial + cuotas Vehimotor.
+  const cronograma: { numero: number; tipo: string; etiqueta: string; monto: number }[] = []
+  { let n = 0
+    abonos.forEach(a => { const m = nz(a.monto); if (m > 0) { n++; const d = Math.round(nz(a.dias)); cronograma.push({ numero: n, tipo: 'Inicial', etiqueta: d > 0 ? `Abono a los ${d} días` : 'Abono de contado', monto: m }) } })
+    for (let i = 1; i <= vhCuotas; i++) { n++; cronograma.push({ numero: n, tipo: 'Vehimotor', etiqueta: `Cuota ${i} de ${vhCuotas} (mensual)`, monto: vhCuotaMonto }) }
+  }
+
+  // Texto de condiciones AUTOGENERADO desde los números.
+  useEffect(() => {
+    if (textoManual || !preview) return
+    const abo = abonos.map(a => ({ m: nz(a.monto), d: Math.round(nz(a.dias)) })).filter(a => a.m > 0)
+    const partes: string[] = []
+    if (abo.length) {
+      const detalle = abo.map(a => `$${fmt(a.m)}${a.d > 0 ? ` a los ${a.d} días` : ' de contado'}`).join(', ')
+      partes.push(`El cliente se compromete a pagar el inicial ($${fmt(inicialTotal)}): ${detalle}.`)
+    }
+    if (vhFinanciado > 0.009 && vhCuotas > 0) {
+      partes.push(`Luego el crédito Vehimotor: ${vhCuotas} cuotas de $${fmt(vhCuotaMonto)}, que inician al completar el inicial.`)
+    }
+    setObservaciones(partes.join(' '))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abonos, montos, textoManual, preview])
 
   const aprobadoNum = parseFloat(aprobadoBanco.replace(',', '.')) || 0
   const restante = Math.max(0, Number(total) - aprobadoNum)
@@ -47,11 +94,20 @@ export default function ProformaPanel({
     setAprobadoBanco(''); setRestanteMetodo('contado')
     setShowroomId(''); setUnidades([]); setPreview(null)
     setMontos({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
+    setAbonos([{ monto: '', dias: '0' }]); setTextoManual(false)
     fetch(`/api/showroom/disponibles?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : []).then(d => setUnidades(Array.isArray(d) ? d : [])).catch(() => {})
     fetch(`/api/proformas/preview?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : null).then(d => {
       if (d && !d.error) {
         setPreview(d)
-        setMontos({ precioBase: String(d.precioBase || ''), inicial: String(d.inicial || ''), financiado: String(d.financiado || ''), cuotaMensual: String(d.cuotaMensual || ''), meses: String(d.meses || '') })
+        setMontos({ precioBase: String(r2(d.precioBase)), inicial: String(r2(d.inicial)), financiado: String(r2(d.financiado)), cuotaMensual: String(r2(d.cuotaMensual)), meses: String(d.meses || '') })
+        // Si ya hay acuerdo de cobro, precargar los abonos del inicial.
+        if (d.acuerdo && d.inicial > 0) {
+          const rows: { monto: string; dias: string }[] = []
+          if (d.acuerdo.contado > 0) rows.push({ monto: String(r2(d.acuerdo.contado)), dias: '0' })
+          const nc = Math.max(0, Math.round(d.acuerdo.numCuotas || 0))
+          for (let i = 1; i <= nc; i++) rows.push({ monto: String(r2(d.acuerdo.cuotaMonto)), dias: String(i * 30) })
+          if (rows.length) setAbonos(rows)
+        }
       }
     }).catch(() => {})
   }
@@ -73,6 +129,7 @@ export default function ProformaPanel({
           montos: {
             precioBase: montos.precioBase, inicial: montos.inicial,
             financiado: montos.financiado, cuotaMensual: montos.cuotaMensual, meses: montos.meses,
+            cronograma: cronograma.map(c => ({ numero: c.numero, tipo: c.tipo, etiqueta: c.etiqueta, monto: c.monto, estado: 'pendiente', monto_pagado: 0, fecha_vencimiento: null })),
           },
           ...(esBancaNacional ? { bancaNacional: { aprobado_banco: aprobadoNum, restante, restante_metodo: restanteMetodo } } : {}),
         }),
@@ -149,36 +206,86 @@ export default function ProformaPanel({
                     Se creará la proforma con la estructura negociada de la cotización y el cronograma de pago del cliente. Sirve como el documento previo a la venta.
                   </p>
 
-                  {/* Así quedará la proforma (editable) */}
+                  {/* Modalidad de pago en números → genera el texto y los montos de la proforma */}
                   {preview && (
-                    <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 space-y-2">
-                      <p className="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">📄 Así quedará la proforma</p>
-                      {preview.vehiculo && <p className="text-[11px] text-gray-600">Vehículo: <b>{preview.vehiculo}</b></p>}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Precio ($)</label>
-                          <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.precioBase} onChange={e => setMonto('precioBase', e.target.value)} /></div>
-                        <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Inicial total ($)</label>
-                          <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.inicial} onChange={e => setMonto('inicial', e.target.value)} /></div>
+                    <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 space-y-2.5">
+                      <p className="text-[11px] font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1"><Calculator size={12} /> Así quedará la proforma</p>
+                      {preview.vehiculo && <p className="text-[11px] text-gray-600">Vehículo: <b>{preview.vehiculo}</b> · Precio ref.: <b>${fmt(nz(montos.precioBase))}</b></p>}
+
+                      {/* INICIAL — abonos flexibles */}
+                      <div className="rounded-lg bg-white border border-indigo-200 p-2.5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-indigo-700">Inicial — ¿cómo lo paga?</label>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-gray-500">Total $</span>
+                            <input inputMode="decimal" className="w-24 px-2 py-1 border border-gray-200 rounded text-sm text-right" value={montos.inicial} onChange={e => setMonto('inicial', e.target.value)} />
+                          </div>
+                        </div>
+                        {abonos.map((a, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-gray-400 w-4">{i + 1}.</span>
+                            <span className="text-[10px] text-gray-500">$</span>
+                            <input inputMode="decimal" placeholder="monto" className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm text-right" value={a.monto} onChange={e => setAbono(i, 'monto', e.target.value)} />
+                            <span className="text-[10px] text-gray-500">a los</span>
+                            <input inputMode="numeric" placeholder="0" className="w-12 px-1.5 py-1 border border-gray-200 rounded text-sm text-center" value={a.dias} onChange={e => setAbono(i, 'dias', e.target.value)} />
+                            <span className="text-[10px] text-gray-500">días</span>
+                            <button type="button" onClick={() => rmAbono(i)} className="text-gray-300 hover:text-red-500 text-xs px-1">✕</button>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between flex-wrap gap-1">
+                          <div className="flex gap-1.5">
+                            <button type="button" onClick={addAbono} className="text-[11px] text-indigo-600 font-bold hover:underline">+ Abono</button>
+                            {faltaInicial > 0.009 && <button type="button" onClick={() => dividirResto(2)} className="text-[11px] text-indigo-600 hover:underline">÷ resto en 2</button>}
+                            {faltaInicial > 0.009 && <button type="button" onClick={() => dividirResto(3)} className="text-[11px] text-indigo-600 hover:underline">÷ 3</button>}
+                          </div>
+                          <span className={`text-[10px] font-bold ${Math.abs(faltaInicial) < 0.01 ? 'text-green-600' : 'text-amber-600'}`}>
+                            {Math.abs(faltaInicial) < 0.01 ? '✓ inicial completo' : `Falta $${fmt(faltaInicial)}`}
+                          </span>
+                        </div>
                       </div>
-                      {preview.acuerdo && (
-                        <div className="rounded-lg bg-white border border-indigo-200 p-2 text-[11px] text-gray-600 leading-relaxed">
-                          <p className="font-bold text-indigo-700 mb-0.5">Acuerdo del inicial (cobra la vendedora)</p>
-                          Paga de contado: <b>${fmt(preview.acuerdo.contado)}</b><br />
-                          Financia La Oriental: <b>${fmt(preview.acuerdo.laOrientalFinancia)}</b> → {preview.acuerdo.numCuotas} cuota{preview.acuerdo.numCuotas === 1 ? '' : 's'} de ${fmt(preview.acuerdo.cuotaMonto)}
-                          <span className="text-gray-400"> · se edita en el Acuerdo de cobro</span>
-                        </div>
-                      )}
+
+                      {/* VEHIMOTOR */}
                       {preview.modalidad !== 'contado' && (
-                        <div className="grid grid-cols-3 gap-2">
-                          <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Financia Vehimotor ($)</label>
-                            <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.financiado} onChange={e => setMonto('financiado', e.target.value)} /></div>
-                          <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">N° cuotas</label>
-                            <input inputMode="numeric" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.meses} onChange={e => setMonto('meses', e.target.value)} /></div>
-                          <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Cuota mensual ($)</label>
-                            <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.cuotaMensual} onChange={e => setMonto('cuotaMensual', e.target.value)} /></div>
+                        <div className="rounded-lg bg-white border border-indigo-200 p-2.5">
+                          <label className="text-[11px] font-bold text-indigo-700">Crédito Vehimotor (después del inicial)</label>
+                          <div className="grid grid-cols-3 gap-2 mt-1.5">
+                            <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Financiado ($)</label>
+                              <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right" value={montos.financiado} onChange={e => setMonto('financiado', e.target.value)} /></div>
+                            <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">N° cuotas</label>
+                              <input inputMode="numeric" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right" value={montos.meses} onChange={e => setMonto('meses', e.target.value)} /></div>
+                            <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Cuota ($)</label>
+                              <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right" value={montos.cuotaMensual} onChange={e => setMonto('cuotaMensual', e.target.value)} /></div>
+                          </div>
                         </div>
                       )}
-                      <p className="text-[10px] text-gray-400">Puedes ajustar estos montos antes de generar; se reflejarán en la proforma.</p>
+
+                      {/* TABLA cronograma */}
+                      {cronograma.length > 0 && (
+                        <div className="rounded-lg bg-white border border-indigo-200 overflow-hidden">
+                          <div className="max-h-44 overflow-y-auto">
+                            <table className="w-full text-[11px]">
+                              <thead className="bg-indigo-100 text-indigo-800 sticky top-0"><tr>
+                                <th className="text-left font-bold px-2 py-1">#</th>
+                                <th className="text-left font-bold px-2 py-1">Concepto</th>
+                                <th className="text-right font-bold px-2 py-1">Monto</th>
+                              </tr></thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {cronograma.map(c => (
+                                  <tr key={c.numero} className={c.tipo === 'Inicial' ? 'bg-amber-50/40' : ''}>
+                                    <td className="px-2 py-1 text-gray-400">{c.numero}</td>
+                                    <td className="px-2 py-1 text-gray-600"><span className={`text-[9px] font-bold mr-1 ${c.tipo === 'Inicial' ? 'text-amber-600' : 'text-indigo-600'}`}>{c.tipo === 'Inicial' ? 'INI' : 'VM'}</span>{c.etiqueta}</td>
+                                    <td className="px-2 py-1 text-right font-semibold text-oriental-black">${fmt(c.monto)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot className="bg-gray-50 font-bold"><tr>
+                                <td className="px-2 py-1" colSpan={2}>Total programado</td>
+                                <td className="px-2 py-1 text-right">${fmt(cronograma.reduce((s, c) => s + c.monto, 0))}</td>
+                              </tr></tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -222,10 +329,13 @@ export default function ProformaPanel({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Observaciones / condiciones de pago (opcional)</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-gray-500">Condiciones de pago <span className="text-indigo-600">(generado de los montos)</span></label>
+                      {textoManual && <button type="button" onClick={() => setTextoManual(false)} className="text-[10px] text-indigo-600 font-bold hover:underline">↻ Regenerar</button>}
+                    </div>
                     <textarea className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red resize-none" rows={3}
-                      value={observaciones} onChange={e => setObservaciones(e.target.value)}
-                      placeholder="Ej: inicial en 2 partes, entrega al completar el 40%…" />
+                      value={observaciones} onChange={e => { setObservaciones(e.target.value); setTextoManual(true) }}
+                      placeholder="Se arma solo con los montos de arriba…" />
                   </div>
 
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">

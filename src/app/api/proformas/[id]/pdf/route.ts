@@ -114,8 +114,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     totalVehiculo: Number(pro.precio_vehiculo ?? 0),
     inicialPagada: Number(pro.monto_inicial ?? 0),
     saldoFinanciado: Number(pro.monto_financiado ?? 0),
-    cuotaMensual: cronograma.length > 0 ? Number(cronograma[0].monto) : 0,
-    numeroCuotas: Number(pro.num_cuotas ?? cronograma.length),
+    // La "cuota mensual" de referencia es una cuota Vehimotor (si el cronograma
+    // trae abonos del inicial mezclados, no tomar el primero).
+    cuotaMensual: (() => {
+      const vm = cronograma.find((c: any) => c.tipo === 'Vehimotor')
+      return vm ? Number(vm.monto) : (cronograma.length > 0 ? Number(cronograma[0].monto) : 0)
+    })(),
+    numeroCuotas: Number(pro.num_cuotas ?? cronograma.filter((c: any) => !c.tipo || c.tipo === 'Vehimotor').length),
     planTipo: credito.plan_tipo ?? '',
     planLabel: planLabel[credito.plan_tipo] ?? 'Crédito',
     condicionesPersonalizadas: pro.condiciones_personalizadas ?? null,

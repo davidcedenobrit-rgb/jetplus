@@ -120,6 +120,20 @@ export async function POST(req: Request) {
       monto_pagado: 0,
     }))
   }
+  // Si el director armó el cronograma en el editor (abonos del inicial + cuotas),
+  // ese cronograma manda sobre el derivado.
+  if (Array.isArray(ov.cronograma) && ov.cronograma.length > 0) {
+    cronogramaSnapshot = ov.cronograma.map((c: any, i: number) => ({
+      numero: Number(c.numero) || (i + 1),
+      tipo: c.tipo ?? null,
+      etiqueta: c.etiqueta ?? null,
+      fecha_vencimiento: c.fecha_vencimiento ?? null,
+      monto: Number(c.monto) || 0,
+      estado: 'pendiente',
+      monto_pagado: 0,
+    }))
+  }
+
   // Para AC500, la "cuota mensual" de referencia (correo/PDF) es la primera cuota.
   const cuotaRef = plan === 'ac500' && ac500Cuotas.length > 0 ? Number(ac500Cuotas[0]) || 0 : cuotaMensual
 
