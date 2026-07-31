@@ -126,6 +126,7 @@ const SECTIONS: NavSection[] = [
     icon: Briefcase,
     links: [
       { href: '/corporativo',        label: `Corporativo ${BRANDING.marca}`, icon: Briefcase,  roles: DIR },
+      { href: '/corporativo/seguridad', label: 'Seguridad',            icon: Shield,     roles: ['jose'] },
       { href: '/obsequios',          label: 'Obsequios a clientes',    icon: Gift,       roles: DIR },
       { href: '/eventos',            label: 'Eventos',                 icon: CalendarDays, roles: DIR },
       { href: '/documentos-empresa', label: 'Docs. Empresa',           icon: FolderOpen, hideFor: ['arianna', 'almacen'] },
