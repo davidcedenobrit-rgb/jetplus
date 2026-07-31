@@ -154,7 +154,9 @@ function seedRojasLineas(v: any, base: Modalidad): Record<string, string> {
 
 const num = (s: string | undefined) => parseFloat(String(s ?? '').replace(',', '.')) || 0
 
-export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }: { catalogo: any[]; showroomStock?: ShowroomItem[]; tasas: { bcv: number; usdt: number } }) {
+export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, modo = 'normal' }: { catalogo: any[]; showroomStock?: ShowroomItem[]; tasas: { bcv: number; usdt: number }; modo?: 'normal' | 'ac500' }) {
+  // modo 'ac500' (módulo Precompra): la cotización arranca directo en Asegúrate con $500.
+  const esPrecompra = modo === 'ac500'
   // Priorizar los que están en showroom (con stock) sobre los que son por encargo
   const disponibles: Vehiculo[] = useMemo(() => {
     const conStock: Vehiculo[] = []
@@ -174,12 +176,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
     return disponibles.filter(v => `${v.brand} ${v.model}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q))
   }, [disponibles, busqVeh])
 
-  const [step, setStep] = useState<Step>('vehiculo')
+  const [step, setStep] = useState<Step>(esPrecompra ? 'form' : 'vehiculo')
   const [vehiculoSel, setVehiculoSel] = useState<Vehiculo | null>(null)
   // Cotización AC500 directa (sin seleccionar carro; el plan AC500 define el modelo).
-  const [ac500Directo, setAc500Directo] = useState(false)
-  const [modalidad, setModalidad] = useState<Modalidad>('contado')
-  const [plan, setPlan] = useState<Plan>('vehimotors')
+  const [ac500Directo, setAc500Directo] = useState(esPrecompra)
+  const [modalidad, setModalidad] = useState<Modalidad>(esPrecompra ? 'credito_24' : 'contado')
+  const [plan, setPlan] = useState<Plan>(esPrecompra ? 'ac500' : 'vehimotors')
   const [form, setForm] = useState({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false, retencionPct: '75', tipoPersona: 'natural' })
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
@@ -457,7 +459,9 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
   }
 
   function reset() {
-    setStep('vehiculo'); setVehiculoSel(null); setAc500Directo(false); setModalidad('contado'); setPlan('vehimotors')
+    // En Precompra la cotización siempre es Asegúrate $500: se reinicia en ese flujo.
+    setStep(esPrecompra ? 'form' : 'vehiculo'); setVehiculoSel(null); setAc500Directo(esPrecompra)
+    setModalidad(esPrecompra ? 'credito_24' : 'contado'); setPlan(esPrecompra ? 'ac500' : 'vehimotors')
     setForm({ clienteNombre: '', clienteCiRif: '', clienteCorreo: '', clienteTelefono: '', clienteDireccion: '', clienteCiudadEstado: '', clienteCodigoPostal: '', agenteRetencion: false, retencionPct: '75', tipoPersona: 'natural' })
     setErrorMsg(''); setNumeroCot(''); setCotIdCreada('')
     setPlanAC500Sel(null); setPlanesAC500([])
@@ -511,17 +515,6 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
             className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-oriental-red"
           />
         </div>
-
-        {/* Atajo: cotización AC500 directa (todos los modelos, sin elegir carro) */}
-        <button
-          onClick={() => {
-            setVehiculoSel(null); setAc500Directo(true)
-            setModalidad('credito_24'); setPlan('ac500'); setAc500Meses(6); setPlanAC500Sel(null)
-            setStep('form')
-          }}
-          className="w-full mb-5 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-blue-800 text-blue-800 hover:bg-blue-50 text-sm font-bold transition-colors">
-          🛡 Cotización de Asegúrate $500 — ver todos los planes
-        </button>
 
         {disponibles.length === 0 ? (
           <div className="card p-12 text-center text-oriental-gray">
@@ -589,8 +582,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
       <>
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => { setAc500Directo(false); setStep('vehiculo') }} className="text-oriental-gray hover:text-oriental-black text-sm font-medium">← {ac500Directo ? 'Volver' : 'Cambiar vehículo'}</button>
-          <span className="text-gray-300">|</span>
+          {!esPrecompra && <><button onClick={() => { setAc500Directo(false); setStep('vehiculo') }} className="text-oriental-gray hover:text-oriental-black text-sm font-medium">← {ac500Directo ? 'Volver' : 'Cambiar vehículo'}</button>
+          <span className="text-gray-300">|</span></>}
           <h2 className="text-base font-bold text-oriental-black">{ac500Directo ? '🛡 Cotización Asegúrate $500' : `${vehiculoSel?.brand} ${vehiculoSel?.model}`}</h2>
         </div>
 
@@ -622,12 +615,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas }
                 {lbl}
               </button>
             ))}
-            <button
-              onClick={() => { setRojasMode(false); setModalidad('credito_24'); setPlan('ac500') }}
-              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all ${!rojasMode && plan === 'ac500' ? 'border-blue-800 bg-blue-800 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
-            >
-              🛡 Asegúrate $500
-            </button>
+            {/* Asegúrate $500 se cotiza en su módulo aparte (pestaña Precompra). */}
             {/* Banca nacional: mismo formato que Contado (total a pagar). El banco
                 aprueba un % y el cliente cubre el resto (se define al pasar a proforma). */}
             <button
