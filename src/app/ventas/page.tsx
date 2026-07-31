@@ -14,15 +14,18 @@ const WA_FIN  = encodeURIComponent('Hola 👋 Vengo de la web y quiero informaci
 
 export const revalidate = 60
 
-export default async function VentasPage() {
+export default async function VentasPage({ searchParams }: { searchParams: Promise<{ vendedor?: string; evento?: string }> }) {
   const supabase = await createClient()
+  const sp = await searchParams
+  const vendedor = String(sp?.vendedor ?? '').slice(0, 80)
+  const evento = String(sp?.evento ?? '').slice(0, 80)
 
   const [{ data: catalogo }, { data: ac500 }, { data: promoVehiculos }, { data: promoData }, { data: tasasCfg }] = await Promise.all([
     supabase.from('catalogo_ventas').select('*').eq('disponible', true).order('orden'),
     supabase.from('ac500_vehiculos').select('*').eq('disponible', true).order('orden'),
     supabase.from('promocion_vehiculos').select('*').order('orden').order('created_at'),
     supabase.from('promociones_especiales').select('*').limit(1).single(),
-    supabase.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt']),
+    supabase.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt', 'wa_corporativo', 'concesionario_id']),
   ])
 
   // Tasas para el diferencial cambiario del plan 100% Banco
@@ -30,6 +33,9 @@ export default async function VentasPage() {
     bcv:  Number((tasasCfg ?? []).find(t => t.clave === 'tasa_bcv')?.valor) || 0,
     usdt: Number((tasasCfg ?? []).find(t => t.clave === 'tasa_usdt')?.valor) || 0,
   }
+  // WhatsApp corporativo (configurable por base; cae al número por defecto).
+  const waCorp = String((tasasCfg ?? []).find(t => t.clave === 'wa_corporativo')?.valor || '').replace(/\D/g, '') || '584149989010'
+  const concesionario = String((tasasCfg ?? []).find(t => t.clave === 'concesionario_id')?.valor || '')
 
   const lista = catalogo ?? []
   const acLista = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo || v.p12_activo)
@@ -122,7 +128,7 @@ export default async function VentasPage() {
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede Maturín · Atención personalizada</p>
           <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
         </div>
-        <VehiculosFiltro vehiculos={lista} tasas={tasas} />
+        <VehiculosFiltro vehiculos={lista} tasas={tasas} vendedor={vendedor} evento={evento} waCorp={waCorp} concesionario={concesionario} />
       </section>
 
       {/* ── PLAN 40% ──────────────────────────────────────────────────────── */}

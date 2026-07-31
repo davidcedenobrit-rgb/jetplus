@@ -6,13 +6,15 @@ import VehiculosEditor from './VehiculosEditor'
 import AC500Editor from './AC500Editor'
 import VendedorasEditor from './VendedorasEditor'
 import PromocionesTab from './PromocionesTab'
+import LeadsTab from './LeadsTab'
 
 // Cotizaciones, Proformas, Generar cotización, Tasas e Historial de clientes se
 // movieron al módulo Ventas (/gestion-ventas). Concesionarios está en Base de
-// datos (/base-datos/concesionarios). Aquí queda solo el editor del link público.
-type Tab = 'catalogo' | 'ac500' | 'vendedoras' | 'promociones'
+// datos (/base-datos/concesionarios). Aquí queda el editor del link público
+// y la bandeja de clientes captados.
+type Tab = 'leads' | 'catalogo' | 'ac500' | 'vendedoras' | 'promociones'
 
-const TABS_VALIDOS: Tab[] = ['catalogo', 'ac500', 'vendedoras', 'promociones']
+const TABS_VALIDOS: Tab[] = ['leads', 'catalogo', 'ac500', 'vendedoras', 'promociones']
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
@@ -24,6 +26,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas }
   const [tab, setTab] = useState<Tab>(initialTab)
 
   const tabs: { key: Tab; label: string }[] = [
+    { key: 'leads', label: 'Clientes captados' },
     { key: 'catalogo', label: 'Catálogo de vehículos' },
     { key: 'ac500', label: 'Asegúrate con $500' },
     { key: 'vendedoras', label: 'Vendedoras' },
@@ -46,6 +49,7 @@ export default function LinkVentasTabs({ catalogo, ac500, showroomStock, tasas }
         ))}
       </div>
 
+      {tab === 'leads' && <LeadsTab />}
       {tab === 'catalogo' && <VehiculosEditor initialVehiculos={catalogo} showroomStock={showroomStock} tasas={tasas} />}
       {tab === 'ac500' && <AC500Editor initial={ac500} />}
       {tab === 'vendedoras' && <VendedorasEditor />}

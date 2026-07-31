@@ -36,7 +36,7 @@ function fm(n: number | null | undefined) {
 
 type Filtro = 'ALL' | 'MG' | 'MAXUS'
 
-export default function VehiculosFiltro({ vehiculos, tasas }: { vehiculos: Vehiculo[]; tasas: { bcv: number; usdt: number } }) {
+export default function VehiculosFiltro({ vehiculos, tasas, vendedor = '', evento = '', waCorp = WA, concesionario = '' }: { vehiculos: Vehiculo[]; tasas: { bcv: number; usdt: number }; vendedor?: string; evento?: string; waCorp?: string; concesionario?: string }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const [modalVehiculo, setModalVehiculo] = useState<Vehiculo | null>(null)
   const [rapidaVehiculo, setRapidaVehiculo] = useState<Vehiculo | null>(null)
@@ -63,7 +63,8 @@ export default function VehiculosFiltro({ vehiculos, tasas }: { vehiculos: Vehic
         <CotizacionModal vehiculo={modalVehiculo} tasas={tasas} onClose={() => setModalVehiculo(null)} />
       )}
       {rapidaVehiculo && (
-        <CotizacionRapidaModal vehiculo={rapidaVehiculo} onClose={() => setRapidaVehiculo(null)} />
+        <CotizacionRapidaModal vehiculo={rapidaVehiculo} onClose={() => setRapidaVehiculo(null)}
+          vendedor={vendedor} evento={evento} waCorp={waCorp} concesionario={concesionario} />
       )}
 
       {/* Filtros */}

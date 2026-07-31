@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 interface Vehiculo {
   brand: string
   model: string
@@ -14,7 +16,14 @@ function fmt(n: number | null | undefined) {
   return n.toLocaleString('de-DE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
-export default function CotizacionRapidaModal({ vehiculo, onClose }: { vehiculo: Vehiculo; onClose: () => void }) {
+export default function CotizacionRapidaModal({ vehiculo, onClose, vendedor = '', evento = '', waCorp = '584149989010', concesionario = '' }: {
+  vehiculo: Vehiculo
+  onClose: () => void
+  vendedor?: string
+  evento?: string
+  waCorp?: string
+  concesionario?: string
+}) {
   const precio    = vehiculo.cash ?? 0
   const iva       = precio * 0.16
   const gc        = vehiculo.gc ?? 0
@@ -24,6 +33,40 @@ export default function CotizacionRapidaModal({ vehiculo, onClose }: { vehiculo:
   const ini40     = precio * 0.4
   const totalIni  = ini40 + iva + gcr
   const fin60     = precio * 0.6
+
+  const [nombre, setNombre] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [presupuesto, setPresupuesto] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [enviado, setEnviado] = useState(false)
+  const [error, setError] = useState('')
+
+  function waLink() {
+    const msg = encodeURIComponent(
+      `Hola 👋 Soy ${nombre}. Me interesa el ${vehiculo.brand} ${vehiculo.model}.` +
+      (presupuesto ? ` Presupuesto: ${presupuesto}.` : '') +
+      (vendedor ? ` (Vendedor: ${vendedor})` : '') +
+      (evento ? ` (Evento: ${evento})` : '')
+    )
+    return `https://wa.me/${waCorp}?text=${msg}`
+  }
+
+  async function enviar() {
+    if (nombre.trim().length < 2 || telefono.trim().length < 6) { setError('Escribe tu nombre y teléfono.'); return }
+    setEnviando(true); setError('')
+    try {
+      await fetch('/api/leads', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre, telefono, presupuesto,
+          marca: vehiculo.brand, modelo: vehiculo.model,
+          vendedor, evento, concesionario, origen: 'cotizacion_rapida',
+        }),
+      })
+    } catch { /* aunque falle el guardado, dejamos pasar al WhatsApp */ }
+    setEnviando(false); setEnviado(true)
+    window.open(waLink(), '_blank', 'noopener,noreferrer')
+  }
 
   const row: React.CSSProperties = {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -36,6 +79,10 @@ export default function CotizacionRapidaModal({ vehiculo, onClose }: { vehiculo:
     fontSize: 11, fontWeight: 800, color: fg,
     textTransform: 'uppercase', letterSpacing: 1,
   })
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8,
+    fontSize: 14, marginBottom: 8, boxSizing: 'border-box',
+  }
 
   return (
     <div
@@ -95,7 +142,31 @@ export default function CotizacionRapidaModal({ vehiculo, onClose }: { vehiculo:
           </div>
         )}
 
-        <div style={{ padding: '10px 18px 16px' }}>
+        {/* Captación de datos del cliente */}
+        <div style={{ padding: '14px 18px 8px', borderTop: '6px solid #f3f4f6' }}>
+          {enviado ? (
+            <div style={{ textAlign: 'center', padding: '10px 0' }}>
+              <p style={{ fontSize: 15, fontWeight: 800, color: '#065f46', margin: '0 0 4px' }}>¡Gracias, {nombre.split(' ')[0]}! 🎉</p>
+              <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>Un asesor te contactará. Si no se abrió WhatsApp, toca el botón:</p>
+              <a href={waLink()} target="_blank" rel="noopener noreferrer" className="lo-btn-wa" style={{ display: 'inline-block' }}>Abrir WhatsApp</a>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: 14, fontWeight: 800, color: '#111', margin: '0 0 2px' }}>¿Te interesa este vehículo?</p>
+              <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>Déjanos tus datos y un asesor te contacta.</p>
+              <input style={inputStyle} placeholder="Nombre y apellido *" value={nombre} onChange={e => setNombre(e.target.value)} />
+              <input style={inputStyle} placeholder="Teléfono / WhatsApp *" inputMode="tel" value={telefono} onChange={e => setTelefono(e.target.value)} />
+              <input style={inputStyle} placeholder="Presupuesto aproximado (opcional)" value={presupuesto} onChange={e => setPresupuesto(e.target.value)} />
+              {error && <p style={{ fontSize: 12, color: '#C41E3A', margin: '0 0 8px' }}>{error}</p>}
+              <button onClick={enviar} disabled={enviando}
+                style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: '#C41E3A', color: '#fff', fontSize: 14, fontWeight: 800, cursor: enviando ? 'default' : 'pointer', opacity: enviando ? 0.6 : 1 }}>
+                {enviando ? 'Enviando…' : 'Quiero que me contacten'}
+              </button>
+            </>
+          )}
+        </div>
+
+        <div style={{ padding: '6px 18px 16px' }}>
           <p style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', margin: 0 }}>
             *Precios referenciales sujetos a disponibilidad y cambios sin previo aviso
           </p>
