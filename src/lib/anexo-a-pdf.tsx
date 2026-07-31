@@ -74,8 +74,24 @@ const NO_CUBRE = [
 export function AnexoADocument({ data }: { data: AnexoAData }) {
   const primario = data.colorPrimario || RED
   const secundario = data.colorSecundario || DARK
-  const empDir = (data.empresaDireccion || '').split('\n').filter(Boolean)
   const esVehimotors = data.variante === 'vehimotors'
+  // El anexo que se envía a Vehimotors lleva el membrete de Vehimotors, C.A.
+  const emp = esVehimotors ? {
+    nombre: 'VEHIMOTORS, C.A.',
+    rif: 'J-50091794-5',
+    dir: 'Avenida Blandin, La Castellana\nCaracas 1080 - Venezuela',
+    tel: null as string | null,
+    correo: null as string | null,
+    logo: undefined as string | undefined,
+  } : {
+    nombre: data.empresaNombre,
+    rif: data.empresaRif ?? null,
+    dir: data.empresaDireccion ?? null,
+    tel: data.empresaTelefono ?? null,
+    correo: data.empresaCorreo ?? null,
+    logo: data.logoSrc,
+  }
+  const empDir = (emp.dir || '').split('\n').filter(Boolean)
 
   const s = StyleSheet.create({
     page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingBottom: 46 },
@@ -158,13 +174,13 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
         {/* Header / membrete */}
         <View style={s.header} fixed>
           <View style={s.logoWrap}>
-            {data.logoSrc ? <Image src={data.logoSrc} style={s.logo} /> : <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: secundario }}>{data.empresaNombre}</Text>}
+            {emp.logo ? <Image src={emp.logo} style={s.logo} /> : <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: secundario }}>{emp.nombre}</Text>}
           </View>
           <View style={s.company}>
-            <Text style={s.companyName}>{data.empresaNombre}</Text>
-            {data.empresaRif ? <Text style={s.companyRif}>RIF: {data.empresaRif}</Text> : null}
+            <Text style={s.companyName}>{emp.nombre}</Text>
+            {emp.rif ? <Text style={s.companyRif}>RIF: {emp.rif}</Text> : null}
             {empDir.map((l, i) => <Text key={i} style={s.companyLine}>{l}</Text>)}
-            {data.empresaTelefono ? <Text style={s.companyLine}>{data.empresaTelefono}{data.empresaCorreo ? ` · ${data.empresaCorreo}` : ''}</Text> : null}
+            {emp.tel ? <Text style={s.companyLine}>{emp.tel}{emp.correo ? ` · ${emp.correo}` : ''}</Text> : null}
           </View>
         </View>
 
@@ -233,6 +249,8 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
             <Text style={s.totalVal}>${fmt(data.totalPagar)}</Text>
           </View>
 
+          {/* Página 2: nota de color, garantía, coberturas y firmas */}
+          <View break />
           <Text style={s.nota}>
             Nota *1: la selección de color(es) es referencial; su disponibilidad depende del proceso interno de la fábrica SAIC MOTORS
             (República Popular China) al momento de la orden y ensamblaje, por lo que no constituye obligación de entrega del color indicado.
@@ -277,7 +295,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
         </View>
 
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>{data.empresaNombre}{data.empresaRif ? ` · RIF ${data.empresaRif}` : ''}</Text>
+          <Text style={s.footerText}>{emp.nombre}{emp.rif ? ` · RIF ${emp.rif}` : ''}</Text>
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} / ${totalPages}`} />
         </View>
       </Page>
