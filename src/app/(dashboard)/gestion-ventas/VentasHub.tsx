@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Search, ShoppingCart, ListChecks, ExternalLink, Calculator, X, Loader2, FileText, ClipboardList, FilePlus2, Percent, Users, Landmark, ShieldCheck } from 'lucide-react'
+import { Search, ShoppingCart, ListChecks, ExternalLink, Calculator, X, Loader2, FileText, ClipboardList, FilePlus2, Percent, Users, Landmark } from 'lucide-react'
 import ProformasTab from '../link-ventas/ProformasTab'
 import CotizacionesTab from '../link-ventas/CotizacionesTab'
 import CotizacionCDMTab from '../link-ventas/CotizacionCDMTab'
@@ -115,8 +115,8 @@ const fmtFecha = (s: string | null) => {
 
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
-type Vista = 'registradas' | 'registrar' | 'cotizaciones' | 'proformas' | 'generar' | 'precompra' | 'banca' | 'tasas' | 'historial' | 'division'
-const VISTAS_VALIDAS: Vista[] = ['registradas', 'registrar', 'cotizaciones', 'proformas', 'generar', 'precompra', 'banca', 'tasas', 'historial', 'division']
+type Vista = 'registradas' | 'registrar' | 'cotizaciones' | 'proformas' | 'generar' | 'banca' | 'tasas' | 'historial' | 'division'
+const VISTAS_VALIDAS: Vista[] = ['registradas', 'registrar', 'cotizaciones', 'proformas', 'generar', 'banca', 'tasas', 'historial', 'division']
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac500 = [], showroomStock = [], tasas = { bcv: 0, usdt: 0 }, puedeEditar = false, esRojas = false }: {
@@ -230,7 +230,6 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
           ['proformas', 'Proformas', FileText],
           ['registrar', 'Registrar venta', ShoppingCart],
           ['registradas', 'Ventas registradas', ListChecks],
-          ['precompra', 'Precompra (AC500)', ShieldCheck],
           ['banca', 'Banca Nacional', Landmark],
           ['tasas', 'Tasas', Percent],
           ['historial', 'Historial de clientes', Users],
@@ -345,22 +344,6 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
         <ProformasTab />
       ) : vista === 'generar' ? (
         <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} tasas={tasas} />
-      ) : vista === 'precompra' ? (
-        <div>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-blue-900 font-semibold mb-1 flex items-center gap-2"><ShieldCheck size={16} /> Precompra — Asegúrate con $500</p>
-              <p className="text-xs text-blue-700 leading-relaxed">
-                Compra programada. Genera la cotización del plan Asegúrate $500 (6 o 9 meses): elige el modelo y trae su plan de una vez. Cuando el cliente reserve, pasa a proforma y anexo.
-              </p>
-            </div>
-            <button onClick={() => router.push('/vehiculos/nuevo?plan=ac500')}
-              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-800 hover:bg-blue-900 text-white text-sm font-bold transition-colors">
-              🛡 Registrar venta AC500
-            </button>
-          </div>
-          <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} tasas={tasas} modo="ac500" />
-        </div>
       ) : vista === 'banca' ? (
         <BancaNacionalTab catalogo={catalogo} puedeEditar={puedeEditar} />
       ) : vista === 'tasas' ? (
