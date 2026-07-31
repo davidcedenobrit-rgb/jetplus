@@ -187,6 +187,9 @@ export async function POST(req: Request) {
       ultima_cuota_fecha: cronogramaSnapshot[cronogramaSnapshot.length - 1]?.fecha_vencimiento ?? null,
       observaciones: observacionesFinal,
       condiciones_personalizadas: condPersonalizadas,
+      // Propuesta de pago negociada (desglose renglón por renglón) — viaja
+      // estructurada a la proforma para reusarla en la venta.
+      estructura_costos: cot.estructura_costos ?? null,
       bn_vehimotors: cot.bn_vehimotors ?? null,
       vendedoras: cot.vendedoras ?? (cot.vendedora_nombre ? [{ nombre: cot.vendedora_nombre }] : null),
       correo_destino: enviarCorreo ? String(correoDestino ?? cot.cliente_correo ?? '').trim().toLowerCase() : null,
