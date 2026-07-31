@@ -8,8 +8,7 @@ import StickyNav from './StickyNav'
 const LOGO    = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
 const MG_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e64a9efded9c776ffb5.png'
 const MX_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e646bac2400279a352f.png'
-const WA_BASE = 'https://wa.me/584149989010'
-const WA_MSG  = encodeURIComponent('Hola 👋 Vengo de la página de La Oriental y quiero información sobre los planes de compra.')
+const WA_MSG  = encodeURIComponent('Hola 👋 Vengo de la página web y quiero información sobre los planes de compra.')
 const WA_FIN  = encodeURIComponent('Hola 👋 Vengo de la web y quiero información sobre el plan de financiamiento 40% inicial + 24 cuotas.')
 
 export const revalidate = 60
@@ -19,22 +18,37 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams
   const evento = String(sp?.evento ?? '').slice(0, 80)
 
-  const [{ data: catalogo }, { data: ac500 }, { data: promoVehiculos }, { data: promoData }, { data: tasasCfg }] = await Promise.all([
+  const [{ data: catalogo }, { data: ac500 }, { data: promoVehiculos }, { data: promoData }, { data: tasasCfg }, { data: conc }] = await Promise.all([
     supabase.from('catalogo_ventas').select('*').eq('disponible', true).order('orden'),
     supabase.from('ac500_vehiculos').select('*').eq('disponible', true).order('orden'),
     supabase.from('promocion_vehiculos').select('*').order('orden').order('created_at'),
     supabase.from('promociones_especiales').select('*').limit(1).single(),
     supabase.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt', 'wa_corporativo', 'concesionario_id']),
+    supabase.from('concesionarios').select('id, nombre_comercial, ciudad, estado, logo_url').eq('es_principal', true).limit(1).maybeSingle(),
   ])
+
+  const cfg = (k: string) => (tasasCfg ?? []).find(t => t.clave === k)?.valor || ''
 
   // Tasas para el diferencial cambiario del plan 100% Banco
   const tasas = {
-    bcv:  Number((tasasCfg ?? []).find(t => t.clave === 'tasa_bcv')?.valor) || 0,
-    usdt: Number((tasasCfg ?? []).find(t => t.clave === 'tasa_usdt')?.valor) || 0,
+    bcv:  Number(cfg('tasa_bcv')) || 0,
+    usdt: Number(cfg('tasa_usdt')) || 0,
   }
   // WhatsApp corporativo (configurable por base; cae al número por defecto).
-  const waCorp = String((tasasCfg ?? []).find(t => t.clave === 'wa_corporativo')?.valor || '').replace(/\D/g, '') || '584149989010'
-  const concesionario = String((tasasCfg ?? []).find(t => t.clave === 'concesionario_id')?.valor || '')
+  const waCorp = cfg('wa_corporativo').replace(/\D/g, '') || '584149989010'
+  const concesionario = cfg('concesionario_id') || conc?.id || ''
+
+  // Branding del link de ventas, tomado del concesionario principal de la base
+  // (Ki Auto en su base, La Oriental en la suya). Cae a los valores de La Oriental.
+  const personalizado = !!(conc?.nombre_comercial || conc?.ciudad)
+  const brand = {
+    nombre: conc?.nombre_comercial || 'La Oriental Automotors',
+    ciudad: conc?.ciudad || 'Maturín',
+    estado: conc?.estado || 'Estado Monagas',
+    wa: waCorp,
+    // Marca personalizada → su logo (o ninguno); marca por defecto → logo de La Oriental.
+    logo: conc?.logo_url || (personalizado ? '' : LOGO),
+  }
 
   const lista = catalogo ?? []
   const acLista = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo || v.p12_activo)
@@ -49,10 +63,10 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           {/* Logo + nombre */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src={LOGO} alt="La Oriental" style={{ height: 32, objectFit: 'contain' }} />
-            <div style={{ width: 1, height: 24, background: '#e5e7eb' }} />
+            {brand.logo && <img src={brand.logo} alt={brand.nombre} style={{ height: 32, objectFit: 'contain' }} />}
+            {brand.logo && <div style={{ width: 1, height: 24, background: '#e5e7eb' }} />}
             <div>
-              <p style={{ fontSize: 13, fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>La Oriental Automotors</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>{brand.nombre}</p>
               <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1 }}>Representantes oficiales · MG y MAXUS</p>
             </div>
           </div>
@@ -63,7 +77,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               <span style={{ width: 1, height: 14, background: '#e5e7eb' }} />
               <img src={MX_LOGO} alt="MAXUS" style={{ height: 16, objectFit: 'contain' }} />
             </div>
-            <span className="lo-pill-loc" style={{ fontSize: 12 }}>📍 Maturín, Venezuela</span>
+            <span className="lo-pill-loc" style={{ fontSize: 12 }}>📍 {brand.ciudad}, Venezuela</span>
           </div>
         </div>
       </div>
@@ -74,19 +88,19 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           {/* Columna izquierda */}
           <div className="lo-glass" style={{ padding: '32px 36px' }}>
             <span className="lo-pill-online" style={{ marginBottom: 18, display: 'inline-flex' }}>
-              <span className="lo-dot" /> Asesores disponibles · Atención en Maturín
+              <span className="lo-dot" /> Asesores disponibles · Atención en {brand.ciudad}
             </span>
             <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, lineHeight: 1.1, color: '#111827', marginBottom: 14, letterSpacing: '-0.5px' }}>
               Tu próximo vehículo <span style={{ color: '#a16207' }}>MG</span><br />o <span style={{ color: '#a16207' }}>MAXUS</span> está aquí.
             </h1>
             <p style={{ fontSize: 15, color: '#6b7280', lineHeight: 1.65, marginBottom: 28, maxWidth: 480 }}>
-              Explora precios base y planes de financiamiento disponibles en nuestra sede de <strong style={{ color: '#374151' }}>Maturín</strong>. Nuestros asesores te acompañan en cada paso.
+              Explora precios base y planes de financiamiento disponibles en nuestra sede de <strong style={{ color: '#374151' }}>{brand.ciudad}</strong>. Nuestros asesores te acompañan en cada paso.
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {promoActiva && promoVehiculosList.length > 0 && <a href="#promociones" className="lo-btn-gold">🏷️ Promociones →</a>}
               {acLista.length > 0 && <a href="#ac500" className="lo-btn-gold">🛡️ Plan $500 →</a>}
               <a href="#vehiculos" className="lo-btn-glass">Ver vehículos ↓</a>
-              <a href={`${WA_BASE}?text=${WA_MSG}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">WhatsApp</a>
+              <a href={`https://wa.me/${brand.wa}?text=${WA_MSG}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">WhatsApp</a>
             </div>
             <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 18 }}>* Los precios mostrados son referenciales y pueden variar. Consulta disponibilidad con tu asesor.</p>
           </div>
@@ -112,9 +126,9 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
 
             {/* Sede Maturín */}
             <div style={{ background: '#fffbeb', border: '1px solid rgba(234,179,8,.3)', borderRadius: 14, padding: '16px 20px' }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>📍 Sede Maturín</p>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>📍 Sede {brand.ciudad}</p>
               <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, margin: 0 }}>
-                Atención personalizada en <strong>Maturín, Estado Monagas</strong>. Cotizaciones aprobadas en tiempo real.
+                Atención personalizada en <strong>{brand.ciudad}, {brand.estado}</strong>. Cotizaciones aprobadas en tiempo real.
               </p>
             </div>
           </div>
@@ -124,7 +138,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
       {/* ── VEHÍCULOS ─────────────────────────────────────────────────────── */}
       <section id="vehiculos" style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 20px 56px' }}>
         <div style={{ marginBottom: 22 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede Maturín · Atención personalizada</p>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede {brand.ciudad} · Atención personalizada</p>
           <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
         </div>
         <VehiculosFiltro vehiculos={lista} tasas={tasas} evento={evento} waCorp={waCorp} concesionario={concesionario} />
@@ -138,7 +152,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
             Estrena con <span style={{ color: '#a16207' }}>40% de inicial</span> y 24 cuotas fijas
           </h2>
           <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 520, margin: '0 auto 36px', lineHeight: 1.6 }}>
-            Sin bancos, sin trámites eternos. Financiamiento directo con La Oriental Automotors.
+            Sin bancos, sin trámites eternos. Financiamiento directo con {brand.nombre}.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, maxWidth: 660, margin: '0 auto 32px' }}>
             {[
@@ -156,7 +170,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               </div>
             ))}
           </div>
-          <a href={`${WA_BASE}?text=${WA_FIN}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">Consultar plan de financiamiento</a>
+          <a href={`https://wa.me/${brand.wa}?text=${WA_FIN}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">Consultar plan de financiamiento</a>
         </div>
       </section>
 
@@ -260,9 +274,9 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
       <section style={{ background: '#fff', borderTop: '1px solid #ececec', padding: '56px 16px' }}>
         <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 12 }}>Contacto directo</p>
-          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#111827', marginBottom: 8 }}>Sede Maturín</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#111827', marginBottom: 8 }}>Sede {brand.ciudad}</h2>
           <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
-            Atención personalizada en <strong style={{ color: '#374151' }}>Maturín, Estado Monagas</strong>.<br />Cotizaciones aprobadas en tiempo real.
+            Atención personalizada en <strong style={{ color: '#374151' }}>{brand.ciudad}, {brand.estado}</strong>.<br />Cotizaciones aprobadas en tiempo real.
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
             <a href="https://wa.link/uc69id" target="_blank" rel="noopener noreferrer" className="lo-btn-wa">WhatsApp oficial</a>
@@ -273,8 +287,8 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
 
       {/* ── FOOTER ────────────────────────────────────────────────────────── */}
       <footer style={{ background: '#111827', padding: '30px 16px', textAlign: 'center' }}>
-        <img src={LOGO} alt="La Oriental" style={{ height: 22, objectFit: 'contain', filter: 'invert(1)', opacity: .4, marginBottom: 12 }} />
-        <p style={{ color: 'rgba(255,255,255,.3)', fontSize: 12, marginBottom: 4 }}>La Oriental Automotors · Representantes oficiales MG &amp; MAXUS · Sede Maturín</p>
+        {brand.logo && <img src={brand.logo} alt={brand.nombre} style={{ height: 22, objectFit: 'contain', filter: 'invert(1)', opacity: .4, marginBottom: 12 }} />}
+        <p style={{ color: 'rgba(255,255,255,.3)', fontSize: 12, marginBottom: 4 }}>{brand.nombre} · Representantes oficiales MG &amp; MAXUS · Sede {brand.ciudad}</p>
         <p style={{ color: 'rgba(255,255,255,.18)', fontSize: 11 }}>* Precios referenciales. Consulta disponibilidad con tu asesor.</p>
       </footer>
 
