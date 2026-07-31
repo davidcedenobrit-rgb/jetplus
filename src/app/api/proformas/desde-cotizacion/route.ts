@@ -30,13 +30,24 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional } = body ?? {}
+  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional, showroomId } = body ?? {}
   if (!cotizacionId) return NextResponse.json({ error: 'Falta la cotización' }, { status: 400 })
 
   const supabase = await createAdminClient()
 
   const { data: cot } = await supabase.from('cotizaciones').select('*').eq('id', cotizacionId).single()
   if (!cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+
+  // Unidad del showroom a reservar (opcional). Debe estar en agencia.
+  let unidad: Record<string, any> | null = null
+  if (showroomId) {
+    const { data: u } = await supabase.from('vehiculos_showroom')
+      .select('id, marca, modelo, version, color, placa, anio, vin, estado')
+      .eq('id', showroomId).maybeSingle()
+    if (!u) return NextResponse.json({ error: 'La unidad del showroom no existe' }, { status: 404 })
+    if (u.estado !== 'en_agencia') return NextResponse.json({ error: 'Esa unidad ya no está disponible (reservada o vendida)' }, { status: 409 })
+    unidad = u
+  }
 
   // Una proforma por cotización.
   const { data: existente } = await supabase.from('proformas').select('id, numero').eq('cotizacion_id', cotizacionId).maybeSingle()
@@ -119,11 +130,14 @@ export async function POST(req: Request) {
   }
   const vehiculoSnapshot = {
     id: cot.vehiculo_id ?? null,
-    marca: cot.marca,
-    modelo: cot.modelo,
-    placa: null,
-    color: null,
-    anio: null,
+    showroom_id: unidad?.id ?? null,
+    marca: unidad?.marca ?? cot.marca,
+    modelo: unidad?.modelo ?? cot.modelo,
+    version: unidad?.version ?? null,
+    placa: unidad?.placa ?? null,
+    color: unidad?.color ?? null,
+    anio: unidad?.anio ?? null,
+    vin: unidad?.vin ?? null,
     precio_total: precioBase,
     precio_base: precioBase,
   }
@@ -190,6 +204,8 @@ export async function POST(req: Request) {
       // Propuesta de pago negociada (desglose renglón por renglón) — viaja
       // estructurada a la proforma para reusarla en la venta.
       estructura_costos: cot.estructura_costos ?? null,
+      // Unidad física del showroom reservada para esta proforma (opcional).
+      showroom_id: unidad?.id ?? null,
       bn_vehimotors: cot.bn_vehimotors ?? null,
       vendedoras: cot.vendedoras ?? (cot.vendedora_nombre ? [{ nombre: cot.vendedora_nombre }] : null),
       correo_destino: enviarCorreo ? String(correoDestino ?? cot.cliente_correo ?? '').trim().toLowerCase() : null,
@@ -201,6 +217,17 @@ export async function POST(req: Request) {
   if (insertErr || !proforma) {
     console.error('[proformas/desde-cotizacion] insert error:', insertErr)
     return NextResponse.json({ error: 'Error al guardar la proforma' }, { status: 500 })
+  }
+
+  // Reservar la unidad del showroom para este cliente/proforma.
+  if (unidad) {
+    await supabase.from('vehiculos_showroom').update({
+      estado: 'reservado',
+      cliente_id: cot.cliente_id ?? null,
+      reservado_por: user.id,
+      reserva_notas: `Proforma ${proforma.numero}${cot.cliente_nombre ? ` · ${cot.cliente_nombre}` : ''}`,
+      updated_at: new Date().toISOString(),
+    }).eq('id', unidad.id).eq('estado', 'en_agencia')
   }
 
   let correoEnviado = false

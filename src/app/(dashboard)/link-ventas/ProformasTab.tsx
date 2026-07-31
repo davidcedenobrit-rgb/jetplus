@@ -39,12 +39,20 @@ export default function ProformasTab() {
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
 
-  useEffect(() => {
+  function cargar() {
     fetch('/api/proformas?limit=100')
       .then(r => r.json())
       .then((d) => { if (Array.isArray(d)) setProformas(d) })
       .finally(() => setLoading(false))
-  }, [])
+  }
+  useEffect(() => { cargar() }, [])
+
+  async function liberarUnidad(proformaId: string) {
+    if (!confirm('¿Liberar la unidad reservada? Volverá a estar disponible en el showroom.')) return
+    const r = await fetch(`/api/proformas/${proformaId}/liberar-unidad`, { method: 'POST' })
+    if (r.ok) cargar()
+    else alert((await r.json().catch(() => ({}))).error ?? 'No se pudo liberar')
+  }
 
   const filtradas = useMemo(() => {
     const nq = norm(q.trim())
@@ -106,6 +114,9 @@ export default function ProformasTab() {
                   </div>
                   <p className="font-semibold text-oriental-black text-sm truncate">{cliente} {ci && <span className="text-gray-400 font-normal text-xs">· {ci}</span>}</p>
                   <p className="text-gray-500 text-xs">{veh} · Inicial ${fmt(p.monto_inicial)}{Number(p.monto_financiado) > 0 ? ` · Financiado $${fmt(p.monto_financiado)}` : ''}</p>
+                  {p.vehiculo_snapshot?.showroom_id && !vendida && (
+                    <p className="text-[11px] text-amber-700 font-semibold mt-0.5">🔒 Unidad reservada{p.vehiculo_snapshot?.placa ? `: ${p.vehiculo_snapshot.placa}` : ''}{p.vehiculo_snapshot?.color ? ` · ${p.vehiculo_snapshot.color}` : ''}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -119,10 +130,19 @@ export default function ProformasTab() {
                       Ver vehículo
                     </button>
                   ) : esPreventa ? (
-                    <button onClick={() => router.push(`/vehiculos/nuevo?proformaId=${p.id}`)}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-oriental-red hover:bg-red-700 text-white rounded-lg text-xs font-bold">
-                      <ShoppingCart size={13} /> Registrar venta
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {p.vehiculo_snapshot?.showroom_id && (
+                        <button onClick={() => liberarUnidad(p.id)}
+                          className="flex items-center gap-1 px-2.5 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-xs font-bold"
+                          title="Liberar la unidad reservada">
+                          Liberar
+                        </button>
+                      )}
+                      <button onClick={() => { const sid = p.vehiculo_snapshot?.showroom_id; router.push(`/vehiculos/nuevo?proformaId=${p.id}${sid ? `&showroomId=${sid}` : ''}`) }}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-oriental-red hover:bg-red-700 text-white rounded-lg text-xs font-bold">
+                        <ShoppingCart size={13} /> Registrar venta
+                      </button>
+                    </div>
                   ) : null}
                 </div>
               </div>

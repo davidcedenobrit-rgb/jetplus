@@ -30,6 +30,8 @@ export default function ProformaPanel({
   const [restanteMetodo, setRestanteMetodo] = useState<'contado' | 'acuerdo'>('contado')
   const [resultado, setResultado] = useState<{ proformaId: string; numero: string; correoEnviado: boolean } | null>(null)
   const [yaExiste, setYaExiste] = useState<{ proformaId: string; numero: string } | null>(null)
+  const [unidades, setUnidades] = useState<{ id: string; label: string; coincide: boolean }[]>([])
+  const [showroomId, setShowroomId] = useState('')
 
   const aprobadoNum = parseFloat(aprobadoBanco.replace(',', '.')) || 0
   const restante = Math.max(0, Number(total) - aprobadoNum)
@@ -39,6 +41,8 @@ export default function ProformaPanel({
     setOpen(true); setError(''); setResultado(null); setYaExiste(null)
     setEnviarCorreo(false); setCorreo(correoCliente ?? ''); setObservaciones('')
     setAprobadoBanco(''); setRestanteMetodo('contado')
+    setShowroomId(''); setUnidades([])
+    fetch(`/api/showroom/disponibles?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : []).then(d => setUnidades(Array.isArray(d) ? d : [])).catch(() => {})
   }
 
   async function generar() {
@@ -54,6 +58,7 @@ export default function ProformaPanel({
           enviarCorreo,
           correoDestino: enviarCorreo ? correo.trim() : null,
           observaciones: observaciones.trim() || null,
+          showroomId: showroomId || null,
           ...(esBancaNacional ? { bancaNacional: { aprobado_banco: aprobadoNum, restante, restante_metodo: restanteMetodo } } : {}),
         }),
       })
@@ -156,6 +161,17 @@ export default function ProformaPanel({
                       </div>
                     </div>
                   )}
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Reservar unidad del showroom (opcional)</label>
+                    <select value={showroomId} onChange={e => setShowroomId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red">
+                      <option value="">Sin reservar unidad (se elige en la venta)</option>
+                      {unidades.map(u => <option key={u.id} value={u.id}>{u.coincide ? '★ ' : ''}{u.label}</option>)}
+                    </select>
+                    {showroomId && <p className="text-[10px] text-amber-600 mt-1">La unidad quedará <b>RESERVADA</b> para este cliente al generar la proforma.</p>}
+                    {unidades.length === 0 && <p className="text-[10px] text-gray-400 mt-1">No hay unidades en agencia disponibles; el carro se elige al registrar la venta.</p>}
+                  </div>
 
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-500 mb-1">Observaciones / condiciones de pago (opcional)</label>
