@@ -35,9 +35,10 @@ export async function GET(req: Request) {
 
   // Acuerdo de cobro: doble financiamiento del inicial (lo maneja la vendedora).
   const { data: ac } = await supabase.from('acuerdos_cobro')
-    .select('inicial_total, monto_contado, monto_financiado, num_cuotas, cuota_monto, estado')
+    .select('id, inicial_total, monto_contado, monto_financiado, num_cuotas, cuota_monto, estado')
     .eq('cotizacion_id', cotizacionId).maybeSingle()
   const acuerdo = ac ? {
+    id: ac.id,
     inicialTotal: num(ac.inicial_total) || inicial,
     contado: num(ac.monto_contado),
     laOrientalFinancia: num(ac.monto_financiado),
