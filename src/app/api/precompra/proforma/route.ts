@@ -138,6 +138,8 @@ export async function POST(req: Request) {
     valor_venta: valorVenta,
     total_pagar: totalPagar,
     serie_cobertura: serieCobertura(marca, modelo),
+    vendedor_id: b.vendedorId ?? null,
+    vendedor_nombre: String(b.vendedorNombre ?? '').trim() || null,
     estado: 'completa',
     notas: String(b.notas ?? '').trim() || null,
     creado_por: user.id,

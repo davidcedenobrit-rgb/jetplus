@@ -127,6 +127,7 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-600">{p.estado}</span>
           </div>
           <p className="text-xs text-gray-500 truncate">{p.marca} {p.modelo}{p.colores ? ` · ${p.colores}` : ''} · Total ${fmt(p.total_pagar)}</p>
+          {p.vendedor_nombre && <p className="text-[11px] text-gray-400 truncate">Vendedor: {p.vendedor_nombre}</p>}
         </div>
         <button onClick={onEdit} className="shrink-0 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50">Editar datos</button>
       </div>
@@ -292,8 +293,11 @@ function ProformaModal({ registro, onClose, onSaved }: { registro: any; onClose:
     colores: registro.colores || registro.color || '',
     ciclo: String(registro.ciclo || ''),
     fechaPlan: (registro.fecha_plan || registro.fecha || '').slice(0, 10),
+    vendedorId: registro.vendedor_id || '',
     notas: registro.notas || '',
   })
+  const [vendedores, setVendedores] = useState<any[]>([])
+  useEffect(() => { fetch('/api/precompra/vendedores').then(r => r.ok ? r.json() : []).then(d => setVendedores(Array.isArray(d) ? d : [])).catch(() => {}) }, [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }))
@@ -311,6 +315,8 @@ function ProformaModal({ registro, onClose, onSaved }: { registro: any; onClose:
       conyuge: casado ? { nombre: f.conyugeNombre, cedula: f.conyugeCedula, rif: f.conyugeRif } : null,
       registroMercantil: f.registroMercantil,
       colores: f.colores, ciclo: f.ciclo, fechaPlan: f.fechaPlan, notas: f.notas,
+      vendedorId: f.vendedorId || null,
+      vendedorNombre: vendedores.find(v => v.id === f.vendedorId)?.nombre || '',
     }
     const r = await fetch('/api/precompra/proforma', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const j = await r.json().catch(() => ({}))
@@ -373,6 +379,13 @@ function ProformaModal({ registro, onClose, onSaved }: { registro: any; onClose:
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2"><label className={lbl}>Color(es) *</label><input className={inp} value={f.colores} onChange={e => set('colores', e.target.value)} placeholder="Blanco / Plata" /></div>
             <div><label className={lbl}>Ciclo</label><input className={inp} value={f.ciclo} onChange={e => set('ciclo', e.target.value)} placeholder="5" inputMode="numeric" /></div>
+          </div>
+          <div>
+            <label className={lbl}>Vendedor</label>
+            <select className={inp} value={f.vendedorId} onChange={e => set('vendedorId', e.target.value)}>
+              <option value="">— Sin asignar —</option>
+              {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}{v.cargo ? ` · ${v.cargo}` : ''}</option>)}
+            </select>
           </div>
           <div><label className={lbl}>Notas (interno)</label><textarea className={`${inp} resize-none`} rows={2} value={f.notas} onChange={e => set('notas', e.target.value)} /></div>
 

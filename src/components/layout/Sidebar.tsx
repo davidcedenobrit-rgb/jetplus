@@ -126,7 +126,7 @@ const SECTIONS: NavSection[] = [
     icon: Briefcase,
     links: [
       { href: '/corporativo',        label: `Corporativo ${BRANDING.marca}`, icon: Briefcase,  roles: DIR },
-      { href: '/corporativo/seguridad', label: 'Seguridad',            icon: Shield,     roles: ['jose'] },
+      { href: '/corporativo/seguridad', label: 'Seguridad',            icon: Shield,     roles: ['jose'], emails: SUPER_ADMIN_EMAILS },
       { href: '/corporativo/contabilidad-ac500', label: 'Contabilidad AC500', icon: BookOpenCheck, roles: DIR },
       { href: '/obsequios',          label: 'Obsequios a clientes',    icon: Gift,       roles: DIR },
       { href: '/eventos',            label: 'Eventos',                 icon: CalendarDays, roles: DIR },
@@ -153,8 +153,12 @@ const DASHBOARD_LINK: NavLink = { href: '/dashboard', label: 'Dashboard', icon: 
 const TAREAS_LINK: NavLink = { href: '/tareas', label: 'Tareas', icon: ListChecks }
 
 function canSee(link: NavLink, rol: string, email?: string): boolean {
-  if (link.emails) return link.emails.map(e => e.toLowerCase()).includes((email ?? '').toLowerCase())
-  if (link.roles) return link.roles.includes(rol)
+  const byEmail = link.emails ? link.emails.map(e => e.toLowerCase()).includes((email ?? '').toLowerCase()) : false
+  const byRole = link.roles ? link.roles.includes(rol) : false
+  // Si el link define ambos (roles + emails), basta con cumplir uno (OR).
+  if (link.emails && link.roles) return byEmail || byRole
+  if (link.emails) return byEmail
+  if (link.roles) return byRole
   if (link.hideFor) return !link.hideFor.includes(rol)
   return true
 }
