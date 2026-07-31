@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, BookOpen, FileBarChart2, Link2, Database, ListChecks
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, BookOpen, FileBarChart2, Link2, Database, ListChecks, Warehouse
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
 
@@ -101,6 +101,7 @@ const SECTIONS: NavSection[] = [
     icon: Boxes,
     links: [
       { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package, sub: [
+        { href: '/repuestos/almacen', label: 'Almacén La Oriental', icon: Warehouse },
         { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
         { href: '/repuestos/catalogo-plaza', label: 'Catálogo compra en plaza', icon: BookOpen },
         { href: '/repuestos/catalogo', label: 'Catálogo repuestos VM', icon: BookOpenCheck },
@@ -315,11 +316,12 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             { href: '/tareas',     label: 'Tareas',             icon: ListChecks },
             { href: '/showroom',   label: 'Vehículo Showroom',  icon: Store },
             { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package },
+            { href: '/repuestos/almacen', label: 'Almacén La Oriental', icon: Warehouse },
             { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
           ]
           return tallerNav.map(({ href, label, icon: Icon }) => {
             const active = href === '/repuestos'
-              ? (pathname === '/repuestos' || (pathname.startsWith('/repuestos/') && !pathname.startsWith('/repuestos/compra-plaza')))
+              ? (pathname === '/repuestos' || (pathname.startsWith('/repuestos/') && !pathname.startsWith('/repuestos/compra-plaza') && !pathname.startsWith('/repuestos/almacen')))
               : (pathname === href || pathname.startsWith(href + '/'))
             return (
               <Link key={href} href={href} onClick={onClose}

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag, FileCheck, Receipt, DollarSign, Truck, FilePlus } from 'lucide-react'
+import { Package, Plus, Send, Inbox, CheckCircle2, XCircle, ShoppingBag, FileCheck, Receipt, DollarSign, Truck, FilePlus, Warehouse } from 'lucide-react'
 import RepuestosCardDeleteBtn from './RepuestosCardDeleteBtn'
 import RepuestosActivasGrid from './RepuestosActivasGrid'
 
@@ -192,9 +192,15 @@ export default async function RepuestosPage({
             })()}
           </div>
         </div>
-        <Link href="/repuestos/nuevo" className="btn-primary flex items-center gap-2">
-          <Plus size={16} /> Nueva solicitud
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/repuestos/almacen"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-teal-200 text-teal-700 hover:bg-teal-50 text-sm font-semibold">
+            <Warehouse size={16} /> Almacén La Oriental
+          </Link>
+          <Link href="/repuestos/nuevo" className="btn-primary flex items-center gap-2">
+            <Plus size={16} /> Nueva solicitud
+          </Link>
+        </div>
       </div>
 
       {/* Tabs por grupo */}
