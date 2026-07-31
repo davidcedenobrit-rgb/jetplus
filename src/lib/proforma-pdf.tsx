@@ -192,6 +192,9 @@ export interface ProformaPDFData {
   placa: string | null
   anio: number | null
   color: string | null
+  version?: string | null
+  vin?: string | null
+  serialMotor?: string | null
   precioBase: number
   totalVehiculo: number
   inicialPagada: number
@@ -316,6 +319,15 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             <Text style={[s.tableCell, s.colPlaca]}>{data.placa || '—'}</Text>
             <Text style={[s.tableCell, s.colPrecio, { fontFamily: 'Helvetica-Bold' }]}>{fmt(bnV ? bnV.precio_base : data.totalVehiculo)}</Text>
           </View>
+          {(data.version || data.vin || data.serialMotor || data.color) && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, paddingTop: 4 }}>
+              {data.version ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Versión: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.version}</Text></Text> : null}
+              {data.color ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Color: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.color}</Text></Text> : null}
+              {data.anio ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Año: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.anio}</Text></Text> : null}
+              {data.vin ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>VIN/Chasis: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.vin}</Text></Text> : null}
+              {data.serialMotor ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Serial motor: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.serialMotor}</Text></Text> : null}
+            </View>
+          )}
 
           {/* Bloque de montos (no en Banca Nacional: su cuadro lo reemplaza) */}
           {!bnV && (
