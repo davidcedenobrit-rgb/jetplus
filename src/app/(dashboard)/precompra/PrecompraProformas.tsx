@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2, PenLine, Send } from 'lucide-react'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const fmt = (n: number | null | undefined) => Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -76,9 +76,24 @@ export default function PrecompraProformas() {
 
 function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onChange: () => void }) {
   const [subiendo, setSubiendo] = useState<string>('')
+  const [firmando, setFirmando] = useState(false)
+  const [correo, setCorreo] = useState(p.correo_destino || '')
+  const [enviando, setEnviando] = useState(false)
+  const [msg, setMsg] = useState('')
   const tipos = p.tipo_persona === 'juridica' ? DOC_TIPOS_JURIDICA : DOC_TIPOS_NATURAL
   const docs: any[] = Array.isArray(p.documentos) ? p.documentos : []
   const tieneDoc = (t: string) => docs.some(d => d.tipo === t)
+
+  async function enviar() {
+    if (!correo.trim()) { setMsg('Escribe el correo de destino'); return }
+    setEnviando(true); setMsg('')
+    const r = await fetch(`/api/precompra/proforma/${p.id}/enviar`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correoDestino: correo }),
+    })
+    const j = await r.json().catch(() => ({}))
+    setEnviando(false)
+    if (r.ok) { setMsg('Enviado ✓'); onChange() } else setMsg(j.error ?? 'No se pudo enviar')
+  }
 
   async function subir(tipo: string, file: File) {
     setSubiendo(tipo)
@@ -125,8 +140,12 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
         </div>
       )}
 
-      {/* Anexos */}
-      <div className="flex flex-wrap gap-2">
+      {/* Firma + Anexos */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <button onClick={() => setFirmando(true)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${p.firma_cliente ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-blue-800 border-blue-300 hover:bg-blue-50'}`}>
+          {p.firma_cliente ? <CheckCircle2 size={13} /> : <PenLine size={13} />} {p.firma_cliente ? 'Firmado' : 'Firmar digital'}
+        </button>
         <a href={`/api/precompra/proforma/${p.id}/anexo?variante=oriental`} target="_blank" rel="noreferrer"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-red-700">
           <FileDown size={13} /> Anexo A Oriental
@@ -135,6 +154,80 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-black text-white text-xs font-bold hover:bg-gray-800">
           <FileDown size={13} /> Anexo A Vehimotors
         </a>
+      </div>
+
+      {/* Envío a Vehimotors (correo abierto) */}
+      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center border-t border-gray-100 pt-3">
+        <input value={correo} onChange={e => setCorreo(e.target.value)} placeholder="Correo de Vehimotors (Marilyn)…"
+          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red" />
+        <button onClick={enviar} disabled={enviando}
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-blue-800 text-white text-xs font-bold hover:bg-blue-900 disabled:opacity-50">
+          {enviando ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar a Vehimotors
+        </button>
+      </div>
+      {msg && <p className={`text-[11px] mt-1 ${msg.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
+      {p.enviado_at && <p className="text-[10px] text-gray-400 mt-1">Último envío: {fmtFecha(p.enviado_at)} → {p.enviado_a}</p>}
+
+      {firmando && <FirmaModal proformaId={p.id} onClose={() => setFirmando(false)} onSaved={() => { setFirmando(false); onChange() }} />}
+    </div>
+  )
+}
+
+function FirmaModal({ proformaId, onClose, onSaved }: { proformaId: string; onClose: () => void; onSaved: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const drawing = useRef(false)
+  const [saving, setSaving] = useState(false)
+  const [vacia, setVacia] = useState(true)
+
+  function pos(e: React.PointerEvent<HTMLCanvasElement>) {
+    const c = canvasRef.current!; const r = c.getBoundingClientRect()
+    return { x: (e.clientX - r.left) * (c.width / r.width), y: (e.clientY - r.top) * (c.height / r.height) }
+  }
+  function start(e: React.PointerEvent<HTMLCanvasElement>) {
+    drawing.current = true; setVacia(false)
+    const ctx = canvasRef.current!.getContext('2d')!
+    const { x, y } = pos(e); ctx.beginPath(); ctx.moveTo(x, y)
+    ;(e.target as HTMLCanvasElement).setPointerCapture(e.pointerId)
+  }
+  function move(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!drawing.current) return
+    const ctx = canvasRef.current!.getContext('2d')!
+    ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#111827'
+    const { x, y } = pos(e); ctx.lineTo(x, y); ctx.stroke()
+  }
+  function end() { drawing.current = false }
+  function limpiar() {
+    const c = canvasRef.current!; c.getContext('2d')!.clearRect(0, 0, c.width, c.height); setVacia(true)
+  }
+  async function guardar() {
+    if (vacia) { onClose(); return }
+    setSaving(true)
+    const dataUrl = canvasRef.current!.toDataURL('image/png')
+    const r = await fetch(`/api/precompra/proforma/${proformaId}/firma`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }),
+    })
+    setSaving(false)
+    if (r.ok) onSaved(); else alert((await r.json().catch(() => ({}))).error ?? 'No se pudo guardar la firma')
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !saving && onClose()} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-oriental-black text-sm flex items-center gap-2"><PenLine size={15} className="text-blue-800" /> Firma del cliente</h3>
+          <button onClick={() => !saving && onClose()} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+        <p className="text-xs text-gray-500 mb-2">El cliente firma con el dedo o el mouse. Se adjuntará al Anexo A.</p>
+        <canvas ref={canvasRef} width={480} height={200}
+          onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerLeave={end}
+          className="w-full h-[200px] border-2 border-dashed border-gray-300 rounded-lg touch-none bg-gray-50" />
+        <div className="flex gap-2 mt-3">
+          <button onClick={limpiar} className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Limpiar</button>
+          <button onClick={guardar} disabled={saving} className="flex-1 py-2 rounded-lg bg-oriental-red text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2">
+            {saving && <Loader2 size={14} className="animate-spin" />} Guardar firma
+          </button>
+        </div>
       </div>
     </div>
   )

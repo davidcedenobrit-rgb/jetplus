@@ -47,6 +47,7 @@ export interface AnexoAData {
   cuotas: AnexoACuota[]        // cuotas 1..5 (ya ajustadas según variante)
   totalPagar: number
   serieCobertura?: string | null  // fila de garantía resaltada según modelo
+  firmaClienteSrc?: string | null  // firma digital del cliente (PNG), se dibuja sobre la línea
 }
 
 const fmt = (n: number) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -155,6 +156,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     // Firmas
     firmas: { flexDirection: 'row', gap: 20, marginTop: 26 },
     firmaBox: { flex: 1, alignItems: 'center' },
+    firmaImg: { height: 40, width: 120, objectFit: 'contain', marginBottom: -4, alignSelf: 'center' },
     firmaLine: { borderTop: `1pt solid ${DARK}`, width: '100%', marginBottom: 4 },
     firmaNom: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'center' },
     firmaRol: { fontSize: 7.5, color: GRAY },
@@ -280,6 +282,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
           {/* Firmas */}
           <View style={s.firmas}>
             <View style={s.firmaBox}>
+              {data.firmaClienteSrc ? <Image src={data.firmaClienteSrc} style={s.firmaImg} /> : null}
               <View style={s.firmaLine} />
               <Text style={s.firmaNom}>Por: {data.clienteNombre}</Text>
               <Text style={s.firmaRol}>Firma del comprador</Text>
