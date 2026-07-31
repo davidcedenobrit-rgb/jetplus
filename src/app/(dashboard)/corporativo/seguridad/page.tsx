@@ -4,13 +4,12 @@ import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { esSuperAdmin } from '@/lib/super-admin'
 import BovedaPanel from './BovedaPanel'
 
-// Bóveda: acceso reservado a Rojas (rol jose) y al super-admin (dueño).
+// Bóveda: acceso reservado al admin/jefe (Rojas = super-admin).
 export default async function SeguridadPage() {
   const auth = await createClient()
   const { data: { user } } = await auth.auth.getUser()
   if (!user) redirect('/login')
-  const rol = (user.app_metadata?.rol as string) ?? ''
-  if (rol !== 'jose' && !esSuperAdmin(user.email)) redirect('/dashboard')
+  if (!esSuperAdmin(user.email)) redirect('/dashboard')
 
   const supabase = await createAdminClient()
 

@@ -9,8 +9,7 @@ export async function POST(req: Request) {
   const auth = await createClient()
   const { data: { user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  const rol = (user.app_metadata?.rol as string) ?? ''
-  if (rol !== 'jose' && !esSuperAdmin(user.email)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+  if (!esSuperAdmin(user.email)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const b = await req.json().catch(() => ({}))
   const clave = String(b.clave ?? '').trim()

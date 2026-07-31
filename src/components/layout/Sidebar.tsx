@@ -126,7 +126,7 @@ const SECTIONS: NavSection[] = [
     icon: Briefcase,
     links: [
       { href: '/corporativo',        label: `Corporativo ${BRANDING.marca}`, icon: Briefcase,  roles: DIR },
-      { href: '/corporativo/seguridad', label: 'Seguridad',            icon: Shield,     roles: ['jose'], emails: SUPER_ADMIN_EMAILS },
+      { href: '/corporativo/seguridad', label: 'Seguridad',            icon: Shield,     emails: SUPER_ADMIN_EMAILS },
       { href: '/corporativo/contabilidad-ac500', label: 'Contabilidad AC500', icon: BookOpenCheck, roles: DIR },
       { href: '/obsequios',          label: 'Obsequios a clientes',    icon: Gift,       roles: DIR },
       { href: '/eventos',            label: 'Eventos',                 icon: CalendarDays, roles: DIR },
