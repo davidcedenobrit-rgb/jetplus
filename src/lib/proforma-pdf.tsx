@@ -195,6 +195,7 @@ export interface ProformaPDFData {
   version?: string | null
   vin?: string | null
   serialMotor?: string | null
+  estructura?: { precioBase: number; iva: number; inicialPct: number; iniBase: number; gastos: { label: string; monto: number }[] } | null
   precioBase: number
   totalVehiculo: number
   inicialPagada: number
@@ -336,29 +337,55 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               <View style={s.montosHeader}>
                 <Text style={s.montosHeaderText}>Resumen de la operación</Text>
               </View>
-              <View style={s.montosRow2}>
-                <Text style={s.montosLabel}>Precio del vehículo</Text>
-                <Text style={s.montosVal}>${fmt(data.totalVehiculo)}</Text>
-              </View>
-              <View style={s.montosRow2}>
-                <Text style={s.montosLabel}>{preVenta ? 'Inicial a pagar' : 'Inicial pagada'}</Text>
-                <Text style={s.montosVal}>${fmt(data.inicialPagada)}</Text>
-              </View>
-              {!preVenta && (
-                <View style={s.montosRow2}>
-                  <Text style={s.montosLabel}>Saldo financiado</Text>
-                  <Text style={s.montosVal}>${fmt(data.saldoFinanciado)}</Text>
-                </View>
+              {data.estructura ? (
+                <>
+                  <View style={s.montosRow2}><Text style={s.montosLabel}>Precio base</Text><Text style={s.montosVal}>${fmt(data.estructura.precioBase)}</Text></View>
+                  <View style={s.montosRow2}><Text style={s.montosLabel}>IVA 16%</Text><Text style={s.montosVal}>${fmt(data.estructura.iva)}</Text></View>
+                  {data.estructura.iniBase > 0 && (
+                    <View style={s.montosRow2}><Text style={s.montosLabel}>{data.estructura.inicialPct}% del precio base (inicial)</Text><Text style={s.montosVal}>${fmt(data.estructura.iniBase)}</Text></View>
+                  )}
+                  {data.estructura.gastos.map((g) => (
+                    <View key={g.label} style={s.montosRow2}><Text style={[s.montosLabel, { paddingLeft: 8 }]}>· {g.label}</Text><Text style={s.montosVal}>${fmt(g.monto)}</Text></View>
+                  ))}
+                  <View style={s.montosTotalRow}>
+                    <Text style={s.montosTotalLabel}>{preVenta ? 'INICIAL A PAGAR:' : 'INICIAL PAGADA:'}</Text>
+                    <Text style={s.montosTotalVal}>${fmt(data.inicialPagada)}</Text>
+                  </View>
+                  {data.saldoFinanciado > 0 && (
+                    <>
+                      <View style={s.montosRow2}><Text style={s.montosLabel}>Financiamiento (Vehimotor)</Text><Text style={s.montosVal}>${fmt(data.saldoFinanciado)}</Text></View>
+                      <View style={s.montosRow2}><Text style={s.montosLabel}>{data.numeroCuotas} cuotas de</Text><Text style={[s.montosVal, { color: RED }]}>${fmt(data.cuotaMensual)}</Text></View>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <View style={s.montosRow2}>
+                    <Text style={s.montosLabel}>Precio del vehículo</Text>
+                    <Text style={s.montosVal}>${fmt(data.totalVehiculo)}</Text>
+                  </View>
+                  <View style={s.montosRow2}>
+                    <Text style={s.montosLabel}>{preVenta ? 'Inicial a pagar' : 'Inicial pagada'}</Text>
+                    <Text style={s.montosVal}>${fmt(data.inicialPagada)}</Text>
+                  </View>
+                  {!preVenta && (
+                    <View style={s.montosRow2}>
+                      <Text style={s.montosLabel}>Saldo financiado</Text>
+                      <Text style={s.montosVal}>${fmt(data.saldoFinanciado)}</Text>
+                    </View>
+                  )}
+                  <View style={s.montosTotalRow}>
+                    <Text style={s.montosTotalLabel}>CUOTA MENSUAL:</Text>
+                    <Text style={s.montosTotalVal}>${fmt(data.cuotaMensual)}</Text>
+                  </View>
+                </>
               )}
-              <View style={s.montosTotalRow}>
-                <Text style={s.montosTotalLabel}>CUOTA MENSUAL:</Text>
-                <Text style={s.montosTotalVal}>${fmt(data.cuotaMensual)}</Text>
-              </View>
             </View>
           </View>
           )}
 
-          {/* Bloque de compromiso formal */}
+          {/* Bloque de compromiso formal — en pre-venta el cuadro azul de condiciones lo reemplaza */}
+          {!(preVenta && !bnV) && (
           <View style={s.compromisoBox}>
             {bnV ? (
               <Text style={s.compromisoText}>
@@ -405,6 +432,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             </Text>
             )}
           </View>
+          )}
 
           {/* Cuadro Banca Nacional — Vehimotors */}
           {data.bnVehimotors ? (

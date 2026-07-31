@@ -32,6 +32,29 @@ function fmtDate(s: string) {
   catch { return s }
 }
 
+// Renglones de gastos con su descripción, en orden.
+const GASTOS_LABELS: [string, string][] = [
+  ['placa', 'Placa'], ['poliza_vehiculo', 'Póliza vehículo'], ['poliza_vida', 'Póliza vida'],
+  ['gastos_vhm', 'Gastos Vehimotor'], ['honorarios', 'Honorarios'], ['gastos_int', 'Gastos internos'],
+  ['alfombras', 'Alfombras'], ['transporte', 'Transporte'], ['accesorios', 'Accesorios'],
+  ['igtf', 'IGTF'], ['diferencial', 'Diferencial cambiario'],
+]
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildEstructura(est: any) {
+  if (!est || typeof est !== 'object') return null
+  const precioBase = Number(est.precioBase) || 0
+  if (precioBase <= 0) return null
+  const lineas = (est.lineas ?? {}) as Record<string, any>
+  const iva = Math.round(precioBase * 0.16 * 100) / 100
+  const inicialPct = Number(est.inicialPct) || 0
+  const iniBase = Math.round(precioBase * inicialPct / 100 * 100) / 100
+  const gastos = GASTOS_LABELS
+    .map(([k, label]) => ({ label, monto: Number(lineas[k]) || 0 }))
+    .filter(g => g.monto > 0)
+  return { precioBase, iva, inicialPct, iniBase, gastos }
+}
+
 const planLabel: Record<string, string> = {
   inicial_la_oriental: 'La Oriental',
   financiamiento_vehimotors: 'Financiamiento Vehimotors',
@@ -113,6 +136,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     version: vehiculo.version ?? null,
     vin: vehiculo.vin ?? null,
     serialMotor: vehiculo.serial_motor ?? null,
+    estructura: buildEstructura(pro.estructura_costos),
     precioBase: Number(vehiculo.precio_base ?? 0),
     totalVehiculo: Number(pro.precio_vehiculo ?? 0),
     inicialPagada: Number(pro.monto_inicial ?? 0),
