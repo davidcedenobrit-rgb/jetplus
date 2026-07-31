@@ -52,6 +52,21 @@ export default function ProformaPanel({
     const baseDias = Math.max(0, ...abonos.map(a => Math.round(nz(a.dias)) || 0))
     setAbonos(a => [...a, ...Array.from({ length: n }, (_, i) => ({ monto: String(cuota), dias: String(baseDias + (i + 1) * 30) }))])
   }
+  // Reparte TODO el inicial en n partes iguales (día 0, 30, 60…); el último ajusta el redondeo.
+  const repartirInicial = (n: number) => {
+    const total = nz(montos.inicial)
+    if (total <= 0 || n < 1) return
+    const cuota = r2(total / n)
+    setAbonos(Array.from({ length: n }, (_, i) => ({
+      monto: String(i === n - 1 ? r2(total - cuota * (n - 1)) : cuota),
+      dias: String(i * 30),
+    })))
+  }
+  // Ajusta el ÚLTIMO abono para que la suma cuadre exacto con el inicial.
+  const ajustarUltimo = () => setAbonos(a => {
+    const rest = r2(nz(montos.inicial) - a.slice(0, -1).reduce((s, r) => s + nz(r.monto), 0))
+    return a.map((r, i) => i === a.length - 1 ? { ...r, monto: String(Math.max(0, rest)) } : r)
+  })
 
   // Cálculos (en vivo)
   const inicialTotal = nz(montos.inicial)
@@ -235,6 +250,13 @@ export default function ProformaPanel({
                             <input inputMode="decimal" className="w-24 px-2 py-1 border border-gray-200 rounded text-sm text-right" value={montos.inicial} onChange={e => setMonto('inicial', e.target.value)} />
                           </div>
                         </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-gray-500">Repartir en partes iguales:</span>
+                          {[1, 2, 3, 4, 6, 12].map(nn => (
+                            <button key={nn} type="button" onClick={() => repartirInicial(nn)}
+                              className="text-[11px] w-6 h-6 rounded border border-indigo-200 text-indigo-700 font-bold hover:bg-indigo-100">{nn}</button>
+                          ))}
+                        </div>
                         {abonos.map((a, i) => (
                           <div key={i} className="flex items-center gap-1.5">
                             <span className="text-[10px] text-gray-400 w-4">{i + 1}.</span>
@@ -251,9 +273,10 @@ export default function ProformaPanel({
                             <button type="button" onClick={addAbono} className="text-[11px] text-indigo-600 font-bold hover:underline">+ Abono</button>
                             {faltaInicial > 0.009 && <button type="button" onClick={() => dividirResto(2)} className="text-[11px] text-indigo-600 hover:underline">÷ resto en 2</button>}
                             {faltaInicial > 0.009 && <button type="button" onClick={() => dividirResto(3)} className="text-[11px] text-indigo-600 hover:underline">÷ 3</button>}
+                            {Math.abs(faltaInicial) >= 0.01 && abonos.length > 0 && <button type="button" onClick={ajustarUltimo} className="text-[11px] text-emerald-600 hover:underline">↧ ajustar último</button>}
                           </div>
-                          <span className={`text-[10px] font-bold ${Math.abs(faltaInicial) < 0.01 ? 'text-green-600' : 'text-amber-600'}`}>
-                            {Math.abs(faltaInicial) < 0.01 ? '✓ inicial completo' : `Falta $${fmt(faltaInicial)}`}
+                          <span className={`text-[10px] font-bold ${Math.abs(faltaInicial) < 0.01 ? 'text-green-600' : faltaInicial > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {Math.abs(faltaInicial) < 0.01 ? '✓ inicial completo' : faltaInicial > 0 ? `Falta $${fmt(faltaInicial)}` : `Sobra $${fmt(Math.abs(faltaInicial))}`}
                           </span>
                         </div>
                       </div>
