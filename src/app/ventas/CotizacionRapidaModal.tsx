@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface Vehiculo {
   brand: string
@@ -16,10 +16,9 @@ function fmt(n: number | null | undefined) {
   return n.toLocaleString('de-DE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
-export default function CotizacionRapidaModal({ vehiculo, onClose, vendedor = '', evento = '', waCorp = '584149989010', concesionario = '' }: {
+export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', waCorp = '584149989010', concesionario = '' }: {
   vehiculo: Vehiculo
   onClose: () => void
-  vendedor?: string
   evento?: string
   waCorp?: string
   concesionario?: string
@@ -37,22 +36,34 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, vendedor = ''
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [presupuesto, setPresupuesto] = useState('')
+  const [vendedor, setVendedor] = useState('')
+  const [vendedores, setVendedores] = useState<string[]>([])
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    fetch('/api/ventas/vendedores').then(r => r.ok ? r.json() : []).then(d => setVendedores(Array.isArray(d) ? d : [])).catch(() => {})
+  }, [])
+
   function waLink() {
+    const fecha = new Date().toLocaleString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     const msg = encodeURIComponent(
-      `Hola 👋 Soy ${nombre}. Me interesa el ${vehiculo.brand} ${vehiculo.model}.` +
-      (presupuesto ? ` Presupuesto: ${presupuesto}.` : '') +
-      (vendedor ? ` (Vendedor: ${vendedor})` : '') +
-      (evento ? ` (Evento: ${evento})` : '')
+      `*Nuevo interesado* 🚗\n` +
+      `Cliente: ${nombre}\n` +
+      `Teléfono: ${telefono}\n` +
+      `Interés en: ${vehiculo.brand} ${vehiculo.model}\n` +
+      (presupuesto ? `Presupuesto: ${presupuesto}\n` : '') +
+      `Vendedor: ${vendedor}\n` +
+      (evento ? `Evento: ${evento}\n` : '') +
+      `Fecha: ${fecha}`
     )
     return `https://wa.me/${waCorp}?text=${msg}`
   }
 
   async function enviar() {
     if (nombre.trim().length < 2 || telefono.trim().length < 6) { setError('Escribe tu nombre y teléfono.'); return }
+    if (!vendedor) { setError('Selecciona el vendedor que te atiende.'); return }
     setEnviando(true); setError('')
     try {
       await fetch('/api/leads', {
@@ -152,16 +163,21 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, vendedor = ''
             </div>
           ) : (
             <>
-              <p style={{ fontSize: 14, fontWeight: 800, color: '#111', margin: '0 0 2px' }}>¿Te interesa este vehículo?</p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: '#111', margin: '0 0 2px' }}>Interesado en el {vehiculo.brand} {vehiculo.model}</p>
               <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>Déjanos tus datos y un asesor te contacta.</p>
               <input style={inputStyle} placeholder="Nombre y apellido *" value={nombre} onChange={e => setNombre(e.target.value)} />
               <input style={inputStyle} placeholder="Teléfono / WhatsApp *" inputMode="tel" value={telefono} onChange={e => setTelefono(e.target.value)} />
               <input style={inputStyle} placeholder="Presupuesto aproximado (opcional)" value={presupuesto} onChange={e => setPresupuesto(e.target.value)} />
+              <select style={{ ...inputStyle, color: vendedor ? '#111' : '#9ca3af' }} value={vendedor} onChange={e => setVendedor(e.target.value)}>
+                <option value="">Vendedor que te atiende *</option>
+                {vendedores.map(v => <option key={v} value={v} style={{ color: '#111' }}>{v}</option>)}
+              </select>
               {error && <p style={{ fontSize: 12, color: '#C41E3A', margin: '0 0 8px' }}>{error}</p>}
               <button onClick={enviar} disabled={enviando}
                 style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: '#C41E3A', color: '#fff', fontSize: 14, fontWeight: 800, cursor: enviando ? 'default' : 'pointer', opacity: enviando ? 0.6 : 1 }}>
-                {enviando ? 'Enviando…' : 'Quiero que me contacten'}
+                {enviando ? 'Enviando…' : 'Enviar por WhatsApp'}
               </button>
+              <p style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', margin: '8px 0 0' }}>Se registra automáticamente la fecha y hora.</p>
             </>
           )}
         </div>

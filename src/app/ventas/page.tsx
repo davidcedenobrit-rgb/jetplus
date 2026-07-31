@@ -14,10 +14,9 @@ const WA_FIN  = encodeURIComponent('Hola 👋 Vengo de la web y quiero informaci
 
 export const revalidate = 60
 
-export default async function VentasPage({ searchParams }: { searchParams: Promise<{ vendedor?: string; evento?: string }> }) {
+export default async function VentasPage({ searchParams }: { searchParams: Promise<{ evento?: string }> }) {
   const supabase = await createClient()
   const sp = await searchParams
-  const vendedor = String(sp?.vendedor ?? '').slice(0, 80)
   const evento = String(sp?.evento ?? '').slice(0, 80)
 
   const [{ data: catalogo }, { data: ac500 }, { data: promoVehiculos }, { data: promoData }, { data: tasasCfg }] = await Promise.all([
@@ -128,7 +127,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede Maturín · Atención personalizada</p>
           <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
         </div>
-        <VehiculosFiltro vehiculos={lista} tasas={tasas} vendedor={vendedor} evento={evento} waCorp={waCorp} concesionario={concesionario} />
+        <VehiculosFiltro vehiculos={lista} tasas={tasas} evento={evento} waCorp={waCorp} concesionario={concesionario} />
       </section>
 
       {/* ── PLAN 40% ──────────────────────────────────────────────────────── */}

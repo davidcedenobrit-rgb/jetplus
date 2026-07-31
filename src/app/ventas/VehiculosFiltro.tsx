@@ -36,7 +36,7 @@ function fm(n: number | null | undefined) {
 
 type Filtro = 'ALL' | 'MG' | 'MAXUS'
 
-export default function VehiculosFiltro({ vehiculos, tasas, vendedor = '', evento = '', waCorp = WA, concesionario = '' }: { vehiculos: Vehiculo[]; tasas: { bcv: number; usdt: number }; vendedor?: string; evento?: string; waCorp?: string; concesionario?: string }) {
+export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp = WA, concesionario = '' }: { vehiculos: Vehiculo[]; tasas: { bcv: number; usdt: number }; evento?: string; waCorp?: string; concesionario?: string }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const [modalVehiculo, setModalVehiculo] = useState<Vehiculo | null>(null)
   const [rapidaVehiculo, setRapidaVehiculo] = useState<Vehiculo | null>(null)
@@ -64,7 +64,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, vendedor = '', event
       )}
       {rapidaVehiculo && (
         <CotizacionRapidaModal vehiculo={rapidaVehiculo} onClose={() => setRapidaVehiculo(null)}
-          vendedor={vendedor} evento={evento} waCorp={waCorp} concesionario={concesionario} />
+          evento={evento} waCorp={waCorp} concesionario={concesionario} />
       )}
 
       {/* Filtros */}
@@ -142,7 +142,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, vendedor = '', event
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <button onClick={() => { trackEvento('cotizacion_rapida', v.brand, v.model); setRapidaVehiculo(v) }} className="lo-cbtn-out">
-                      📊 Cot. Rápida
+                      📩 Me interesa
                     </button>
                     <button onClick={() => { trackEvento('cotizacion_formal_click', v.brand, v.model); setModalVehiculo(v) }} className="lo-cbtn-red">
                       <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
