@@ -22,6 +22,7 @@ export type NuevaCompraPlazaInput = {
   destino: 'oriental' | 'cliente' | 'externo'
   clienteId?: string | null
   clienteExterno?: string | null
+  comprobantes?: { url: string; nombre: string }[]
 }
 
 function numeroEgreso() {
@@ -133,6 +134,21 @@ export async function crearCompraPlazaDirecta(input: NuevaCompraPlazaInput): Pro
 
   if (egreso?.id) {
     await admin.from('solicitudes_repuestos').update({ egreso_plaza_id: egreso.id }).eq('id', sol.id)
+
+    // Comprobantes/factura adjuntos → quedan anclados al egreso (mismo patrón que
+    // el registro de egreso TOP), para respaldo del pago en plaza.
+    const comprobantes = (input.comprobantes ?? []).filter(c => c?.url)
+    if (comprobantes.length > 0) {
+      await admin.from('archivos').insert(
+        comprobantes.map(c => ({
+          tipo: 'comprobante',
+          url: c.url,
+          nombre: c.nombre,
+          egreso_id: egreso.id,
+          subido_por: user.id,
+        }))
+      )
+    }
   }
 
   await admin.from('repuestos_historial').insert({

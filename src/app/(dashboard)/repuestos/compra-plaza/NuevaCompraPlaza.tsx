@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ShoppingBag, Loader2, X, Plus, Trash2, DollarSign } from 'lucide-react'
 import ProveedorPicker from '../../egresos/nuevo/ProveedorPicker'
 import type { Proveedor } from '../../egresos/actions'
+import FileUpload from '@/components/FileUpload'
 import { crearCompraPlazaDirecta } from './actions'
 
 type Item = { descripcion: string; cantidad: number }
@@ -27,11 +28,12 @@ export default function NuevaCompraPlaza() {
   const [bancoOrigen, setBancoOrigen] = useState('')
   const [referencia, setReferencia] = useState('')
   const [notas, setNotas] = useState('')
+  const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
 
   function reset() {
-    setProveedor(null); setItems([{ descripcion: '', cantidad: 1 }]); setMonto(''); setMoneda('USD')
+    setProveedor(null); setItems([{ descripcion: '', cantidad: 1 }]); setMonto(''); setMoneda('USD'); setTasa('')
     setFechaCompra(new Date().toISOString().slice(0, 10)); setMetodoPago(''); setBancoOrigen('')
-    setReferencia(''); setNotas(''); setError('')
+    setReferencia(''); setNotas(''); setComprobantes([]); setError('')
   }
 
   function setItem(i: number, patch: Partial<Item>) {
@@ -61,6 +63,7 @@ export default function NuevaCompraPlaza() {
       referencia: referencia || null,
       notas: notas || null,
       destino: 'oriental',
+      comprobantes,
     })
     setLoading(false)
     if (res.error) { setError(res.error); return }
@@ -188,6 +191,11 @@ export default function NuevaCompraPlaza() {
               <div>
                 <label className="label">Notas</label>
                 <textarea className="textarea text-sm" rows={2} placeholder="Opcional" value={notas} onChange={e => setNotas(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="label">Comprobante / Factura</label>
+                <FileUpload files={comprobantes} onFilesChange={setComprobantes} maxFiles={6} disabled={loading} />
               </div>
             </div>
 
