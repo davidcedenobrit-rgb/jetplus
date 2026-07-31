@@ -12,9 +12,12 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; total: number }) {
   const [abierta, setAbierta] = useState(false)
+  const [vozOk, setVozOk] = useState(false)         // comando de voz reconocido → pedir clave
   const [escuchando, setEscuchando] = useState(false)
   const [error, setError] = useState('')
   const [oido, setOido] = useState('')
+  const [clave, setClave] = useState('')
+  const [verificando, setVerificando] = useState(false)
   const recRef = useRef<any>(null)
 
   useEffect(() => () => { try { recRef.current?.stop() } catch { /* noop */ } }, [])
@@ -34,8 +37,8 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
       }
       const t = norm(dijo)
       setOido(dijo.trim())
-      if (t.includes('abrir') && t.includes('boveda') || t.includes('abre la boveda') || t.includes('abrir boveda')) {
-        setAbierta(true)
+      if ((t.includes('abrir') && t.includes('boveda')) || t.includes('abre la boveda') || t.includes('abrir boveda')) {
+        setVozOk(true); setError('')
       } else {
         setError('Comando no reconocido. Di: «abrir la bóveda».')
       }
@@ -44,6 +47,23 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
     rec.onend = () => setEscuchando(false)
     try { rec.start() } catch { setError('No se pudo iniciar el micrófono.'); setEscuchando(false) }
   }
+
+  async function verificarClave() {
+    if (!clave.trim()) { setError('Escribe la clave.'); return }
+    setVerificando(true); setError('')
+    try {
+      const r = await fetch('/api/boveda/verificar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clave }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j.ok) { setAbierta(true); setClave('') }
+      else setError('Clave incorrecta.')
+    } catch {
+      setError('No se pudo verificar la clave.')
+    } finally { setVerificando(false) }
+  }
+
+  function cerrar() { setAbierta(false); setVozOk(false); setClave(''); setOido(''); setError('') }
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto">
@@ -60,14 +80,37 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
               <Lock size={34} className="text-white" />
             </div>
             <h2 className="text-xl font-bold flex items-center justify-center gap-2"><Vault size={20} /> Bóveda</h2>
-            <p className="text-gray-300 text-sm mt-1 mb-6">Ingresos reservados de la directiva. Pronuncia el comando para abrir.</p>
-            <button onClick={escuchar} disabled={escuchando}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-oriental-red hover:bg-red-700 text-white font-bold text-sm transition-colors disabled:opacity-60">
-              <Mic size={18} className={escuchando ? 'animate-pulse' : ''} /> {escuchando ? 'Escuchando… di «abrir la bóveda»' : 'Abrir con comando de voz'}
-            </button>
-            {oido && <p className="text-[11px] text-gray-400 mt-3">Escuché: “{oido}”</p>}
-            {error && <p className="text-[12px] text-red-300 mt-3">{error}</p>}
-            <p className="text-[11px] text-gray-500 mt-5">Comando: «abrir la bóveda»</p>
+            <p className="text-gray-300 text-sm mt-1 mb-6">Ingresos reservados de la directiva. {vozOk ? 'Ahora ingresa la clave secreta.' : 'Pronuncia el comando y luego ingresa la clave.'}</p>
+
+            {!vozOk ? (
+              <>
+                <button onClick={escuchar} disabled={escuchando}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-oriental-red hover:bg-red-700 text-white font-bold text-sm transition-colors disabled:opacity-60">
+                  <Mic size={18} className={escuchando ? 'animate-pulse' : ''} /> {escuchando ? 'Escuchando… di «abrir la bóveda»' : 'Abrir con comando de voz'}
+                </button>
+                {oido && <p className="text-[11px] text-gray-400 mt-3">Escuché: “{oido}”</p>}
+                {error && <p className="text-[12px] text-red-300 mt-3">{error}</p>}
+                <p className="text-[11px] text-gray-500 mt-5">Paso 1 de 2 · Comando: «abrir la bóveda»</p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-2 text-[12px] text-green-300 mb-3">
+                  <Mic size={14} /> Comando reconocido ✓
+                </div>
+                <form onSubmit={e => { e.preventDefault(); verificarClave() }} className="flex flex-col items-center gap-3">
+                  <input value={clave} onChange={e => setClave(e.target.value)} type="password" inputMode="numeric"
+                    autoFocus placeholder="Clave secreta" autoComplete="off"
+                    className="w-48 text-center tracking-[0.4em] px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-gray-500 focus:outline-none focus:border-oriental-red" />
+                  <button type="submit" disabled={verificando}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-oriental-red hover:bg-red-700 text-white font-bold text-sm transition-colors disabled:opacity-60">
+                    <Unlock size={16} /> {verificando ? 'Verificando…' : 'Abrir bóveda'}
+                  </button>
+                </form>
+                {error && <p className="text-[12px] text-red-300 mt-3">{error}</p>}
+                <button onClick={cerrar} className="text-[11px] text-gray-400 mt-4 hover:text-gray-200 underline">Cancelar</button>
+                <p className="text-[11px] text-gray-500 mt-3">Paso 2 de 2 · Clave secreta</p>
+              </>
+            )}
           </div>
         </div>
       ) : (
@@ -98,7 +141,7 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
           )}
 
           <div className="mt-6 text-right">
-            <button onClick={() => setAbierta(false)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
+            <button onClick={cerrar} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
               <Lock size={14} /> Cerrar bóveda
             </button>
           </div>

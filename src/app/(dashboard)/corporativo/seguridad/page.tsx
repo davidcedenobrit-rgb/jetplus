@@ -13,24 +13,22 @@ export default async function SeguridadPage() {
 
   const supabase = await createAdminClient()
 
-  // "Ingreso bóveda" = lo que queda para la directiva por cada venta (la bolsa),
-  // ya calculado en la división contable (pote_directiva).
-  const divisiones = await fetchAllRows<any>((from, to) => supabase
-    .from('ventas_division_contable')
-    .select('id, pote_directiva, comision_directiva_monto, created_at, vehiculos(marca, modelo, placa, clientes(nombre))')
+  // Ingresos que caen en la bóveda (por ahora: los $500 fijos por carro AC500
+  // al pagar la cuota 1). El ledger permite sumar otras fuentes en el futuro.
+  const rows = await fetchAllRows<any>((from, to) => supabase
+    .from('boveda_ingresos')
+    .select('id, origen, concepto, monto, moneda, cliente_nombre, vehiculo, created_at')
     .order('created_at', { ascending: false })
     .range(from, to))
 
-  const ingresos = (divisiones ?? [])
-    .filter((d: any) => Number(d.pote_directiva || 0) !== 0)
-    .map((d: any) => ({
-      id: d.id,
-      fecha: d.created_at,
-      monto: Number(d.pote_directiva || 0),
-      origen: 'División contable — venta',
-      detalle: [d.vehiculos?.marca, d.vehiculos?.modelo, d.vehiculos?.placa].filter(Boolean).join(' · '),
-      cliente: d.vehiculos?.clientes?.nombre ?? '—',
-    }))
+  const ingresos = (rows ?? []).map((d: any) => ({
+    id: d.id,
+    fecha: d.created_at,
+    monto: Number(d.monto || 0),
+    origen: d.concepto || d.origen || 'Ingreso',
+    detalle: d.vehiculo || '—',
+    cliente: d.cliente_nombre || '—',
+  }))
 
   const total = ingresos.reduce((s: number, i: { monto: number }) => s + i.monto, 0)
 

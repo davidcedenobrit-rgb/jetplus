@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2, PenLine, Send } from 'lucide-react'
+import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2, PenLine, Send, Vault } from 'lucide-react'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const fmt = (n: number | null | undefined) => Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -80,6 +80,7 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
   const [correo, setCorreo] = useState(p.correo_destino || '')
   const [enviando, setEnviando] = useState(false)
   const [msg, setMsg] = useState('')
+  const [cobrando, setCobrando] = useState(false)
   const tipos = p.tipo_persona === 'juridica' ? DOC_TIPOS_JURIDICA : DOC_TIPOS_NATURAL
   const docs: any[] = Array.isArray(p.documentos) ? p.documentos : []
   const tieneDoc = (t: string) => docs.some(d => d.tipo === t)
@@ -93,6 +94,16 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
     const j = await r.json().catch(() => ({}))
     setEnviando(false)
     if (r.ok) { setMsg('Enviado ✓'); onChange() } else setMsg(j.error ?? 'No se pudo enviar')
+  }
+
+  async function cobrarCuota1() {
+    if (!confirm('¿Registrar el pago de la cuota 1? Esto hará caer $500 en la bóveda.')) return
+    setCobrando(true); setMsg('')
+    const r = await fetch(`/api/precompra/proforma/${p.id}/cuota1`, { method: 'POST' })
+    const j = await r.json().catch(() => ({}))
+    setCobrando(false)
+    if (r.ok) { setMsg('Cuota 1 registrada · $500 a bóveda ✓'); onChange() }
+    else setMsg(j.error ?? 'No se pudo registrar')
   }
 
   async function subir(tipo: string, file: File) {
@@ -154,6 +165,16 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oriental-black text-white text-xs font-bold hover:bg-gray-800">
           <FileDown size={13} /> Anexo A Vehimotors
         </a>
+        {p.cuota1_pagada ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-bold">
+            <Vault size={13} /> Cuota 1 pagada · $500 en bóveda
+          </span>
+        ) : (
+          <button onClick={cobrarCuota1} disabled={cobrando}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 disabled:opacity-50">
+            {cobrando ? <Loader2 size={13} className="animate-spin" /> : <Vault size={13} />} Registrar pago cuota 1
+          </button>
+        )}
       </div>
 
       {/* Envío a Vehimotors (correo abierto) */}
