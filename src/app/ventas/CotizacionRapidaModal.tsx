@@ -168,10 +168,14 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
               <input style={inputStyle} placeholder="Nombre y apellido *" value={nombre} onChange={e => setNombre(e.target.value)} />
               <input style={inputStyle} placeholder="Teléfono / WhatsApp *" inputMode="tel" value={telefono} onChange={e => setTelefono(e.target.value)} />
               <input style={inputStyle} placeholder="Presupuesto aproximado (opcional)" value={presupuesto} onChange={e => setPresupuesto(e.target.value)} />
-              <select style={{ ...inputStyle, color: vendedor ? '#111' : '#9ca3af' }} value={vendedor} onChange={e => setVendedor(e.target.value)}>
-                <option value="">Vendedor que te atiende *</option>
-                {vendedores.map(v => <option key={v} value={v} style={{ color: '#111' }}>{v}</option>)}
-              </select>
+              {vendedores.length > 0 ? (
+                <select style={{ ...inputStyle, color: vendedor ? '#111' : '#9ca3af' }} value={vendedor} onChange={e => setVendedor(e.target.value)}>
+                  <option value="">Vendedor que te atiende *</option>
+                  {vendedores.map(v => <option key={v} value={v} style={{ color: '#111' }}>{v}</option>)}
+                </select>
+              ) : (
+                <input style={inputStyle} placeholder="Vendedor que te atiende *" value={vendedor} onChange={e => setVendedor(e.target.value)} />
+              )}
               {error && <p style={{ fontSize: 12, color: '#C41E3A', margin: '0 0 8px' }}>{error}</p>}
               <button onClick={enviar} disabled={enviando}
                 style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: '#C41E3A', color: '#fff', fontSize: 14, fontWeight: 800, cursor: enviando ? 'default' : 'pointer', opacity: enviando ? 0.6 : 1 }}>
