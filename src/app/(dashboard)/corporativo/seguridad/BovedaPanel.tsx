@@ -90,6 +90,12 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
                 </button>
                 {oido && <p className="text-[11px] text-gray-400 mt-3">Escuché: “{oido}”</p>}
                 {error && <p className="text-[12px] text-red-300 mt-3">{error}</p>}
+                {error && (
+                  <button onClick={() => { setError(''); setVozOk(true) }}
+                    className="block mx-auto text-[11px] text-gray-300 mt-3 underline hover:text-white">
+                    El micrófono no funciona — continuar solo con la clave
+                  </button>
+                )}
                 <p className="text-[11px] text-gray-500 mt-5">Paso 1 de 2 · Comando: «abrir la bóveda»</p>
               </>
             ) : (
