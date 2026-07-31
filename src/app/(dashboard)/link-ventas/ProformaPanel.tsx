@@ -32,6 +32,10 @@ export default function ProformaPanel({
   const [yaExiste, setYaExiste] = useState<{ proformaId: string; numero: string } | null>(null)
   const [unidades, setUnidades] = useState<{ id: string; label: string; coincide: boolean }[]>([])
   const [showroomId, setShowroomId] = useState('')
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const [preview, setPreview] = useState<any | null>(null)
+  const [montos, setMontos] = useState({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
+  const setMonto = (k: keyof typeof montos, v: string) => setMontos(p => ({ ...p, [k]: v }))
 
   const aprobadoNum = parseFloat(aprobadoBanco.replace(',', '.')) || 0
   const restante = Math.max(0, Number(total) - aprobadoNum)
@@ -41,8 +45,15 @@ export default function ProformaPanel({
     setOpen(true); setError(''); setResultado(null); setYaExiste(null)
     setEnviarCorreo(false); setCorreo(correoCliente ?? ''); setObservaciones('')
     setAprobadoBanco(''); setRestanteMetodo('contado')
-    setShowroomId(''); setUnidades([])
+    setShowroomId(''); setUnidades([]); setPreview(null)
+    setMontos({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
     fetch(`/api/showroom/disponibles?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : []).then(d => setUnidades(Array.isArray(d) ? d : [])).catch(() => {})
+    fetch(`/api/proformas/preview?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : null).then(d => {
+      if (d && !d.error) {
+        setPreview(d)
+        setMontos({ precioBase: String(d.precioBase || ''), inicial: String(d.inicial || ''), financiado: String(d.financiado || ''), cuotaMensual: String(d.cuotaMensual || ''), meses: String(d.meses || '') })
+      }
+    }).catch(() => {})
   }
 
   async function generar() {
@@ -59,6 +70,10 @@ export default function ProformaPanel({
           correoDestino: enviarCorreo ? correo.trim() : null,
           observaciones: observaciones.trim() || null,
           showroomId: showroomId || null,
+          montos: {
+            precioBase: montos.precioBase, inicial: montos.inicial,
+            financiado: montos.financiado, cuotaMensual: montos.cuotaMensual, meses: montos.meses,
+          },
           ...(esBancaNacional ? { bancaNacional: { aprobado_banco: aprobadoNum, restante, restante_metodo: restanteMetodo } } : {}),
         }),
       })
@@ -133,6 +148,39 @@ export default function ProformaPanel({
                   <p className="text-xs text-gray-500 leading-relaxed">
                     Se creará la proforma con la estructura negociada de la cotización y el cronograma de pago del cliente. Sirve como el documento previo a la venta.
                   </p>
+
+                  {/* Así quedará la proforma (editable) */}
+                  {preview && (
+                    <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 space-y-2">
+                      <p className="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">📄 Así quedará la proforma</p>
+                      {preview.vehiculo && <p className="text-[11px] text-gray-600">Vehículo: <b>{preview.vehiculo}</b></p>}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Precio ($)</label>
+                          <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.precioBase} onChange={e => setMonto('precioBase', e.target.value)} /></div>
+                        <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Inicial total ($)</label>
+                          <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.inicial} onChange={e => setMonto('inicial', e.target.value)} /></div>
+                      </div>
+                      {preview.acuerdo && (
+                        <div className="rounded-lg bg-white border border-indigo-200 p-2 text-[11px] text-gray-600 leading-relaxed">
+                          <p className="font-bold text-indigo-700 mb-0.5">Acuerdo del inicial (cobra la vendedora)</p>
+                          Paga de contado: <b>${fmt(preview.acuerdo.contado)}</b><br />
+                          Financia La Oriental: <b>${fmt(preview.acuerdo.laOrientalFinancia)}</b> → {preview.acuerdo.numCuotas} cuota{preview.acuerdo.numCuotas === 1 ? '' : 's'} de ${fmt(preview.acuerdo.cuotaMonto)}
+                          <span className="text-gray-400"> · se edita en el Acuerdo de cobro</span>
+                        </div>
+                      )}
+                      {preview.modalidad !== 'contado' && (
+                        <div className="grid grid-cols-3 gap-2">
+                          <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Financia Vehimotor ($)</label>
+                            <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.financiado} onChange={e => setMonto('financiado', e.target.value)} /></div>
+                          <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">N° cuotas</label>
+                            <input inputMode="numeric" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.meses} onChange={e => setMonto('meses', e.target.value)} /></div>
+                          <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Cuota mensual ($)</label>
+                            <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right" value={montos.cuotaMensual} onChange={e => setMonto('cuotaMensual', e.target.value)} /></div>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-gray-400">Puedes ajustar estos montos antes de generar; se reflejarán en la proforma.</p>
+                    </div>
+                  )}
 
                   {esBancaNacional && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-3">

@@ -30,7 +30,9 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional, showroomId } = body ?? {}
+  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional, showroomId, montos } = body ?? {}
+  const ov = (montos ?? {}) as Record<string, any>
+  const hasOv = (k: string) => ov[k] != null && ov[k] !== ''
   if (!cotizacionId) return NextResponse.json({ error: 'Falta la cotización' }, { status: 400 })
 
   const supabase = await createAdminClient()
@@ -78,11 +80,14 @@ export async function POST(req: Request) {
   const { key: planTipo, label: planLbl } = planLabelCotizacion(modalidad, plan)
 
   const est = (cot.estructura_costos ?? {}) as any
-  const precioBase = Number(cot.precio_base ?? 0)
-  const inicial = Number(cot.total_inicial ?? 0)
-  const financiado = Number(cot.financiamiento_monto ?? 0)
-  const cuotaMensual = Number(cot.cuota_mensual ?? 0)
-  const meses = modalidad === 'contado' ? 0
+  // Montos: por defecto vienen de la cotización, pero si Rojas los editó en el
+  // preview de "Así quedará la proforma" (montos.*), se usan esos.
+  const precioBase = hasOv('precioBase') ? Number(ov.precioBase) : Number(cot.precio_base ?? 0)
+  const inicial = hasOv('inicial') ? Number(ov.inicial) : Number(cot.total_inicial ?? 0)
+  const financiado = hasOv('financiado') ? Number(ov.financiado) : Number(cot.financiamiento_monto ?? 0)
+  const cuotaMensual = hasOv('cuotaMensual') ? Number(ov.cuotaMensual) : Number(cot.cuota_mensual ?? 0)
+  const meses = hasOv('meses') ? Math.max(0, Math.round(Number(ov.meses)))
+    : modalidad === 'contado' ? 0
     : Math.max(1, Math.round(
         Number(est.meses)
         || Number(cot.personalizado_meses)
