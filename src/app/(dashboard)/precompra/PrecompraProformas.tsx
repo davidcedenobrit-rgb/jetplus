@@ -11,7 +11,7 @@ const fmtFecha = (s: string | null) => { if (!s) return '—'; try { return new 
 const DOC_TIPOS_NATURAL = ['Cédula', 'RIF', 'Comprobante de reserva']
 const DOC_TIPOS_JURIDICA = ['RIF de la empresa', 'Registro mercantil', 'Cédula del firmante', 'RIF del firmante', 'Comprobante de reserva']
 
-type Seccion = 'cotizaciones' | 'proforma' | 'venta' | 'anexos'
+type Seccion = 'cotizaciones' | 'proforma' | 'venta' | 'division' | 'anexos'
 
 export default function PrecompraProformas({ seccion = 'proforma' }: { seccion?: Seccion }) {
   const [cots, setCots] = useState<any[]>([])
@@ -66,8 +66,8 @@ export default function PrecompraProformas({ seccion = 'proforma' }: { seccion?:
   }
 
   // ── Pasos 3/4/5: Proformas / Registro de venta / Anexos ──
-  const titulo = seccion === 'venta' ? 'Registro de venta y reserva' : seccion === 'anexos' ? 'Anexos para Caracas' : 'Proformas de compra programada'
-  const vacio = seccion === 'venta' ? 'No hay proformas para registrar venta.' : seccion === 'anexos' ? 'No hay proformas para generar anexos.' : 'Aún no hay proformas. Convierte una cotización en la pestaña «Cotizaciones».'
+  const titulo = seccion === 'venta' ? 'Registro de venta y reserva' : seccion === 'division' ? 'División contable por venta' : seccion === 'anexos' ? 'Anexos para Caracas' : 'Proformas de compra programada'
+  const vacio = seccion === 'venta' ? 'No hay proformas para registrar venta.' : seccion === 'division' ? 'No hay proformas para mostrar la división contable.' : seccion === 'anexos' ? 'No hay proformas para generar anexos.' : 'Aún no hay proformas. Convierte una cotización en la pestaña «Cotizaciones».'
 
   return (
     <div>
@@ -204,6 +204,30 @@ function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; s
             </button>
           )}
         </>
+      )}
+
+      {/* ── División contable (cuadro de dirección) ── */}
+      {seccion === 'division' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Bloque Vehimotors (lo que se deposita) */}
+          <div className="rounded-lg border border-gray-200 p-3 text-[12px]">
+            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5">Ingresos y descuentos (Vehimotors)</p>
+            <div className="flex justify-between"><span className="text-gray-500">P. Base (suma cuotas 1-5)</span><span className="font-semibold text-oriental-black">${fmt(base)}</span></div>
+            <div className="flex justify-between mt-1"><span className="text-gray-500">Cuota 1 (ingreso)</span><span className="text-gray-700">${fmt(cuota1)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">− Reserva</span><span className="text-gray-600">${fmt(reserva)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">− Comisión {pct}%</span><span className="text-gray-600">${fmt(comision)}</span></div>
+            <div className="flex justify-between border-t border-gray-200 mt-1 pt-1 font-bold"><span className="text-blue-900">Depósito a Vehimotors</span><span className="text-blue-900">${fmt(deposito)}</span></div>
+          </div>
+          {/* Bloque destino contable (bóveda / contabilidad / vendedor) */}
+          <div className="rounded-lg border border-gray-200 p-3 text-[12px]">
+            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5">Destino contable</p>
+            <div className="flex justify-between"><span className="text-gray-500 inline-flex items-center gap-1"><Vault size={11} /> Bóveda (gastos admin.)</span><span className="font-semibold text-oriental-black">${fmt(reserva)}</span></div>
+            <div className="flex justify-between mt-1"><span className="text-gray-500">Comisión bruta {pct}% (contabilidad)</span><span className="text-green-700 font-semibold">${fmt(comision)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">− Comisión del vendedor{p.vendedor_nombre ? ` (${p.vendedor_nombre})` : ''}</span><span className="text-gray-400">pendiente</span></div>
+            <div className="flex justify-between border-t border-gray-200 mt-1 pt-1 font-bold"><span className="text-gray-500">Ingreso neto de venta</span><span className="text-gray-400">pendiente</span></div>
+            <p className="text-[10px] text-gray-400 mt-2">{p.cuota1_pagada ? 'Venta registrada — valores ya cargados en bóveda y contabilidad.' : 'Valores estimados — se cargan al registrar la cuota 1.'}</p>
+          </div>
+        </div>
       )}
 
       {/* ── Paso 5: Anexos para Caracas ── */}

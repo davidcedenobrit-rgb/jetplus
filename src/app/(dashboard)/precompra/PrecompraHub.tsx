@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShieldCheck, FilePlus2, ClipboardList, FileText, Vault, Send } from 'lucide-react'
+import { ShieldCheck, FilePlus2, ClipboardList, FileText, Vault, Send, Scale } from 'lucide-react'
 import CotizacionCDMTab from '../link-ventas/CotizacionCDMTab'
 import PrecompraProformas from './PrecompraProformas'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type Vista = 'cotizar' | 'cotizaciones' | 'proforma' | 'venta' | 'anexos'
+type Vista = 'cotizar' | 'cotizaciones' | 'proforma' | 'venta' | 'division' | 'anexos'
 
 export default function PrecompraHub({ catalogo = [], showroomStock = [], tasas = { bcv: 0, usdt: 0 } }: {
   catalogo?: any[]
@@ -39,6 +39,7 @@ export default function PrecompraHub({ catalogo = [], showroomStock = [], tasas 
           ['cotizaciones', 'Cotizaciones', ClipboardList],
           ['proforma', 'Proformas', FileText],
           ['venta', 'Registro de venta', Vault],
+          ['division', 'División contable', Scale],
           ['anexos', 'Anexos (Caracas)', Send],
         ] as const).map(([k, label, Icon]) => (
           <button key={k} onClick={() => setVista(k)}
@@ -86,6 +87,15 @@ export default function PrecompraHub({ catalogo = [], showroomStock = [], tasas 
             <p className="text-xs text-blue-700 leading-relaxed">Paso 4. Registra el pago de la cuota 1 (reserva): los $500 caen en la bóveda y la comisión va a contabilidad. Abajo ves el depósito que va a Vehimotors.</p>
           </div>
           <PrecompraProformas seccion="venta" />
+        </div>
+      )}
+
+      {vista === 'division' && (
+        <div>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
+            <p className="text-xs text-blue-700 leading-relaxed">División contable por venta: ingresos y descuentos de Vehimotors (depósito) y el destino contable (bóveda, comisión a contabilidad, comisión del vendedor e ingreso neto).</p>
+          </div>
+          <PrecompraProformas seccion="division" />
         </div>
       )}
 
