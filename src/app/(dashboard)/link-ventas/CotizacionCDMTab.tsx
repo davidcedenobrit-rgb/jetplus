@@ -283,16 +283,18 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
     const iva = precio * 0.16
     const gastos = CLAVES_ROJAS.reduce((s, { k }) => s + num(rojasLineas[k]), 0)
     if (rojasBase === 'contado') {
-      return { precio, iva, gastos, inicial: precio + iva + gastos, financiamiento: 0, cuota: 0, meses: 0, costoTotal: precio + iva + gastos }
+      return { precio, iva, gastos, inicial: precio + iva + gastos, financiamiento: 0, cuota: 0, meses: 0, costoTotal: precio + iva + gastos, iniPct: 100, iniBase: precio }
     }
-    const iniPct = Math.min(100, Math.max(0, num(rojasIniPct))) / 100
+    const iniPctNum = Math.min(100, Math.max(0, num(rojasIniPct)))
+    const iniPct = iniPctNum / 100
     const meses = Math.max(1, Math.round(num(rojasMeses) || 24))
     const tasa = Math.max(0, num(rojasTasa))
-    const inicial = precio * iniPct + iva + gastos
+    const iniBase = precio * iniPct                    // el % del precio base que va al inicial
+    const inicial = iniBase + iva + gastos
     const financiamiento = precio * (1 - iniPct)
     const r = tasa / 100 / 12
     const cuota = r > 0 ? (financiamiento * r * Math.pow(1 + r, meses)) / (Math.pow(1 + r, meses) - 1) : financiamiento / meses
-    return { precio, iva, gastos, inicial, financiamiento, cuota, meses, costoTotal: inicial + cuota * meses }
+    return { precio, iva, gastos, inicial, financiamiento, cuota, meses, costoTotal: inicial + cuota * meses, iniPct: iniPctNum, iniBase }
   }, [rojasPrecio, rojasLineas, rojasBase, rojasIniPct, rojasMeses, rojasTasa])
 
   // Concesionario (encabezado de la cotización)
@@ -1093,8 +1095,13 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
               <div className="flex justify-between text-gray-300"><span>Precio base</span><span className="font-mono">${fmt(rojasCalc.precio)}</span></div>
               <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmt(rojasCalc.iva)}</span></div>
               <div className="flex justify-between text-gray-300"><span>Gastos</span><span className="font-mono">${fmt(rojasCalc.gastos)}</span></div>
+              {rojasBase === 'credito_24' && (
+                <div className="flex justify-between text-emerald-300 border-t border-gray-700/60 pt-1.5">
+                  <span>{rojasCalc.iniPct}% del precio base (inicial)</span><span className="font-mono">${fmt(rojasCalc.iniBase)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-yellow-400 border-t border-gray-700 pt-1.5">
-                <span>{rojasBase === 'contado' ? 'TOTAL A PAGAR' : 'INICIAL A PAGAR'}</span>
+                <span>{rojasBase === 'contado' ? 'TOTAL A PAGAR' : `INICIAL A PAGAR (${rojasCalc.iniPct}% + IVA + gastos)`}</span>
                 <span className="font-mono">${fmt(rojasCalc.inicial)}</span>
               </div>
               {rojasBase === 'credito_24' && (
