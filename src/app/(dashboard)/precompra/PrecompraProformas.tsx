@@ -177,14 +177,23 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
           </button>
         )}
       </div>
-      {!p.cuota1_pagada && (() => {
+      {(() => {
         const pct = porcentajeContabilidadAC500(p.marca, p.modelo)
         const base = baseContabilidadAC500(p.cuotas)
-        const montoC = Math.round(base * pct / 100 * 100) / 100
+        const comision = Math.round(base * pct / 100 * 100) / 100
+        const cuota1 = Array.isArray(p.cuotas) ? Number(p.cuotas[0]) || 0 : 0
+        const reserva = Number(p.reserva ?? 500) || 500
+        const deposito = Math.round((cuota1 - reserva - comision) * 100) / 100
         return (
-          <p className="text-[11px] text-gray-400 flex items-center gap-1 mb-3 -mt-1">
-            <Calculator size={11} /> Al registrar cuota 1: <b className="text-gray-500">$500</b> a bóveda · <b className="text-gray-500">{pct}%</b> a contabilidad sobre ${fmt(base)} (cuotas 1-5) = <b className="text-gray-500">${fmt(montoC)}</b>
-          </p>
+          <div className="mb-3 -mt-1 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[12px]">
+            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 flex items-center gap-1 mb-1.5">
+              <Calculator size={11} /> Reparto de la cuota 1
+            </p>
+            <div className="flex justify-between"><span className="text-gray-500">Cuota 1</span><span className="font-semibold text-oriental-black">${fmt(cuota1)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">− Reserva (gastos admin. → bóveda)</span><span className="text-gray-600">${fmt(reserva)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">− Comisión {pct}% (sobre ${fmt(base)}, c1-c5)</span><span className="text-gray-600">${fmt(comision)}</span></div>
+            <div className="flex justify-between border-t border-gray-200 mt-1 pt-1 font-bold"><span className="text-blue-900">Total depósito a Vehimotors</span><span className="text-blue-900">${fmt(deposito)}</span></div>
+          </div>
         )
       })()}
 
