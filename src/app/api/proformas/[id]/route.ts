@@ -14,13 +14,23 @@ async function guard() {
   return { error: null, status: 200 as const, user }
 }
 
+// GET: la fila completa de la proforma (para precargar el editor).
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const g = await guard(); if (g.error) return NextResponse.json({ error: g.error }, { status: g.status })
+  const supabase = await createAdminClient()
+  const { data, error } = await supabase.from('proformas').select('*').eq('id', id).maybeSingle()
+  if (error || !data) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  return NextResponse.json(data)
+}
+
 // PATCH: editar los montos/condiciones de una proforma (solo pre-venta).
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const g = await guard(); if (g.error) return NextResponse.json({ error: g.error }, { status: g.status })
   const supabase = await createAdminClient()
 
-  const { data: pro } = await supabase.from('proformas').select('id, vehiculo_id, cronograma_snapshot').eq('id', id).maybeSingle()
+  const { data: pro } = await supabase.from('proformas').select('id, vehiculo_id, showroom_id, cliente_id, numero, cliente_snapshot, vehiculo_snapshot, cronograma_snapshot').eq('id', id).maybeSingle()
   if (!pro) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
   if (pro.vehiculo_id) return NextResponse.json({ error: 'La venta ya fue registrada; no se puede editar la proforma.' }, { status: 409 })
 
@@ -33,9 +43,37 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof b.condiciones === 'string') patch.condiciones_personalizadas = b.condiciones.trim() || null
   if (Array.isArray(b.cronograma)) {
     patch.cronograma_snapshot = b.cronograma.map((c: any, i: number) => ({
-      numero: n(c.numero) || (i + 1), tipo: c.tipo ?? null, etiqueta: c.etiqueta ?? null,
+      numero: n(c.numero) || (i + 1), tipo: c.tipo ?? null, etiqueta: c.etiqueta ?? null, dias: c.dias != null ? n(c.dias) : null,
       fecha_vencimiento: c.fecha_vencimiento ?? null, monto: n(c.monto), estado: 'pendiente', monto_pagado: 0,
     }))
+  }
+
+  // Cambio de unidad del showroom (si aplica).
+  const nuevoShowroom = (b.showroomId ?? '') as string
+  const actualShowroom = (pro.showroom_id ?? '') as string
+  if (b.showroomId !== undefined && nuevoShowroom !== actualShowroom) {
+    // Liberar la unidad anterior.
+    if (actualShowroom) {
+      await supabase.from('vehiculos_showroom').update({ estado: 'en_agencia', reservado_por: null, cliente_id: null, reserva_notas: null, updated_at: new Date().toISOString() })
+        .eq('id', actualShowroom).eq('estado', 'reservado')
+    }
+    if (nuevoShowroom) {
+      const { data: u } = await supabase.from('vehiculos_showroom')
+        .select('id, marca, modelo, version, color, placa, anio, vin, serial_motor, fecha_llegada, estado')
+        .eq('id', nuevoShowroom).maybeSingle()
+      if (!u || u.estado !== 'en_agencia') return NextResponse.json({ error: 'Esa unidad ya no está disponible' }, { status: 409 })
+      await supabase.from('vehiculos_showroom').update({
+        estado: 'reservado', cliente_id: pro.cliente_id ?? null, reservado_por: g.user!.id,
+        reserva_notas: `Proforma ${pro.numero}`, updated_at: new Date().toISOString(),
+      }).eq('id', nuevoShowroom).eq('estado', 'en_agencia')
+      patch.showroom_id = nuevoShowroom
+      patch.vehiculo_snapshot = {
+        ...(pro.vehiculo_snapshot ?? {}), showroom_id: u.id, marca: u.marca, modelo: u.modelo, version: u.version,
+        placa: u.placa, color: u.color, anio: u.anio, vin: u.vin, serial_motor: u.serial_motor, fecha_llegada: u.fecha_llegada,
+      }
+    } else {
+      patch.showroom_id = null
+    }
   }
 
   const { error } = await supabase.from('proformas').update(patch).eq('id', id)

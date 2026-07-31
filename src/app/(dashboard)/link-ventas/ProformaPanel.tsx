@@ -11,7 +11,7 @@ const nz = (s: string) => parseFloat(String(s).replace(',', '.')) || 0
 // cotización → aprobación → PROFORMA → venta). La proforma es la cotización
 // negociada + las condiciones de pago para ese cliente.
 export default function ProformaPanel({
-  cotId, numero, correoCliente, onDone, compact = false, plan, total = 0,
+  cotId, numero, correoCliente, onDone, compact = false, plan, total = 0, editProforma = null, autoOpen = false,
 }: {
   cotId: string
   numero: string
@@ -20,8 +20,11 @@ export default function ProformaPanel({
   compact?: boolean
   plan?: string
   total?: number
+  editProforma?: any
+  autoOpen?: boolean
 }) {
   const esBancaNacional = plan === 'banca_nacional'
+  const esEdit = !!editProforma
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -77,10 +80,10 @@ export default function ProformaPanel({
   const vhCuotaMonto = vhCuotas > 0 ? (nz(montos.cuotaMensual) || r2(vhFinanciado / vhCuotas)) : 0
 
   // Cronograma combinado: abonos del inicial + cuotas Vehimotor.
-  const cronograma: { numero: number; tipo: string; etiqueta: string; monto: number }[] = []
+  const cronograma: { numero: number; tipo: string; etiqueta: string; monto: number; dias: number }[] = []
   { let n = 0
-    abonos.forEach(a => { const m = nz(a.monto); if (m > 0) { n++; const d = Math.round(nz(a.dias)); cronograma.push({ numero: n, tipo: 'Inicial', etiqueta: d > 0 ? `Abono a los ${d} días` : 'Abono de contado', monto: m }) } })
-    for (let i = 1; i <= vhCuotas; i++) { n++; cronograma.push({ numero: n, tipo: 'Vehimotor', etiqueta: `Cuota ${i} de ${vhCuotas} (mensual)`, monto: vhCuotaMonto }) }
+    abonos.forEach(a => { const m = nz(a.monto); if (m > 0) { n++; const d = Math.round(nz(a.dias)); cronograma.push({ numero: n, tipo: 'Inicial', etiqueta: d > 0 ? `Abono a los ${d} días` : 'Abono de contado', monto: m, dias: d }) } })
+    for (let i = 1; i <= vhCuotas; i++) { n++; cronograma.push({ numero: n, tipo: 'Vehimotor', etiqueta: `Cuota ${i} de ${vhCuotas} (mensual)`, monto: vhCuotaMonto, dias: i * 30 }) }
   }
 
   // Texto de condiciones AUTOGENERADO desde los números.
@@ -111,6 +114,39 @@ export default function ProformaPanel({
     setMontos({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
     setAbonos([{ monto: '', dias: '0' }]); setTextoManual(false)
     fetch(`/api/showroom/disponibles?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : []).then(d => setUnidades(Array.isArray(d) ? d : [])).catch(() => {})
+
+    // MODO EDICIÓN: trae la proforma completa y precarga TODO.
+    if (esEdit) {
+      fetch(`/api/proformas/${editProforma.id}`).then(r => r.ok ? r.json() : null).then((pf: any) => {
+        if (!pf || pf.error) return
+        const veh = pf.vehiculo_snapshot ?? {}
+        const crono: any[] = Array.isArray(pf.cronograma_snapshot) ? pf.cronograma_snapshot : []
+        const vm = crono.filter(c => c.tipo === 'Vehimotor' || !c.tipo)
+        const ini = crono.filter(c => c.tipo === 'Inicial')
+        setPreview({
+          vehiculo: `${veh.marca ?? ''} ${veh.modelo ?? ''}`.trim(),
+          modalidad: Number(pf.num_cuotas) > 0 ? 'credito' : 'contado',
+          precioBase: Number(pf.precio_vehiculo) || 0, inicial: Number(pf.monto_inicial) || 0,
+          financiado: Number(pf.monto_financiado) || 0, meses: Number(pf.num_cuotas) || 0, acuerdo: null,
+        })
+        setMontos({
+          precioBase: String(r2(pf.precio_vehiculo)), inicial: String(r2(pf.monto_inicial)),
+          financiado: String(r2(pf.monto_financiado)), meses: String(pf.num_cuotas || vm.length || ''),
+          cuotaMensual: String(r2(vm[0]?.monto ?? 0)),
+        })
+        if (ini.length) {
+          setAbonos(ini.map((c: any) => {
+            const d = c.dias != null ? Math.round(Number(c.dias)) : Number(String(c.etiqueta || '').match(/(\d+)\s*d/)?.[1] ?? 0)
+            return { monto: String(r2(c.monto)), dias: String(d) }
+          }))
+        }
+        setObservaciones(pf.condiciones_personalizadas ?? '')
+        setTextoManual(true)
+        setShowroomId(pf.showroom_id ?? veh.showroom_id ?? '')
+      }).catch(() => {})
+      return
+    }
+
     fetch(`/api/proformas/preview?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : null).then(d => {
       if (d && !d.error) {
         setPreview(d)
@@ -127,10 +163,34 @@ export default function ProformaPanel({
     }).catch(() => {})
   }
 
+  // Auto-abrir (usado por el botón Editar de la lista).
+  useEffect(() => { if (autoOpen) abrir() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [])
+
+  const cronogramaBody = () => cronograma.map(c => ({ numero: c.numero, tipo: c.tipo, etiqueta: c.etiqueta, monto: c.monto, dias: c.dias, estado: 'pendiente', monto_pagado: 0, fecha_vencimiento: null }))
+
   async function generar() {
     if (esBancaNacional && aprobadoNum <= 0) { setError('Indica el monto que aprobó el banco'); return }
     if (esBancaNacional && aprobadoNum > Number(total)) { setError('Lo aprobado por el banco no puede superar el total'); return }
     setSaving(true); setError('')
+
+    // MODO EDICIÓN: PATCH a la proforma existente con todos los datos.
+    if (esEdit) {
+      try {
+        const r = await fetch(`/api/proformas/${editProforma.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            precio: montos.precioBase, inicial: montos.inicial, financiado: montos.financiado, meses: montos.meses,
+            condiciones: observaciones.trim() || null, cronograma: cronogramaBody(), showroomId: showroomId || null,
+          }),
+        })
+        const j = await r.json().catch(() => ({}))
+        setSaving(false)
+        if (!r.ok) { setError(j.error ?? 'No se pudo guardar'); return }
+        onDone()
+      } catch { setError('Error de conexión'); setSaving(false) }
+      return
+    }
+
     try {
       const r = await fetch('/api/proformas/desde-cotizacion', {
         method: 'POST',
@@ -144,7 +204,7 @@ export default function ProformaPanel({
           montos: {
             precioBase: montos.precioBase, inicial: montos.inicial,
             financiado: montos.financiado, cuotaMensual: montos.cuotaMensual, meses: montos.meses,
-            cronograma: cronograma.map(c => ({ numero: c.numero, tipo: c.tipo, etiqueta: c.etiqueta, monto: c.monto, estado: 'pendiente', monto_pagado: 0, fecha_vencimiento: null })),
+            cronograma: cronogramaBody(),
           },
           ...(esBancaNacional ? { bancaNacional: { aprobado_banco: aprobadoNum, restante, restante_metodo: restanteMetodo } } : {}),
         }),
@@ -163,9 +223,11 @@ export default function ProformaPanel({
     }
   }
 
+  const cerrar = () => { setOpen(false); if (esEdit) onDone() }
+
   return (
     <>
-      {compact ? (
+      {esEdit ? null : compact ? (
         <button onClick={abrir}
           className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors">
           <FileText size={12} /> Convertir en proforma
@@ -179,14 +241,14 @@ export default function ProformaPanel({
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !saving && setOpen(false)} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !saving && cerrar()} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 sticky top-0 bg-white">
               <div>
-                <h2 className="font-bold text-oriental-black text-base flex items-center gap-2"><FileText size={16} className="text-indigo-600" /> Generar proforma</h2>
+                <h2 className="font-bold text-oriental-black text-base flex items-center gap-2"><FileText size={16} className="text-indigo-600" /> {esEdit ? 'Editar proforma' : 'Generar proforma'}</h2>
                 <p className="text-xs text-oriental-gray font-mono">{numero}</p>
               </div>
-              <button onClick={() => !saving && setOpen(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X size={16} /></button>
+              <button onClick={() => !saving && cerrar()} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X size={16} /></button>
             </div>
 
             <div className="p-5">
@@ -232,7 +294,7 @@ export default function ProformaPanel({
               ) : (
                 <div className="space-y-4">
                   <p className="text-xs text-gray-500 leading-relaxed">
-                    Se creará la proforma con la estructura negociada de la cotización y el cronograma de pago del cliente. Sirve como el documento previo a la venta.
+                    {esEdit ? 'Edita los montos, abonos del inicial, cuotas y condiciones de la proforma. Se recalcula el cronograma y el texto.' : 'Se creará la proforma con la estructura negociada de la cotización y el cronograma de pago del cliente. Sirve como el documento previo a la venta.'}
                   </p>
 
                   {/* Modalidad de pago en números → genera el texto y los montos de la proforma */}
@@ -385,9 +447,9 @@ export default function ProformaPanel({
                   )}
 
                   <div className="flex gap-2 pt-1">
-                    <button onClick={() => setOpen(false)} disabled={saving} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+                    <button onClick={cerrar} disabled={saving} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
                     <button onClick={generar} disabled={saving || (enviarCorreo && !correo.trim())} className="flex-1 py-2.5 rounded-lg bg-indigo-700 text-white text-sm font-semibold hover:bg-indigo-800 disabled:opacity-50 flex items-center justify-center gap-2">
-                      {saving && <Loader2 size={14} className="animate-spin" />} Generar
+                      {saving && <Loader2 size={14} className="animate-spin" />} {esEdit ? 'Guardar cambios' : 'Generar'}
                     </button>
                   </div>
                 </div>

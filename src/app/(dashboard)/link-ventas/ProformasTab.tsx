@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2, X, Loader2 } from 'lucide-react'
+import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2 } from 'lucide-react'
+import ProformaPanel from './ProformaPanel'
 
 type Proforma = {
   id: string
@@ -167,62 +168,15 @@ export default function ProformasTab() {
         </div>
       )}
 
-      {editando && <EditProformaModal p={editando} onClose={() => setEditando(null)} onSaved={() => { setEditando(null); cargar() }} />}
-    </div>
-  )
-}
-
-function EditProformaModal({ p, onClose, onSaved }: { p: Proforma; onClose: () => void; onSaved: () => void }) {
-  const [precio, setPrecio] = useState(String(p.precio_vehiculo ?? ''))
-  const [inicial, setInicial] = useState(String(p.monto_inicial ?? ''))
-  const [financiado, setFinanciado] = useState(String(p.monto_financiado ?? ''))
-  const [meses, setMeses] = useState(String(p.num_cuotas ?? ''))
-  const [condiciones, setCondiciones] = useState<string>((p as any).condiciones_personalizadas ?? '')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const inp = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-oriental-red'
-
-  async function guardar() {
-    setSaving(true); setError('')
-    const r = await fetch(`/api/proformas/${p.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ precio, inicial, financiado, meses, condiciones }),
-    })
-    setSaving(false)
-    if (r.ok) onSaved()
-    else setError((await r.json().catch(() => ({}))).error ?? 'No se pudo guardar')
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !saving && onClose()} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100">
-          <div>
-            <h3 className="font-bold text-oriental-black text-sm flex items-center gap-2"><Pencil size={15} className="text-indigo-600" /> Editar proforma</h3>
-            <p className="text-xs text-gray-400 font-mono">{p.numero}</p>
-          </div>
-          <button onClick={() => !saving && onClose()} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X size={16} /></button>
-        </div>
-        <div className="p-5 space-y-3">
-          {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs text-red-800">{error}</div>}
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-[11px] font-semibold text-gray-500 mb-1">Precio ($)</label><input className={inp} inputMode="decimal" value={precio} onChange={e => setPrecio(e.target.value)} /></div>
-            <div><label className="block text-[11px] font-semibold text-gray-500 mb-1">Inicial ($)</label><input className={inp} inputMode="decimal" value={inicial} onChange={e => setInicial(e.target.value)} /></div>
-            <div><label className="block text-[11px] font-semibold text-gray-500 mb-1">Financiado ($)</label><input className={inp} inputMode="decimal" value={financiado} onChange={e => setFinanciado(e.target.value)} /></div>
-            <div><label className="block text-[11px] font-semibold text-gray-500 mb-1">N° cuotas</label><input className={inp} inputMode="numeric" value={meses} onChange={e => setMeses(e.target.value)} /></div>
-          </div>
-          <div><label className="block text-[11px] font-semibold text-gray-500 mb-1">Condiciones de pago</label>
-            <textarea className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:border-oriental-red" rows={3} value={condiciones} onChange={e => setCondiciones(e.target.value)} /></div>
-          <p className="text-[10px] text-gray-400">Para reestructurar los abonos/cuotas en detalle, bórrala y genérala de nuevo desde la cotización.</p>
-          <div className="flex gap-2 pt-1">
-            <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
-            <button onClick={guardar} disabled={saving} className="flex-1 py-2.5 rounded-lg bg-indigo-700 text-white text-sm font-semibold hover:bg-indigo-800 disabled:opacity-50 flex items-center justify-center gap-2">
-              {saving && <Loader2 size={14} className="animate-spin" />} Guardar
-            </button>
-          </div>
-        </div>
-      </div>
+      {editando && (
+        <ProformaPanel
+          cotId={editando.cotizacion_id ?? ''}
+          numero={editando.numero}
+          editProforma={editando}
+          autoOpen
+          onDone={() => { setEditando(null); cargar() }}
+        />
+      )}
     </div>
   )
 }
