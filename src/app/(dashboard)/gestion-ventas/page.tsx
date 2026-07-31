@@ -128,12 +128,15 @@ export default async function GestionVentasPage() {
       poliza_vida: Number(div?.poliza_vida ?? 0),
       obsequio_clientes: Number(div?.obsequio_clientes ?? 0),
       alfombras: Number(div?.alfombras ?? 0),
+      papel_ahumado: Number(div?.papel_ahumado ?? 0),
+      gasto_administrativo: Number(div?.gasto_administrativo ?? 0),
       tipo_venta: div?.tipo_venta ?? null,
       comision_vendedores_pct: Number(div?.comision_vendedores_pct ?? 0),
       comision_vendedores_monto: Number(div?.comision_vendedores_monto ?? 0),
       comision_directiva_pct: Number(div?.comision_directiva_pct ?? 0),
       comision_directiva_monto: Number(div?.comision_directiva_monto ?? 0),
       vendedores_split: Array.isArray(div?.vendedores_split) ? div.vendedores_split : null,
+      ingreso_neto_venta: Number(div?.ingreso_neto_venta ?? 0),
       pote_directiva: Number(div?.pote_directiva ?? 0),
       // Vendedora ya definida en la división, o la sugerida por la proforma
       // (viene de la cotización, para no re-escribirla a mano).

@@ -20,34 +20,41 @@ export async function POST(req: Request) {
 
   const supabase = await createAdminClient()
 
+  const r2 = (n: number) => Math.round(n * 100) / 100
   const precioVenta = num(b.precioVenta)
-  const pagoVM = num(b.pagoVehimotors)
   const comisionPct = num(b.comisionPct)                              // % comisión de venta
-  const comisionMonto = Math.round(precioVenta * comisionPct) / 100   // monto comisión de venta
-  const montoProforma = num(b.montoProforma)
+  const comisionMonto = r2(precioVenta * comisionPct / 100)           // monto comisión de venta (= ingreso bruto venta)
+  const montoProforma = num(b.montoProforma)                          // monto proforma oriental
+  const pagoVM = num(b.pagoVehimotors)                                // pagado a Vehimotors
   const polizaCarro = num(b.polizaCarro)
   const polizaVida = num(b.polizaVida)
   const obsequioClientes = num(b.obsequioClientes)
   const alfombras = num(b.alfombras)
+  const papelAhumado = num(b.papelAhumado)
+  const gastoAdministrativo = num(b.gastoAdministrativo)
 
-  // Nuevo modelo: base, comisiones (vendedores/directiva) y "la bolsa" (neto directiva)
   const TIPOS_VENTA = ['contado', 'credito_vehimotors', 'credito_banca_nacional', 'credito_financiadora_interno']
   const tipoVenta = TIPOS_VENTA.includes(b.tipoVenta) ? b.tipoVenta : null
   const montoBase = precioVenta - comisionMonto                       // monto base de La Oriental
   const comisionVendedoresPct = num(b.comisionVendedoresPct)
-  const comisionVendedoresMonto = Math.round(montoBase * comisionVendedoresPct) / 100
+  const comisionVendedoresMonto = r2(montoBase * comisionVendedoresPct / 100)
   const comisionDirectivaPct = num(b.comisionDirectivaPct)
-  const comisionDirectivaMonto = Math.round(montoBase * comisionDirectivaPct) / 100
+  const comisionDirectivaMonto = r2(montoBase * comisionDirectivaPct / 100)
   // Reparto del pool de comisión de vendedores: [{ nombre, pct }] (pct = % del pool, suma 100).
   const vendedoresSplit: { nombre: string; pct: number }[] = Array.isArray(b.vendedoresSplit)
     ? b.vendedoresSplit
         .map((v: any) => ({ nombre: String(v?.nombre ?? '').trim(), pct: num(v?.pct) }))
         .filter((v: any) => v.nombre)
     : []
-  // Egresos de La Oriental (van a contabilidad) = comisión vendedores + comisión directiva + pólizas/obsequio/alfombras
-  const egresosOriental = comisionVendedoresMonto + comisionDirectivaMonto + polizaCarro + polizaVida + obsequioClientes + alfombras
-  // Neto de directiva ("la bolsa"), reservado.
-  const poteDirectiva = Math.round((montoBase - egresosOriental) * 100) / 100
+
+  // Cuadro resumen en 3 bloques (dibujo de dirección):
+  // A) Ingreso bruto oriental = monto proforma oriental − pagado a Vehimotors
+  const ingresoBrutoOriental = r2(montoProforma - pagoVM)
+  // B) A ORIENTAL → Ingreso neto venta = comisión de venta − comisión vendedores − comisión directiva (va a contabilidad)
+  const ingresoNetoVenta = r2(comisionMonto - comisionVendedoresMonto - comisionDirectivaMonto)
+  // C) A DIRECTIVA = ingreso bruto oriental − ingreso bruto venta (comisión de venta), menos egresos → Ingreso bóveda
+  const egresosDirectiva = polizaCarro + polizaVida + obsequioClientes + alfombras + papelAhumado + gastoAdministrativo
+  const poteDirectiva = r2(ingresoBrutoOriental - comisionMonto - egresosDirectiva)  // ingreso bóveda ("la bolsa")
 
   // Referencias opcionales (proforma/cotización/cliente) desde la proforma de la venta.
   let proformaId: string | null = b.proformaId ?? null
@@ -78,12 +85,15 @@ export async function POST(req: Request) {
     poliza_vida: polizaVida,
     obsequio_clientes: obsequioClientes,
     alfombras: alfombras,
+    papel_ahumado: papelAhumado,
+    gasto_administrativo: gastoAdministrativo,
     tipo_venta: tipoVenta,
     comision_vendedores_pct: comisionVendedoresPct,
     comision_vendedores_monto: comisionVendedoresMonto,
     comision_directiva_pct: comisionDirectivaPct,
     comision_directiva_monto: comisionDirectivaMonto,
     vendedores_split: vendedoresSplit.length ? vendedoresSplit : null,
+    ingreso_neto_venta: ingresoNetoVenta,
     pote_directiva: poteDirectiva,
     vendedora: (b.vendedora ?? '').toString().trim() || null,
     reportado_vm: !!b.reportadoVm,

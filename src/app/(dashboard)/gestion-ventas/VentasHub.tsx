@@ -39,6 +39,8 @@ type Venta = {
   poliza_vida: number
   obsequio_clientes: number
   alfombras: number
+  papel_ahumado: number
+  gasto_administrativo: number
   vendedora: string
   reportado_vm: boolean
   div_notas: string
@@ -49,6 +51,7 @@ type Venta = {
   comision_directiva_pct: number
   comision_directiva_monto: number
   vendedores_split: { nombre: string; pct: number }[] | null
+  ingreso_neto_venta: number
   pote_directiva: number
 }
 
@@ -60,29 +63,35 @@ const TIPOS_VENTA: { key: string; label: string }[] = [
 ]
 const tipoVentaLabel = (k: string | null) => TIPOS_VENTA.find(t => t.key === k)?.label ?? '—'
 
-// Fórmula de la división contable de una venta.
-//   Monto comisión de venta = precio × % comisión de venta
-//   Monto base de La Oriental = precio − monto comisión de venta
+// Fórmula de la división contable de una venta (cuadro resumen en 3 bloques):
+//   Monto comisión de venta = precio × % comisión de venta   (= ingreso bruto venta)
+//   Monto base de La Oriental = precio − comisión de venta
 //   Comisión de vendedores = base × % vendedores   (pool repartido entre los vendedores)
 //   Comisión de directiva  = base × % directiva
-//   Egresos de La Oriental = comisión vendedores + comisión directiva + pólizas/obsequio/alfombras
-//   Neto de directiva ("la bolsa") = base − egresos de La Oriental  (reservado)
+//   A) Ingreso bruto oriental = monto proforma oriental − pagado a Vehimotors
+//   B) Ingreso neto venta = comisión de venta − comisión vendedores − comisión directiva  (→ contabilidad)
+//   C) Ingreso bóveda ("la bolsa") = ingreso bruto oriental − comisión de venta − egresos directiva  (reservado)
 function calcDivision(v: Venta) {
+  const r2 = (n: number) => Math.round(n * 100) / 100
   const precio = Number(v.precio_venta || 0)
   const comisionVentaMonto = v.comision_monto
     ? Number(v.comision_monto)
-    : Math.round(precio * Number(v.comision_pct || 0)) / 100
+    : r2(precio * Number(v.comision_pct || 0) / 100)
   const montoBase = precio - comisionVentaMonto
   const comisionVendedores = v.comision_vendedores_monto
     ? Number(v.comision_vendedores_monto)
-    : Math.round(montoBase * Number(v.comision_vendedores_pct || 0)) / 100
+    : r2(montoBase * Number(v.comision_vendedores_pct || 0) / 100)
   const comisionDirectiva = v.comision_directiva_monto
     ? Number(v.comision_directiva_monto)
-    : Math.round(montoBase * Number(v.comision_directiva_pct || 0)) / 100
-  const egresosMenores = Number(v.poliza_carro || 0) + Number(v.poliza_vida || 0) + Number(v.obsequio_clientes || 0) + Number(v.alfombras || 0)
-  const egresosOriental = comisionVendedores + comisionDirectiva + egresosMenores
-  const poteDirectiva = montoBase - egresosOriental
-  return { precio, comisionVentaMonto, montoBase, comisionVendedores, comisionDirectiva, egresosMenores, egresosOriental, poteDirectiva }
+    : r2(montoBase * Number(v.comision_directiva_pct || 0) / 100)
+  // A) bloque oriental
+  const ingresoBrutoOriental = r2(Number(v.monto_proforma || 0) - Number(v.pago_vehimotors || 0))
+  // B) bloque venta → contabilidad
+  const ingresoNetoVenta = r2(comisionVentaMonto - comisionVendedores - comisionDirectiva)
+  // C) bloque directiva → bóveda
+  const egresosDirectiva = Number(v.poliza_carro || 0) + Number(v.poliza_vida || 0) + Number(v.obsequio_clientes || 0) + Number(v.alfombras || 0) + Number(v.papel_ahumado || 0) + Number(v.gasto_administrativo || 0)
+  const ingresoBoveda = r2(ingresoBrutoOriental - comisionVentaMonto - egresosDirectiva)
+  return { precio, comisionVentaMonto, montoBase, comisionVendedores, comisionDirectiva, ingresoBrutoOriental, ingresoNetoVenta, egresosDirectiva, ingresoBoveda }
 }
 
 const ETAPA_CFG: Record<string, string> = {
@@ -159,11 +168,11 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
     return divFiltradas.reduce((acc, v) => {
       const d = calcDivision(v)
       acc.precio += d.precio
-      acc.base += d.montoBase
+      acc.netoVenta += d.ingresoNetoVenta
       acc.comisionVend += d.comisionVendedores
-      acc.pote += d.poteDirectiva
+      acc.boveda += d.ingresoBoveda
       return acc
-    }, { precio: 0, base: 0, comisionVend: 0, pote: 0 })
+    }, { precio: 0, netoVenta: 0, comisionVend: 0, boveda: 0 })
   }, [divFiltradas])
 
   function onSaved(div: any) {
@@ -179,12 +188,15 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
       poliza_vida: Number(div.poliza_vida ?? 0),
       obsequio_clientes: Number(div.obsequio_clientes ?? 0),
       alfombras: Number(div.alfombras ?? 0),
+      papel_ahumado: Number(div.papel_ahumado ?? 0),
+      gasto_administrativo: Number(div.gasto_administrativo ?? 0),
       tipo_venta: div.tipo_venta ?? null,
       comision_vendedores_pct: Number(div.comision_vendedores_pct ?? 0),
       comision_vendedores_monto: Number(div.comision_vendedores_monto ?? 0),
       comision_directiva_pct: Number(div.comision_directiva_pct ?? 0),
       comision_directiva_monto: Number(div.comision_directiva_monto ?? 0),
       vendedores_split: Array.isArray(div.vendedores_split) ? div.vendedores_split : null,
+      ingreso_neto_venta: Number(div.ingreso_neto_venta ?? 0),
       pote_directiva: Number(div.pote_directiva ?? 0),
       vendedora: div.vendedora ?? '',
       reportado_vm: !!div.reportado_vm,
@@ -343,9 +355,9 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
         <div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
             <TotalCard label="Precio de venta" value={totales.precio} color="text-oriental-black" />
-            <TotalCard label="Monto base La Oriental" value={totales.base} color="text-indigo-700" />
+            <TotalCard label="Ingreso neto venta (contab.)" value={totales.netoVenta} color="text-indigo-700" />
             <TotalCard label="Comisión vendedores" value={totales.comisionVend} color="text-red-600" />
-            {esRojas && <TotalCard label="La bolsa (neto directiva)" value={totales.pote} color="text-green-700" />}
+            {esRojas && <TotalCard label="Ingreso bóveda (la bolsa)" value={totales.boveda} color="text-green-700" />}
           </div>
 
           {divFiltradas.length === 0 ? (
@@ -380,17 +392,18 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
                       <Celda label="Precio de venta" value={`$${fmt(d.precio)}`} />
+                      <Celda label="Ingreso bruto oriental" value={`$${fmt(d.ingresoBrutoOriental)}`} />
                       <Celda label={`Comisión venta${v.comision_pct ? ` (${v.comision_pct}%)` : ''}`} value={`$${fmt(d.comisionVentaMonto)}`} />
-                      <Celda label="Monto base La Oriental" value={`$${fmt(d.montoBase)}`} />
-                      <Celda label={`Com. vendedores${v.comision_vendedores_pct ? ` (${v.comision_vendedores_pct}%)` : ''}`} value={`$${fmt(d.comisionVendedores)}`} rojo />
+                      <Celda label="Ingreso neto venta" value={`$${fmt(d.ingresoNetoVenta)}`} verde />
                       {esRojas
-                        ? <Celda label="La bolsa (directiva)" value={`$${fmt(d.poteDirectiva)}`} verde />
-                        : <Celda label={`Com. directiva${v.comision_directiva_pct ? ` (${v.comision_directiva_pct}%)` : ''}`} value={`$${fmt(d.comisionDirectiva)}`} />}
+                        ? <Celda label="Ingreso bóveda" value={`$${fmt(d.ingresoBoveda)}`} verde />
+                        : <Celda label={`Com. vendedores${v.comision_vendedores_pct ? ` (${v.comision_vendedores_pct}%)` : ''}`} value={`$${fmt(d.comisionVendedores)}`} rojo />}
                     </div>
-                    {(d.comisionDirectiva > 0 || d.egresosMenores > 0) && (
+                    {(d.comisionVendedores > 0 || d.comisionDirectiva > 0 || d.egresosDirectiva > 0) && (
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[10px] text-gray-400">
-                        {d.comisionDirectiva > 0 && <span>Comisión directiva: ${fmt(d.comisionDirectiva)}</span>}
-                        {d.egresosMenores > 0 && <span>Pólizas / obsequio / alfombras: ${fmt(d.egresosMenores)}</span>}
+                        {d.comisionVendedores > 0 && <span>Com. vendedores: ${fmt(d.comisionVendedores)}</span>}
+                        {d.comisionDirectiva > 0 && <span>Com. directiva: ${fmt(d.comisionDirectiva)}</span>}
+                        {d.egresosDirectiva > 0 && <span>Egresos directiva: ${fmt(d.egresosDirectiva)}</span>}
                       </div>
                     )}
                   </div>
@@ -438,6 +451,8 @@ function DivisionModal({ venta, esRojas = false, onClose, onSaved }: { venta: Ve
   const [polizaVida, setPolizaVida] = useState(String(venta.poliza_vida || ''))
   const [obsequio, setObsequio] = useState(String(venta.obsequio_clientes || ''))
   const [alfombras, setAlfombras] = useState(String(venta.alfombras || ''))
+  const [papelAhumado, setPapelAhumado] = useState(String(venta.papel_ahumado || ''))
+  const [gastoAdmin, setGastoAdmin] = useState(String(venta.gasto_administrativo || ''))
   // Vendedores: base de datos (Rojas los carga) + áreas fijas. Rojas elige los que quiera
   // y reparte el monto de comisión de vendedores (que es el 100%) entre ellos por %.
   const AREAS = ['Dpto. de Mercadeo', 'Taller', 'Dpto. Administrativo', 'Directiva']
@@ -479,21 +494,25 @@ function DivisionModal({ venta, esRojas = false, onClose, onSaved }: { venta: Ve
   const vendedora = vendedores.map(v => v.nombre).join(' / ')
 
   const nf = (s: string) => parseFloat(String(s).replace(',', '.')) || 0
+  const r2 = (n: number) => Math.round(n * 100) / 100
   const x = nf(precioVenta)                                  // precio de venta
   const pctVenta = nf(comisionPct)                           // % comisión de venta
-  const comisionVentaMonto = Math.round(x * pctVenta) / 100  // monto comisión de venta
+  const comisionVentaMonto = r2(x * pctVenta / 100)          // monto comisión de venta (= ingreso bruto venta)
   const montoBase = x - comisionVentaMonto                   // monto base de La Oriental
   const pctVend = nf(comVendPct)
-  const comVendMonto = Math.round(montoBase * pctVend) / 100 // pool de comisión de vendedores (100%)
+  const comVendMonto = r2(montoBase * pctVend / 100)         // pool de comisión de vendedores (100%)
   const pctDir = nf(comDirPct)
-  const comDirMonto = Math.round(montoBase * pctDir) / 100   // comisión de directiva
-  const egr = { pc: nf(polizaCarro), pv: nf(polizaVida), ob: nf(obsequio), al: nf(alfombras) }
-  const egresosMenores = egr.pc + egr.pv + egr.ob + egr.al
-  const egresosOriental = comVendMonto + comDirMonto + egresosMenores
-  const poteDirectiva = Math.round((montoBase - egresosOriental) * 100) / 100
-  const sumaPctVend = Math.round(vendedores.reduce((s, v) => s + nf(v.pct), 0) * 100) / 100
-  const proforma = nf(montoProforma)
-  const y = nf(pagoVM)
+  const comDirMonto = r2(montoBase * pctDir / 100)           // comisión de directiva
+  const egr = { pc: nf(polizaCarro), pv: nf(polizaVida), ob: nf(obsequio), al: nf(alfombras), pa: nf(papelAhumado), ga: nf(gastoAdmin) }
+  const sumaPctVend = r2(vendedores.reduce((s, v) => s + nf(v.pct), 0))
+  const proforma = nf(montoProforma)                         // monto proforma oriental
+  const y = nf(pagoVM)                                       // pagado a Vehimotors
+
+  // Cuadro resumen en 3 bloques (dibujo de dirección)
+  const ingresoBrutoOriental = r2(proforma - y)                                          // A
+  const ingresoNetoVenta = r2(comisionVentaMonto - comVendMonto - comDirMonto)           // B → contabilidad
+  const egresosDirectiva = egr.pc + egr.pv + egr.ob + egr.al + egr.pa + egr.ga
+  const ingresoBoveda = r2(ingresoBrutoOriental - comisionVentaMonto - egresosDirectiva) // C → la bolsa
 
   async function guardar() {
     setSaving(true); setError('')
@@ -508,6 +527,7 @@ function DivisionModal({ venta, esRojas = false, onClose, onSaved }: { venta: Ve
           vendedoresSplit: vendedores.map(v => ({ nombre: v.nombre, pct: nf(v.pct) })),
           montoProforma: proforma, pagoVehimotors: y,
           polizaCarro: egr.pc, polizaVida: egr.pv, obsequioClientes: egr.ob, alfombras: egr.al,
+          papelAhumado: egr.pa, gastoAdministrativo: egr.ga,
           vendedora, reportadoVm, notas,
         }),
       })
@@ -622,53 +642,72 @@ function DivisionModal({ venta, esRojas = false, onClose, onSaved }: { venta: Ve
             )}
           </div>
 
-          {/* Otros egresos */}
+          {/* 8-9. Monto proforma oriental + Pagado a Vehimotors */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Monto proforma oriental $</label>
+              <input className={inp} inputMode="decimal" value={montoProforma} onChange={e => setMontoProforma(e.target.value)} />
+            </div>
+            <div>
+              <label className={lbl}>Pagado a Vehimotors $</label>
+              <input className={inp} inputMode="decimal" value={pagoVM} onChange={e => setPagoVM(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-between text-[11px] text-gray-500 -mt-1 px-1">
+            <span>Ingreso bruto oriental</span><span className="font-bold text-oriental-black">${fmt(ingresoBrutoOriental)}</span>
+          </div>
+
+          {/* 10. Egresos de directiva */}
           <div>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Otros egresos</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Egresos de directiva</p>
             <div className="grid grid-cols-2 gap-2">
               <div><label className={lbl}>Póliza de carro $</label><input className={inp} inputMode="decimal" value={polizaCarro} onChange={e => setPolizaCarro(e.target.value)} /></div>
               <div><label className={lbl}>Póliza de vida $</label><input className={inp} inputMode="decimal" value={polizaVida} onChange={e => setPolizaVida(e.target.value)} /></div>
               <div><label className={lbl}>Obsequio a clientes $</label><input className={inp} inputMode="decimal" value={obsequio} onChange={e => setObsequio(e.target.value)} /></div>
-              <div><label className={lbl}>Alfombras $</label><input className={inp} inputMode="decimal" value={alfombras} onChange={e => setAlfombras(e.target.value)} /></div>
+              <div><label className={lbl}>Alfombra $</label><input className={inp} inputMode="decimal" value={alfombras} onChange={e => setAlfombras(e.target.value)} /></div>
+              <div><label className={lbl}>Papel ahumado $</label><input className={inp} inputMode="decimal" value={papelAhumado} onChange={e => setPapelAhumado(e.target.value)} /></div>
+              <div><label className={lbl}>Gasto administrativo $</label><input className={inp} inputMode="decimal" value={gastoAdmin} onChange={e => setGastoAdmin(e.target.value)} /></div>
             </div>
           </div>
 
-          {/* Datos Vehimotors (continuidad de reportes) */}
-          <details className="rounded-lg border border-gray-100">
-            <summary className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2 cursor-pointer select-none">Datos Vehimotors (opcional)</summary>
-            <div className="grid grid-cols-2 gap-2 px-3 pb-3">
-              <div><label className={lbl}>Monto de proforma $</label><input className={inp} inputMode="decimal" value={montoProforma} onChange={e => setMontoProforma(e.target.value)} /></div>
-              <div><label className={lbl}>Pagado a Vehimotors $</label><input className={inp} inputMode="decimal" value={pagoVM} onChange={e => setPagoVM(e.target.value)} /></div>
-            </div>
-          </details>
-
-          {/* Resumen */}
+          {/* Resumen — 3 bloques (dibujo de dirección) */}
           <div className="rounded-xl bg-gray-900 p-4 text-white space-y-1.5 text-sm">
-            <div className="flex justify-between text-gray-300"><span>Precio de venta</span><span className="font-mono">${fmt(x)}</span></div>
-            <div className="flex justify-between text-indigo-300"><span>− Comisión de venta ({fmt(pctVenta)}%)</span><span className="font-mono">${fmt(comisionVentaMonto)}</span></div>
-            <div className="flex justify-between text-gray-100 border-t border-gray-700 pt-1.5"><span>= Monto base La Oriental</span><span className="font-mono">${fmt(montoBase)}</span></div>
+            {/* A) Ingreso bruto oriental */}
+            <div className="flex justify-between text-gray-300"><span>Monto proforma oriental</span><span className="font-mono">${fmt(proforma)}</span></div>
+            <div className="flex justify-between text-gray-300"><span>− Pagado a Vehimotors</span><span className="font-mono">${fmt(y)}</span></div>
+            <div className="flex justify-between text-gray-100 border-t border-gray-700 pt-1.5"><span>= Ingreso bruto oriental</span><span className="font-mono">${fmt(ingresoBrutoOriental)}</span></div>
 
+            {/* B) A oriental → Ingreso neto venta (contabilidad) */}
             <div className="pt-1.5 mt-1 border-t border-gray-700">
-              <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Egresos de La Oriental</p>
+              <p className="text-[10px] uppercase tracking-wider text-indigo-300 font-bold mb-1">A oriental</p>
+              <div className="flex justify-between text-gray-300"><span>Ingreso bruto venta ({fmt(pctVenta)}%)</span><span className="font-mono">${fmt(comisionVentaMonto)}</span></div>
               {vendedores.filter(v => nf(v.pct) > 0).map(v => (
-                <div key={v.nombre} className="flex justify-between text-gray-300"><span>Comisión venta · {v.nombre} ({fmt(nf(v.pct))}%)</span><span className="font-mono">${fmt(Math.round(comVendMonto * nf(v.pct)) / 100)}</span></div>
+                <div key={v.nombre} className="flex justify-between text-gray-300"><span>− Comisión venta · {v.nombre} ({fmt(nf(v.pct))}%)</span><span className="font-mono">${fmt(Math.round(comVendMonto * nf(v.pct)) / 100)}</span></div>
               ))}
               {comVendMonto > 0 && vendedores.filter(v => nf(v.pct) > 0).length === 0 && (
-                <div className="flex justify-between text-gray-300"><span>Comisión de vendedores ({fmt(pctVend)}%)</span><span className="font-mono">${fmt(comVendMonto)}</span></div>
+                <div className="flex justify-between text-gray-300"><span>− Comisión de vendedores ({fmt(pctVend)}%)</span><span className="font-mono">${fmt(comVendMonto)}</span></div>
               )}
-              {comDirMonto > 0 && <div className="flex justify-between text-gray-300"><span>Comisión de directiva ({fmt(pctDir)}%)</span><span className="font-mono">${fmt(comDirMonto)}</span></div>}
-              {egr.pc > 0 && <div className="flex justify-between text-gray-300"><span>Póliza de carro</span><span className="font-mono">${fmt(egr.pc)}</span></div>}
-              {egr.pv > 0 && <div className="flex justify-between text-gray-300"><span>Póliza de vida</span><span className="font-mono">${fmt(egr.pv)}</span></div>}
-              {egr.ob > 0 && <div className="flex justify-between text-gray-300"><span>Obsequio a clientes</span><span className="font-mono">${fmt(egr.ob)}</span></div>}
-              {egr.al > 0 && <div className="flex justify-between text-gray-300"><span>Alfombras</span><span className="font-mono">${fmt(egr.al)}</span></div>}
-              <div className="flex justify-between text-gray-100 border-t border-gray-700 pt-1.5 mt-1"><span>= Total egresos La Oriental</span><span className="font-mono">${fmt(egresosOriental)}</span></div>
+              {comDirMonto > 0 && <div className="flex justify-between text-gray-300"><span>− Comisión venta directiva ({fmt(pctDir)}%)</span><span className="font-mono">${fmt(comDirMonto)}</span></div>}
+              <div className="flex justify-between font-bold text-green-400 border-t border-gray-700 pt-1.5 mt-1"><span>= Ingreso neto venta</span><span className="font-mono">${fmt(ingresoNetoVenta)}</span></div>
+              <p className="text-[10px] text-gray-500 text-right">va a contabilidad</p>
             </div>
 
-            {esRojas ? (
-              <div className="flex justify-between font-bold text-green-400 border-t border-gray-700 pt-1.5"><span>= La bolsa (neto directiva)</span><span className="font-mono">${fmt(poteDirectiva)}</span></div>
-            ) : (
-              <div className="flex justify-between text-[11px] text-gray-500 border-t border-gray-700 pt-1.5"><span>Neto de directiva</span><span className="font-mono">— reservado —</span></div>
-            )}
+            {/* C) A directiva → Ingreso bóveda (la bolsa, reservado) */}
+            <div className="pt-1.5 mt-1 border-t border-gray-700">
+              <p className="text-[10px] uppercase tracking-wider text-amber-300 font-bold mb-1">A directiva <span className="text-gray-500 normal-case">(IBO − IBV)</span></p>
+              <div className="flex justify-between text-gray-300"><span>Ingreso bruto oriental − ingreso bruto venta</span><span className="font-mono">${fmt(r2(ingresoBrutoOriental - comisionVentaMonto))}</span></div>
+              {egr.pv > 0 && <div className="flex justify-between text-gray-300"><span>− Póliza de vida</span><span className="font-mono">${fmt(egr.pv)}</span></div>}
+              {egr.pc > 0 && <div className="flex justify-between text-gray-300"><span>− Póliza de carro</span><span className="font-mono">${fmt(egr.pc)}</span></div>}
+              {egr.ob > 0 && <div className="flex justify-between text-gray-300"><span>− Obsequio a clientes</span><span className="font-mono">${fmt(egr.ob)}</span></div>}
+              {egr.al > 0 && <div className="flex justify-between text-gray-300"><span>− Alfombra</span><span className="font-mono">${fmt(egr.al)}</span></div>}
+              {egr.pa > 0 && <div className="flex justify-between text-gray-300"><span>− Papel ahumado</span><span className="font-mono">${fmt(egr.pa)}</span></div>}
+              {egr.ga > 0 && <div className="flex justify-between text-gray-300"><span>− Gasto administrativo</span><span className="font-mono">${fmt(egr.ga)}</span></div>}
+              {esRojas ? (
+                <div className="flex justify-between font-bold text-green-400 border-t border-gray-700 pt-1.5 mt-1"><span>= Ingreso bóveda</span><span className="font-mono">${fmt(ingresoBoveda)}</span></div>
+              ) : (
+                <div className="flex justify-between text-[11px] text-gray-500 border-t border-gray-700 pt-1.5 mt-1"><span>Ingreso bóveda</span><span className="font-mono">— reservado —</span></div>
+              )}
+            </div>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
