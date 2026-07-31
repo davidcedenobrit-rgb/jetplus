@@ -290,8 +290,6 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
               <Text style={s.firmaRol}>Firma autorizada</Text>
             </View>
           </View>
-
-          {data.selloSrc ? <Image src={data.selloSrc} style={s.sello} /> : null}
         </View>
 
         <View style={s.footer} fixed>
