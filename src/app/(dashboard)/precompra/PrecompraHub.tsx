@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ShieldCheck, FilePlus2, ClipboardList } from 'lucide-react'
 import CotizacionCDMTab from '../link-ventas/CotizacionCDMTab'
+import PrecompraProformas from './PrecompraProformas'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Vista = 'cotizar' | 'proformas'
@@ -57,11 +58,7 @@ export default function PrecompraHub({ catalogo = [], showroomStock = [], tasas 
           <CotizacionCDMTab catalogo={catalogo} showroomStock={showroomStock} tasas={tasas} modo="ac500" />
         </div>
       ) : (
-        <div className="card p-10 text-center text-oriental-gray">
-          <ClipboardList size={28} className="mx-auto mb-3 text-gray-300" />
-          <p className="font-semibold text-oriental-black">Proformas y anexos del plan Asegúrate $500</p>
-          <p className="text-sm mt-1">En preparación: aquí pasarás la cotización a proforma (datos completos + documentos) y generarás el Anexo A.</p>
-        </div>
+        <PrecompraProformas />
       )}
     </div>
   )
