@@ -13,16 +13,25 @@ export default async function SeguridadPage() {
 
   const supabase = await createAdminClient()
 
-  // Ingresos que caen en la bóveda (por ahora: los $500 fijos por carro AC500
-  // al pagar la cuota 1). El ledger permite sumar otras fuentes en el futuro.
-  const rows = await fetchAllRows<any>((from, to) => supabase
-    .from('boveda_ingresos')
-    .select('id, origen, concepto, monto, moneda, cliente_nombre, vehiculo, created_at')
-    .order('created_at', { ascending: false })
-    .range(from, to))
+  // La bóveda suma DOS fuentes:
+  //  1) boveda_ingresos: los $500 fijos por carro AC500 (al pagar la cuota 1).
+  //  2) ventas_division_contable.pote_directiva: el "ingreso bóveda / la bolsa"
+  //     que resulta de la división contable de cada venta normal.
+  const [rows, divisiones] = await Promise.all([
+    fetchAllRows<any>((from, to) => supabase
+      .from('boveda_ingresos')
+      .select('id, origen, concepto, monto, cliente_nombre, vehiculo, created_at')
+      .order('created_at', { ascending: false })
+      .range(from, to)),
+    fetchAllRows<any>((from, to) => supabase
+      .from('ventas_division_contable')
+      .select('id, pote_directiva, created_at, vehiculos(marca, modelo, placa, clientes(nombre))')
+      .order('created_at', { ascending: false })
+      .range(from, to)),
+  ])
 
-  const ingresos = (rows ?? []).map((d: any) => ({
-    id: d.id,
+  const deBoveda = (rows ?? []).map((d: any) => ({
+    id: `b-${d.id}`,
     fecha: d.created_at,
     monto: Number(d.monto || 0),
     origen: d.concepto || d.origen || 'Ingreso',
@@ -30,6 +39,18 @@ export default async function SeguridadPage() {
     cliente: d.cliente_nombre || '—',
   }))
 
+  const deDivision = (divisiones ?? [])
+    .filter((d: any) => Number(d.pote_directiva || 0) !== 0)
+    .map((d: any) => ({
+      id: `dc-${d.id}`,
+      fecha: d.created_at,
+      monto: Number(d.pote_directiva || 0),
+      origen: 'Ingreso bóveda — división contable',
+      detalle: [d.vehiculos?.marca, d.vehiculos?.modelo, d.vehiculos?.placa].filter(Boolean).join(' · ') || '—',
+      cliente: d.vehiculos?.clientes?.nombre ?? '—',
+    }))
+
+  const ingresos = [...deBoveda, ...deDivision].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
   const total = ingresos.reduce((s: number, i: { monto: number }) => s + i.monto, 0)
 
   return <BovedaPanel ingresos={ingresos} total={total} />

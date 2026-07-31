@@ -15,7 +15,6 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
   const [vozOk, setVozOk] = useState(false)         // comando de voz reconocido → pedir clave
   const [escuchando, setEscuchando] = useState(false)
   const [error, setError] = useState('')
-  const [oido, setOido] = useState('')
   const [clave, setClave] = useState('')
   const [verificando, setVerificando] = useState(false)
   const recRef = useRef<any>(null)
@@ -23,7 +22,7 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
   useEffect(() => () => { try { recRef.current?.stop() } catch { /* noop */ } }, [])
 
   function escuchar() {
-    setError(''); setOido('')
+    setError('')
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) { setError('Tu navegador no soporta comando de voz. Usa Chrome.'); return }
     const rec = new SR()
@@ -36,7 +35,6 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
         for (let j = 0; j < ev.results[i].length; j++) dijo += ' ' + ev.results[i][j].transcript
       }
       const t = norm(dijo)
-      setOido(dijo.trim())
       if ((t.includes('abrir') && t.includes('boveda')) || t.includes('abre la boveda') || t.includes('abrir boveda')) {
         setVozOk(true); setError('')
       } else {
@@ -63,7 +61,7 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
     } finally { setVerificando(false) }
   }
 
-  function cerrar() { setAbierta(false); setVozOk(false); setClave(''); setOido(''); setError('') }
+  function cerrar() { setAbierta(false); setVozOk(false); setClave(''); setError('') }
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto">
@@ -86,9 +84,8 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
               <>
                 <button onClick={escuchar} disabled={escuchando}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-oriental-red hover:bg-red-700 text-white font-bold text-sm transition-colors disabled:opacity-60">
-                  <Mic size={18} className={escuchando ? 'animate-pulse' : ''} /> {escuchando ? 'Escuchando… di «abrir la bóveda»' : 'Abrir con comando de voz'}
+                  <Mic size={18} className={escuchando ? 'animate-pulse' : ''} /> {escuchando ? 'Escuchando…' : 'Abrir con comando de voz'}
                 </button>
-                {oido && <p className="text-[11px] text-gray-400 mt-3">Escuché: “{oido}”</p>}
                 {error && <p className="text-[12px] text-red-300 mt-3">{error}</p>}
                 {error && (
                   <button onClick={() => { setError(''); setVozOk(true) }}
@@ -96,7 +93,7 @@ export default function BovedaPanel({ ingresos, total }: { ingresos: Ingreso[]; 
                     El micrófono no funciona — continuar solo con la clave
                   </button>
                 )}
-                <p className="text-[11px] text-gray-500 mt-5">Paso 1 de 2 · Comando: «abrir la bóveda»</p>
+                <p className="text-[11px] text-gray-500 mt-5">Paso 1 de 2</p>
               </>
             ) : (
               <>
