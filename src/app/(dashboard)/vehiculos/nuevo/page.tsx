@@ -295,7 +295,7 @@ export default function NuevoVehiculoPage() {
     ;(async () => {
       const { data: pro } = await supabase
         .from('proformas')
-        .select('id, numero, cliente_id, cotizacion_id')
+        .select('id, numero, cliente_id, cotizacion_id, monto_inicial')
         .eq('id', proId).single()
       if (!pro) return
       setProformaId(pro.id)
@@ -305,6 +305,14 @@ export default function NuevoVehiculoPage() {
         if (cli) { setClienteSeleccionado(cli); setClienteQuery(cli.nombre) }
       }
       if (pro.cotizacion_id) await prefillDesdeCotizacion(pro.cotizacion_id)
+      // Fase 3: el pago inicial se prellenar con el inicial negociado en la
+      // proforma y se activa el registro de ingreso (queda 'pendiente de
+      // aprobación'; el cajero solo confirma el método/comprobante).
+      const iniProforma = Number(pro.monto_inicial) || 0
+      if (iniProforma > 0) {
+        setRegistrarIngresoInicial(true)
+        setPagosIniciales(prev => prev.map((p, i) => i === 0 ? { ...p, monto: iniProforma.toFixed(2) } : p))
+      }
     })()
   }, [])
 
@@ -871,6 +879,12 @@ export default function NuevoVehiculoPage() {
         ...(clienteSeleccionado.id ? { cliente_id: clienteSeleccionado.id } : {}),
         updated_at: new Date().toISOString(),
       }).eq('id', proformaId)
+      // Fase 3: sembrar el borrador de división contable ligado a esta venta
+      // (best-effort; no bloquea el registro si falla).
+      fetch('/api/ventas-division/seed', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehiculoId: vehiculo.id, precioVenta: parseFloat(precioTotalVehiculo) || 0 }),
+      }).catch(() => {})
     }
 
     // Vincular showroom (local, o el ya transferido desde el aliado) a la venta
