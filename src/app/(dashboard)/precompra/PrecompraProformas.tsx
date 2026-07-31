@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2, PenLine, Send, Vault } from 'lucide-react'
+import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2, PenLine, Send, Vault, Calculator } from 'lucide-react'
+import { porcentajeContabilidadAC500, baseContabilidadAC500 } from '@/lib/ac500-porcentaje'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const fmt = (n: number | null | undefined) => Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -167,7 +168,7 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
         </a>
         {p.cuota1_pagada ? (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-bold">
-            <Vault size={13} /> Cuota 1 pagada · $500 en bóveda
+            <Vault size={13} /> Cuota 1 pagada · $500 bóveda{p.monto_contabilidad != null ? ` · ${p.pct_contabilidad}% contab. $${fmt(p.monto_contabilidad)}` : ''}
           </span>
         ) : (
           <button onClick={cobrarCuota1} disabled={cobrando}
@@ -176,6 +177,16 @@ function ProformaCard({ p, onEdit, onChange }: { p: any; onEdit: () => void; onC
           </button>
         )}
       </div>
+      {!p.cuota1_pagada && (() => {
+        const pct = porcentajeContabilidadAC500(p.marca, p.modelo)
+        const base = baseContabilidadAC500(p.cuotas)
+        const montoC = Math.round(base * pct / 100 * 100) / 100
+        return (
+          <p className="text-[11px] text-gray-400 flex items-center gap-1 mb-3 -mt-1">
+            <Calculator size={11} /> Al registrar cuota 1: <b className="text-gray-500">$500</b> a bóveda · <b className="text-gray-500">{pct}%</b> a contabilidad sobre ${fmt(base)} (cuotas 1-5) = <b className="text-gray-500">${fmt(montoC)}</b>
+          </p>
+        )
+      })()}
 
       {/* Envío a Vehimotors (correo abierto) */}
       <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center border-t border-gray-100 pt-3">

@@ -1,8 +1,10 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { porcentajeContabilidadAC500, baseContabilidadAC500 } from '@/lib/ac500-porcentaje'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
+const r2 = (n: number) => Math.round(n * 100) / 100
 
 // Registra el pago de la cuota 1 de una proforma AC500 y hace caer los
 // $500 fijos en la BÓVEDA (idempotente: no duplica si ya se registró).
@@ -17,7 +19,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const supabase = await createAdminClient()
   const { data: pf } = await supabase
     .from('precompra_proformas')
-    .select('id, cuota1_pagada, cuota1_monto_boveda, cliente_nombre, marca, modelo, concesionario_id')
+    .select('id, cuota1_pagada, cuota1_monto_boveda, cliente_nombre, marca, modelo, concesionario_id, cuotas')
     .eq('id', id)
     .maybeSingle()
   if (!pf) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
@@ -27,6 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const nowIso = new Date().toISOString()
   const vehiculo = [pf.marca, pf.modelo].filter(Boolean).join(' ')
 
+  // 1) $500 fijos → BÓVEDA
   const { error: insErr } = await supabase.from('boveda_ingresos').insert({
     origen: 'ac500_cuota1',
     concepto: 'Asegúrate $500 — pago de cuota 1',
@@ -41,9 +44,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   })
   if (insErr) return NextResponse.json({ error: 'No se pudo registrar el ingreso en bóveda' }, { status: 500 })
 
+  // 2) Porcentaje del carro (sobre suma cuotas 1..5) → CONTABILIDAD
+  const pct = porcentajeContabilidadAC500(pf.marca, pf.modelo)
+  const base = baseContabilidadAC500(pf.cuotas)
+  const montoContab = r2(base * pct / 100)
+  if (montoContab > 0) {
+    await supabase.from('contabilidad_ingresos').insert({
+      origen: 'ac500_porcentaje',
+      concepto: `Asegúrate $500 — ${pct}% del carro (cuotas 1-5)`,
+      monto: montoContab,
+      moneda: 'USD',
+      porcentaje: pct,
+      base_calculo: base,
+      proforma_id: id,
+      cliente_nombre: pf.cliente_nombre ?? null,
+      vehiculo: vehiculo || null,
+      concesionario_id: pf.concesionario_id ?? null,
+      creado_por: user.id,
+      created_at: nowIso,
+    })
+  }
+
   await supabase.from('precompra_proformas').update({
-    cuota1_pagada: true, cuota1_pagada_at: nowIso, updated_at: nowIso,
+    cuota1_pagada: true, cuota1_pagada_at: nowIso,
+    pct_contabilidad: pct, base_contabilidad: base, monto_contabilidad: montoContab,
+    updated_at: nowIso,
   }).eq('id', id)
 
-  return NextResponse.json({ ok: true, monto })
+  return NextResponse.json({ ok: true, monto, pct, base, montoContab })
 }
