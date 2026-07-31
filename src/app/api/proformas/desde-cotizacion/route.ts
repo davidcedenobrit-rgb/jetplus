@@ -219,7 +219,9 @@ export async function POST(req: Request) {
       primera_cuota_fecha: cronogramaSnapshot[0]?.fecha_vencimiento ?? null,
       ultima_cuota_fecha: cronogramaSnapshot[cronogramaSnapshot.length - 1]?.fecha_vencimiento ?? null,
       observaciones: observacionesFinal,
-      condiciones_personalizadas: condPersonalizadas,
+      // El texto de condiciones del editor (auto-generado/editado en el modal)
+      // manda sobre el de la cotización, para que el PDF muestre lo acordado.
+      condiciones_personalizadas: (String(observaciones ?? '').trim() || condPersonalizadas),
       // Propuesta de pago negociada (desglose renglón por renglón) — viaja
       // estructurada a la proforma para reusarla en la venta.
       estructura_costos: cot.estructura_costos ?? null,
