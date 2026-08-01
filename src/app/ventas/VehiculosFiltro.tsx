@@ -47,13 +47,13 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
   }
 
   function goWA(model: string) {
-    const msg = `Hola 👋 vengo del perfil de ventas de La Oriental. Me interesa el ${model}.`
-    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
+    const msg = `Hola 👋 vengo del perfil de ventas. Me interesa el ${model}.`
+    window.open(`https://wa.me/${waCorp}?text=${encodeURIComponent(msg)}`, '_blank')
   }
   async function compartir(v: Vehiculo) {
     const url = new URL(window.location.href); url.searchParams.set('car', v.id)
     const link = url.toString()
-    if (navigator.share) { try { await navigator.share({ title: `La Oriental | ${v.model}`, url: link }); return } catch {} }
+    if (navigator.share) { try { await navigator.share({ title: v.model, url: link }); return } catch {} }
     try { await navigator.clipboard.writeText(link) } catch {}
   }
 

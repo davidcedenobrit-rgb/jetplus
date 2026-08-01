@@ -1,8 +1,8 @@
 'use client'
 
-const WA_FICHAS = encodeURIComponent('Hola 👋 Vengo de la web de La Oriental y quiero que me envíen las fichas técnicas de los vehículos MG y MAXUS disponibles.')
+const WA_FICHAS = encodeURIComponent('Hola 👋 Vengo de la web y quiero que me envíen las fichas técnicas de los vehículos MG y MAXUS disponibles.')
 
-export default function StickyNav({ hasAC500 }: { hasAC500: boolean }) {
+export default function StickyNav({ hasAC500, waCorp = '584149989010' }: { hasAC500: boolean; waCorp?: string }) {
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -25,7 +25,7 @@ export default function StickyNav({ hasAC500 }: { hasAC500: boolean }) {
         onMouseEnter={e => (e.currentTarget.style.opacity = '.85')}
         onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
       >
-        🚗 Showroom Maturín
+        🚗 Showroom
       </button>
 
       {hasAC500 && (
@@ -40,7 +40,7 @@ export default function StickyNav({ hasAC500 }: { hasAC500: boolean }) {
       )}
 
       <a
-        href={`https://wa.me/584149989010?text=${WA_FICHAS}`}
+        href={`https://wa.me/${waCorp}?text=${WA_FICHAS}`}
         target="_blank"
         rel="noopener noreferrer"
         style={{ ...btnBase, background: '#111827', color: '#fff', textDecoration: 'none' }}

@@ -191,7 +191,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               ))}
             </div>
           </div>
-          <AC500Filtro vehiculos={acLista} />
+          <AC500Filtro vehiculos={acLista} waCorp={waCorp} />
         </section>
       )}
 
@@ -293,7 +293,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
       </footer>
 
       {/* ── STICKY BOTTOM NAV ─────────────────────────────────────────────── */}
-      <StickyNav hasAC500={acLista.length > 0} />
+      <StickyNav hasAC500={acLista.length > 0} waCorp={waCorp} />
     </div>
   )
 }

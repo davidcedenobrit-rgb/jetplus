@@ -104,7 +104,7 @@ function schedule(v: AC500Vehiculo, mode: Mode) {
   ]
 }
 
-function AC500Card({ v }: { v: AC500Vehiculo }) {
+function AC500Card({ v, waCorp = WA }: { v: AC500Vehiculo; waCorp?: string }) {
   const colors = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
   const [mode, setMode] = useState<Mode>(defaultMode(v))
   const [color, setColor] = useState(colors[0] || '')
@@ -119,8 +119,8 @@ function AC500Card({ v }: { v: AC500Vehiculo }) {
     fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_whatsapp', marca: v.brand, modelo: v.model }) }).catch(() => {})
     const colorPart = color ? ` Color: ${color}.` : ''
     const entrega = `${mode} meses`
-    const msg = `Hola 👋 vengo del perfil de ventas de La Oriental. Me interesa el ${v.model} en el Plan Asegúrate con $500 (${entrega}).${colorPart} ¿Me comparten disponibilidad y próximos pasos?`
-    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank')
+    const msg = `Hola 👋 vengo del perfil de ventas. Me interesa el ${v.model} en el Plan Asegúrate con $500 (${entrega}).${colorPart} ¿Me comparten disponibilidad y próximos pasos?`
+    window.open(`https://wa.me/${waCorp}?text=${encodeURIComponent(msg)}`, '_blank')
   }
   async function compartir() {
     const url = new URL(window.location.href); url.searchParams.set('car', v.id)
@@ -216,7 +216,7 @@ function AC500Card({ v }: { v: AC500Vehiculo }) {
   )
 }
 
-export default function AC500Filtro({ vehiculos }: { vehiculos: AC500Vehiculo[] }) {
+export default function AC500Filtro({ vehiculos, waCorp = WA }: { vehiculos: AC500Vehiculo[]; waCorp?: string }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
@@ -231,7 +231,7 @@ export default function AC500Filtro({ vehiculos }: { vehiculos: AC500Vehiculo[] 
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
-        {lista.map(v => <AC500Card key={v.id} v={v} />)}
+        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} />)}
       </div>
 
       {lista.length === 0 && (
