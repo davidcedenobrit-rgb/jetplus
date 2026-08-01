@@ -201,7 +201,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               ))}
             </div>
           </div>
-          <AC500Filtro vehiculos={acLista} waCorp={waCorp} />
+          <AC500Filtro vehiculos={acLista} waCorp={waCorp} evento={evento} concesionario={concesionario} />
         </section>
       )}
 

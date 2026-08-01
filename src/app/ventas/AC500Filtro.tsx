@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import CotizacionRapidaModal from './CotizacionRapidaModal'
 
 export interface AC500Vehiculo {
   id: string
@@ -104,9 +105,10 @@ function schedule(v: AC500Vehiculo, mode: Mode) {
   ]
 }
 
-function AC500Card({ v, waCorp = WA }: { v: AC500Vehiculo; waCorp?: string }) {
+function AC500Card({ v, waCorp = WA, evento = '', concesionario = '' }: { v: AC500Vehiculo; waCorp?: string; evento?: string; concesionario?: string }) {
   const colors = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
   const [mode, setMode] = useState<Mode>(defaultMode(v))
+  const [rapida, setRapida] = useState(false)
   const [color, setColor] = useState(colors[0] || '')
 
   const modes = activeModes(v)
@@ -208,15 +210,29 @@ function AC500Card({ v, waCorp = WA }: { v: AC500Vehiculo; waCorp?: string }) {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto' }}>
+          <button className="lo-cbtn-red" onClick={() => {
+            fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_interesado', marca: v.brand, modelo: v.model }) }).catch(() => {})
+            setRapida(true)
+          }}>📩 Me interesa</button>
           <button className="lo-cbtn-dark" onClick={goWA}>Solicitar información</button>
           <button className="lo-cbtn-out" onClick={compartir}>Compartir esta oferta</button>
         </div>
       </div>
+
+      {rapida && (
+        <CotizacionRapidaModal
+          vehiculo={{ brand: v.brand, model: v.model, cash: null, gc: null, gcr: null, tasa_credito: null }}
+          onClose={() => setRapida(false)}
+          evento={evento} waCorp={waCorp} concesionario={concesionario}
+          financiamiento={false} modalidad="ac500"
+          planNota={`Plan Asegúrate $500 · entrega en ${mode} meses${color ? ` · ${cap(color)}` : ''}`}
+        />
+      )}
     </article>
   )
 }
 
-export default function AC500Filtro({ vehiculos, waCorp = WA }: { vehiculos: AC500Vehiculo[]; waCorp?: string }) {
+export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', concesionario = '' }: { vehiculos: AC500Vehiculo[]; waCorp?: string; evento?: string; concesionario?: string }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
@@ -231,7 +247,7 @@ export default function AC500Filtro({ vehiculos, waCorp = WA }: { vehiculos: AC5
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
-        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} />)}
+        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} evento={evento} concesionario={concesionario} />)}
       </div>
 
       {lista.length === 0 && (

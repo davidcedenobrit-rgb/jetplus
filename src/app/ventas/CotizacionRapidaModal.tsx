@@ -16,12 +16,15 @@ function fmt(n: number | null | undefined) {
   return n.toLocaleString('de-DE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
-export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', waCorp = '584149989010', concesionario = '' }: {
+export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', waCorp = '584149989010', concesionario = '', financiamiento = true, modalidad = '', planNota = '' }: {
   vehiculo: Vehiculo
   onClose: () => void
   evento?: string
   waCorp?: string
   concesionario?: string
+  financiamiento?: boolean   // false = solo captación (p. ej. Asegúrate $500)
+  modalidad?: string         // se guarda en el lead (ac500 | credito | contado…)
+  planNota?: string          // línea de contexto del plan cuando no hay desglose
 }) {
   const precio    = vehiculo.cash ?? 0
   const iva       = precio * 0.16
@@ -49,10 +52,11 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
   function waLink() {
     const fecha = new Date().toLocaleString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     const msg = encodeURIComponent(
-      `*Nuevo interesado* 🚗\n` +
+      `*Nuevo interesado${modalidad === 'ac500' ? ' · Asegúrate $500' : ''}* 🚗\n` +
       `Cliente: ${nombre}\n` +
       `Teléfono: ${telefono}\n` +
       `Interés en: ${vehiculo.brand} ${vehiculo.model}\n` +
+      (planNota ? `Plan: ${planNota}\n` : '') +
       (presupuesto ? `Presupuesto: ${presupuesto}\n` : '') +
       `Vendedor: ${vendedor}\n` +
       (evento ? `Evento: ${evento}\n` : '') +
@@ -71,7 +75,8 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
         body: JSON.stringify({
           nombre, telefono, presupuesto,
           marca: vehiculo.brand, modelo: vehiculo.model,
-          vendedor, evento, concesionario, origen: 'cotizacion_rapida',
+          vendedor, evento, concesionario, modalidad: modalidad || null,
+          origen: modalidad === 'ac500' ? 'ac500_interesado' : 'cotizacion_rapida',
         }),
       })
     } catch { /* aunque falle el guardado, dejamos pasar al WhatsApp */ }
@@ -111,6 +116,13 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 20, lineHeight: '32px', textAlign: 'center' }}>×</button>
         </div>
 
+        {planNota && (
+          <div style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a', padding: '10px 18px', fontSize: 12.5, fontWeight: 700, color: '#92400e' }}>
+            🛡️ {planNota}
+          </div>
+        )}
+
+        {financiamiento && <>
         {/* CONTADO */}
         <div style={hdr('#7c2d12', '#fde68a')}>Modalidad de Contado</div>
 
@@ -152,6 +164,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
             <span style={{ fontSize: 17, fontWeight: 900, color: '#C41E3A', fontFamily: 'monospace' }}>${fmt(cuota)}</span>
           </div>
         )}
+        </>}
 
         {/* Captación de datos del cliente */}
         <div style={{ padding: '14px 18px 8px', borderTop: '6px solid #f3f4f6' }}>
