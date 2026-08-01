@@ -32,7 +32,12 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
     admin.from('concesionarios').select('id, nombre_comercial, ciudad, estado, logo_url').eq('es_principal', true).limit(1).maybeSingle(),
   ])
 
-  const cfg = (k: string) => (tasasCfg ?? []).find(t => t.clave === k)?.valor || ''
+  // valor puede venir como NUMERIC (número) desde la base; se normaliza a texto
+  // para poder usar .replace()/Number() sin romper el render del link público.
+  const cfg = (k: string) => {
+    const v = (tasasCfg ?? []).find(t => t.clave === k)?.valor
+    return v == null ? '' : String(v)
+  }
 
   // Tasas para el diferencial cambiario del plan 100% Banco
   const tasas = {
