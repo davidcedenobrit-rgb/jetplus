@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import VehiculosFiltro from './VehiculosFiltro'
 import AC500Filtro from './AC500Filtro'
 import PromoCotizar from './PromoCotizar'
@@ -15,6 +15,11 @@ export const revalidate = 60
 
 export default async function VentasPage({ searchParams }: { searchParams: Promise<{ evento?: string }> }) {
   const supabase = await createClient()
+  // La config y el concesionario principal solo tienen política de lectura para
+  // usuarios autenticados; el link /ventas es público (visitante sin sesión), así
+  // que se leen con el cliente de servicio para que el número de WhatsApp, las
+  // tasas y el branding salgan correctos por cada base (La Oriental / Ki Auto).
+  const admin = await createAdminClient()
   const sp = await searchParams
   const evento = String(sp?.evento ?? '').slice(0, 80)
 
@@ -23,8 +28,8 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
     supabase.from('ac500_vehiculos').select('*').eq('disponible', true).order('orden'),
     supabase.from('promocion_vehiculos').select('*').order('orden').order('created_at'),
     supabase.from('promociones_especiales').select('*').limit(1).single(),
-    supabase.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt', 'wa_corporativo', 'concesionario_id']),
-    supabase.from('concesionarios').select('id, nombre_comercial, ciudad, estado, logo_url').eq('es_principal', true).limit(1).maybeSingle(),
+    admin.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt', 'wa_corporativo', 'concesionario_id']),
+    admin.from('concesionarios').select('id, nombre_comercial, ciudad, estado, logo_url').eq('es_principal', true).limit(1).maybeSingle(),
   ])
 
   const cfg = (k: string) => (tasasCfg ?? []).find(t => t.clave === k)?.valor || ''

@@ -20,6 +20,12 @@ export async function middleware(request: NextRequest) {
     // y el navegador recibe un 405.
     '/api/cotizaciones/responder',
     '/api/cotizaciones/solicitar-descuento',
+    // Link público de ventas (/ventas): captación de leads, desplegable de
+    // vendedores y tracking de eventos. Sin esto el POST del formulario se
+    // redirige al login y el lead nunca se guarda.
+    '/api/leads',
+    '/api/ventas/vendedores',
+    '/api/eventos',
   ]
 
   // PDF de la cotización: público (se comparte al cliente por WhatsApp/correo).
