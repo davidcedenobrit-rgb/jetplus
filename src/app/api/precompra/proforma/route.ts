@@ -56,8 +56,11 @@ export async function POST(req: Request) {
 
   const tipoPersona = b.tipoPersona === 'juridica' ? 'juridica' : 'natural'
   const nombre = String(b.clienteNombre ?? cot?.cliente_nombre ?? '').trim()
-  const cedula = String(b.clienteCedula ?? cot?.cliente_cedula ?? '').trim()
-  const rif = String(b.clienteRif ?? cot?.cliente_rif ?? cot?.cliente_ci_rif ?? '').trim()
+  const cedula = String(b.clienteCedula ?? cot?.cliente_cedula ?? (tipoPersona === 'natural' ? cot?.cliente_ci_rif : '') ?? '').trim()
+  // Natural: la identidad es la cédula, no lleva RIF. Jurídica: RIF de la empresa.
+  const rif = tipoPersona === 'juridica'
+    ? String(b.clienteRif ?? cot?.cliente_rif ?? cot?.cliente_ci_rif ?? '').trim()
+    : String(b.clienteRif ?? cot?.cliente_rif ?? '').trim()
   const direccion = String(b.clienteDireccion ?? cot?.cliente_direccion ?? '').trim()
   const telefono = String(b.clienteTelefono ?? cot?.cliente_telefono ?? '').trim()
   const correo = String(b.clienteCorreo ?? cot?.cliente_correo ?? '').trim()
@@ -77,8 +80,8 @@ export async function POST(req: Request) {
   // Validación de completitud (bloquea si faltan datos indispensables).
   const faltan: string[] = []
   if (!nombre) faltan.push('nombre')
-  if (!cedula) faltan.push('cédula')
-  if (!rif) faltan.push('RIF')
+  if (!cedula) faltan.push(tipoPersona === 'juridica' ? 'cédula del firmante' : 'cédula')
+  if (tipoPersona === 'juridica' && !rif) faltan.push('RIF de la empresa')
   if (!direccion) faltan.push('dirección')
   if (!telefono) faltan.push('teléfono')
   if (!correo) faltan.push('correo')

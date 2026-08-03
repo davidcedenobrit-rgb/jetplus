@@ -396,6 +396,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
   async function enviar() {
     if (!vehiculoSel && !ac500Directo) return
     if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) { setErrorMsg('Nombre y C.I./RIF son obligatorios.'); return }
+    if (esPrecompra && form.tipoPersona === 'juridica' && !form.clienteCedula.trim()) { setErrorMsg('Para persona jurídica indica la cédula del firmante.'); return }
     if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) { setErrorMsg('El correo no es válido.'); return }
     if (rojasMode && rojasCalc.precio <= 0) { setErrorMsg('Indica el precio base para la cotización personalizada.'); return }
     if (!rojasMode && plan === 'ac500' && !planAC500Sel) { setErrorMsg('Selecciona un modelo del plan Asegúrate con $500.'); return }
@@ -444,7 +445,10 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
           clienteDireccion: form.clienteDireccion || null, clienteCiudadEstado: form.clienteCiudadEstado || null,
           clienteCodigoPostal: form.clienteCodigoPostal || null, agenteRetencion: form.agenteRetencion,
           retencionPct: form.agenteRetencion ? (num(form.retencionPct) ?? 75) : null,
-          clienteCedula: form.clienteCedula || null, clienteRif: form.clienteRif || null,
+          // Natural → cédula = la identidad (C.I./RIF), sin RIF aparte.
+          // Jurídica → RIF = la identidad de la empresa + cédula del firmante.
+          clienteCedula: (form.tipoPersona === 'juridica' ? form.clienteCedula.trim() : form.clienteCiRif.trim()) || null,
+          clienteRif: (form.tipoPersona === 'juridica' ? form.clienteCiRif.trim() : '') || null,
           color: form.color || null,
           modalidad: modalidadEnvio,
           plan: planEnvio,
@@ -982,19 +986,19 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
               </div>
             </div>
 
-            {/* Precompra (AC500): identidad completa + color para arrastrar a la proforma/anexo */}
+            {/* Precompra (AC500): identidad + color para arrastrar a la proforma/anexo.
+                Natural → la identidad es la cédula (campo C.I./RIF de arriba), no lleva RIF.
+                Jurídica → la identidad es el RIF de la empresa (campo de arriba) + la
+                cédula de quien firma la letra por la empresa. */}
             {esPrecompra && (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                {form.tipoPersona === 'juridica' && (
                   <div>
-                    <label className={labelCls}>Cédula del firmante</label>
+                    <label className={labelCls}>Cédula del firmante *</label>
                     <input className={inputCls} value={form.clienteCedula} onChange={e => setForm(p => ({ ...p, clienteCedula: e.target.value }))} placeholder="V-12345678" />
+                    <p className="text-[10px] text-gray-400 mt-1">Persona que firma la letra en representación de la empresa.</p>
                   </div>
-                  <div>
-                    <label className={labelCls}>{form.tipoPersona === 'juridica' ? 'RIF de la empresa' : 'RIF'}</label>
-                    <input className={inputCls} value={form.clienteRif} onChange={e => setForm(p => ({ ...p, clienteRif: e.target.value }))} placeholder={form.tipoPersona === 'juridica' ? 'J-12345678-9' : 'V-12345678-9'} />
-                  </div>
-                </div>
+                )}
                 <div>
                   <label className={labelCls}>Color(es) elegido(s)</label>
                   <input className={inputCls} value={form.color} onChange={e => setForm(p => ({ ...p, color: e.target.value }))} placeholder="Ej: Blanco perla / Negro" />
