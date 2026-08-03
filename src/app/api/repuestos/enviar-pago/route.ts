@@ -50,7 +50,9 @@ export async function POST(req: NextRequest) {
       numeroCotizacion: cotiz, correoAdicional: correoExtra,
     })
 
-    // Auto-egreso: registrar el pago a Vehimotors como egreso (no duplica si ya existe)
+    // Auto-egreso: registrar el pago de los repuestos (pedidos por SORE) como egreso.
+    // El proveedor de repuestos es Avanza Motors; se busca por nombre para tomar su
+    // id y RIF en la base que corresponda (no duplica si el egreso ya existe).
     let egresoId: string | null = sol.egreso_pago_id ?? null
     if (!egresoId) {
       const year = new Date().getFullYear()
@@ -59,14 +61,19 @@ export async function POST(req: NextRequest) {
       const seq = String(buf[0] % 1_000_000).padStart(6, '0')
       const numero_egreso = `LOA-EGR-${year}-${seq}`
 
+      const { data: prov } = await supabase
+        .from('proveedores').select('id, nombre, rif').ilike('nombre', 'avanza motors%').limit(1).maybeSingle()
+
       const { data: egreso } = await supabase.from('egresos').insert({
         numero_egreso,
         categoria:        'repuestos',
-        concepto:         `Pago repuestos Vehimotors — ${sol.numero}`,
-        descripcion:      cotiz ? `Cotización Vehimotors ${cotiz}` : null,
+        concepto:         `Pago repuestos Avanza Motors — ${sol.numero}`,
+        descripcion:      cotiz ? `Cotización Avanza Motors ${cotiz}` : null,
         monto:            montoNum,
         moneda:           monedaPago,
-        beneficiario:     'Vehimotors',
+        beneficiario:     prov?.nombre ?? 'AVANZA MOTORS, C.A.',
+        cedula_rif_benef: prov?.rif ?? null,
+        proveedor_id:     prov?.id ?? null,
         numero_sa:        cotiz,
         centro_costo_id:  'repuestos',
         area_responsable: 'Repuestos',
