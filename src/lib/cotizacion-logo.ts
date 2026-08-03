@@ -33,11 +33,16 @@ export function getSelloBase64(): string | undefined {
  * usarlo como cabecera del Anexo A. Devuelve undefined si el archivo no existe
  * (en ese caso el PDF cae al header de texto).
  */
+const MEMBRETE_VEHIMOTORS_URL = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/6a70efff32db2dd15782dcd5.jpg'
+
 export function getMembreteVehimotorsBase64(): string | undefined {
-  try {
-    const buf = readFileSync(join(process.cwd(), 'public', 'membrete-vehimotors.png'))
-    return `data:image/png;base64,${buf.toString('base64')}`
-  } catch {
-    return undefined
+  // Prioridad: archivo local en public/ (más confiable, va empacado). Si no está,
+  // se usa la imagen alojada en el CDN (react-pdf la descarga al generar el PDF).
+  for (const [file, mime] of [['membrete-vehimotors.png', 'image/png'], ['membrete-vehimotors.jpg', 'image/jpeg']] as const) {
+    try {
+      const buf = readFileSync(join(process.cwd(), 'public', file))
+      return `data:${mime};base64,${buf.toString('base64')}`
+    } catch { /* sigue */ }
   }
+  return MEMBRETE_VEHIMOTORS_URL
 }
