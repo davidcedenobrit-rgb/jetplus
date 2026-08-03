@@ -60,6 +60,8 @@ const COBERTURAS: { marca: string; cobertura: string }[] = [
   { marca: 'Baterías eléctricas / híbridas', cobertura: '8 años / 150.000 km' },
 ]
 
+const NOTA_FLETES = 'Ciertas condiciones podrán aplicar, relacionadas con el gasto por concepto de cancelación de fletes, por nuevas regulaciones marítimas, y de impuestos de nacionalización, que se encuentran de manera específica en el contrato final. (Las cuales el Comprador declara conocer).'
+
 const NOTA_COLOR = 'Nota *1: El Cliente acepta y entiende que la selección de este(os) color(es) es solo a manera referencial, y que los mismos dependerán del proceso interno de disponibilidad al momento de la orden de compra y de posterior ensamblaje, según disponibilidad de la Fábrica SAIC MOTORS de la República Popular China; por lo que, ésta declaración de preferencia de color(es), solo es a modo de señalamiento, y de ninguna manera implica, ni se constituye en una obligación de VEHIMOTORS, de hacer la entrega a EL COMPRADOR, del(os) vehículo(s) del color indicado como preferencia el comprador, pues los mismos estarán sujetos al proceso interno de disponibilidad manejado en la fábrica de SAIC MOTORS en la República Popular China.'
 
 const COND_GARANTIA = [
@@ -134,9 +136,9 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     logoWrap: { flexShrink: 0, width: 180 },
     logo: { width: 180, height: 42, objectFit: 'contain', objectPositionX: 0 },
     company: { flex: 1, alignItems: 'flex-end', paddingLeft: 18 },
-    companyName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: secundario, textAlign: 'right' },
-    companyRif: { fontSize: 8, color: primario, fontFamily: 'Helvetica-Bold', marginTop: 1, textAlign: 'right' },
-    companyLine: { fontSize: 7.5, color: GRAY, textAlign: 'right' },
+    companyName: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: secundario, textAlign: 'right' },
+    companyRif: { fontSize: 6.5, color: primario, fontFamily: 'Helvetica-Bold', marginTop: 1, textAlign: 'right' },
+    companyLine: { fontSize: 6, color: GRAY, textAlign: 'right' },
 
     body: { padding: '14pt 30pt' },
 
@@ -265,14 +267,10 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
           </View>
           <Text style={s.nota}>Nota: estos valores son estimados a esta fecha y están sujetos a variación por orden o datos suministrados por los entes gubernamentales; se recotizarán al momento de ejecutar el pago final.</Text>
 
-          {/* Monto total — antes del cronograma */}
+          {/* Valor de venta de la unidad — antes del cronograma */}
           <View style={s.valorBox}>
             <Text style={s.valorLbl}>Valor (venta) de la unidad</Text>
             <Text style={s.valorVal}>${fmt(data.valorVentaUnidad)}</Text>
-          </View>
-          <View style={s.totalBox}>
-            <Text style={s.totalLbl}>TOTAL A PAGAR</Text>
-            <Text style={s.totalVal}>${fmt(data.totalPagar)}</Text>
           </View>
 
           {/* Cronograma */}
@@ -292,11 +290,19 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
             <Text style={s.tMonto}>{fmt(data.gastosAsociados)}</Text>
           </View>
 
-          {/* Página 2: nota de color y condiciones de garantía (texto completo del anexo) */}
-          <View break />
+          {/* Cuadro de pago total — después del cronograma */}
+          <View style={s.totalBox}>
+            <Text style={s.totalLbl}>TOTAL A PAGAR</Text>
+            <Text style={s.totalVal}>${fmt(data.totalPagar)}</Text>
+          </View>
+
+          {/* Notas de la primera página (carácter más pequeño) */}
+          <Text style={[s.nota, { color: GRAY, marginTop: 6 }]}>{NOTA_FLETES}</Text>
           <Text style={s.nota}>{NOTA_COLOR}</Text>
 
-          <Text style={[s.gIntro, { marginTop: 6 }]}>Información de interés y de referencia para el proceso del plan de compra programada, a ejecutar.</Text>
+          {/* Página 2: condiciones de garantía (texto completo del anexo) */}
+          <View break />
+          <Text style={s.gIntro}>Información de interés y de referencia para el proceso del plan de compra programada, a ejecutar.</Text>
 
           {/* Condiciones de garantía */}
           <Text style={s.gTitle}>Condiciones de garantía</Text>
