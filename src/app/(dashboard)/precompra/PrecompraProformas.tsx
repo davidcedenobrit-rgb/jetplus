@@ -87,7 +87,10 @@ export default function PrecompraProformas({ seccion = 'proforma' }: { seccion?:
 function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; seccion?: Seccion; onEdit: () => void; onChange: () => void }) {
   const [subiendo, setSubiendo] = useState<string>('')
   const [firmando, setFirmando] = useState(false)
-  const [correo, setCorreo] = useState(p.correo_destino || '')
+  const [correos, setCorreos] = useState<string[]>(
+    p.correo_destino ? String(p.correo_destino).split(/[,;\s]+/).map((s: string) => s.trim()).filter(Boolean) : []
+  )
+  const [correoInput, setCorreoInput] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [msg, setMsg] = useState('')
   const [cobrando, setCobrando] = useState(false)
@@ -95,15 +98,27 @@ function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; s
   const docs: any[] = Array.isArray(p.documentos) ? p.documentos : []
   const tieneDoc = (t: string) => docs.some(d => d.tipo === t)
 
+  const emailValido = (s: string) => /\S+@\S+\.\S+/.test(s)
+  function agregarCorreo(raw: string) {
+    const nuevos = raw.split(/[,;\s]+/).map(s => s.trim()).filter(emailValido)
+    if (nuevos.length) setCorreos(prev => Array.from(new Set([...prev, ...nuevos])))
+    setCorreoInput('')
+  }
+  function quitarCorreo(c: string) { setCorreos(prev => prev.filter(x => x !== c)) }
+
   async function enviar() {
-    if (!correo.trim()) { setMsg('Escribe el correo de destino'); return }
+    // Incluye lo que quedó escrito sin agregar (por si no presionaron Enter).
+    const pendientes = correoInput.split(/[,;\s]+/).map(s => s.trim()).filter(emailValido)
+    const lista = Array.from(new Set([...correos, ...pendientes]))
+    if (!lista.length) { setMsg('Agrega al menos un correo de destino'); return }
     setEnviando(true); setMsg('')
     const r = await fetch(`/api/precompra/proforma/${p.id}/enviar`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correoDestino: correo }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correoDestino: lista.join(', ') }),
     })
     const j = await r.json().catch(() => ({}))
     setEnviando(false)
-    if (r.ok) { setMsg('Enviado ✓'); onChange() } else setMsg(j.error ?? 'No se pudo enviar')
+    if (r.ok) { setCorreos(lista); setCorreoInput(''); setMsg(`Enviado ✓ (${lista.length} correo${lista.length === 1 ? '' : 's'})`); onChange() }
+    else setMsg(j.error ?? 'No se pudo enviar')
   }
 
   async function cobrarCuota1() {
@@ -250,8 +265,22 @@ function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; s
             </a>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center border-t border-gray-100 pt-3">
-            <input value={correo} onChange={e => setCorreo(e.target.value)} placeholder="Correo de Vehimotors / Caracas…"
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red" />
+            <div className="flex-1 flex flex-wrap items-center gap-1.5 px-2 py-1.5 border border-gray-200 rounded-lg focus-within:border-oriental-red">
+              {correos.map(c => (
+                <span key={c} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-[11px] font-medium px-2 py-0.5 rounded-full">
+                  {c}
+                  <button type="button" onClick={() => quitarCorreo(c)} className="text-gray-400 hover:text-red-600 leading-none">×</button>
+                </span>
+              ))}
+              <input
+                value={correoInput}
+                onChange={e => setCorreoInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ',' || e.key === ';') { e.preventDefault(); agregarCorreo(correoInput) } }}
+                onBlur={() => { if (correoInput.trim()) agregarCorreo(correoInput) }}
+                placeholder={correos.length ? 'Agregar otro correo…' : 'Correos (Enter o coma para agregar varios)…'}
+                className="flex-1 min-w-[150px] px-1 py-0.5 text-sm focus:outline-none"
+              />
+            </div>
             <button onClick={enviar} disabled={enviando}
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-blue-800 text-white text-xs font-bold hover:bg-blue-900 disabled:opacity-50">
               {enviando ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar a Caracas
