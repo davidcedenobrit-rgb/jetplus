@@ -204,7 +204,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     covOn: { backgroundColor: '#fef2f2' },
 
     // Firmas
-    firmas: { flexDirection: 'row', gap: 20, marginTop: 14 },
+    firmas: { flexDirection: 'row', gap: 20, marginTop: 26 },
     firmaBox: { flex: 1, alignItems: 'center' },
     firmaImg: { height: 40, width: 120, objectFit: 'contain', marginBottom: -4, alignSelf: 'center' },
     firmaLine: { borderTop: `1pt solid ${DARK}`, width: '100%', marginBottom: 4 },
@@ -323,6 +323,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
 
           {/* Página 2: condiciones de garantía (texto completo del anexo) */}
           <View break />
+          <View style={{ height: 16 }} />
           <Text style={s.gIntro}>Información de interés y de referencia para el proceso del plan de compra programada, a ejecutar.</Text>
 
           {/* Condiciones de garantía */}
