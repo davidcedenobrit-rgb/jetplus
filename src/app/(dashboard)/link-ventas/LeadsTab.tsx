@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Search, Users, MessageCircle } from 'lucide-react'
+import { Loader2, Search, Users, MessageCircle, FileSpreadsheet } from 'lucide-react'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const fmtFecha = (s: string) => { try { return new Date(s).toLocaleString('es-VE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) } catch { return s } }
@@ -45,6 +45,13 @@ export default function LeadsTab() {
             {eventos.map(ev => <option key={ev} value={ev}>{ev}</option>)}
           </select>
         )}
+        <a
+          href={`/api/leads/export${evento ? `?evento=${encodeURIComponent(evento)}` : ''}`}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-oriental-red text-white hover:opacity-90 transition-opacity whitespace-nowrap"
+          title="Descargar en Excel con la guía para rebatir objeciones"
+        >
+          <FileSpreadsheet size={15} /> Exportar a Excel
+        </a>
       </div>
 
       {filtrados.length === 0 ? (
