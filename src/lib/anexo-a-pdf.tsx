@@ -286,7 +286,9 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
             <View style={s.planRow}><Text style={s.planKey}>Unidad</Text><Text style={s.planVal}>{data.unidad}</Text></View>
             <View style={s.planRow}><Text style={s.planKey}>Color(es) de preferencia</Text><Text style={s.planVal}>{data.colores || '—'}</Text></View>
             <View style={s.planRow}><Text style={s.planKey}>Gastos asociados (IVA, IGTF y matriculación)</Text><Text style={s.planVal}>${fmt(data.gastosAsociados)}</Text></View>
-            <Text style={[s.nota, { marginTop: 6 }]}>Nota: estos valores son estimados a esta fecha y están sujetos a variación por orden o datos suministrados por los entes gubernamentales; se recotizarán al momento de ejecutar el pago final.</Text>
+            <Text style={{ fontSize: 7.5, color: primario, fontStyle: 'italic', lineHeight: 1.3, marginTop: 8, paddingTop: 6, borderTop: `0.5pt solid ${BORDER}` }}>
+              Nota: estos valores son estimados a esta fecha y están sujetos a variación por orden o datos suministrados por los entes gubernamentales; se recotizarán al momento de ejecutar el pago final.
+            </Text>
           </View>
 
           {/* Valor de venta de la unidad — antes del cronograma */}
