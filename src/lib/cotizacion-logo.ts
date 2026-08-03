@@ -27,3 +27,17 @@ export function getSelloBase64(): string | undefined {
     return undefined
   }
 }
+
+/**
+ * Membrete full-width de VEHIMOTORS (banner con logo + fondo) en base64, para
+ * usarlo como cabecera del Anexo A. Devuelve undefined si el archivo no existe
+ * (en ese caso el PDF cae al header de texto).
+ */
+export function getMembreteVehimotorsBase64(): string | undefined {
+  try {
+    const buf = readFileSync(join(process.cwd(), 'public', 'membrete-vehimotors.png'))
+    return `data:image/png;base64,${buf.toString('base64')}`
+  } catch {
+    return undefined
+  }
+}

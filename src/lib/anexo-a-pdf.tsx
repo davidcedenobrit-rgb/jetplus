@@ -18,6 +18,7 @@ export interface AnexoAData {
   // Membrete / concesionario
   logoSrc?: string
   selloSrc?: string
+  membreteSrc?: string   // banner full-width (p. ej. membrete de Vehimotors); si está, ocupa todo el ancho del header
   empresaNombre?: string
   empresaRif?: string | null
   empresaDireccion?: string | null
@@ -120,6 +121,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     tel: null as string | null,
     correo: null as string | null,
     logo: undefined as string | undefined,
+    membrete: data.membreteSrc,
   } : {
     nombre: data.empresaNombre,
     rif: data.empresaRif ?? null,
@@ -127,6 +129,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     tel: data.empresaTelefono ?? null,
     correo: data.empresaCorreo ?? null,
     logo: data.logoSrc,
+    membrete: data.membreteSrc,
   }
   const empDir = (emp.dir || '').split('\n').filter(Boolean)
 
@@ -136,6 +139,8 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     logoWrap: { flexShrink: 0, width: 180 },
     logo: { width: 180, height: 42, objectFit: 'contain', objectPositionX: 0 },
     company: { flex: 1, alignItems: 'flex-end', paddingLeft: 18 },
+    membreteFull: { width: '100%', objectFit: 'contain' },
+    membreteData: { paddingHorizontal: 30, paddingTop: 2, paddingBottom: 6, borderBottom: `2pt solid ${primario}`, alignItems: 'flex-end' },
     companyName: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: secundario, textAlign: 'right' },
     companyRif: { fontSize: 6.5, color: primario, fontFamily: 'Helvetica-Bold', marginTop: 1, textAlign: 'right' },
     companyLine: { fontSize: 6, color: GRAY, textAlign: 'right' },
@@ -220,17 +225,29 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     <Document>
       <Page size="A4" style={s.page}>
         {/* Header / membrete */}
-        <View style={s.header} fixed>
-          <View style={s.logoWrap}>
-            {emp.logo ? <Image src={emp.logo} style={s.logo} /> : <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: secundario }}>{emp.nombre}</Text>}
+        {emp.membrete ? (
+          /* Membrete full-width (banner) + franja pequeña con datos legales */
+          <View fixed>
+            <Image src={emp.membrete} style={s.membreteFull} />
+            <View style={s.membreteData}>
+              <Text style={s.companyName}>{emp.nombre}{emp.rif ? `  ·  RIF: ${emp.rif}` : ''}</Text>
+              {empDir.map((l, i) => <Text key={i} style={s.companyLine}>{l}</Text>)}
+              {emp.tel ? <Text style={s.companyLine}>{emp.tel}{emp.correo ? ` · ${emp.correo}` : ''}</Text> : null}
+            </View>
           </View>
-          <View style={s.company}>
-            <Text style={s.companyName}>{emp.nombre}</Text>
-            {emp.rif ? <Text style={s.companyRif}>RIF: {emp.rif}</Text> : null}
-            {empDir.map((l, i) => <Text key={i} style={s.companyLine}>{l}</Text>)}
-            {emp.tel ? <Text style={s.companyLine}>{emp.tel}{emp.correo ? ` · ${emp.correo}` : ''}</Text> : null}
+        ) : (
+          <View style={s.header} fixed>
+            <View style={s.logoWrap}>
+              {emp.logo ? <Image src={emp.logo} style={s.logo} /> : <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: secundario }}>{emp.nombre}</Text>}
+            </View>
+            <View style={s.company}>
+              <Text style={s.companyName}>{emp.nombre}</Text>
+              {emp.rif ? <Text style={s.companyRif}>RIF: {emp.rif}</Text> : null}
+              {empDir.map((l, i) => <Text key={i} style={s.companyLine}>{l}</Text>)}
+              {emp.tel ? <Text style={s.companyLine}>{emp.tel}{emp.correo ? ` · ${emp.correo}` : ''}</Text> : null}
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={s.body}>
           {/* Título */}
@@ -242,7 +259,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
           </View>
 
           {/* Cliente */}
-          <Text style={s.sectionLabel}>Datos del cliente</Text>
+          <Text style={s.sectionLabel}>Señores:</Text>
           <View style={s.card}>
             <View style={s.row}><Text style={s.key}>Cliente:</Text><Text style={s.val}>{data.clienteNombre}</Text></View>
             {data.estadoCivil ? <View style={s.row}><Text style={s.key}>Estado civil:</Text><Text style={s.val}>{data.estadoCivil}</Text></View> : null}
@@ -260,7 +277,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
 
           {/* Plan — una sola columna: los gastos van debajo de los colores */}
           <View style={s.card}>
-            <View style={s.planRow}><Text style={s.planKey}>Fecha</Text><Text style={s.planVal}>{data.fecha}</Text></View>
+            <View style={s.planRow}><Text style={s.planKey}>Fecha de inicio del plan:</Text><Text style={s.planVal}>{data.fecha}</Text></View>
             <View style={s.planRow}><Text style={s.planKey}>Unidad</Text><Text style={s.planVal}>{data.unidad}</Text></View>
             <View style={s.planRow}><Text style={s.planKey}>Color(es) de preferencia</Text><Text style={s.planVal}>{data.colores || '—'}</Text></View>
             <View style={s.planRow}><Text style={s.planKey}>Gastos asociados (IVA, IGTF y matriculación)</Text><Text style={s.planVal}>${fmt(data.gastosAsociados)}</Text></View>

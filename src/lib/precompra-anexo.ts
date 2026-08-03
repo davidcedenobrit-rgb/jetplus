@@ -1,5 +1,6 @@
 import { buildAnexoMontos, type AnexoAData } from './anexo-a-pdf'
 import type { ConcesionarioIdentity } from './concesionario'
+import { getMembreteVehimotorsBase64 } from './cotizacion-logo'
 
 const num = (x: unknown) => { const n = Number(x); return Number.isFinite(n) ? n : 0 }
 
@@ -16,6 +17,8 @@ export function buildAnexoData(pf: any, conces: ConcesionarioIdentity, variante:
   const montos = buildAnexoMontos({ variante, reserva: num(pf.reserva) || 500, cuotasBase, cuotaFinal: num(pf.cuota_final) })
   return {
     logoSrc: conces.logoSrc,
+    // Membrete full-width de Vehimotors en la copia que se le envía (si el archivo existe).
+    membreteSrc: variante === 'vehimotors' ? getMembreteVehimotorsBase64() : undefined,
     empresaNombre: conces.nombre,
     empresaRif: conces.rif,
     empresaDireccion: conces.direccion,
