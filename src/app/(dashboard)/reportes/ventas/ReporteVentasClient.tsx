@@ -41,6 +41,7 @@ export default function ReporteVentasClient() {
   const now = new Date()
   const [anio, setAnio] = useState(now.getFullYear())
   const [mes, setMes] = useState<number>(now.getMonth() + 1) // 0 = todo el año
+  const [soloVentas, setSoloVentas] = useState(true) // ocultar créditos viejos cargados
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<any[]>([])
 
@@ -61,9 +62,12 @@ export default function ReporteVentasClient() {
       const modalidad = plan ? (MODALIDAD[plan] ? plan : 'otro')
         : (v.tipo_compra === 'contado' ? 'contado' : 'otro')
       const div = divMap[v.id]
-      // Venta nueva = tiene división contable definida o es Asegúrate 500;
-      // el resto son ventas antiguas (carga de crédito de clientes previos).
-      const esNueva = !!div || plan === 'asegurate_500'
+      // Venta del mes = el vehículo tiene fecha de entrega real (se vendió/entregó
+      // en el periodo) o es un Asegúrate 500 registrado en el periodo. Los créditos
+      // viejos que se cargan solo para seguimiento NO traen fecha de entrega y, si
+      // caen en un mes por su fecha de carga, quedan marcados como "crédito viejo".
+      // (Ojo: no depende de la división contable, que puede faltar en ventas nuevas.)
+      const esNueva = !!v.fecha_entrega || plan === 'asegurate_500'
       return {
         id: v.id, marca: v.marca ?? '—', modelo: v.modelo ?? '—',
         placa: v.placa || '—',
@@ -78,10 +82,13 @@ export default function ReporteVentasClient() {
   }, [])
   useEffect(() => { cargar() }, [cargar])
 
-  const filtradas = useMemo(() => rows.filter(r => {
+  const enPeriodo = useCallback((r: any) => {
     const y = Number(r.fecha.slice(0, 4)); const m = Number(r.fecha.slice(5, 7))
     return y === anio && (mes === 0 || m === mes)
-  }), [rows, anio, mes])
+  }, [anio, mes])
+  const filtradas = useMemo(() => rows.filter(r => enPeriodo(r) && (!soloVentas || r.esNueva)), [rows, enPeriodo, soloVentas])
+  // Créditos viejos cargados que quedan ocultos en el periodo (para el aviso).
+  const creditosViejosOcultos = useMemo(() => rows.filter(r => enPeriodo(r) && !r.esNueva).length, [rows, enPeriodo])
 
   const anios = useMemo(() => {
     const s = new Set<number>(rows.map(r => Number(r.fecha.slice(0, 4))))
@@ -142,7 +149,17 @@ export default function ReporteVentasClient() {
             {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
         </div>
+        <label className="flex items-center gap-2 cursor-pointer select-none ml-auto self-center">
+          <input type="checkbox" className="accent-oriental-red w-4 h-4" checked={!soloVentas} onChange={e => setSoloVentas(!e.target.checked)} />
+          <span className="text-sm text-oriental-gray">Incluir créditos viejos cargados</span>
+        </label>
       </div>
+
+      {soloVentas && creditosViejosOcultos > 0 && (
+        <div className="mb-6 -mt-2 text-xs text-oriental-gray bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          Mostrando solo ventas del periodo. Se ocultaron <b>{creditosViejosOcultos}</b> crédito{creditosViejosOcultos === 1 ? '' : 's'} viejo{creditosViejosOcultos === 1 ? '' : 's'} cargado{creditosViejosOcultos === 1 ? '' : 's'}. Marca la casilla para incluirlos.
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="card p-4"><p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray mb-1">Vehículos vendidos</p><p className="text-2xl font-black text-oriental-black">{filtradas.length}</p></div>
@@ -155,8 +172,10 @@ export default function ReporteVentasClient() {
         <div className="card p-12 text-center text-oriental-gray text-sm">Sin ventas en {periodo}.</div>
       ) : (
         <div className="space-y-5">
-          <Bloque titulo="Por tipo de venta (nueva / antigua)" headers={['Tipo', 'Unid.', 'Monto']} rows={porTipo}
-            onCsv={() => csv(`ventas_tipo_${periodo}`, ['Tipo', 'Unidades', 'Monto USD'], porTipo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+          {!soloVentas && (
+            <Bloque titulo="Por tipo de venta (nueva / antigua)" headers={['Tipo', 'Unid.', 'Monto']} rows={porTipo}
+              onCsv={() => csv(`ventas_tipo_${periodo}`, ['Tipo', 'Unidades', 'Monto USD'], porTipo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+          )}
           <Bloque titulo="Por modalidad de venta" headers={['Modalidad', 'Unid.', 'Monto']} rows={porModalidad}
             onCsv={() => csv(`ventas_modalidad_${periodo}`, ['Modalidad', 'Unidades', 'Monto USD'], porModalidad.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
           <Bloque titulo="Por marca y modelo" headers={['Marca / Modelo', 'Unid.', 'Monto']} rows={porMarcaModelo}
