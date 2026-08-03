@@ -139,8 +139,9 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     logoWrap: { flexShrink: 0, width: 180 },
     logo: { width: 180, height: 42, objectFit: 'contain', objectPositionX: 0 },
     company: { flex: 1, alignItems: 'flex-end', paddingLeft: 18 },
+    membreteWrap: { position: 'relative', borderBottom: `2pt solid ${primario}` },
     membreteFull: { width: '100%', objectFit: 'contain' },
-    membreteData: { paddingHorizontal: 30, paddingTop: 2, paddingBottom: 6, borderBottom: `2pt solid ${primario}`, alignItems: 'flex-end' },
+    membreteDataAbs: { position: 'absolute', top: 10, right: 30, alignItems: 'flex-end' },
     companyName: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: secundario, textAlign: 'right' },
     companyRif: { fontSize: 6.5, color: primario, fontFamily: 'Helvetica-Bold', marginTop: 1, textAlign: 'right' },
     companyLine: { fontSize: 6, color: GRAY, textAlign: 'right' },
@@ -185,22 +186,25 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     totalLbl: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#fff', letterSpacing: 0.5 },
     totalVal: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#fff' },
 
-    // Garantía
-    gTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: secundario, marginBottom: 4, marginTop: 8 },
-    gIntro: { fontSize: 7.5, color: '#4b5563', marginBottom: 3, lineHeight: 1.3 },
-    gItem: { fontSize: 7.2, color: '#4b5563', marginBottom: 2, lineHeight: 1.3, flexDirection: 'row' },
+    // Garantía (compacta para que quepa toda en 1 página)
+    gTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: secundario, marginBottom: 2.5, marginTop: 5 },
+    gIntro: { fontSize: 6.5, color: '#4b5563', marginBottom: 1.5, lineHeight: 1.2 },
+    gItem: { fontSize: 6.3, color: '#4b5563', marginBottom: 0.8, lineHeight: 1.2, flexDirection: 'row' },
     gBullet: { width: 8, color: primario },
-    numNo: { width: 15, color: primario, fontFamily: 'Helvetica-Bold' },
-    otrosRow: { flexDirection: 'row', borderBottom: `0.5pt solid ${BORDER}`, paddingVertical: 2 },
-    otrosPieza: { flex: 1, fontSize: 7.2, color: '#4b5563' },
-    otrosPlazo: { width: 150, fontSize: 7.2, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'right' },
-    covRow: { flexDirection: 'row', borderBottom: `0.5pt solid ${BORDER}`, paddingVertical: 3 },
-    covMarca: { flex: 1, fontSize: 7.5, color: DARK },
-    covCob: { width: 130, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'right' },
+    numNo: { width: 13, color: primario, fontFamily: 'Helvetica-Bold' },
+    // Otros componentes y coberturas: dos columnas para ahorrar altura
+    twoCol: { flexDirection: 'row', gap: 16 },
+    twoColItem: { width: '48%' },
+    otrosRow: { flexDirection: 'row', borderBottom: `0.5pt solid ${BORDER}`, paddingVertical: 1 },
+    otrosPieza: { flex: 1, fontSize: 6.3, color: '#4b5563' },
+    otrosPlazo: { fontSize: 6.3, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'right' },
+    covRow: { flexDirection: 'row', borderBottom: `0.5pt solid ${BORDER}`, paddingVertical: 1.5 },
+    covMarca: { flex: 1, fontSize: 6.5, color: DARK },
+    covCob: { width: 110, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'right' },
     covOn: { backgroundColor: '#fef2f2' },
 
     // Firmas
-    firmas: { flexDirection: 'row', gap: 20, marginTop: 26 },
+    firmas: { flexDirection: 'row', gap: 20, marginTop: 14 },
     firmaBox: { flex: 1, alignItems: 'center' },
     firmaImg: { height: 40, width: 120, objectFit: 'contain', marginBottom: -4, alignSelf: 'center' },
     firmaLine: { borderTop: `1pt solid ${DARK}`, width: '100%', marginBottom: 4 },
@@ -226,10 +230,10 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
       <Page size="A4" style={s.page}>
         {/* Header / membrete */}
         {emp.membrete ? (
-          /* Membrete full-width (banner) + franja pequeña con datos legales */
-          <View fixed>
+          /* Membrete full-width (banner) con los datos legales arriba a la derecha */
+          <View fixed style={s.membreteWrap}>
             <Image src={emp.membrete} style={s.membreteFull} />
-            <View style={s.membreteData}>
+            <View style={s.membreteDataAbs}>
               <Text style={s.companyName}>{emp.nombre}{emp.rif ? `  ·  RIF: ${emp.rif}` : ''}</Text>
               {empDir.map((l, i) => <Text key={i} style={s.companyLine}>{l}</Text>)}
               {emp.tel ? <Text style={s.companyLine}>{emp.tel}{emp.correo ? ` · ${emp.correo}` : ''}</Text> : null}
@@ -350,14 +354,20 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
             )
           })}
 
-          {/* Otros componentes con delimitación */}
-          <Text style={[s.gTitle, { fontSize: 9 }]}>Otros componentes con delimitación</Text>
-          {OTROS_COMPONENTES.map(([pieza, plazo], i) => (
-            <View key={i} style={s.otrosRow} wrap={false}>
-              <Text style={s.otrosPieza}>{pieza}</Text>
-              <Text style={s.otrosPlazo}>{plazo}</Text>
-            </View>
-          ))}
+          {/* Otros componentes con delimitación — en dos columnas para ahorrar espacio */}
+          <Text style={[s.gTitle, { fontSize: 8.5 }]}>Otros componentes con delimitación</Text>
+          <View style={s.twoCol}>
+            {[OTROS_COMPONENTES.slice(0, Math.ceil(OTROS_COMPONENTES.length / 2)), OTROS_COMPONENTES.slice(Math.ceil(OTROS_COMPONENTES.length / 2))].map((col, ci) => (
+              <View key={ci} style={s.twoColItem}>
+                {col.map(([pieza, plazo], i) => (
+                  <View key={i} style={s.otrosRow} wrap={false}>
+                    <Text style={s.otrosPieza}>{pieza}</Text>
+                    <Text style={s.otrosPlazo}>{plazo}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
 
           {/* Firmas */}
           <View style={s.firmas} wrap={false}>
