@@ -60,16 +60,50 @@ const COBERTURAS: { marca: string; cobertura: string }[] = [
   { marca: 'Baterías eléctricas / híbridas', cobertura: '8 años / 150.000 km' },
 ]
 
+const NOTA_COLOR = 'Nota *1: El Cliente acepta y entiende que la selección de este(os) color(es) es solo a manera referencial, y que los mismos dependerán del proceso interno de disponibilidad al momento de la orden de compra y de posterior ensamblaje, según disponibilidad de la Fábrica SAIC MOTORS de la República Popular China; por lo que, ésta declaración de preferencia de color(es), solo es a modo de señalamiento, y de ninguna manera implica, ni se constituye en una obligación de VEHIMOTORS, de hacer la entrega a EL COMPRADOR, del(os) vehículo(s) del color indicado como preferencia el comprador, pues los mismos estarán sujetos al proceso interno de disponibilidad manejado en la fábrica de SAIC MOTORS en la República Popular China.'
+
+const COND_GARANTIA = [
+  'Que todos los reclamos sean notificados y llevados a cabo por el concesionario o distribuidor autorizado durante el período de garantía.',
+  'Que todas las reparaciones, rectificación de desperfectos, mantenimiento o montaje de repuestos y accesorios sean realizadas por el Concesionario o distribuidor autorizado por la marca.',
+  'El vehículo debe contar con un registro de mantenimiento acorde a las pautas establecidas por el fabricante (cada 5.000 km).',
+  'Todas las operaciones de mantenimiento deben realizarse de acuerdo con el Plan de Mantenimiento (lo podrá encontrar en nuestras páginas webs oficiales o en cualquier centro de servicio autorizado).',
+]
+
+const ALCANCE = [
+  'La reparación, el reemplazo o el ajuste sin cobro adicional por parte del Concesionario o Distribuidor autorizado, de las piezas que puedan llegar a fallar durante el período de garantía como resultado de un defecto de fabricación o ensamblaje (consulte el alcance y períodos de cobertura específica).',
+  'Para mantenimientos y/o reparaciones se deben utilizar repuestos originales.',
+  'Para hacer uso de la garantía, se debe acudir al concesionario autorizado más cercano para su análisis, gestión y reparación.',
+]
+
 const NO_CUBRE = [
-  'Fallas por almacenamiento inadecuado (motor o sistema de combustible por aceites/combustibles contaminados).',
-  'Descarga de batería o daño en pintura por acción del medioambiente.',
-  'Piezas de desgaste normal: neumáticos, pastillas de freno, disco de embrague, bombillos, limpiaparabrisas, bombas e inyectores.',
-  'Falta de mantenimiento periódico o no seguir el manual del usuario.',
-  'Daños por sustancias, piedras, granizo, rayos, terremotos, inundaciones, humedad, etc.',
-  'Uso de productos no autorizados, uso inadecuado, carreras, exhibiciones o pruebas no autorizadas.',
-  'Modificaciones al vehículo (carrocería, chasis, tren motriz, sistemas electrónicos).',
-  'Odómetro desconectado o alterado por terceros no autorizados.',
-  'Gastos fuera del alcance: pérdida de uso, salarios, almacenamiento, alquiler, hospedaje, grúas, gastos legales, etc.',
+  'Cualquier falla causada por métodos de almacenamiento inadecuados, tales como fallas de motor o del sistema de combustible causados por aceites o combustibles contaminados, entre otros.',
+  'Descarga de la batería o daño sobre la pintura por acción del medioambiente.',
+  'Aquellos artículos que requieran reemplazo o mantenimiento debido a un desgaste normal o suscitado por factores externos (combustible, uso extremo o anormal), tales como neumáticos, pastillas de freno, disco de embrague, bombillos, limpiaparabrisas, bombas de combustibles, bombas de inyección, inyectores, riel de inyección.',
+  'Cualquier falla causada por falta de mantenimiento periódico.',
+  'Daños causados por no seguir las instrucciones de mantenimiento del manual del usuario.',
+  'Daños provocados por la caída de sustancias (sustancias químicas, lluvia ácida), piedras, granizo, rayos, terremotos, inundaciones, conmociones sociales, humedad del ambiente, etc.',
+  'Daños al vehículo causados por el uso de productos no autorizados.',
+  'Daños causados por un uso inadecuado o por un mantenimiento deficiente, incluida la sobrecarga o utilizar el vehículo para carreras, exhibiciones o pruebas de manejo externas no autorizadas por la marca.',
+  'Daños causados por modificaciones al vehículo (incluyendo carrocería, chasis, tren motriz, sistemas electrónicos u otros).',
+  'Cualquier vehículo cuyo odómetro haya sido desconectado o cambiado (que no sea un cambio realizado por un distribuidor autorizado).',
+  'Cualquier gasto que esté fuera del alcance de la garantía del automóvil, como pérdida de uso del vehículo, pérdida de salarios, molestias, costos de almacenamiento, costo de alquiler de autos, hospedaje, comidas o gastos de viaje, grúas, gastos legales, entre otros.',
+]
+
+const OTROS_COMPONENTES: [string, string][] = [
+  ['Filtro de aire motor', '3 meses o 5.000 km'],
+  ['Filtro de polen', '3 meses o 5.000 km'],
+  ['Filtro de aceite motor', '3 meses o 5.000 km'],
+  ['Filtro de combustible', '6 meses o 10.000 km'],
+  ['Bujías (sin óxido)', '3 meses o 5.000 km'],
+  ['Discos y pastillas de freno', '6 meses o 10.000 km'],
+  ['Conjunto de embrague', '6 meses o 10.000 km'],
+  ['Batería (acumulador)', '12 meses o 20.000 km'],
+  ['Batería de control remoto', '3 meses o 5.000 km'],
+  ['Plumillas de limpiaparabrisas', '3 meses o 5.000 km'],
+  ['Bombillería', '3 meses o 5.000 km'],
+  ['Amortiguadores', '12 meses o 20.000 km (uso normal)'],
+  ['Alineación y balanceo', '6 meses o 10.000 km'],
+  ['Neumáticos', '6 meses o 10.000 km'],
 ]
 
 export function AnexoADocument({ data }: { data: AnexoAData }) {
@@ -145,9 +179,14 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
     totalVal: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#fff' },
 
     // Garantía
-    gTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: secundario, marginBottom: 4, marginTop: 6 },
-    gItem: { fontSize: 7.2, color: '#4b5563', marginBottom: 1.5, lineHeight: 1.25, flexDirection: 'row' },
+    gTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: secundario, marginBottom: 4, marginTop: 8 },
+    gIntro: { fontSize: 7.5, color: '#4b5563', marginBottom: 3, lineHeight: 1.3 },
+    gItem: { fontSize: 7.2, color: '#4b5563', marginBottom: 2, lineHeight: 1.3, flexDirection: 'row' },
     gBullet: { width: 8, color: primario },
+    numNo: { width: 15, color: primario, fontFamily: 'Helvetica-Bold' },
+    otrosRow: { flexDirection: 'row', borderBottom: `0.5pt solid ${BORDER}`, paddingVertical: 2 },
+    otrosPieza: { flex: 1, fontSize: 7.2, color: '#4b5563' },
+    otrosPlazo: { width: 150, fontSize: 7.2, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'right' },
     covRow: { flexDirection: 'row', borderBottom: `0.5pt solid ${BORDER}`, paddingVertical: 3 },
     covMarca: { flex: 1, fontSize: 7.5, color: DARK },
     covCob: { width: 130, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'right' },
@@ -168,6 +207,11 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
 
   const Bullet = ({ children }: { children: React.ReactNode }) => (
     <View style={s.gItem}><Text style={s.gBullet}>•</Text><Text style={{ flex: 1 }}>{children}</Text></View>
+  )
+  const NumList = ({ items }: { items: string[] }) => (
+    <>{items.map((t, i) => (
+      <View key={i} style={s.gItem}><Text style={s.numNo}>{i + 1}.</Text><Text style={{ flex: 1 }}>{t}</Text></View>
+    ))}</>
   )
 
   return (
@@ -212,21 +256,27 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
             A continuación, le presentamos un resumen de los acuerdos de nuestro plan de compra programada:
           </Text>
 
-          {/* Plan */}
-          <View style={s.grid2}>
-            <View style={s.col}>
-              <View style={s.planRow}><Text style={s.planKey}>Fecha</Text><Text style={s.planVal}>{data.fecha}</Text></View>
-              <View style={s.planRow}><Text style={s.planKey}>Unidad</Text><Text style={s.planVal}>{data.unidad}</Text></View>
-              <View style={s.planRow}><Text style={s.planKey}>Color(es) de preferencia</Text><Text style={s.planVal}>{data.colores || '—'}</Text></View>
-            </View>
-            <View style={s.col}>
-              <View style={s.planRow}><Text style={s.planKey}>Gastos asociados (IVA, IGTF y matriculación)</Text><Text style={s.planVal}>${fmt(data.gastosAsociados)}</Text></View>
-            </View>
+          {/* Plan — una sola columna: los gastos van debajo de los colores */}
+          <View style={s.card}>
+            <View style={s.planRow}><Text style={s.planKey}>Fecha</Text><Text style={s.planVal}>{data.fecha}</Text></View>
+            <View style={s.planRow}><Text style={s.planKey}>Unidad</Text><Text style={s.planVal}>{data.unidad}</Text></View>
+            <View style={s.planRow}><Text style={s.planKey}>Color(es) de preferencia</Text><Text style={s.planVal}>{data.colores || '—'}</Text></View>
+            <View style={s.planRow}><Text style={s.planKey}>Gastos asociados (IVA, IGTF y matriculación)</Text><Text style={s.planVal}>${fmt(data.gastosAsociados)}</Text></View>
           </View>
           <Text style={s.nota}>Nota: estos valores son estimados a esta fecha y están sujetos a variación por orden o datos suministrados por los entes gubernamentales; se recotizarán al momento de ejecutar el pago final.</Text>
 
+          {/* Monto total — antes del cronograma */}
+          <View style={s.valorBox}>
+            <Text style={s.valorLbl}>Valor (venta) de la unidad</Text>
+            <Text style={s.valorVal}>${fmt(data.valorVentaUnidad)}</Text>
+          </View>
+          <View style={s.totalBox}>
+            <Text style={s.totalLbl}>TOTAL A PAGAR</Text>
+            <Text style={s.totalVal}>${fmt(data.totalPagar)}</Text>
+          </View>
+
           {/* Cronograma */}
-          <Text style={s.sectionLabel}>Cronograma de pagos convenido</Text>
+          <Text style={[s.sectionLabel, { marginTop: 10 }]}>Cronograma de pagos convenido</Text>
           <View style={s.tHead}>
             <Text style={[s.tHeadCell, { flex: 1 }]}>CONCEPTO</Text>
             <Text style={[s.tHeadCell, { width: 90, textAlign: 'right' }]}>MONTO ($)</Text>
@@ -242,55 +292,62 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
             <Text style={s.tMonto}>{fmt(data.gastosAsociados)}</Text>
           </View>
 
-          <View style={s.valorBox}>
-            <Text style={s.valorLbl}>Valor (venta) de la unidad</Text>
-            <Text style={s.valorVal}>${fmt(data.valorVentaUnidad)}</Text>
-          </View>
-          <View style={s.totalBox}>
-            <Text style={s.totalLbl}>TOTAL A PAGAR</Text>
-            <Text style={s.totalVal}>${fmt(data.totalPagar)}</Text>
-          </View>
-
-          {/* Página 2: nota de color, garantía, coberturas y firmas */}
+          {/* Página 2: nota de color y condiciones de garantía (texto completo del anexo) */}
           <View break />
-          <Text style={s.nota}>
-            Nota *1: la selección de color(es) es referencial; su disponibilidad depende del proceso interno de la fábrica SAIC MOTORS
-            (República Popular China) al momento de la orden y ensamblaje, por lo que no constituye obligación de entrega del color indicado.
-            {esVehimotors ? ' Ciertas condiciones podrán aplicar por fletes, regulaciones marítimas e impuestos de nacionalización (detalladas en el contrato final).' : ''}
-          </Text>
+          <Text style={s.nota}>{NOTA_COLOR}</Text>
 
-          {/* Garantía */}
-          <Text style={s.gTitle}>Condiciones y alcance de la garantía</Text>
-          <Bullet>Reclamos notificados y gestionados por el concesionario o distribuidor autorizado durante el período de garantía.</Bullet>
-          <Bullet>Reparaciones, mantenimiento y montaje de repuestos/accesorios realizados por el concesionario autorizado, con repuestos originales.</Bullet>
-          <Bullet>Registro de mantenimiento según el fabricante (cada 5.000 km) y conforme al Plan de Mantenimiento oficial.</Bullet>
+          <Text style={[s.gIntro, { marginTop: 6 }]}>Información de interés y de referencia para el proceso del plan de compra programada, a ejecutar.</Text>
 
-          <Text style={[s.sectionLabel, { marginTop: 8 }]}>Tiempo y kilometraje por marca y serie</Text>
+          {/* Condiciones de garantía */}
+          <Text style={s.gTitle}>Condiciones de garantía</Text>
+          <Text style={s.gIntro}>Las condiciones de garantía requieren lo siguiente:</Text>
+          <NumList items={COND_GARANTIA} />
+
+          {/* Alcance */}
+          <Text style={s.gTitle}>Alcance de la garantía</Text>
+          <NumList items={ALCANCE} />
+
+          {/* No cubre */}
+          <Text style={s.gTitle}>El alcance de esta garantía, lo que no cubre:</Text>
+          <NumList items={NO_CUBRE} />
+
+          {/* Tiempo y kilometraje */}
+          <Text style={[s.gTitle, { fontSize: 9 }]} wrap={false}>Tiempo y kilometraje por marca y serie</Text>
+          <View style={s.covRow} wrap={false}>
+            <Text style={[s.covMarca, { fontFamily: 'Helvetica-Bold' }]}>Marca</Text>
+            <Text style={s.covCob}>Cobertura</Text>
+          </View>
           {COBERTURAS.map((c, i) => {
             const on = data.serieCobertura && c.marca === data.serieCobertura
             return (
-              <View key={i} style={on ? [s.covRow, s.covOn] : s.covRow}>
+              <View key={i} style={on ? [s.covRow, s.covOn] : s.covRow} wrap={false}>
                 <Text style={s.covMarca}>{c.marca}</Text>
                 <Text style={s.covCob}>{c.cobertura}</Text>
               </View>
             )
           })}
 
-          <Text style={[s.gTitle, { fontSize: 9 }]}>La garantía no cubre</Text>
-          {NO_CUBRE.map((t, i) => <Bullet key={i}>{t}</Bullet>)}
+          {/* Otros componentes con delimitación */}
+          <Text style={[s.gTitle, { fontSize: 9 }]}>Otros componentes con delimitación</Text>
+          {OTROS_COMPONENTES.map(([pieza, plazo], i) => (
+            <View key={i} style={s.otrosRow} wrap={false}>
+              <Text style={s.otrosPieza}>{pieza}</Text>
+              <Text style={s.otrosPlazo}>{plazo}</Text>
+            </View>
+          ))}
 
           {/* Firmas */}
-          <View style={s.firmas}>
+          <View style={s.firmas} wrap={false}>
             <View style={s.firmaBox}>
-              {data.firmaClienteSrc ? <Image src={data.firmaClienteSrc} style={s.firmaImg} /> : null}
+              {!esVehimotors && data.firmaClienteSrc ? <Image src={data.firmaClienteSrc} style={s.firmaImg} /> : null}
               <View style={s.firmaLine} />
-              <Text style={s.firmaNom}>Por: {data.clienteNombre}</Text>
-              <Text style={s.firmaRol}>Firma del comprador</Text>
+              <Text style={s.firmaNom}>Por: {esVehimotors ? 'TELECOMUNICACIONES ROCARLI, C.A.' : data.clienteNombre}</Text>
+              <Text style={s.firmaRol}>{esVehimotors ? 'Firma' : 'Firma del comprador'}</Text>
             </View>
             <View style={s.firmaBox}>
               <View style={s.firmaLine} />
               <Text style={s.firmaNom}>Por: {esVehimotors ? 'VEHIMOTORS, C.A.' : (data.empresaNombre || 'La Oriental Automotors, C.A.')}</Text>
-              <Text style={s.firmaRol}>Firma autorizada</Text>
+              <Text style={s.firmaRol}>{esVehimotors ? 'Firma' : 'Firma autorizada'}</Text>
             </View>
           </View>
         </View>
