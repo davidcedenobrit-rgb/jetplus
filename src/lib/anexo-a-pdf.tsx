@@ -147,13 +147,13 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
 
     body: { padding: '14pt 30pt' },
 
-    // Título
-    titleBand: { backgroundColor: secundario, borderRadius: 8, padding: '12pt 16pt', marginBottom: 14, position: 'relative', overflow: 'hidden' },
-    titleAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: primario },
-    titleMain: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#fff', letterSpacing: 1 },
-    titleSub: { fontSize: 8, color: '#d1d5db', marginTop: 2, letterSpacing: 0.5, textTransform: 'uppercase' },
-    pill: { position: 'absolute', right: 14, top: 14, backgroundColor: primario, borderRadius: 20, paddingVertical: 4, paddingHorizontal: 12 },
-    pillText: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
+    // Título (más compacto)
+    titleBand: { backgroundColor: secundario, borderRadius: 7, padding: '7pt 14pt', marginBottom: 12, position: 'relative', overflow: 'hidden' },
+    titleAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: primario },
+    titleMain: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#fff', letterSpacing: 1 },
+    titleSub: { fontSize: 6.5, color: '#d1d5db', marginTop: 1.5, letterSpacing: 0.5, textTransform: 'uppercase' },
+    pill: { position: 'absolute', right: 12, top: 11, backgroundColor: primario, borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10 },
+    pillText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#fff' },
 
     sectionLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: primario, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6, marginTop: 4 },
 
