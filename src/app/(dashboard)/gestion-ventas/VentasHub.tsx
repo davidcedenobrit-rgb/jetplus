@@ -281,7 +281,10 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
           <div className="space-y-2">
             <p className="text-xs text-gray-400">{filtradas.length} de {ventas.length} ventas</p>
             {filtradas.map(v => {
-              const utilidad = Number(v.precio_venta || 0) - Number(v.pago_vehimotors || 0)
+              // Utilidad = Ingreso neto de venta que va a contabilidad (comisión por
+              // venta de carro − comisión vendedores − comisión directiva). NO es
+              // precio_venta − pago_vehimotors (eso es el ingreso bruto oriental).
+              const utilidad = Number(v.ingreso_neto_venta || 0)
               return (
               <Link key={v.id} href={`/vehiculos/${v.id}`}
                 className="flex flex-col sm:flex-row sm:items-center gap-2 border border-gray-200 rounded-xl p-4 hover:border-oriental-red hover:bg-red-50/30 transition-colors">
@@ -304,7 +307,7 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
                   <p className="text-sm font-bold text-oriental-black">${fmt(v.precio_total)}</p>
                   <p className="text-[10px] text-gray-400 mb-1">Precio base · {fmtFecha(v.created_at)}</p>
                   {v.div_definida ? (
-                    <p className="text-[11px] font-bold text-green-700">Utilidad: ${fmt(utilidad)}</p>
+                    <p className="text-[11px] font-bold text-green-700" title="Ingreso neto de la venta que va a contabilidad (comisión por venta de carro − comisión de vendedores − comisión de directiva)">Utilidad: ${fmt(utilidad)}</p>
                   ) : (
                     <button
                       type="button"
