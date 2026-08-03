@@ -47,7 +47,7 @@ export default function ReporteVentasClient() {
   const cargar = useCallback(async () => {
     setLoading(true)
     const [vehiculos, creditos, divisiones] = await Promise.all([
-      fetchAll<any>((f, t) => supabase.from('vehiculos').select('id, marca, modelo, tipo_compra, fecha_entrega, created_at, precio_total, estado').range(f, t)),
+      fetchAll<any>((f, t) => supabase.from('vehiculos').select('id, marca, modelo, placa, tipo_compra, fecha_entrega, created_at, precio_total, estado, cliente_id, clientes(nombre, cedula_rif)').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('creditos').select('vehiculo_id, plan_tipo').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('ventas_division_contable').select('vehiculo_id, vendedora, monto_proforma').range(f, t)),
     ])
@@ -66,6 +66,9 @@ export default function ReporteVentasClient() {
       const esNueva = !!div || plan === 'asegurate_500'
       return {
         id: v.id, marca: v.marca ?? '—', modelo: v.modelo ?? '—',
+        placa: v.placa || '—',
+        cliente: v.clientes?.nombre ?? '—',
+        cedula: v.clientes?.cedula_rif ?? '',
         fecha: String(v.fecha_entrega ?? v.created_at ?? '').slice(0, 10),
         modalidad, esNueva, vendedora: div?.vendedora || 'Sin asignar',
         monto: Number(div?.monto_proforma ?? v.precio_total ?? 0),
@@ -93,7 +96,7 @@ export default function ReporteVentasClient() {
   const porMarcaModelo = useMemo(() => agg(r => `${r.marca} ${r.modelo}`), [filtradas])
   const porModalidad = useMemo(() => agg(r => MODALIDAD[r.modalidad] ?? r.modalidad), [filtradas])
   const porVendedora = useMemo(() => agg(r => r.vendedora), [filtradas])
-  const porTipo = useMemo(() => agg(r => r.esNueva ? 'Nueva' : 'Antigua (carga de crédito)'), [filtradas])
+  const porTipo = useMemo(() => agg(r => r.esNueva ? 'Venta nueva' : 'Crédito viejo (cargado)'), [filtradas])
   const detalle = useMemo(() => filtradas.slice().sort((a, b) => b.fecha.localeCompare(a.fecha)), [filtradas])
   const totalMonto = filtradas.reduce((s, r) => s + r.monto, 0)
 
@@ -107,7 +110,7 @@ export default function ReporteVentasClient() {
       { titulo: 'Por modalidad de venta', headers: ['Modalidad', 'Unidades', 'Monto USD'], rows: porModalidad.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
       { titulo: 'Por marca y modelo', headers: ['Marca / Modelo', 'Unidades', 'Monto USD'], rows: porMarcaModelo.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
       { titulo: 'Por vendedora', headers: ['Vendedora', 'Unidades', 'Monto USD'], rows: porVendedora.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
-      { titulo: 'Detalle de ventas', headers: ['Vehículo', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], rows: detalle.map(r => [`${r.marca} ${r.modelo}`, r.fecha, r.vendedora, r.esNueva ? 'Nueva' : 'Antigua', MODALIDAD[r.modalidad] ?? r.modalidad, `$${fmt(r.monto)}`]) },
+      { titulo: 'Detalle de ventas', headers: ['Vehículo', 'Placa', 'Cliente', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], rows: detalle.map(r => [`${r.marca} ${r.modelo}`, r.placa, r.cedula ? `${r.cliente} (${r.cedula})` : r.cliente, r.fecha, r.vendedora, r.esNueva ? 'Venta nueva' : 'Crédito viejo', MODALIDAD[r.modalidad] ?? r.modalidad, `$${fmt(r.monto)}`]) },
     ],
   })
 
@@ -119,7 +122,7 @@ export default function ReporteVentasClient() {
           <div className="w-10 h-10 bg-oriental-red/10 rounded-xl flex items-center justify-center"><ShoppingBag size={20} className="text-oriental-red" /></div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Reporte de ventas</h1>
-            <p className="text-oriental-gray text-sm">Tipo (nueva/antigua), modalidad, vendedora y detalle — {periodo}</p>
+            <p className="text-oriental-gray text-sm">Detalle con cliente y placa · venta nueva vs crédito viejo — {periodo}</p>
           </div>
         </div>
         <ExportBar build={buildPayload} />
@@ -165,24 +168,29 @@ export default function ReporteVentasClient() {
           <section className="card p-5">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-bold text-oriental-black text-sm">Detalle de ventas ({detalle.length})</h2>
-              <button onClick={() => csv(`ventas_detalle_${periodo}`, ['Vehículo', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], detalle.map(r => [`${r.marca} ${r.modelo}`, r.fecha, r.vendedora, r.esNueva ? 'Nueva' : 'Antigua', MODALIDAD[r.modalidad] ?? r.modalidad, r.monto.toFixed(2)]))}
+              <button onClick={() => csv(`ventas_detalle_${periodo}`, ['Vehículo', 'Placa', 'Cliente', 'Cédula/RIF', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], detalle.map(r => [`${r.marca} ${r.modelo}`, r.placa, r.cliente, r.cedula, r.fecha, r.vendedora, r.esNueva ? 'Venta nueva' : 'Crédito viejo', MODALIDAD[r.modalidad] ?? r.modalidad, r.monto.toFixed(2)]))}
                 className="text-xs font-semibold text-oriental-gray border border-gray-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 hover:bg-gray-50"><FileDown size={13} /> CSV</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50"><tr>
-                  {['Vehículo', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto'].map((h, i) => (
-                    <th key={i} className={`px-3 py-2 text-[11px] font-semibold text-oriental-gray ${i === 5 ? 'text-right' : 'text-left'}`}>{h}</th>
+                  {['Vehículo', 'Placa', 'Cliente', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto'].map((h, i) => (
+                    <th key={i} className={`px-3 py-2 text-[11px] font-semibold text-oriental-gray ${i === 7 ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody className="divide-y divide-gray-50">
                   {detalle.map(r => (
                     <tr key={r.id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 text-oriental-black font-medium">{r.marca} {r.modelo}</td>
+                      <td className="px-3 py-2 text-oriental-black font-medium whitespace-nowrap">{r.marca} {r.modelo}</td>
+                      <td className="px-3 py-2 text-oriental-gray text-xs font-mono whitespace-nowrap">{r.placa}</td>
+                      <td className="px-3 py-2 text-oriental-black">
+                        {r.cliente}
+                        {r.cedula ? <span className="text-gray-400 text-xs block">{r.cedula}</span> : null}
+                      </td>
                       <td className="px-3 py-2 text-oriental-gray text-xs whitespace-nowrap">{r.fecha}</td>
                       <td className="px-3 py-2 text-oriental-gray">{r.vendedora}</td>
                       <td className="px-3 py-2">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.esNueva ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{r.esNueva ? 'Nueva' : 'Antigua'}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap ${r.esNueva ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{r.esNueva ? 'Venta nueva' : 'Crédito viejo'}</span>
                       </td>
                       <td className="px-3 py-2 text-oriental-gray text-xs">{MODALIDAD[r.modalidad] ?? r.modalidad}</td>
                       <td className="px-3 py-2 text-right tabular-nums font-semibold">${fmt(r.monto)}</td>
