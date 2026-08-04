@@ -24,6 +24,13 @@ function fechaCuota(base: Date, mesesAdelante: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+// Suma días a una fecha (para el cronograma armado por el director, que usa
+// "a los N días" en abonos y cuotas).
+function fechaMasDias(base: Date, dias: number): string {
+  const d = new Date(base.getTime() + Math.round(dias) * 86400000)
+  return d.toISOString().slice(0, 10)
+}
+
 export async function POST(req: Request) {
   const authClient = await createClient()
   const { data: { user } } = await authClient.auth.getUser()
@@ -47,7 +54,11 @@ export async function POST(req: Request) {
       .select('id, marca, modelo, version, color, placa, anio, vin, serial_motor, fecha_llegada, estado')
       .eq('id', showroomId).maybeSingle()
     if (!u) return NextResponse.json({ error: 'La unidad del showroom no existe' }, { status: 404 })
-    if (u.estado !== 'en_agencia') return NextResponse.json({ error: 'Esa unidad ya no está disponible (reservada o vendida)' }, { status: 409 })
+    // Se permite reservar una unidad en agencia o ya reservada (reasignarla a
+    // esta proforma). Solo se bloquea si ya se vendió/salió.
+    if (!['en_agencia', 'reservado'].includes(u.estado)) {
+      return NextResponse.json({ error: 'Esa unidad ya no está disponible (vendida o transferida)' }, { status: 409 })
+    }
     unidad = u
   }
 
@@ -123,15 +134,20 @@ export async function POST(req: Request) {
   // Si el director armó el cronograma en el editor (abonos del inicial + cuotas),
   // ese cronograma manda sobre el derivado.
   if (Array.isArray(ov.cronograma) && ov.cronograma.length > 0) {
-    cronogramaSnapshot = ov.cronograma.map((c: any, i: number) => ({
-      numero: Number(c.numero) || (i + 1),
-      tipo: c.tipo ?? null,
-      etiqueta: c.etiqueta ?? null,
-      fecha_vencimiento: c.fecha_vencimiento ?? null,
-      monto: Number(c.monto) || 0,
-      estado: 'pendiente',
-      monto_pagado: 0,
-    }))
+    cronogramaSnapshot = ov.cronograma.map((c: any, i: number) => {
+      const dias = c.dias != null && c.dias !== '' ? Math.round(Number(c.dias)) : null
+      return {
+        numero: Number(c.numero) || (i + 1),
+        tipo: c.tipo ?? null,
+        etiqueta: c.etiqueta ?? null,
+        dias,
+        // Fecha real del pago: la envía el cliente, o se calcula desde "a los N días".
+        fecha_vencimiento: c.fecha_vencimiento ?? (dias != null && Number.isFinite(dias) ? fechaMasDias(hoy, dias) : null),
+        monto: Number(c.monto) || 0,
+        estado: 'pendiente',
+        monto_pagado: 0,
+      }
+    })
   }
 
   // Para AC500, la "cuota mensual" de referencia (correo/PDF) es la primera cuota.
@@ -250,7 +266,7 @@ export async function POST(req: Request) {
       reservado_por: user.id,
       reserva_notas: `Proforma ${proforma.numero}${cot.cliente_nombre ? ` · ${cot.cliente_nombre}` : ''}`,
       updated_at: new Date().toISOString(),
-    }).eq('id', unidad.id).eq('estado', 'en_agencia')
+    }).eq('id', unidad.id).in('estado', ['en_agencia', 'reservado'])
   }
 
   let correoEnviado = false

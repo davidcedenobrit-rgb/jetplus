@@ -35,7 +35,7 @@ export default function ProformaPanel({
   const [restanteMetodo, setRestanteMetodo] = useState<'contado' | 'acuerdo'>('contado')
   const [resultado, setResultado] = useState<{ proformaId: string; numero: string; correoEnviado: boolean } | null>(null)
   const [yaExiste, setYaExiste] = useState<{ proformaId: string; numero: string } | null>(null)
-  const [unidades, setUnidades] = useState<{ id: string; label: string; coincide: boolean }[]>([])
+  const [unidades, setUnidades] = useState<{ id: string; label: string; coincide: boolean; reservado?: boolean }[]>([])
   const [showroomId, setShowroomId] = useState('')
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const [preview, setPreview] = useState<any | null>(null)
@@ -54,6 +54,9 @@ export default function ProformaPanel({
   // 3.000 (día 15), 5.000 (día 30), 5.000 (día 45).
   const [abonos, setAbonos] = useState<{ monto: string; dias: string }[]>([{ monto: '', dias: '0' }])
   const [textoManual, setTextoManual] = useState(false)
+  // Crédito Vehimotor: ¿corre en paralelo con el inicial (simultáneo) o empieza
+  // después de completar el inicial? Por defecto "después" (comportamiento previo).
+  const [creditoSimultaneo, setCreditoSimultaneo] = useState(false)
   const addAbono = () => setAbonos(a => [...a, { monto: '', dias: '' }])
   const rmAbono = (i: number) => setAbonos(a => a.length > 1 ? a.filter((_, j) => j !== i) : a)
   const setAbono = (i: number, k: 'monto' | 'dias', v: string) => setAbonos(a => a.map((r, j) => j === i ? { ...r, [k]: v } : r))
@@ -88,11 +91,17 @@ export default function ProformaPanel({
   const vhCuotas = Math.max(0, Math.round(nz(montos.meses)))
   const vhCuotaMonto = vhCuotas > 0 ? (nz(montos.cuotaMensual) || r2(vhFinanciado / vhCuotas)) : 0
 
+  // Último día del inicial (para arrancar el crédito "después" de completarlo).
+  const ultimoDiaInicial = Math.max(0, ...abonos.filter(a => nz(a.monto) > 0).map(a => Math.round(nz(a.dias)) || 0))
+
   // Cronograma combinado: abonos del inicial + cuotas Vehimotor.
+  // · Simultáneo: las cuotas VM corren desde el día 30 (en paralelo al inicial).
+  // · Después: las cuotas VM arrancan al terminar el inicial (último día + 30).
   const cronograma: { numero: number; tipo: string; etiqueta: string; monto: number; dias: number }[] = []
   { let n = 0
     abonos.forEach(a => { const m = nz(a.monto); if (m > 0) { n++; const d = Math.round(nz(a.dias)); cronograma.push({ numero: n, tipo: 'Inicial', etiqueta: d > 0 ? `Abono a los ${d} días` : 'Abono de contado', monto: m, dias: d }) } })
-    for (let i = 1; i <= vhCuotas; i++) { n++; cronograma.push({ numero: n, tipo: 'Vehimotor', etiqueta: `Cuota ${i} de ${vhCuotas} (mensual)`, monto: vhCuotaMonto, dias: i * 30 }) }
+    const baseVM = creditoSimultaneo ? 0 : ultimoDiaInicial
+    for (let i = 1; i <= vhCuotas; i++) { n++; cronograma.push({ numero: n, tipo: 'Vehimotor', etiqueta: `Cuota ${i} de ${vhCuotas} (mensual)`, monto: vhCuotaMonto, dias: baseVM + i * 30 }) }
   }
 
   // Texto de condiciones AUTOGENERADO desde los números.
@@ -105,11 +114,13 @@ export default function ProformaPanel({
       partes.push(`El cliente se compromete a pagar el inicial ($${fmt(inicialTotal)}): ${detalle}.`)
     }
     if (vhFinanciado > 0.009 && vhCuotas > 0) {
-      partes.push(`Luego el crédito Vehimotor: ${vhCuotas} cuotas de $${fmt(vhCuotaMonto)}, que inician al completar el inicial.`)
+      partes.push(creditoSimultaneo
+        ? `El crédito Vehimotor corre en paralelo con el inicial: ${vhCuotas} cuotas de $${fmt(vhCuotaMonto)}, que inician a los 30 días.`
+        : `Luego el crédito Vehimotor: ${vhCuotas} cuotas de $${fmt(vhCuotaMonto)}, que inician al completar el inicial.`)
     }
     setObservaciones(partes.join(' '))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abonos, montos, textoManual, preview])
+  }, [abonos, montos, textoManual, preview, creditoSimultaneo])
 
   const aprobadoNum = parseFloat(aprobadoBanco.replace(',', '.')) || 0
   const restante = Math.max(0, Number(total) - aprobadoNum)
@@ -121,7 +132,7 @@ export default function ProformaPanel({
     setAprobadoBanco(''); setRestanteMetodo('contado')
     setShowroomId(''); setUnidades([]); setPreview(null)
     setMontos({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
-    setAbonos([{ monto: '', dias: '0' }]); setTextoManual(false); setTasa('')
+    setAbonos([{ monto: '', dias: '0' }]); setTextoManual(false); setTasa(''); setCreditoSimultaneo(false)
     fetch(`/api/showroom/disponibles?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : []).then(d => setUnidades(Array.isArray(d) ? d : [])).catch(() => {})
 
     // MODO EDICIÓN: trae la proforma completa y precarga TODO.
@@ -149,6 +160,10 @@ export default function ProformaPanel({
             return { monto: String(r2(c.monto)), dias: String(d) }
           }))
         }
+        // Inferir si el crédito iba simultáneo o después (según los días guardados).
+        const lastIniDias = Math.max(0, ...ini.map((c: any) => c.dias != null ? Math.round(Number(c.dias)) : Number(String(c.etiqueta || '').match(/(\d+)\s*d/)?.[1] ?? 0)))
+        const firstVmDias = vm[0]?.dias != null ? Math.round(Number(vm[0].dias)) : null
+        if (firstVmDias != null && lastIniDias > 0) setCreditoSimultaneo(firstVmDias <= 30)
         setObservaciones(pf.condiciones_personalizadas ?? '')
         setTextoManual(true)
         setShowroomId(pf.showroom_id ?? veh.showroom_id ?? '')
@@ -358,8 +373,22 @@ export default function ProformaPanel({
                       {/* VEHIMOTOR */}
                       {preview.modalidad !== 'contado' && (
                         <div className="rounded-lg bg-white border border-indigo-200 p-2.5">
-                          <label className="text-[11px] font-bold text-indigo-700">Crédito Vehimotor (después del inicial)</label>
-                          <div className="grid grid-cols-4 gap-2 mt-1.5">
+                          <label className="text-[11px] font-bold text-indigo-700">Crédito Vehimotor</label>
+                          {/* ¿Cuándo arranca el crédito respecto al inicial? */}
+                          <div className="mt-1.5 flex gap-1.5">
+                            {([[false, 'Después del inicial'], [true, 'Simultáneo con el inicial']] as const).map(([val, lbl]) => (
+                              <button key={String(val)} type="button" onClick={() => setCreditoSimultaneo(val)}
+                                className={`flex-1 py-1.5 rounded-lg border-2 text-[11px] font-bold transition-all ${creditoSimultaneo === val ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 text-gray-500 hover:border-indigo-300'}`}>
+                                {lbl}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            {creditoSimultaneo
+                              ? 'Las cuotas Vehimotor corren en paralelo con el inicial (desde el día 30).'
+                              : 'Las cuotas Vehimotor arrancan al terminar de pagar el inicial.'}
+                          </p>
+                          <div className="grid grid-cols-4 gap-2 mt-2">
                             <div><label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Financiado ($)</label>
                               <input inputMode="decimal" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm text-right"
                                 value={montos.financiado} onChange={e => { setMonto('financiado', e.target.value); recalcCuota(nz(e.target.value), Math.round(nz(montos.meses)), nz(tasa)) }} /></div>
@@ -441,7 +470,10 @@ export default function ProformaPanel({
                       <option value="">Sin reservar unidad (se elige en la venta)</option>
                       {unidades.map(u => <option key={u.id} value={u.id}>{u.coincide ? '★ ' : ''}{u.label}</option>)}
                     </select>
-                    {showroomId && <p className="text-[10px] text-amber-600 mt-1">La unidad quedará <b>RESERVADA</b> para este cliente al generar la proforma.</p>}
+                    {showroomId && unidades.find(u => u.id === showroomId)?.reservado && (
+                      <p className="text-[10px] text-red-600 mt-1">⚠️ Esta unidad ya estaba <b>RESERVADA</b> para otro cliente; al generar la proforma se <b>reasignará</b> a este cliente.</p>
+                    )}
+                    {showroomId && !unidades.find(u => u.id === showroomId)?.reservado && <p className="text-[10px] text-amber-600 mt-1">La unidad quedará <b>RESERVADA</b> para este cliente al generar la proforma.</p>}
                     {unidades.length === 0 && <p className="text-[10px] text-gray-400 mt-1">No hay unidades en agencia disponibles; el carro se elige al registrar la venta.</p>}
                   </div>
 

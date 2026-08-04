@@ -42,10 +42,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (b.meses != null) patch.num_cuotas = Math.max(0, Math.round(n(b.meses)))
   if (typeof b.condiciones === 'string') patch.condiciones_personalizadas = b.condiciones.trim() || null
   if (Array.isArray(b.cronograma)) {
-    patch.cronograma_snapshot = b.cronograma.map((c: any, i: number) => ({
-      numero: n(c.numero) || (i + 1), tipo: c.tipo ?? null, etiqueta: c.etiqueta ?? null, dias: c.dias != null ? n(c.dias) : null,
-      fecha_vencimiento: c.fecha_vencimiento ?? null, monto: n(c.monto), estado: 'pendiente', monto_pagado: 0,
-    }))
+    const hoy = new Date()
+    const fMasDias = (dias: number) => new Date(hoy.getTime() + Math.round(dias) * 86400000).toISOString().slice(0, 10)
+    patch.cronograma_snapshot = b.cronograma.map((c: any, i: number) => {
+      const dias = c.dias != null && c.dias !== '' ? Math.round(n(c.dias)) : null
+      return {
+        numero: n(c.numero) || (i + 1), tipo: c.tipo ?? null, etiqueta: c.etiqueta ?? null, dias,
+        fecha_vencimiento: c.fecha_vencimiento ?? (dias != null ? fMasDias(dias) : null),
+        monto: n(c.monto), estado: 'pendiente', monto_pagado: 0,
+      }
+    })
   }
 
   // Cambio de unidad del showroom (si aplica).
@@ -61,11 +67,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const { data: u } = await supabase.from('vehiculos_showroom')
         .select('id, marca, modelo, version, color, placa, anio, vin, serial_motor, fecha_llegada, estado')
         .eq('id', nuevoShowroom).maybeSingle()
-      if (!u || u.estado !== 'en_agencia') return NextResponse.json({ error: 'Esa unidad ya no está disponible' }, { status: 409 })
+      if (!u || !['en_agencia', 'reservado'].includes(u.estado)) return NextResponse.json({ error: 'Esa unidad ya no está disponible (vendida o transferida)' }, { status: 409 })
       await supabase.from('vehiculos_showroom').update({
         estado: 'reservado', cliente_id: pro.cliente_id ?? null, reservado_por: g.user!.id,
         reserva_notas: `Proforma ${pro.numero}`, updated_at: new Date().toISOString(),
-      }).eq('id', nuevoShowroom).eq('estado', 'en_agencia')
+      }).eq('id', nuevoShowroom).in('estado', ['en_agencia', 'reservado'])
       patch.showroom_id = nuevoShowroom
       patch.vehiculo_snapshot = {
         ...(pro.vehiculo_snapshot ?? {}), showroom_id: u.id, marca: u.marca, modelo: u.modelo, version: u.version,

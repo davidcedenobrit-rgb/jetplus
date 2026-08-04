@@ -25,10 +25,12 @@ export async function GET(req: Request) {
     modelo = String(cot?.modelo ?? '').toUpperCase()
   }
 
+  // Unidades disponibles (en_agencia) Y reservadas: Rojas puede reservar una que
+  // ya esté reservada (reasignarla a esta proforma). Las vendidas no aparecen.
   const rows = await fetchAllRows<any>((from, to) => supabase
     .from('vehiculos_showroom')
-    .select('id, marca, modelo, version, color, placa, anio, estado')
-    .eq('estado', 'en_agencia')
+    .select('id, marca, modelo, version, color, placa, anio, estado, reserva_notas')
+    .in('estado', ['en_agencia', 'reservado'])
     .order('marca', { ascending: true })
     .order('modelo', { ascending: true })
     .range(from, to))
@@ -39,14 +41,22 @@ export async function GET(req: Request) {
     return (!!modelo && m.includes(modelo)) || (!!marca && (v.marca ?? '').toUpperCase() === marca && !!modelo && m.includes(modelo.split(' ')[0]))
   }
 
-  const unidades = (rows ?? []).map((v: any) => ({
-    id: v.id,
-    label: [v.marca, v.modelo, v.version, v.color, v.placa ? `· ${v.placa}` : '', v.anio ? `(${v.anio})` : '']
-      .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim(),
-    coincide: coincide(v),
-  }))
-  // Las que coinciden con el modelo cotizado, primero.
-  unidades.sort((a: { coincide: boolean }, b: { coincide: boolean }) => (b.coincide ? 1 : 0) - (a.coincide ? 1 : 0))
+  const unidades = (rows ?? []).map((v: any) => {
+    const reservado = v.estado === 'reservado'
+    const base = [v.marca, v.modelo, v.version, v.color, v.placa ? `· ${v.placa}` : '', v.anio ? `(${v.anio})` : '']
+      .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+    return {
+      id: v.id,
+      label: reservado ? `${base} — RESERVADO${v.reserva_notas ? ` (${v.reserva_notas})` : ''}` : base,
+      coincide: coincide(v),
+      reservado,
+    }
+  })
+  // Orden: primero las que coinciden con el modelo cotizado, luego disponibles
+  // antes que reservadas.
+  unidades.sort((a, b) =>
+    (b.coincide ? 1 : 0) - (a.coincide ? 1 : 0) ||
+    (a.reservado ? 1 : 0) - (b.reservado ? 1 : 0))
 
   return NextResponse.json(unidades)
 }
