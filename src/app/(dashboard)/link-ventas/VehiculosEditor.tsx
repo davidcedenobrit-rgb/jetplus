@@ -194,6 +194,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const [syncing, setSyncing] = useState(false)
+  const [syncAliados, setSyncAliados] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [newV, setNewV] = useState<{ id: string } & typeof EMPTY_VEHICULO>({ id: '', ...EMPTY_VEHICULO })
   const [savingNew, setSavingNew] = useState(false)
@@ -454,6 +455,29 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
     if (activados > 0) router.refresh()
   }
 
+  // Empuja el catálogo de La Oriental (precios, gastos, cuotas, tasas, IGTF,
+  // specs e imágenes) a los concesionarios aliados configurados. NO toca el
+  // stock de cada aliado. Empareja por marca+modelo (los id son distintos).
+  async function sincronizarAliados() {
+    if (!confirm('Se copiará el catálogo de La Oriental (precios, gastos, cuotas, tasas e IGTF) a los concesionarios aliados configurados.\n\nEl stock/inventario de cada aliado NO se modifica. ¿Continuar?')) return
+    setSyncAliados(true)
+    try {
+      const res = await fetch('/api/catalogo/sincronizar', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok || !json.ok) { showToast(json.error || 'Error al sincronizar', false); return }
+      type R = { aliado: string; actualizados: number; insertados: number; extras: string[]; error?: string }
+      const rs: R[] = json.resultados ?? []
+      const resumen = rs.map(r => r.error ? `${r.aliado}: ERROR` : `${r.aliado}: ${r.actualizados} act.${r.insertados ? ` / ${r.insertados} nuevos` : ''}`).join('  ·  ')
+      const hayError = rs.some(r => r.error)
+      showToast(hayError ? `Sincronizado con errores → ${resumen}` : `✓ Sincronizado → ${resumen}`, !hayError)
+      console.log('[sincronizar aliados]', json)
+    } catch {
+      showToast('Error de conexión al sincronizar', false)
+    } finally {
+      setSyncAliados(false)
+    }
+  }
+
   async function saveNew() {
     if (!newV.id || !newV.model) { showToast('ID y Modelo son obligatorios', false); return }
     setSavingNew(true)
@@ -506,6 +530,15 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
           >
             <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
             Sync showroom
+          </button>
+          <button
+            onClick={sincronizarAliados}
+            disabled={syncAliados}
+            className="flex items-center gap-1.5 px-3 py-2 border border-purple-300 bg-purple-50 text-purple-700 text-xs font-semibold rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
+            title="Copia el catálogo (precios, gastos, cuotas, tasas e IGTF) a los concesionarios aliados. No toca el stock de cada aliado."
+          >
+            <Send size={13} className={syncAliados ? 'animate-pulse' : ''} />
+            {syncAliados ? 'Sincronizando…' : 'Sincronizar a aliados'}
           </button>
           <button
             onClick={() => setShowModal(true)}
