@@ -1,7 +1,20 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+
+// Cliente con service role REAL (sin cookies): bypassa RLS de verdad. El
+// createAdminClient basado en @supabase/ssr arrastra la sesión del usuario por
+// las cookies y termina ejecutando como el usuario (o fallando la auth), lo que
+// hacía fallar el INSERT con el genérico "No se pudo crear la compra".
+function adminDb() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  )
+}
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'arianna']
 
@@ -54,7 +67,7 @@ export async function crearCompraPlazaDirecta(input: NuevaCompraPlazaInput): Pro
   if (moneda === 'VES' && !(tasa > 0)) return { error: 'Para pagos en Bs ingresa la tasa del día (Bs/$)' }
   const fecha = /^\d{4}-\d{2}-\d{2}$/.test(input.fechaCompra) ? input.fechaCompra : new Date().toISOString().slice(0, 10)
 
-  const admin = await createAdminClient()
+  const admin = adminDb()
 
   // Numero SORE
   const year = new Date().getFullYear()
@@ -94,7 +107,10 @@ export async function crearCompraPlazaDirecta(input: NuevaCompraPlazaInput): Pro
     .select('id')
     .single()
 
-  if (solErr || !sol) return { error: 'No se pudo crear la compra' }
+  if (solErr || !sol) {
+    console.error('[compra-plaza] error al crear solicitud:', solErr)
+    return { error: `No se pudo crear la compra${solErr?.message ? `: ${solErr.message}` : ''}` }
+  }
 
   await admin.from('repuestos_items').insert(
     items.map(it => ({

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'arianna']
 
@@ -63,7 +64,12 @@ export async function POST(
     ? fechaCompra
     : new Date().toISOString().slice(0, 10)
 
-  const admin = await createAdminClient()
+  // Service role REAL (sin cookies): bypassa RLS. Ver nota en compra-plaza/actions.ts.
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  )
 
   const { data: solicitud, error: solErr } = await admin
     .from('solicitudes_repuestos')

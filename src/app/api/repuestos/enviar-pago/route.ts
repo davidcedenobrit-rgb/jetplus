@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
       const { data: egreso } = await supabase.from('egresos').insert({
         numero_egreso,
-        categoria:        'repuestos',
+        categoria:        'cr_avanza_motors',
         concepto:         `Pago repuestos Avanza Motors — ${sol.numero}`,
         descripcion:      cotiz ? `Cotización Avanza Motors ${cotiz}` : null,
         monto:            montoNum,
