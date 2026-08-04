@@ -94,6 +94,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
   const [cotId, setCotId] = useState('')
+  const [compartiendo, setCompartiendo] = useState(false)
 
   // Concesionario — solo el código de la casa (R000) puede elegir; el resto va a La Oriental
   const esCasa = pin.trim().toUpperCase() === 'R000'
@@ -216,6 +217,45 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
       setErrorMsg('Error de conexión. Intenta de nuevo.')
       setStep('form')
     }
+  }
+
+  const pdfUrl = cotId ? `/api/cotizaciones/${cotId}/pdf` : ''
+
+  // Compartir por WhatsApp desde el PDF: en el teléfono usa el compartir nativo
+  // (adjunta el PDF de verdad al chat que elija la vendedora). Si el dispositivo
+  // no lo soporta (típico en escritorio), cae al enlace wa.me con el link al PDF.
+  async function compartirPorWhatsApp() {
+    if (!cotId || compartiendo) return
+    setCompartiendo(true)
+    try {
+      if (typeof navigator !== 'undefined' && 'canShare' in navigator) {
+        const res = await fetch(`${pdfUrl}?download=1`)
+        if (res.ok) {
+          const blob = await res.blob()
+          const file = new File([blob], `Cotizacion-${numeroCot || 'cotizacion'}.pdf`, { type: 'application/pdf' })
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: `Cotización ${numeroCot}`,
+              text: `Cotización ${numeroCot} — ${vehiculo.brand} ${vehiculo.model}`,
+            })
+            setCompartiendo(false)
+            return
+          }
+        }
+      }
+    } catch (e) {
+      // Si la vendedora cancela el compartir nativo, no hacemos fallback.
+      if ((e as { name?: string })?.name === 'AbortError') { setCompartiendo(false); return }
+    }
+    // Fallback (escritorio o navegador sin compartir de archivos): enlace wa.me
+    const url = waCotizacionUrl({
+      numero: numeroCot, marca: vehiculo.brand, modelo: vehiculo.model,
+      telefono: form.clienteTelefono, clienteNombre: form.clienteNombre,
+      pdfUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}${pdfUrl}`,
+    })
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setCompartiendo(false)
   }
 
   const inp = 'width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;outline:none;font-family:inherit;background:#fff;box-sizing:border-box'
@@ -476,22 +516,24 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
               <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20 }}>También recibiste una copia por correo y José Rojas fue notificado.</p>
 
               {cotId && (
-                <a
-                  href={waCotizacionUrl({
-                    numero: numeroCot,
-                    marca: vehiculo.brand,
-                    modelo: vehiculo.model,
-                    telefono: form.clienteTelefono,
-                    clienteNombre: form.clienteNombre,
-                    pdfUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/cotizaciones/${cotId}/pdf`,
-                  })}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '12px', background: '#16a34a', color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none', fontFamily: 'inherit', marginBottom: 10, boxSizing: 'border-box' }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.999-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                  Enviar por WhatsApp al cliente
-                </a>
+                <>
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '12px', background: '#fff', color: '#111', border: '1.5px solid #d1d5db', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none', fontFamily: 'inherit', marginBottom: 10, boxSizing: 'border-box' }}
+                  >
+                    👁 Ver PDF
+                  </a>
+                  <button
+                    onClick={compartirPorWhatsApp}
+                    disabled={compartiendo}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: compartiendo ? 'default' : 'pointer', fontFamily: 'inherit', marginBottom: 10, boxSizing: 'border-box' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.999-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                    {compartiendo ? 'Preparando PDF…' : 'Compartir por WhatsApp'}
+                  </button>
+                </>
               )}
 
               <button onClick={onClose} style={{ width: '100%', padding: '12px', background: '#111', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
