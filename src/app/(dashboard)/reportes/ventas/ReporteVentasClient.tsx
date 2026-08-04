@@ -47,15 +47,22 @@ export default function ReporteVentasClient() {
 
   const cargar = useCallback(async () => {
     setLoading(true)
-    const [vehiculos, creditos, divisiones] = await Promise.all([
+    const [vehiculos, creditos, divisiones, proformas] = await Promise.all([
       fetchAll<any>((f, t) => supabase.from('vehiculos').select('id, marca, modelo, placa, tipo_compra, fecha_entrega, created_at, precio_total, estado, cliente_id, clientes(nombre, cedula_rif)').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('creditos').select('vehiculo_id, plan_tipo').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('ventas_division_contable').select('vehiculo_id, vendedora, monto_proforma').range(f, t)),
+      fetchAll<any>((f, t) => supabase.from('proformas').select('vehiculo_id, numero, created_at').not('vehiculo_id', 'is', null).range(f, t)),
     ])
     const credMap: Record<string, string> = {}
     for (const c of creditos) if (c.vehiculo_id && !credMap[c.vehiculo_id]) credMap[c.vehiculo_id] = c.plan_tipo
     const divMap: Record<string, any> = {}
     for (const d of divisiones) if (d.vehiculo_id) divMap[d.vehiculo_id] = d
+    // Nº de proforma generado dentro del Centro de Mando (PRO-AAAA-…). Un vehículo
+    // puede tener más de una; nos quedamos con la más reciente.
+    const proMap: Record<string, string> = {}
+    for (const p of proformas.slice().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))) {
+      if (p.vehiculo_id && p.numero && !proMap[p.vehiculo_id]) proMap[p.vehiculo_id] = p.numero
+    }
 
     const armadas = vehiculos.map(v => {
       const plan = credMap[v.id]
@@ -71,6 +78,7 @@ export default function ReporteVentasClient() {
       return {
         id: v.id, marca: v.marca ?? '—', modelo: v.modelo ?? '—',
         placa: v.placa || '—',
+        proforma: proMap[v.id] || '—',
         cliente: v.clientes?.nombre ?? '—',
         cedula: v.clientes?.cedula_rif ?? '',
         fecha: String(v.fecha_entrega ?? v.created_at ?? '').slice(0, 10),
@@ -117,7 +125,7 @@ export default function ReporteVentasClient() {
       { titulo: 'Por modalidad de venta', headers: ['Modalidad', 'Unidades', 'Monto USD'], rows: porModalidad.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
       { titulo: 'Por marca y modelo', headers: ['Marca / Modelo', 'Unidades', 'Monto USD'], rows: porMarcaModelo.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
       { titulo: 'Por vendedora', headers: ['Vendedora', 'Unidades', 'Monto USD'], rows: porVendedora.map(([k, x]) => [k, x.n, `$${fmt(x.monto)}`]) },
-      { titulo: 'Detalle de ventas', headers: ['Vehículo', 'Placa', 'Cliente', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], rows: detalle.map(r => [`${r.marca} ${r.modelo}`, r.placa, r.cedula ? `${r.cliente} (${r.cedula})` : r.cliente, r.fecha, r.vendedora, r.esNueva ? 'Venta nueva' : 'Crédito viejo', MODALIDAD[r.modalidad] ?? r.modalidad, `$${fmt(r.monto)}`]) },
+      { titulo: 'Detalle de ventas', headers: ['Vehículo', 'Placa', 'Proforma', 'Cliente', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], rows: detalle.map(r => [`${r.marca} ${r.modelo}`, r.placa, r.proforma, r.cedula ? `${r.cliente} (${r.cedula})` : r.cliente, r.fecha, r.vendedora, r.esNueva ? 'Venta nueva' : 'Crédito viejo', MODALIDAD[r.modalidad] ?? r.modalidad, `$${fmt(r.monto)}`]) },
     ],
   })
 
@@ -187,14 +195,14 @@ export default function ReporteVentasClient() {
           <section className="card p-5">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-bold text-oriental-black text-sm">Detalle de ventas ({detalle.length})</h2>
-              <button onClick={() => csv(`ventas_detalle_${periodo}`, ['Vehículo', 'Placa', 'Cliente', 'Cédula/RIF', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], detalle.map(r => [`${r.marca} ${r.modelo}`, r.placa, r.cliente, r.cedula, r.fecha, r.vendedora, r.esNueva ? 'Venta nueva' : 'Crédito viejo', MODALIDAD[r.modalidad] ?? r.modalidad, r.monto.toFixed(2)]))}
+              <button onClick={() => csv(`ventas_detalle_${periodo}`, ['Vehículo', 'Placa', 'Proforma', 'Cliente', 'Cédula/RIF', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto USD'], detalle.map(r => [`${r.marca} ${r.modelo}`, r.placa, r.proforma, r.cliente, r.cedula, r.fecha, r.vendedora, r.esNueva ? 'Venta nueva' : 'Crédito viejo', MODALIDAD[r.modalidad] ?? r.modalidad, r.monto.toFixed(2)]))}
                 className="text-xs font-semibold text-oriental-gray border border-gray-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 hover:bg-gray-50"><FileDown size={13} /> CSV</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50"><tr>
-                  {['Vehículo', 'Placa', 'Cliente', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto'].map((h, i) => (
-                    <th key={i} className={`px-3 py-2 text-[11px] font-semibold text-oriental-gray ${i === 7 ? 'text-right' : 'text-left'}`}>{h}</th>
+                  {['Vehículo', 'Placa', 'Proforma', 'Cliente', 'Fecha', 'Vendedora', 'Tipo', 'Modalidad', 'Monto'].map((h, i) => (
+                    <th key={i} className={`px-3 py-2 text-[11px] font-semibold text-oriental-gray ${i === 8 ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody className="divide-y divide-gray-50">
@@ -202,6 +210,7 @@ export default function ReporteVentasClient() {
                     <tr key={r.id} className="hover:bg-gray-50">
                       <td className="px-3 py-2 text-oriental-black font-medium whitespace-nowrap">{r.marca} {r.modelo}</td>
                       <td className="px-3 py-2 text-oriental-gray text-xs font-mono whitespace-nowrap">{r.placa}</td>
+                      <td className="px-3 py-2 text-oriental-gray text-xs font-mono whitespace-nowrap">{r.proforma}</td>
                       <td className="px-3 py-2 text-oriental-black">
                         {r.cliente}
                         {r.cedula ? <span className="text-gray-400 text-xs block">{r.cedula}</span> : null}
