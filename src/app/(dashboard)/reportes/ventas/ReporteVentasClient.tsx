@@ -130,7 +130,7 @@ export default function ReporteVentasClient() {
   })
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl">
+    <div className="p-4 lg:p-8">
       <div className="flex items-center gap-4 mb-6">
         <Link href="/reportes" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50"><ArrowLeft size={18} className="text-oriental-gray" /></Link>
         <div className="flex items-center gap-3 flex-1">
@@ -169,7 +169,7 @@ export default function ReporteVentasClient() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-6 max-w-2xl">
         <div className="card p-4"><p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray mb-1">Vehículos vendidos</p><p className="text-2xl font-black text-oriental-black">{filtradas.length}</p></div>
         <div className="card p-4"><p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray mb-1">Monto total (proforma)</p><p className="text-2xl font-black text-green-700">${fmt(totalMonto)}</p></div>
       </div>
@@ -180,16 +180,18 @@ export default function ReporteVentasClient() {
         <div className="card p-12 text-center text-oriental-gray text-sm">Sin ventas en {periodo}.</div>
       ) : (
         <div className="space-y-5">
-          {!soloVentas && (
-            <Bloque titulo="Por tipo de venta (nueva / antigua)" headers={['Tipo', 'Unid.', 'Monto']} rows={porTipo}
-              onCsv={() => csv(`ventas_tipo_${periodo}`, ['Tipo', 'Unidades', 'Monto USD'], porTipo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
-          )}
-          <Bloque titulo="Por modalidad de venta" headers={['Modalidad', 'Unid.', 'Monto']} rows={porModalidad}
-            onCsv={() => csv(`ventas_modalidad_${periodo}`, ['Modalidad', 'Unidades', 'Monto USD'], porModalidad.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
-          <Bloque titulo="Por marca y modelo" headers={['Marca / Modelo', 'Unid.', 'Monto']} rows={porMarcaModelo}
-            onCsv={() => csv(`ventas_marca_${periodo}`, ['Marca/Modelo', 'Unidades', 'Monto USD'], porMarcaModelo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
-          <Bloque titulo="Por vendedora" headers={['Vendedora', 'Unid.', 'Monto']} rows={porVendedora}
-            onCsv={() => csv(`ventas_vendedora_${periodo}`, ['Vendedora', 'Unidades', 'Monto USD'], porVendedora.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+          <div className="grid gap-4 xl:grid-cols-2">
+            {!soloVentas && (
+              <Bloque titulo="Por tipo de venta (nueva / antigua)" headers={['Tipo', 'Unid.', 'Monto']} rows={porTipo}
+                onCsv={() => csv(`ventas_tipo_${periodo}`, ['Tipo', 'Unidades', 'Monto USD'], porTipo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+            )}
+            <Bloque titulo="Por modalidad de venta" headers={['Modalidad', 'Unid.', 'Monto']} rows={porModalidad}
+              onCsv={() => csv(`ventas_modalidad_${periodo}`, ['Modalidad', 'Unidades', 'Monto USD'], porModalidad.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+            <Bloque titulo="Por marca y modelo" headers={['Marca / Modelo', 'Unid.', 'Monto']} rows={porMarcaModelo}
+              onCsv={() => csv(`ventas_marca_${periodo}`, ['Marca/Modelo', 'Unidades', 'Monto USD'], porMarcaModelo.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+            <Bloque titulo="Por vendedora" headers={['Vendedora', 'Unid.', 'Monto']} rows={porVendedora}
+              onCsv={() => csv(`ventas_vendedora_${periodo}`, ['Vendedora', 'Unidades', 'Monto USD'], porVendedora.map(([k, x]) => [k, x.n, x.monto.toFixed(2)]))} />
+          </div>
 
           {/* Detalle de cada venta */}
           <section className="card p-5">
