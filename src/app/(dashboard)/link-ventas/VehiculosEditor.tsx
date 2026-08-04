@@ -467,10 +467,19 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       if (!res.ok || !json.ok) { showToast(json.error || 'Error al sincronizar', false); return }
       type R = { aliado: string; actualizados: number; insertados: number; extras: string[]; error?: string }
       const rs: R[] = json.resultados ?? []
-      const resumen = rs.map(r => r.error ? `${r.aliado}: ERROR` : `${r.aliado}: ${r.actualizados} act.${r.insertados ? ` / ${r.insertados} nuevos` : ''}`).join('  ·  ')
       const hayError = rs.some(r => r.error)
-      showToast(hayError ? `Sincronizado con errores → ${resumen}` : `✓ Sincronizado → ${resumen}`, !hayError)
       console.log('[sincronizar aliados]', json)
+      if (hayError) {
+        // Muestra el mensaje real de cada aliado que falló (para diagnosticar).
+        const detalle = rs.map(r => r.error
+          ? `❌ ${r.aliado}: ${r.error}`
+          : `✓ ${r.aliado}: ${r.actualizados} actualizados / ${r.insertados} nuevos`).join('\n')
+        alert('Sincronización con errores:\n\n' + detalle)
+        showToast('Sincronizado con errores (ver detalle)', false)
+      } else {
+        const resumen = rs.map(r => `${r.aliado}: ${r.actualizados} act.${r.insertados ? ` / ${r.insertados} nuevos` : ''}`).join('  ·  ')
+        showToast(`✓ Sincronizado → ${resumen}`, true)
+      }
     } catch {
       showToast('Error de conexión al sincronizar', false)
     } finally {
