@@ -338,19 +338,24 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       cuota = financiado / nCuotas
     }
     const cuotaRounded = Math.round(cuota * 100) / 100
+    // IGTF = 3% del precio base del carro (automático, igual en contado y crédito)
+    const igtf3 = Math.round(precio * 0.03 * 100) / 100
 
-    // Actualiza los campos calculados en el estado local
-    // Gastos Vehimotors se aplica igual en contado y crédito (7% del financiamiento)
+    // Actualiza los campos calculados en el estado local.
+    // Contado NO lleva Gastos Vehimotors (no hay financiamiento) → 0.
+    // Crédito: Gastos Vehimotors = 7% del financiamiento.
     setVehiculos(prev => prev.map(x => x.id === v.id ? {
       ...x,
-      gastos_vhm_c: gastosVhmCr,
+      gastos_vhm_c: 0,
       gastos_vhm_cr: gastosVhmCr,
+      igtf_c: igtf3,
+      igtf_cr: igtf3,
       tasa_credito: cuotaRounded,
     } : x))
     setDirty(prev => ({ ...prev, [v.id]: true }))
     setSaved(prev => ({ ...prev, [v.id]: false }))
 
-    if (mostrarToast) showToast(`✓ Cuota $${cuotaRounded.toFixed(2)} · Gastos VM $${gastosVhmCr.toFixed(2)}`, true)
+    if (mostrarToast) showToast(`✓ Cuota $${cuotaRounded.toFixed(2)} · Gastos VM $${gastosVhmCr.toFixed(2)} · IGTF $${igtf3.toFixed(2)}`, true)
   }
 
   function toggleExpand(id: string) {
@@ -361,12 +366,16 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
     const v = vehiculos.find(x => x.id === id)
     if (!v) return
     setSaving(prev => ({ ...prev, [id]: true }))
+    // Reglas fijas: el CONTADO no lleva Gastos Vehimotors (no hay financiamiento) → 0.
+    // El IGTF es automático = 3% del precio base, igual en contado y crédito.
+    const igtf3 = Math.round(Number(v.cash ?? 0) * 0.03 * 100) / 100
+    const gastosVhmC = 0
     const gcCalc = (v.placa_c ?? 0) + (v.poliza_vehiculo_c ?? 0) + (v.poliza_vida_c ?? 0) +
-      (v.gastos_vhm_c ?? 0) + (v.honorarios_c ?? 0) + (v.gastos_int_c ?? 0) + (v.alfombras_c ?? 0) +
-      (v.transporte_c ?? 0) + (v.accesorios_c ?? 0) + (v.igtf_c ?? 0)
+      gastosVhmC + (v.honorarios_c ?? 0) + (v.gastos_int_c ?? 0) + (v.alfombras_c ?? 0) +
+      (v.transporte_c ?? 0) + (v.accesorios_c ?? 0) + igtf3
     const gcrCalc = (v.placa_cr ?? 0) + (v.poliza_vehiculo_cr ?? 0) + (v.poliza_vida_cr ?? 0) +
       (v.gastos_vhm_cr ?? 0) + (v.honorarios_cr ?? 0) + (v.gastos_int_cr ?? 0) + (v.alfombras_cr ?? 0) +
-      (v.transporte_cr ?? 0) + (v.accesorios_cr ?? 0) + (v.igtf_cr ?? 0)
+      (v.transporte_cr ?? 0) + (v.accesorios_cr ?? 0) + igtf3
     const { error } = await supabase.from('catalogo_ventas').update({
       brand: v.brand, model: v.model, img_url: v.img_url,
       cash: v.cash,
@@ -377,14 +386,14 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       ac500_visible: v.ac500_visible, ac500_6m_cuota: v.ac500_6m_cuota,
       ac500_9m_cuota: v.ac500_9m_cuota, ac500_12m_cuota: v.ac500_12m_cuota,
       placa_c: v.placa_c, poliza_vehiculo_c: v.poliza_vehiculo_c, poliza_vida_c: v.poliza_vida_c,
-      gastos_vhm_c: v.gastos_vhm_c, honorarios_c: v.honorarios_c,
+      gastos_vhm_c: gastosVhmC, honorarios_c: v.honorarios_c,
       gastos_int_c: v.gastos_int_c, alfombras_c: v.alfombras_c,
-      transporte_c: v.transporte_c, accesorios_c: v.accesorios_c, igtf_c: v.igtf_c,
+      transporte_c: v.transporte_c, accesorios_c: v.accesorios_c, igtf_c: igtf3,
       diferencial_c_activo: v.diferencial_c_activo ?? false,
       placa_cr: v.placa_cr, poliza_vehiculo_cr: v.poliza_vehiculo_cr, poliza_vida_cr: v.poliza_vida_cr,
       gastos_vhm_cr: v.gastos_vhm_cr, honorarios_cr: v.honorarios_cr,
       gastos_int_cr: v.gastos_int_cr, alfombras_cr: v.alfombras_cr,
-      transporte_cr: v.transporte_cr, accesorios_cr: v.accesorios_cr, igtf_cr: v.igtf_cr,
+      transporte_cr: v.transporte_cr, accesorios_cr: v.accesorios_cr, igtf_cr: igtf3,
       diferencial_cr_activo: v.diferencial_cr_activo ?? false,
       placa_monto: v.placa_monto,
       poliza_vehiculo_banco: v.poliza_vehiculo_banco, poliza_vida_banco: v.poliza_vida_banco,
@@ -770,7 +779,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                               </div>
                               <div className="grid grid-cols-2 gap-2 items-center">
                                 <span className={rowLbl}>Gastos Vehimotor ($)</span>
-                                <NumField className={itemsCls} value={v.gastos_vhm_c} placeholder="0" onCommit={n => update(v.id, 'gastos_vhm_c', n)} />
+                                <input className={`${itemsCls} bg-gray-50 text-gray-400`} value="0" readOnly title="El contado no lleva Gastos Vehimotor (no hay financiamiento)" />
                               </div>
                               <div className="grid grid-cols-2 gap-2 items-center">
                                 <span className={rowLbl}>Hon. profesionales ($)</span>
@@ -793,8 +802,8 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                                 <NumField className={itemsCls} value={v.accesorios_c} placeholder="0" onCommit={n => update(v.id, 'accesorios_c', n)} />
                               </div>
                               <div className="grid grid-cols-2 gap-2 items-center">
-                                <span className={rowLbl}>IGTF ($)</span>
-                                <NumField className={itemsCls} value={v.igtf_c} placeholder="0" onCommit={n => update(v.id, 'igtf_c', n)} />
+                                <span className={rowLbl}>IGTF ($) · 3% auto</span>
+                                <input className={`${itemsCls} bg-gray-50 text-gray-500`} value={fmtN(precio * 0.03)} readOnly title="IGTF automático = 3% del precio base" />
                               </div>
                               {/* Diferencial cambiario (opcional) */}
                               <div className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -869,8 +878,8 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                                 <NumField className={itemsCls} value={v.accesorios_cr} placeholder="0" onCommit={n => update(v.id, 'accesorios_cr', n)} />
                               </div>
                               <div className="grid grid-cols-2 gap-2 items-center">
-                                <span className={rowLbl}>IGTF ($)</span>
-                                <NumField className={itemsCls} value={v.igtf_cr} placeholder="0" onCommit={n => update(v.id, 'igtf_cr', n)} />
+                                <span className={rowLbl}>IGTF ($) · 3% auto</span>
+                                <input className={`${itemsCls} bg-gray-50 text-gray-500`} value={fmtN(precio * 0.03)} readOnly title="IGTF automático = 3% del precio base" />
                               </div>
                               {/* Diferencial cambiario (opcional) */}
                               <div className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
