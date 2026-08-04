@@ -95,6 +95,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   const [numeroCot, setNumeroCot] = useState('')
   const [cotId, setCotId] = useState('')
   const [compartiendo, setCompartiendo] = useState(false)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   // Concesionario — solo el código de la casa (R000) puede elegir; el resto va a La Oriental
   const esCasa = pin.trim().toUpperCase() === 'R000'
@@ -220,6 +221,58 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   }
 
   const pdfUrl = cotId ? `/api/cotizaciones/${cotId}/pdf` : ''
+
+  // Vista previa del PDF (sin guardar la cotización ni enviar correo). Abre el
+  // PDF en una pestaña nueva para que la vendedora lo revise antes de enviar.
+  async function verPreview() {
+    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) {
+      setErrorMsg('Nombre y C.I./RIF son obligatorios para la vista previa.')
+      return
+    }
+    setErrorMsg('')
+    setPreviewLoading(true)
+    // Abrir la pestaña dentro del gesto del usuario (evita bloqueo de pop-ups en móvil).
+    const win = typeof window !== 'undefined' ? window.open('', '_blank') : null
+    try {
+      const r = await fetch('/api/cotizaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          preview: true,
+          codigo: pin,
+          ...(esPromo && promoId ? { promoVehiculoId: promoId } : { vehiculoId: vehiculo.id }),
+          clienteNombre: form.clienteNombre,
+          clienteCiRif: form.clienteCiRif,
+          clienteCorreo: form.clienteCorreo || null,
+          clienteTelefono: form.clienteTelefono || null,
+          clienteDireccion: form.clienteDireccion || null,
+          clienteCiudadEstado: form.clienteCiudadEstado || null,
+          clienteCodigoPostal: form.clienteCodigoPostal || null,
+          agenteRetencion: form.agenteRetencion,
+          modalidad,
+          plan: modalidad === 'credito_24' ? plan : 'vehimotors',
+          concesionarioId: esCasa ? concesionarioId : 'la-oriental',
+        }),
+      })
+      if (!r.ok) {
+        let msg = 'No se pudo generar la vista previa.'
+        try { const j = await r.json(); if (j?.error) msg = j.error } catch {}
+        if (win) win.close()
+        setErrorMsg(msg)
+        return
+      }
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      if (win) win.location.href = url
+      else window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch {
+      if (win) win.close()
+      setErrorMsg('Error de conexión al generar la vista previa.')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
 
   // Compartir por WhatsApp desde el PDF: en el teléfono usa el compartir nativo
   // (adjunta el PDF de verdad al chat que elija la vendedora). Si el dispositivo
@@ -490,7 +543,15 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button
+                onClick={verPreview}
+                disabled={previewLoading || step === 'sending'}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '12px', marginTop: 20, background: '#fff', border: '1.5px solid #111', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#111', cursor: previewLoading ? 'default' : 'pointer', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              >
+                {previewLoading ? 'Generando vista previa…' : '👁 Ver PDF (vista previa)'}
+              </button>
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                 <button onClick={onClose} style={{ flex: 1, padding: '12px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' }}>
                   Cancelar
                 </button>

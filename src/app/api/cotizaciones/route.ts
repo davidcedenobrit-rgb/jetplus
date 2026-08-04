@@ -1,7 +1,10 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
+import { renderToBuffer } from '@react-pdf/renderer'
+import React from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
+import { CotizacionPDF } from '@/lib/cotizacion-pdf'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 import { permitido } from '@/lib/rate-limit'
@@ -24,6 +27,9 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const {
+      // Vista previa: genera el PDF con los datos actuales SIN guardar la
+      // cotización ni enviar correos (para que la vendedora lo revise/comparta).
+      preview,
       codigo,
       vehiculoId,
       clienteNombre,
@@ -373,6 +379,64 @@ export async function POST(req: Request) {
     const hoy = new Date()
     const venc = new Date(hoy)
     venc.setDate(venc.getDate() + 3)
+
+    // ── VISTA PREVIA ──────────────────────────────────────────────────────
+    // Devuelve el PDF con los datos actuales sin guardar la cotización ni
+    // enviar correos. Reutiliza exactamente el mismo cálculo del flujo normal.
+    if (preview) {
+      const previewData: CotizacionPDFData = {
+        logoSrc: conces.logoSrc,
+        selloSrc: conces.selloSrc,
+        empresaNombre: conces.nombre,
+        empresaRif: conces.rif,
+        empresaDireccion: conces.direccion,
+        empresaTelefono: conces.telefono,
+        empresaCorreo: conces.correo,
+        numero: 'VISTA PREVIA',
+        fecha: fmtDate(hoy),
+        vencimiento: fmtDate(venc),
+        clienteNombre: clienteNombre.trim(),
+        clienteCiRif: clienteCiRif.trim(),
+        clienteDireccion: clienteDireccion?.trim() || null,
+        clienteCorreo: correoCliente,
+        clienteTelefono: clienteTelefono?.trim() || null,
+        clienteCiudadEstado: clienteCiudadEstado?.trim() || null,
+        clienteCodigoPostal: clienteCodigoPostal?.trim() || null,
+        agenteRetencion: !!agenteRetencion,
+        retencionPct: agenteRetencion ? (Number(retencionPct) || 75) : null,
+        marca: vehiculo.brand,
+        modelo: vehiculo.model,
+        color: (typeof color === 'string' && color.trim()) ? color.trim() : undefined,
+        cantidad: cantidadNum,
+        precioBase,
+        modalidad,
+        plan,
+        ivaMonto: iva,
+        gastosMonto: gastos,
+        totalVehiculo: plan === 'banco_100' ? totalVehiculoBanco : undefined,
+        totalInicial,
+        financiamientoMonto,
+        cuotaMensual,
+        mesesBanco: plan === 'banco_100' ? mesesBanco : undefined,
+        costoTotal,
+        ac500Schedule: plan === 'ac500' && ac500Schedule ? ac500Schedule : undefined,
+        inicialPct: plan === 'personalizado' ? persIniPct / 100 : undefined,
+        mesesCredito: plan === 'personalizado' ? persMeses : undefined,
+        condicionesPersonalizadas: condPersonalizadas,
+        bnVehimotors: bnVehimotorsData,
+      }
+      const previewBuf = await renderToBuffer(
+        React.createElement(CotizacionPDF, { data: previewData }) as React.ReactElement<any>
+      )
+      return new NextResponse(Buffer.from(previewBuf), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'inline; filename="cotizacion-vista-previa.pdf"',
+          'Cache-Control': 'private, no-cache',
+        },
+      })
+    }
 
     // Vincular cliente_id si ya existe un cliente con esta CI/RIF
     const ciNorm = clienteCiRif.trim().toUpperCase()
