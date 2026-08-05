@@ -342,11 +342,10 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               </View>
               {data.estructura ? (
                 <>
-                  <View style={s.montosRow2}><Text style={s.montosLabel}>Precio base</Text><Text style={s.montosVal}>${fmt(data.estructura.precioBase)}</Text></View>
+                  <View style={s.montosRow2}><Text style={s.montosLabel}>IVA 16%</Text><Text style={s.montosVal}>${fmt(data.estructura.iva)}</Text></View>
                   {data.estructura.iniBase > 0 && (
                     <View style={s.montosRow2}><Text style={s.montosLabel}>{data.estructura.inicialPct}% del precio base (inicial)</Text><Text style={s.montosVal}>${fmt(data.estructura.iniBase)}</Text></View>
                   )}
-                  <View style={s.montosRow2}><Text style={s.montosLabel}>IVA 16%</Text><Text style={s.montosVal}>${fmt(data.estructura.iva)}</Text></View>
                   {gastosTotal > 0 && (
                     <View style={s.montosRow2}><Text style={[s.montosLabel, { paddingRight: 6 }]}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría, IGTF</Text><Text style={s.montosVal}>${fmt(gastosTotal)}</Text></View>
                   )}
