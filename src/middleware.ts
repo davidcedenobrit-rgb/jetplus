@@ -26,13 +26,23 @@ export async function middleware(request: NextRequest) {
     '/api/leads',
     '/api/ventas/vendedores',
     '/api/eventos',
+    // Verificación del código de vendedor(a) desde el link público /ventas.
+    // Sin esto el POST se redirige al login (307) y el navegador recibe HTML
+    // en vez de JSON → "Error de conexión" al ingresar el código.
+    '/api/vendedoras/verificar',
   ]
 
   // PDF de la cotización: público (se comparte al cliente por WhatsApp/correo).
   // La URL lleva un UUID no adivinable, mismo modelo que el token del correo.
   const esPdfCotizacionPublico = /^\/api\/cotizaciones\/[^/]+\/pdf$/.test(pathname)
 
-  if (esPdfCotizacionPublico || publicApiPaths.some(path => pathname.startsWith(path))) {
+  // Crear cotización desde el link público /ventas (POST exacto a /api/cotizaciones).
+  // El propio handler valida el código de vendedor(a); el GET (listado) sigue
+  // exigiendo sesión dentro del handler. Solo se libera la ruta EXACTA, no las
+  // subrutas administrativas (/api/cotizaciones/[id], reactivar, etc.).
+  const esCrearCotizacionPublica = pathname === '/api/cotizaciones'
+
+  if (esPdfCotizacionPublico || esCrearCotizacionPublica || publicApiPaths.some(path => pathname.startsWith(path))) {
     return supabaseResponse
   }
 
