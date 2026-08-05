@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { FileSignature, X, Loader2, ExternalLink, CheckCircle2, Trash2, Clock } from 'lucide-react'
-import { cuotaAmortizada } from '@/lib/cotizacion-calc'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -31,9 +30,10 @@ export default function AcuerdoCobroPanel({
   const [montoFinanciado, setMontoFinanciado] = useState('')
   const [numCuotas, setNumCuotas] = useState('')
   const [cuotaMonto, setCuotaMonto] = useState('')
-  const [tasaInteres, setTasaInteres] = useState('')
   const [planCuotas, setPlanCuotas] = useState('')
   const [observaciones, setObservaciones] = useState('')
+  // Ejecutivo(a) de ventas / responsable de cobro — editable por Rojas al generar.
+  const [ejecutivo, setEjecutivo] = useState('')
 
   // Flags de "el usuario lo escribió a mano". Mientras estén en false, el campo
   // se calcula solo a partir de los otros. Se marcan true al editar el campo, o
@@ -60,9 +60,13 @@ export default function AcuerdoCobroPanel({
     setMontoFinanciado(acuerdo?.monto_financiado != null ? String(acuerdo.monto_financiado) : '')
     setNumCuotas(acuerdo?.num_cuotas != null ? String(acuerdo.num_cuotas) : '')
     setCuotaMonto(acuerdo?.cuota_monto != null ? String(acuerdo.cuota_monto) : '')
-    setTasaInteres(acuerdo?.tasa_interes != null ? String(acuerdo.tasa_interes) : '')
     setPlanCuotas(acuerdo?.plan_cuotas ?? '')
     setObservaciones(acuerdo?.observaciones ?? '')
+    // Ejecutivo: el guardado en el acuerdo tiene prioridad; si no, el de la cotización.
+    const ejecutivoGuardado = Array.isArray(acuerdo?.vendedoras) && acuerdo.vendedoras.length
+      ? acuerdo.vendedoras.map((v: any) => v?.nombre).filter(Boolean).join(', ')
+      : ''
+    setEjecutivo(ejecutivoGuardado || vendedoraNombre || '')
     // Al reabrir un acuerdo ya guardado respetamos sus valores (manual = true).
     // En uno nuevo, todo se calcula solo (manual = false).
     const existe = !!acuerdo
@@ -95,10 +99,8 @@ export default function AcuerdoCobroPanel({
     if (cuotaManual) return
     const fin = num(montoFinanciado), nc = num(numCuotas)
     if (fin == null || !nc || nc <= 0) { setCuotaMonto(''); return }
-    const tasa = num(tasaInteres) ?? 0
-    const cuota = tasa > 0 ? cuotaAmortizada(fin, tasa, Math.round(nc)) : fin / nc
-    setCuotaMonto(clean(cuota))
-  }, [montoFinanciado, numCuotas, tasaInteres, cuotaManual]) // eslint-disable-line react-hooks/exhaustive-deps
+    setCuotaMonto(clean(fin / nc))
+  }, [montoFinanciado, numCuotas, cuotaManual]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sugerencia del plan de cuotas en texto: "N cuotas mensuales de $X,XX".
   useEffect(() => {
@@ -106,10 +108,8 @@ export default function AcuerdoCobroPanel({
     const nc = num(numCuotas), cm = num(cuotaMonto)
     if (!nc || nc <= 0 || cm == null || cm <= 0) { setPlanCuotas(''); return }
     const n = Math.round(nc)
-    const tasa = num(tasaInteres) ?? 0
-    const tasaTxt = tasa > 0 ? ` (incluye ${fmtLocal(tasa)}% de interés anual)` : ''
-    setPlanCuotas(`${n} ${n === 1 ? 'cuota mensual' : 'cuotas mensuales'} de $${fmtLocal(cm)} desde la entrega${tasaTxt}`)
-  }, [numCuotas, cuotaMonto, tasaInteres, planManual]) // eslint-disable-line react-hooks/exhaustive-deps
+    setPlanCuotas(`${n} ${n === 1 ? 'cuota mensual' : 'cuotas mensuales'} de $${fmtLocal(cm)} desde la entrega`)
+  }, [numCuotas, cuotaMonto, planManual]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function guardar() {
     if (!num(montoFinanciado) || num(montoFinanciado)! <= 0) { setError('Indica el monto financiado por La Oriental.'); return }
@@ -120,7 +120,8 @@ export default function AcuerdoCobroPanel({
         body: JSON.stringify({
           cotizacionId: cotId,
           inicialTotal: num(inicialTotal), montoContado: num(montoContado), montoFinanciado: num(montoFinanciado),
-          numCuotas: num(numCuotas), cuotaMonto: num(cuotaMonto), tasaInteres: num(tasaInteres), planCuotas, observaciones,
+          numCuotas: num(numCuotas), cuotaMonto: num(cuotaMonto), planCuotas, observaciones,
+          ejecutivo: ejecutivo.trim() || null,
         }),
       })
       const j = await r.json()
@@ -229,7 +230,13 @@ export default function AcuerdoCobroPanel({
             </div>
             <div className="p-5 space-y-3">
               {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs text-red-800">{error}</div>}
-              {vendedoraNombre && <p className="text-[11px] text-gray-500">Responsable(s) de cobro: <b className="text-oriental-black">{vendedoraNombre}</b></p>}
+
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">Ejecutivo(a) de ventas / responsable de cobro</label>
+                <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-500"
+                  value={ejecutivo} onChange={e => setEjecutivo(e.target.value)} placeholder="Nombre del ejecutivo(a) de ventas" />
+                <p className="text-[10px] text-gray-400 mt-1">Aparece en el encabezado y en la firma del acuerdo.</p>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Inicial total ($)" value={inicialTotal} onChange={setInicialTotal} />
@@ -241,13 +248,11 @@ export default function AcuerdoCobroPanel({
                 auto={!finManual} onReset={() => setFinManual(false)} />
               <div className="grid grid-cols-2 gap-3">
                 <Field label="N° de cuotas" value={numCuotas} onChange={setNumCuotas} />
-                <Field label="Tasa de interés anual (%)" value={tasaInteres} onChange={setTasaInteres}
-                  hint="Opcional — a tu criterio" auto={(num(tasaInteres) ?? 0) > 0} />
+                <Field label="Monto por cuota ($)" value={cuotaMonto}
+                  onChange={v => { setCuotaManual(true); setCuotaMonto(v) }}
+                  hint={cuotaManual ? 'Editado manualmente' : 'Auto: financiado ÷ cuotas'}
+                  auto={!cuotaManual} onReset={() => setCuotaManual(false)} />
               </div>
-              <Field label="Monto por cuota ($)" value={cuotaMonto}
-                onChange={v => { setCuotaManual(true); setCuotaMonto(v) }}
-                hint={cuotaManual ? 'Editado manualmente' : ((num(tasaInteres) ?? 0) > 0 ? 'Auto: con interés (amortización)' : 'Auto: financiado ÷ cuotas')}
-                auto={!cuotaManual} onReset={() => setCuotaManual(false)} />
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] font-semibold text-gray-500">Plan de cuotas (texto)</label>

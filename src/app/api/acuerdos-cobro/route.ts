@@ -46,8 +46,8 @@ export async function POST(req: Request) {
   const {
     cotizacionId,
     inicialTotal, montoContado, montoFinanciado,
-    numCuotas, cuotaMonto, tasaInteres, planCuotas,
-    observaciones,
+    numCuotas, cuotaMonto, planCuotas,
+    observaciones, ejecutivo,
   } = body
 
   if (!cotizacionId) return NextResponse.json({ error: 'Falta cotizacionId' }, { status: 400 })
@@ -66,8 +66,12 @@ export async function POST(req: Request) {
     .maybeSingle()
   if (!cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
 
-  const vendedoras = cot.vendedoras
-    ?? (cot.vendedora_nombre ? [{ nombre: cot.vendedora_nombre }] : null)
+  // El ejecutivo(a) de ventas se puede editar al generar el acuerdo (Rojas).
+  // Si se indica, tiene prioridad sobre las vendedoras de la cotización.
+  const ejecutivoTxt = typeof ejecutivo === 'string' ? ejecutivo.trim() : ''
+  const vendedoras = ejecutivoTxt
+    ? [{ nombre: ejecutivoTxt }]
+    : (cot.vendedoras ?? (cot.vendedora_nombre ? [{ nombre: cot.vendedora_nombre }] : null))
 
   // Un acuerdo por cotización: si ya existe, se actualiza (mientras no esté aceptado).
   const { data: existente } = await supabase
@@ -83,7 +87,7 @@ export async function POST(req: Request) {
     monto_financiado: financiado,
     num_cuotas: num(numCuotas),
     cuota_monto: num(cuotaMonto),
-    tasa_interes: num(tasaInteres),
+    tasa_interes: null,
     plan_cuotas: (typeof planCuotas === 'string' && planCuotas.trim()) ? planCuotas.trim() : null,
     vendedoras,
     observaciones: (typeof observaciones === 'string' && observaciones.trim()) ? observaciones.trim() : null,

@@ -13,7 +13,7 @@ const PURPLE_LIGHT = '#f5f3ff'
 
 const s = StyleSheet.create({
   // Margen superior en TODAS las páginas (la hoja 2 respeta el borde) + inferior
-  page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingTop: 22, paddingBottom: 40 },
+  page: { fontSize: 9, fontFamily: 'Helvetica', color: DARK, paddingTop: 16, paddingBottom: 28 },
 
   // Barra superior fija (flush al borde, se repite en cada página)
   topBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: RED },
@@ -29,25 +29,25 @@ const s = StyleSheet.create({
   headerAccentGold: { width: 96, backgroundColor: GOLD },
   headerAccentRed: { flex: 1, backgroundColor: RED },
 
-  body: { padding: '16pt 28pt 14pt' },
+  body: { padding: '9pt 28pt 8pt' },
 
   // Banda de título elegante
-  titleBand: { alignItems: 'center', marginBottom: 14 },
-  titleEyebrow: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: GOLD, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 },
-  documentTitle: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: PURPLE, letterSpacing: 0.8, textAlign: 'center' },
-  documentSubtitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#6b7280', letterSpacing: 1, marginTop: 3, textAlign: 'center' },
-  titleRule: { width: 64, height: 2.5, backgroundColor: PURPLE, borderRadius: 2, marginTop: 8 },
+  titleBand: { alignItems: 'center', marginBottom: 8 },
+  titleEyebrow: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: GOLD, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 3 },
+  documentTitle: { fontSize: 12.5, fontFamily: 'Helvetica-Bold', color: PURPLE, letterSpacing: 0.8, textAlign: 'center' },
+  documentSubtitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#6b7280', letterSpacing: 1, marginTop: 2, textAlign: 'center' },
+  titleRule: { width: 64, height: 2.5, backgroundColor: PURPLE, borderRadius: 2, marginTop: 5 },
 
   // Datos (dos columnas: cliente + operación)
-  metaBox: { border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden', marginBottom: 12 },
+  metaBox: { border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden', marginBottom: 7 },
   metaHeader: { backgroundColor: DARK, padding: '5pt 12pt' },
   metaHeaderText: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 12pt', borderBottom: `0.5pt solid ${BORDER}` },
   metaKey: { fontSize: 8, color: GRAY },
   metaVal: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'right', flex: 1, marginLeft: 12 },
 
-  sectionTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: PURPLE, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 12, marginBottom: 5 },
-  p: { textAlign: 'justify', marginBottom: 6, lineHeight: 1.5, fontSize: 8.5, color: DARK },
+  sectionTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: PURPLE, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 7, marginBottom: 3 },
+  p: { textAlign: 'justify', marginBottom: 4, lineHeight: 1.4, fontSize: 8.5, color: DARK },
   bold: { fontFamily: 'Helvetica-Bold' },
 
   // Cuadro de montos de la inicial
@@ -65,7 +65,7 @@ const s = StyleSheet.create({
   planVal: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#4c1d95', textAlign: 'right', flex: 1, marginLeft: 12 },
 
   // Cronograma detallado de cuotas de la inicial
-  cronoBox: { border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden', marginTop: 10 },
+  cronoBox: { border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden', marginTop: 6 },
   cronoHeader: { backgroundColor: PURPLE, padding: '5pt 12pt', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cronoHeaderText: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
   cronoHeaderSub: { fontSize: 7.5, color: '#ede9fe' },
@@ -81,7 +81,7 @@ const s = StyleSheet.create({
   cronoTotalLabel: { flex: 1, fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GOLD },
   cronoTotalVal: { width: 100, textAlign: 'right', fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#92400e' },
 
-  li: { flexDirection: 'row', marginBottom: 5 },
+  li: { flexDirection: 'row', marginBottom: 3 },
   liDot: { width: 12, fontSize: 8.5, color: PURPLE },
   liText: { flex: 1, textAlign: 'justify', fontSize: 8.5, lineHeight: 1.5 },
 
@@ -89,7 +89,7 @@ const s = StyleSheet.create({
   obsText: { fontSize: 8, color: GRAY, lineHeight: 1.5 },
 
   // Firma + sello: fluye al final del documento (no fija), para no tapar texto
-  firmaBlock: { marginTop: 26, alignItems: 'center' },
+  firmaBlock: { marginTop: 14, alignItems: 'center' },
   firmaLine: { width: 240, borderBottom: `1pt solid ${DARK}`, height: 26, marginBottom: 4 },
   firmaLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: DARK },
   firmaSub: { fontSize: 7, color: GRAY },
@@ -161,17 +161,12 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
     const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate())
     return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
   }
-  // Con interés, el total a pagar es cuota × nº de cuotas (mayor que el capital
-  // financiado); sin interés, el total es el propio monto financiado.
-  const tasa = data.tasaInteres != null ? Number(data.tasaInteres) : 0
-  const conInteres = tasa > 0 && cuotaBase > 0 && nCuotas > 0
-  const totalObjetivo = conInteres
-    ? Math.round(cuotaBase * nCuotas * 100) / 100
-    : data.montoFinanciado
+  // El acuerdo de cobro NO maneja interés: el total financiado es el capital y
+  // las cuotas reparten ese monto (la última absorbe el redondeo).
+  const totalObjetivo = data.montoFinanciado
   const cronograma: { n: number; venc: string; monto: number }[] = []
   if (nCuotas >= 1 && cuotaBase > 0) {
     for (let i = 1; i <= nCuotas; i++) {
-      // La última cuota absorbe el redondeo para cuadrar con el total.
       const monto = (i === nCuotas && totalObjetivo > 0)
         ? Math.round((totalObjetivo - cuotaBase * (nCuotas - 1)) * 100) / 100
         : cuotaBase
@@ -179,7 +174,6 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
     }
   }
   const totalCrono = cronograma.reduce((a, c) => a + c.monto, 0)
-  const interesTotal = conInteres ? Math.round((totalCrono - data.montoFinanciado) * 100) / 100 : 0
 
   return (
     <Document title="Acuerdo de gestión de cobro" author={empNombre}>
@@ -249,12 +243,6 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
                 <Text style={s.montoVal}>{nCuotas ? `${nCuotas} cuota(s)` : ''}{nCuotas && cuotaBase ? ' × ' : ''}{cuotaBase ? fmtUsd(cuotaBase) : ''}</Text>
               </View>
             ) : null}
-            {conInteres ? (
-              <>
-                <View style={s.montoRow}><Text style={s.montoLabel}>Tasa de interés anual</Text><Text style={s.montoVal}>{tasa.toLocaleString('es-VE', { maximumFractionDigits: 2 })}%</Text></View>
-                <View style={s.montoRow}><Text style={s.montoLabel}>Interés total</Text><Text style={s.montoVal}>{fmtUsd(interesTotal)}</Text></View>
-              </>
-            ) : null}
             {cronograma.length === 0 ? (
               <View style={s.planRow}><Text style={s.planLabel}>Plan de cuotas</Text><Text style={s.planVal}>{data.planCuotas || '________________'}</Text></View>
             ) : null}
@@ -280,7 +268,7 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
                 </View>
               ))}
               <View style={s.cronoTotal}>
-                <Text style={s.cronoTotalLabel}>{conInteres ? 'Total a pagar (capital + interés)' : 'Total financiado'} ({nCuotas} cuota{nCuotas === 1 ? '' : 's'})</Text>
+                <Text style={s.cronoTotalLabel}>Total financiado ({nCuotas} cuota{nCuotas === 1 ? '' : 's'})</Text>
                 <Text style={s.cronoTotalVal}>{fmtUsd(totalCrono)}</Text>
               </View>
             </View>
