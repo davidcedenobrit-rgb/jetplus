@@ -133,6 +133,11 @@ export default function ProformasTab() {
                     className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50">
                     <ExternalLink size={13} /> PDF
                   </a>
+                  <a href={`/api/proformas/${p.id}/acuerdo-pago/pdf`} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-2 border border-oriental-red/30 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50"
+                    title="Generar el PDF del acuerdo de pago del cliente">
+                    <FileText size={13} /> Acuerdo de pago
+                  </a>
                   {vendida ? (
                     <button onClick={() => router.push(`/vehiculos/${p.vehiculo_id}`)}
                       className="flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold">
