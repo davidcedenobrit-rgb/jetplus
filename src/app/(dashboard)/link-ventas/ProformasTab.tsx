@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2 } from 'lucide-react'
+import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2, ClipboardCheck, ShieldAlert } from 'lucide-react'
 import ProformaPanel from './ProformaPanel'
 
 type Proforma = {
@@ -137,6 +137,16 @@ export default function ProformasTab() {
                     className="flex items-center gap-1.5 px-3 py-2 border border-oriental-red/30 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50"
                     title="Generar el PDF del acuerdo de pago del cliente">
                     <FileText size={13} /> Acuerdo de pago
+                  </a>
+                  <a href={`/api/proformas/${p.id}/fe-entrega/pdf`} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold text-oriental-black hover:bg-gray-50"
+                    title="Generar la fe de entrega del vehículo">
+                    <ClipboardCheck size={13} /> Fe de entrega
+                  </a>
+                  <a href={`/api/proformas/${p.id}/exoneracion/pdf`} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-2 border border-amber-300 rounded-lg text-xs font-bold text-amber-700 hover:bg-amber-50"
+                    title="Generar la exoneración de responsabilidad (papel ahumado)">
+                    <ShieldAlert size={13} /> Exores
                   </a>
                   {vendida ? (
                     <button onClick={() => router.push(`/vehiculos/${p.vehiculo_id}`)}
