@@ -326,12 +326,12 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             <Text style={[s.tableCell, s.colPrecio, { fontFamily: 'Helvetica-Bold' }]}>{fmt(bnV ? bnV.precio_base : data.totalVehiculo)}</Text>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, paddingTop: 4 }}>
-            {data.version ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Versión: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.version}</Text></Text> : null}
-            {data.color ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Color: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.color}</Text></Text> : null}
-            {data.anio ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Año: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.anio}</Text></Text> : null}
-            {data.vin ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>VIN/Chasis: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.vin}</Text></Text> : null}
-            {data.serialMotor ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Serial motor: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.serialMotor}</Text></Text> : null}
-            {data.proformaVehimotors ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>N° Proforma Vehimotors: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.proformaVehimotors}</Text></Text> : null}
+            {data.version ? <Text style={{ fontSize: 6.5, color: GRAY, marginRight: 7, marginBottom: 2 }}>Versión: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.version}</Text></Text> : null}
+            {data.color ? <Text style={{ fontSize: 6.5, color: GRAY, marginRight: 7, marginBottom: 2 }}>Color: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.color}</Text></Text> : null}
+            {data.anio ? <Text style={{ fontSize: 6.5, color: GRAY, marginRight: 7, marginBottom: 2 }}>Año: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.anio}</Text></Text> : null}
+            {data.vin ? <Text style={{ fontSize: 6.5, color: GRAY, marginRight: 7, marginBottom: 2 }}>VIN/Chasis: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.vin}</Text></Text> : null}
+            {data.serialMotor ? <Text style={{ fontSize: 6.5, color: GRAY, marginRight: 7, marginBottom: 2 }}>Serial motor: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.serialMotor}</Text></Text> : null}
+            {data.proformaVehimotors ? <Text style={{ fontSize: 6.5, color: GRAY, marginRight: 7, marginBottom: 2 }}>N° Proforma Vehimotors: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.proformaVehimotors}</Text></Text> : null}
           </View>
 
           {/* Bloque de montos (no en Banca Nacional: su cuadro lo reemplaza) */}
