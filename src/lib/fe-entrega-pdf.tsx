@@ -144,7 +144,7 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
             ))}
           </View>
           <View style={{ flex: 1 }}>
-            {[['Año', v.anio != null ? String(v.anio) : ''], ['Placa', v.placa], ['Color', v.color], ['Fecha de llegada', v.fechaLlegada]].map(([k, val]) => (
+            {[['Año', v.anio != null ? String(v.anio) : ''], ['Placa', v.placa], ['Color', v.color]].map(([k, val]) => (
               <View key={k as string} style={[s.row, { paddingVertical: 1.7, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
                 <Text style={[s.cellTxt, { width: 76, color: GRAY }]}>{k}:</Text>
                 <Text style={[s.cellTxt, { flex: 1, fontFamily: 'Helvetica-Bold' }]}>{val || ''}</Text>
