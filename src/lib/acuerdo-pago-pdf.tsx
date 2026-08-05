@@ -22,7 +22,9 @@ export interface AcuerdoPagoData {
   condiciones: string
   // ¿El crédito Vehimotor corre en paralelo con el inicial (simultáneo)?
   creditoSimultaneo?: boolean
-  filas: { numero: number; tipo: string; etiqueta: string; monto: number }[]
+  // Fecha de entrega del vehículo (base para calcular los vencimientos).
+  fechaEntrega?: string
+  filas: { numero: number; tipo: string; etiqueta: string; monto: number; fecha?: string }[]
 }
 
 export function AcuerdoPagoPDF({ data }: { data: AcuerdoPagoData }) {
@@ -77,20 +79,27 @@ export function AcuerdoPagoPDF({ data }: { data: AcuerdoPagoData }) {
 
         {data.condiciones ? <Text style={s.p}><Text style={s.b}>El cliente se compromete a pagar: </Text>{data.condiciones}</Text> : null}
 
-        <Text style={[s.b, { fontSize: 9, marginTop: 4, marginBottom: 3 }]}>Plan de pagos</Text>
+        <Text style={[s.b, { fontSize: 9, marginTop: 4, marginBottom: 1 }]}>Plan de pagos</Text>
+        {data.fechaEntrega ? (
+          <Text style={{ fontSize: 7, color: GRAY, marginBottom: 3 }}>
+            Fechas de vencimiento calculadas desde la fecha de entrega del vehículo: {data.fechaEntrega}.
+          </Text>
+        ) : null}
         <View style={s.tHead}>
-          <Text style={[s.tHeadTxt, { width: 24 }]}>#</Text>
+          <Text style={[s.tHeadTxt, { width: 18 }]}>#</Text>
           <Text style={[s.tHeadTxt, { flex: 1 }]}>Concepto</Text>
-          <Text style={[s.tHeadTxt, { width: 90, textAlign: 'right' }]}>Monto</Text>
+          <Text style={[s.tHeadTxt, { width: 66 }]}>Vence</Text>
+          <Text style={[s.tHeadTxt, { width: 74, textAlign: 'right' }]}>Monto</Text>
         </View>
         {filasRender.map(f => (
           <View key={f.numero} style={[s.tRow, f.tipo === 'Inicial' ? { backgroundColor: '#fffbeb' } : {}]}>
-            <Text style={{ width: 24, color: GRAY }}>{f.serie}</Text>
+            <Text style={{ width: 18, color: GRAY }}>{f.serie}</Text>
             <Text style={{ flex: 1 }}>
               <Text style={[s.tag, { color: f.tipo === 'Inicial' ? '#b45309' : primario }]}>{f.tipo === 'Inicial' ? 'INICIAL ' : 'VEHIMOTOR '}</Text>
               {f.etiqueta}
             </Text>
-            <Text style={{ width: 90, textAlign: 'right', fontFamily: 'Helvetica-Bold' }}>${fmt(f.monto)}</Text>
+            <Text style={{ width: 66, color: DARK }}>{f.fecha ?? '—'}</Text>
+            <Text style={{ width: 74, textAlign: 'right', fontFamily: 'Helvetica-Bold' }}>${fmt(f.monto)}</Text>
           </View>
         ))}
 

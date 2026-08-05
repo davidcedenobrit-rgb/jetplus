@@ -33,11 +33,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const veh = (pro.vehiculo_snapshot ?? {}) as Record<string, any>
   const crono = (Array.isArray(pro.cronograma_snapshot) ? pro.cronograma_snapshot : []) as Record<string, any>[]
 
+  // Fecha de entrega = hoy (Caracas). Cada cuota vence a los "dias" indicados
+  // en el cronograma, contados desde la entrega del vehículo.
+  const hoy = new Date()
+  const fechaCuota = (dias: number) =>
+    new Date(hoy.getTime() + Math.max(0, Math.round(dias)) * 86400000)
+      .toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Caracas' })
+  const fechaEntrega = fechaCuota(0)
+
   const filas = crono.map((f, i) => ({
     numero: n(f.numero) || (i + 1),
     tipo: (f.tipo as string) || 'Vehimotor',
     etiqueta: (f.etiqueta as string) || `Cuota ${n(f.numero) || i + 1}`,
     monto: n(f.monto),
+    fecha: fechaCuota(n(f.dias)),
   }))
 
   // ¿El crédito Vehimotor corre en paralelo con el inicial? Se infiere del
@@ -66,6 +75,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     financiado: n(pro.monto_financiado),
     condiciones: (pro.observaciones as string) || (pro.condiciones_personalizadas as string) || '',
     creditoSimultaneo,
+    fechaEntrega,
     filas,
   }
 
