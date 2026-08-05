@@ -28,9 +28,14 @@ export default async function ContabilidadPage() {
             <p className="text-oriental-gray text-sm">Plan de cuentas y capa contable · <span className="text-amber-600 font-semibold">En construcción</span></p>
           </div>
         </div>
-        <Link href="/contabilidad/importar" className="btn-primary flex items-center gap-2 text-sm">
-          <Upload size={15} /> Importar catálogo (simulación)
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/contabilidad/mayor" className="btn-secondary flex items-center gap-2 text-sm">
+            <BookOpenCheck size={15} /> Mayor por cuenta
+          </Link>
+          <Link href="/contabilidad/importar" className="btn-primary flex items-center gap-2 text-sm">
+            <Upload size={15} /> Importar catálogo (simulación)
+          </Link>
+        </div>
       </div>
 
       {/* Aviso */}

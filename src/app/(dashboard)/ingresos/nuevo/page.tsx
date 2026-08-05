@@ -9,6 +9,8 @@ import { ArrowLeft, Save, Search, X, Car, Hash, Check, CreditCard, AlertCircle, 
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
 import IvaBloque from '@/components/IvaBloque'
+import CuentaContablePicker from '@/components/CuentaContablePicker'
+import { sugerenciaIngreso, nombreDeCuenta } from '@/lib/contabilidad/cuentas-selector'
 import type { Cliente, Vehiculo } from '@/types/database'
 
 const CONCEPTOS = [
@@ -113,6 +115,9 @@ function NuevoIngresoPageInner() {
   const [montoExento, setMontoExento] = useState('')
   const [centros, setCentros] = useState<{ id: string; nombre: string }[]>([])
   const [centroCosto, setCentroCosto] = useState('')
+  // Plan de cuentas: el ingreso alimenta la contabilidad. Por defecto afecta.
+  const [afectaPlan, setAfectaPlan] = useState(true)
+  const [cuentaContable, setCuentaContable] = useState('')
   const [titularFondos, setTitularFondos] = useState<'propio' | 'vehimotors' | 'tercero'>('propio')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
   const [rolUsuario, setRolUsuario] = useState<string>('')
@@ -134,6 +139,12 @@ function NuevoIngresoPageInner() {
     supabase.from('centros_costo').select('id, nombre').eq('activo', true).order('orden')
       .then(({ data }) => setCentros((data as { id: string; nombre: string }[]) ?? []))
   }, [])
+
+  // Sugerir cuenta contable según el concepto (el usuario puede cambiarla).
+  useEffect(() => {
+    const sug = sugerenciaIngreso(concepto)
+    if (sug) setCuentaContable(sug)
+  }, [concepto])
 
   // ── Auto-carga desde query params (cuando llega desde el botón "Registrar pago" del crédito) ──
   useEffect(() => {
@@ -596,6 +607,9 @@ function NuevoIngresoPageInner() {
       monto_exento:      ivaAplica ? (parseFloat(montoExento) || 0) : null,
       centro_costo_id:   centroCosto || null,
       titular_fondos:    titularFondos,
+      afecta_plan:       afectaPlan,
+      cuenta_contable:   afectaPlan ? (cuentaContable || null) : null,
+      cuenta_contable_nombre: afectaPlan ? nombreDeCuenta(cuentaContable) : null,
       cuotas:            cuotasPayload,
       comprobantes,
     })
@@ -1073,6 +1087,17 @@ function NuevoIngresoPageInner() {
                 <option value="">— Sin asignar —</option>
                 {centros.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
+            </div>
+            {/* Cuenta contable (plan de cuentas) */}
+            <div className="md:col-span-2">
+              <label className="label">Cuenta contable</label>
+              <CuentaContablePicker
+                afecta={afectaPlan}
+                onAfectaChange={setAfectaPlan}
+                value={cuentaContable}
+                onChange={setCuentaContable}
+                sugerencia={sugerenciaIngreso(concepto)}
+              />
             </div>
             {/* 3. Moneda */}
             <div className="md:col-span-2">

@@ -1,0 +1,935 @@
+{
+ "version": "catalogo-2026-08-05-final",
+ "cuentas": [
+  {
+   "codigo": "1.0",
+   "nombre": "ACTIVOS",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.01.001",
+   "nombre": "Caja - Efectivo Bolivares",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.01.002",
+   "nombre": "Caja - Efectivo Dolares",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.02.001",
+   "nombre": "Bancamiga cta. 01570053093753206972",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.02.002",
+   "nombre": "Banco Del Sur Banco Universal C.A Cta.01720608726084915872",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.02.003",
+   "nombre": "Banesco Banco Universal C.A Cta.0134-0459-36-4591049944",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.03.001",
+   "nombre": "Inversiones  varias",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.04.001",
+   "nombre": "Efectos a cobrar",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.05.001",
+   "nombre": "Efectos a cobrar descontados",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.001",
+   "nombre": "Cuentas a cobrar clientes",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.002",
+   "nombre": "Cuentas a cobrar empleados",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.003",
+   "nombre": "Cuentas a cobrar filiales",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.004",
+   "nombre": "Provisión cuentas incobrables varias",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.005",
+   "nombre": "Cuentas Por Cobrar Accionistas",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.050",
+   "nombre": "CxC Financiamiento propio — Capital",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.051",
+   "nombre": "Intereses por cobrar — Financiamiento propio",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.052",
+   "nombre": "Mora por cobrar — Financiamiento propio",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.06.099",
+   "nombre": "Otras cuentas a cobrar",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.07.001",
+   "nombre": "Anticipo de Prestaciones Sociales",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.001",
+   "nombre": "I.S.L.R. por compensar",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.002",
+   "nombre": "I.S.L.R. Pagado por Anticipado",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.003",
+   "nombre": "I.V.A. credito fiscal",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.004",
+   "nombre": "Estimada I.S.L.R.",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.005",
+   "nombre": "I.V.A. credito fiscal diferido",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.006",
+   "nombre": "Impuestos Municipales",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.007",
+   "nombre": "Retención IVA",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.008",
+   "nombre": "Anticipo IVA",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.08.009",
+   "nombre": "Anticipo ISLR",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.09.001",
+   "nombre": "Seguros Prepagados",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.10.001",
+   "nombre": "Inventario de Vehiculos",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.10.002",
+   "nombre": "Inventario de Repuestos y Accesorios",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.1.10.003",
+   "nombre": "Inventario Insumo Autolavado",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.2.01.001",
+   "nombre": "Inversiones varias",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.01.001",
+   "nombre": "Maquinarias y Equipos",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.01.099",
+   "nombre": "Depreciación acumulada maquinarias",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.02.001",
+   "nombre": "Mobiliario y Equipos de oficina",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.02.002",
+   "nombre": "Mobiliario y Equipos",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.02.099",
+   "nombre": "Dep. Acum. Mobiliario y Eq.",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.03.001",
+   "nombre": "Herramientas Menores",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.03.099",
+   "nombre": "Dep. Acum. Herramientas",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.04.001",
+   "nombre": "Vehículos",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.3.04.099",
+   "nombre": "Depreciación Acum. Vehículos",
+   "clase": "1"
+  },
+  {
+   "codigo": "1.4.01.001",
+   "nombre": "Depositos en Garantias",
+   "clase": "1"
+  },
+  {
+   "codigo": "2.0",
+   "nombre": "PASIVOS",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.01.001",
+   "nombre": "Prestamo Bancario",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.02.001",
+   "nombre": "Seguros Por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.03.001",
+   "nombre": "Cuentas a pagar a proveedores",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.03.002",
+   "nombre": "Alquileres por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.03.003",
+   "nombre": "Cuentas a pagar Empleados",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.03.004",
+   "nombre": "Depositos bancarios por Identificar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.03.099",
+   "nombre": "Otras cuentas a pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.04.001",
+   "nombre": "Retención ISLR por Enterar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.04.002",
+   "nombre": "Retención I.V.A. por Enterar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.05.001",
+   "nombre": "I.S.L.R. a pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.05.002",
+   "nombre": "Impuesto Municiaples por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.05.003",
+   "nombre": "I.V.A. a pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.05.004",
+   "nombre": "IGTF Percibido",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.05.005",
+   "nombre": "I.V.A. debito fiscal",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.05.006",
+   "nombre": "I.V.A. debito fiscal diferido",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.05.007",
+   "nombre": "Anticipo ISLR por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.06.001",
+   "nombre": "S.S.O. - P.F. por pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.06.002",
+   "nombre": "I.N.C.E. por pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.06.003",
+   "nombre": "FAOV por pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.06.004",
+   "nombre": "Contibucion ley DPP",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.06.099",
+   "nombre": "Otras Retenciones por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.001",
+   "nombre": "Sueldos y Salarios por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.002",
+   "nombre": "Vacaciones acumulados a pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.003",
+   "nombre": "Utilidades acumulada a pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.004",
+   "nombre": "Bonificaciones Acumuladas por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.005",
+   "nombre": "Prestaciones Acumuladas por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.006",
+   "nombre": "Gastos Acumulados por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.007",
+   "nombre": "Intereses Prestaciones Sociales Por Paga",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.008",
+   "nombre": "Bono Vacacional Acumulado por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.009",
+   "nombre": "Comisiones Acumuladas por Pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.07.010",
+   "nombre": "Bono de Alimentancion por pagar",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.09.001",
+   "nombre": "Fondos por entregar a Vehimotors — Iniciales",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.09.002",
+   "nombre": "Fondos por entregar a Vehimotors — Cuotas",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.09.003",
+   "nombre": "Fondos por entregar a Vehimotors — Ventas/otros",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.09.010",
+   "nombre": "Otros fondos de terceros en custodia",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.1.09.020",
+   "nombre": "Dinero en custodia por custodio",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.2.01.001",
+   "nombre": "Apartados prestaciones sociales",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.2.01.002",
+   "nombre": "Apartado intereses prestaciones sociales",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.2.01.003",
+   "nombre": "Apartados para Vacaciones",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.2.01.004",
+   "nombre": "Apartados para Utilidades",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.2.01.005",
+   "nombre": "Apartados para ISLR",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.2.02.001",
+   "nombre": "Reservas para Contigencias",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.3.01.001",
+   "nombre": "Anticipos Clientes",
+   "clase": "2"
+  },
+  {
+   "codigo": "2.3.01.010",
+   "nombre": "Anticipos/Reservas de clientes (vehículos)",
+   "clase": "2"
+  },
+  {
+   "codigo": "3.0",
+   "nombre": "PATRIMONIO",
+   "clase": "3"
+  },
+  {
+   "codigo": "3.1.01.001",
+   "nombre": "Capital Social Suscrito",
+   "clase": "3"
+  },
+  {
+   "codigo": "3.1.01.002",
+   "nombre": "Capital Suscrito y No Pagado",
+   "clase": "3"
+  },
+  {
+   "codigo": "3.1.02.001",
+   "nombre": "Reserva Legal",
+   "clase": "3"
+  },
+  {
+   "codigo": "3.1.03.001",
+   "nombre": "Superávit o Déficit Acumulado",
+   "clase": "3"
+  },
+  {
+   "codigo": "3.1.03.003",
+   "nombre": "Ganancias y Pérdidas",
+   "clase": "3"
+  },
+  {
+   "codigo": "4.0",
+   "nombre": "INGRESOS",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.1.01.001",
+   "nombre": "Ingresos por Ventas de Vehiculos",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.1.01.002",
+   "nombre": "Ingresos por Servicios Tecnicos",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.1.01.003",
+   "nombre": "Ingresos por Servicios Autolavado",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.1.01.004",
+   "nombre": "Otrsos Ingresos (Comisiones por ventas de Vehiculos)",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.1.02.001",
+   "nombre": "Devoluciones en ventas",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.1.02.002",
+   "nombre": "Rebajas y descuentos en ventas",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.2.01.001",
+   "nombre": "Intereses ganados",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.2.01.002",
+   "nombre": "Ganancia en venta de activos",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.2.01.003",
+   "nombre": "Ganancia por diferencial cambiario",
+   "clase": "4"
+  },
+  {
+   "codigo": "4.2.01.010",
+   "nombre": "Ingresos por intereses de financiamiento propio",
+   "clase": "4"
+  },
+  {
+   "codigo": "5.0",
+   "nombre": "COSTOS",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.01.001",
+   "nombre": "Inventario de Vehiculos",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.01.002",
+   "nombre": "Inventario de Repuestos y Accesorios",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.01.003",
+   "nombre": "Inventario Insumo Autolavado",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.02.001",
+   "nombre": "Sueldos y Salarios",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.02.002",
+   "nombre": "Prestaciones Sociales",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.02.003",
+   "nombre": "Contribuciones Laborales",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.02.004",
+   "nombre": "Comisiones de Personal de Servicio",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.02.005",
+   "nombre": "Servicios Contratado Diversos",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.02.006",
+   "nombre": "Otros Costos de Servicios",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.03.001",
+   "nombre": "Devoluciones en compras",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.04.001",
+   "nombre": "Inventario Final  de Vehiculos",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.04.002",
+   "nombre": "Inventario Final  de Repuestos y Accesorios",
+   "clase": "5"
+  },
+  {
+   "codigo": "5.1.04.003",
+   "nombre": "Inventario Final  Insumo Autolavado",
+   "clase": "5"
+  },
+  {
+   "codigo": "6.0",
+   "nombre": "GASTOS DE ADMINISTRACIÓN Y OPERACIONALES",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.001",
+   "nombre": "Sueldos a Directivos",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.002",
+   "nombre": "Sueldos y Salarios",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.003",
+   "nombre": "Vacaciones",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.004",
+   "nombre": "Utilidades",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.005",
+   "nombre": "Prestaciones sociales",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.006",
+   "nombre": "Intereses sobre antiguedad",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.007",
+   "nombre": "Bonificaciones Ayuda Familiar",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.008",
+   "nombre": "Uniformes del personal",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.009",
+   "nombre": "Cursos y mejoramiento profesional",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.010",
+   "nombre": "Días Feriados",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.011",
+   "nombre": "Descanso Legal",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.012",
+   "nombre": "Bono Nocturno",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.013",
+   "nombre": "Bono Vacacional",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.014",
+   "nombre": "Bono de Transporte",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.015",
+   "nombre": "Sàbados y Domingos Feriados",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.01.016",
+   "nombre": "Bonos Alimenticios",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.02.001",
+   "nombre": "SSO - PF",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.02.002",
+   "nombre": "I.N.C.E.S.",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.02.003",
+   "nombre": "Ahorro Habitacional (FAOV)",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.1.02.004",
+   "nombre": "Intereses SSO-PF",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.01.001",
+   "nombre": "Prima de Seguro",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.02.001",
+   "nombre": "Reparación y Mantenimiento de Vehiculo",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.02.002",
+   "nombre": "Reparación y Mantenimiento del Local",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.02.003",
+   "nombre": "Rep. y Mantto. de Mobiliario y Equipo",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.03.001",
+   "nombre": "Alquiler de Local",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.04.001",
+   "nombre": "Electricidad",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.04.002",
+   "nombre": "Teléfonos",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.04.003",
+   "nombre": "Aseo Urbano",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.04.004",
+   "nombre": "Agua Comercial",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.04.006",
+   "nombre": "Telefonía Movil",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.05.001",
+   "nombre": "Gastos de Depreciación",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.05.002",
+   "nombre": "Gastos de Amortización",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.06.001",
+   "nombre": "Honorarios Contables",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.06.002",
+   "nombre": "Honorarios Diversos",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.07.001",
+   "nombre": "Extintores",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.07.006",
+   "nombre": "Vigilancia",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.07.007",
+   "nombre": "Aseo y Limpieza",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.07.019",
+   "nombre": "Gastos de viaje (Pasaje,comida,Alojam)",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.07.022",
+   "nombre": "Servicios Contratados Diversos",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.08.001",
+   "nombre": "Artículos de Oficina",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.08.002",
+   "nombre": "Artículos de Ferreteria",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.08.003",
+   "nombre": "Artículos de Limpieza",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.08.004",
+   "nombre": "Combustibles y Lubricantes",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.08.005",
+   "nombre": "Gastos Generales",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.09",
+   "nombre": "PERDIDAS ABSORBIDAS",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.10.001",
+   "nombre": "Pérdida en Ventas de A.F.T.",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.11.001",
+   "nombre": "Gastos de I.S.L.R",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.11.002",
+   "nombre": "Multas",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.11.003",
+   "nombre": "Intereses de Mora sobre Contribuciones",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.11.004",
+   "nombre": "Gastos no Deducibles",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.11.005",
+   "nombre": "Egresos Sin Soportes",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.12.001",
+   "nombre": "Gastos de Impuestos Municipales",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.12.002",
+   "nombre": "Gastos de Impuestos Sobre la Renta",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.13.003",
+   "nombre": "Contibucion ley DPP",
+   "clase": "6"
+  },
+  {
+   "codigo": "6.2.13.004",
+   "nombre": "Aporte LODAFEF",
+   "clase": "6"
+  },
+  {
+   "codigo": "7.0",
+   "nombre": "OTROS INGRESOS",
+   "clase": "7"
+  },
+  {
+   "codigo": "7.1",
+   "nombre": "OTROS INGRESOS",
+   "clase": "7"
+  },
+  {
+   "codigo": "8.0",
+   "nombre": "OTROS GASTOS",
+   "clase": "8"
+  },
+  {
+   "codigo": "8.1.01.001",
+   "nombre": "Intereses bancarios",
+   "clase": "8"
+  },
+  {
+   "codigo": "8.1.01.003",
+   "nombre": "Imp. a las Grandes Trans. Financ. IGTF",
+   "clase": "8"
+  },
+  {
+   "codigo": "8.1.01.004",
+   "nombre": "Comisiones y gastos bancarios",
+   "clase": "8"
+  },
+  {
+   "codigo": "8.1.02.001",
+   "nombre": "I.V.A. Crédito Fiscal no Deducible",
+   "clase": "8"
+  },
+  {
+   "codigo": "8.1.02.002",
+   "nombre": "Donaciones y liberalidades",
+   "clase": "8"
+  },
+  {
+   "codigo": "9.1.01.001",
+   "nombre": "Vehículos en consignación (Vehimotors)",
+   "clase": "9"
+  },
+  {
+   "codigo": "9.1.01.002",
+   "nombre": "Vehículos en tránsito",
+   "clase": "9"
+  },
+  {
+   "codigo": "9.9.01.001",
+   "nombre": "Contra-cuenta de orden",
+   "clase": "9"
+  }
+ ]
+}

@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { IngresoSchema } from '@/lib/validations'
 import { desglosarIva, IVA_TASA_DEFAULT } from '@/lib/iva'
 import { permitido } from '@/lib/rate-limit'
+import { existeCuenta, nombreDeCuenta } from '@/lib/contabilidad/cuentas-selector'
 
 export type CuotaPayload = {
   id: string
@@ -38,6 +39,10 @@ export type CrearIngresoPayload = {
   centro_costo_id?: string | null
   titular_fondos?: string | null
   banco_nacional?: string | null
+  // Plan de cuentas
+  afecta_plan?: boolean
+  cuenta_contable?: string | null
+  cuenta_contable_nombre?: string | null
   // Cuotas ya calculadas por el cliente
   cuotas: CuotaPayload[]
   // Comprobantes ya subidos al storage
@@ -125,6 +130,13 @@ export async function crearIngreso(payload: CrearIngresoPayload) {
   if (payload.titular_fondos && ['propio', 'vehimotors', 'tercero'].includes(payload.titular_fondos)) {
     updates.titular_fondos = payload.titular_fondos
   }
+  // Plan de cuentas: se valida el código contra el catálogo (no se confía en el cliente).
+  const afectaPlan = payload.afecta_plan !== false
+  const cuentaContable = afectaPlan && payload.cuenta_contable && existeCuenta(payload.cuenta_contable)
+    ? payload.cuenta_contable : null
+  updates.afecta_plan = afectaPlan
+  updates.cuenta_contable = cuentaContable
+  updates.cuenta_contable_nombre = cuentaContable ? nombreDeCuenta(cuentaContable) : null
   if (payload.banco_nacional) updates.banco_nacional = String(payload.banco_nacional).slice(0, 120)
   if (Object.keys(updates).length > 0) {
     await admin.from('ingresos').update(updates).eq('id', ingresoId)

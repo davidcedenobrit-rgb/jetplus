@@ -6,6 +6,7 @@ import { permitido } from '@/lib/rate-limit'
 import { desglosarIva, IVA_TASA_DEFAULT } from '@/lib/iva'
 import { periodoDeFecha, siguienteComprobante, calcRetIva } from '@/lib/retencion-iva'
 import { calcRetIslr, siguienteComprobanteIslr } from '@/lib/retencion-islr'
+import { existeCuenta, nombreDeCuenta } from '@/lib/contabilidad/cuentas-selector'
 
 export type CrearEgresoPayload = {
   categoria: string
@@ -45,6 +46,10 @@ export type CrearEgresoPayload = {
   ret_islr_aplica?: boolean
   ret_islr_codigo?: string | null         // 055 | 002
   ret_islr_fecha_emision?: string | null
+  // Plan de cuentas
+  afecta_plan?: boolean
+  cuenta_contable?: string | null
+  cuenta_contable_nombre?: string | null
   comprobantes: { url: string; nombre: string }[]
 }
 
@@ -174,6 +179,14 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
     retIslrComprobante = await siguienteComprobanteIslr(admin, retIslrPeriodo)
   }
 
+  // Plan de cuentas: se valida el código contra el catálogo (no se confía en el
+  // cliente) y se guarda el nombre como snapshot para reportar sin joins.
+  const afectaPlan = payload.afecta_plan !== false
+  const cuentaContable = afectaPlan && payload.cuenta_contable && existeCuenta(payload.cuenta_contable)
+    ? payload.cuenta_contable
+    : null
+  const cuentaContableNombre = cuentaContable ? nombreDeCuenta(cuentaContable) : null
+
   const year = new Date().getFullYear()
   const buf = new Uint32Array(1)
   crypto.getRandomValues(buf)
@@ -234,6 +247,9 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
       ret_islr_comprobante: retIslrComprobante,
       ret_islr_periodo: retIslrPeriodo,
       ret_islr_fecha_emision: retIslrFechaEmision,
+      afecta_plan:      afectaPlan,
+      cuenta_contable:  cuentaContable,
+      cuenta_contable_nombre: cuentaContableNombre,
       estado:           'pendiente_aprobacion',
       registrado_por:   user.id,
     })

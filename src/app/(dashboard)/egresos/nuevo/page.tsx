@@ -11,6 +11,8 @@ import { crearEgreso, type Proveedor } from '../actions'
 import IvaBloque from '@/components/IvaBloque'
 import ProveedorPicker from './ProveedorPicker'
 import { desglosarIva } from '@/lib/iva'
+import CuentaContablePicker from '@/components/CuentaContablePicker'
+import { sugerenciaEgreso, nombreDeCuenta } from '@/lib/contabilidad/cuentas-selector'
 
 type CentroCosto = { id: string; nombre: string }
 
@@ -41,6 +43,9 @@ export default function NuevoEgresoPage() {
   const [tipoMovimiento, setTipoMovimiento] = useState<'gasto' | 'inversion'>('gasto')
 
   const [categoria, setCategoria] = useState('')
+  // Plan de cuentas: el movimiento alimenta la contabilidad. Por defecto afecta.
+  const [afectaPlan, setAfectaPlan] = useState(true)
+  const [cuentaContable, setCuentaContable] = useState('')
   const [concepto, setConcepto] = useState('')
   const [conceptoPersonalizado, setConceptoPersonalizado] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -168,6 +173,9 @@ export default function NuevoEgresoPage() {
       ret_islr_aplica: retIslrAplica,
       ret_islr_codigo: retIslrAplica ? (retIslrCodigo || null) : null,
       ret_islr_fecha_emision: retIslrAplica ? retIslrFechaEmision : null,
+      afecta_plan: afectaPlan,
+      cuenta_contable: afectaPlan ? (cuentaContable || null) : null,
+      cuenta_contable_nombre: afectaPlan ? nombreDeCuenta(cuentaContable) : null,
       comprobantes,
     })
 
@@ -430,7 +438,7 @@ export default function NuevoEgresoPage() {
             </div>
             <div>
               <label className="label">Categoría *</label>
-              <select className="select" value={categoria} onChange={e => { setCategoria(e.target.value); setConcepto(''); setConceptoPersonalizado('') }} required>
+              <select className="select" value={categoria} onChange={e => { setCategoria(e.target.value); setConcepto(''); setConceptoPersonalizado(''); const sug = sugerenciaEgreso(e.target.value); if (sug) setCuentaContable(sug) }} required>
                 <option value="">Seleccionar...</option>
                 {(categorias.length > 0
                   ? categorias.map(c => [c.clave, c.nombre] as [string, string])
@@ -494,6 +502,16 @@ export default function NuevoEgresoPage() {
             <div className="md:col-span-2">
               <label className="label">Descripción detallada</label>
               <textarea className="textarea" rows={2} placeholder="Detalles adicionales..." value={descripcion} onChange={e => setDescripcion(e.target.value)} />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">Cuenta contable</label>
+              <CuentaContablePicker
+                afecta={afectaPlan}
+                onAfectaChange={setAfectaPlan}
+                value={cuentaContable}
+                onChange={setCuentaContable}
+                sugerencia={sugerenciaEgreso(categoria)}
+              />
             </div>
           </div>
         </div>
