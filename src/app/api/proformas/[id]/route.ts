@@ -65,7 +65,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     if (nuevoShowroom) {
       const { data: u } = await supabase.from('vehiculos_showroom')
-        .select('id, marca, modelo, version, color, placa, anio, vin, serial_motor, fecha_llegada, estado')
+        .select('id, marca, modelo, version, color, placa, anio, vin, serial_motor, proforma_vehimotors, fecha_llegada, estado')
         .eq('id', nuevoShowroom).maybeSingle()
       if (!u || !['en_agencia', 'reservado'].includes(u.estado)) return NextResponse.json({ error: 'Esa unidad ya no está disponible (vendida o transferida)' }, { status: 409 })
       await supabase.from('vehiculos_showroom').update({
@@ -75,7 +75,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       patch.showroom_id = nuevoShowroom
       patch.vehiculo_snapshot = {
         ...(pro.vehiculo_snapshot ?? {}), showroom_id: u.id, marca: u.marca, modelo: u.modelo, version: u.version,
-        placa: u.placa, color: u.color, anio: u.anio, vin: u.vin, serial_motor: u.serial_motor, fecha_llegada: u.fecha_llegada,
+        placa: u.placa, color: u.color, anio: u.anio, vin: u.vin, serial_motor: u.serial_motor, proforma_vehimotors: u.proforma_vehimotors, fecha_llegada: u.fecha_llegada,
       }
     } else {
       patch.showroom_id = null

@@ -78,6 +78,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const cliente: any = pro.cliente_snapshot ?? {}
   const vehiculo: any = pro.vehiculo_snapshot ?? {}
+
+  // N° de proforma de Vehimotors del carro: del snapshot o, si no está, de la
+  // unidad física del showroom reservada en la proforma.
+  let proformaVehimotors: string | null = vehiculo.proforma_vehimotors ?? null
+  if (!proformaVehimotors && pro.showroom_id) {
+    const { data: sh } = await supabase.from('vehiculos_showroom').select('proforma_vehimotors').eq('id', pro.showroom_id).maybeSingle()
+    proformaVehimotors = sh?.proforma_vehimotors ?? null
+  }
   const credito: any = pro.credito_snapshot ?? {}
   const cronograma: CuotaCronogramaItem[] = (pro.cronograma_snapshot ?? []) as CuotaCronogramaItem[]
 
@@ -136,6 +144,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     version: vehiculo.version ?? null,
     vin: vehiculo.vin ?? null,
     serialMotor: vehiculo.serial_motor ?? null,
+    proformaVehimotors,
     estructura: buildEstructura(pro.estructura_costos),
     precioBase: Number(vehiculo.precio_base ?? 0),
     totalVehiculo: Number(pro.precio_vehiculo ?? 0),

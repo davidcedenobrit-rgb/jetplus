@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   let unidad: Record<string, any> | null = null
   if (showroomId) {
     const { data: u } = await supabase.from('vehiculos_showroom')
-      .select('id, marca, modelo, version, color, placa, anio, vin, serial_motor, fecha_llegada, estado')
+      .select('id, marca, modelo, version, color, placa, anio, vin, serial_motor, proforma_vehimotors, fecha_llegada, estado')
       .eq('id', showroomId).maybeSingle()
     if (!u) return NextResponse.json({ error: 'La unidad del showroom no existe' }, { status: 404 })
     // Se permite reservar una unidad en agencia o ya reservada (reasignarla a
@@ -174,6 +174,7 @@ export async function POST(req: Request) {
     anio: unidad?.anio ?? null,
     vin: unidad?.vin ?? null,
     serial_motor: unidad?.serial_motor ?? null,
+    proforma_vehimotors: unidad?.proforma_vehimotors ?? null,
     fecha_llegada: unidad?.fecha_llegada ?? null,
     precio_total: precioBase,
     precio_base: precioBase,

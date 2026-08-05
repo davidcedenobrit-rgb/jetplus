@@ -195,6 +195,8 @@ export interface ProformaPDFData {
   version?: string | null
   vin?: string | null
   serialMotor?: string | null
+  // N° de proforma de Vehimotors que trae el carro (de la unidad física).
+  proformaVehimotors?: string | null
   estructura?: { precioBase: number; iva: number; inicialPct: number; iniBase: number; gastos: { label: string; monto: number }[] } | null
   precioBase: number
   totalVehiculo: number
@@ -329,7 +331,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             {data.anio ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Año: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.anio}</Text></Text> : null}
             {data.vin ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>VIN/Chasis: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.vin}</Text></Text> : null}
             {data.serialMotor ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Serial motor: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.serialMotor}</Text></Text> : null}
-            <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>N° Proforma: <Text style={{ fontFamily: 'Helvetica-Bold', color: RED }}>{data.numero}</Text></Text>
+            {data.proformaVehimotors ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>N° Proforma Vehimotors: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.proformaVehimotors}</Text></Text> : null}
           </View>
 
           {/* Bloque de montos (no en Banca Nacional: su cuadro lo reemplaza) */}
