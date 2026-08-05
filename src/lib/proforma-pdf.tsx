@@ -61,8 +61,8 @@ const s = StyleSheet.create({
   colPlaca: { width: 60, textAlign: 'center' },
   colPrecio: { width: 80, textAlign: 'right' },
 
-  montosRow: { flexDirection: 'row', marginTop: 12, gap: 12 },
-  montosBox: { flex: 1, border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' },
+  montosRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
+  montosBox: { width: 270, border: `1pt solid ${BORDER}`, borderRadius: 6, overflow: 'hidden' },
   montosHeader: { backgroundColor: DARK, padding: '5pt 10pt' },
   montosHeaderText: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
   montosRow2: { flexDirection: 'row', justifyContent: 'space-between', padding: '4pt 10pt', borderBottom: `0.5pt solid ${BORDER}` },
@@ -241,6 +241,9 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
   // para no contradecirlo (precio maquillado, inicial y cuota van en el cuadro).
   const bnV = data.bnVehimotors ?? null
   const acLO = data.acuerdoLaOriental && data.acuerdoLaOriental.montoFinanciado > 0 ? data.acuerdoLaOriental : null
+  // Todos los gastos (placa, pólizas, notaría, IGTF, etc.) van en UNA sola línea
+  // con su monto total, igual que en la cotización.
+  const gastosTotal = data.estructura ? data.estructura.gastos.reduce((sum, g) => sum + Number(g.monto || 0), 0) : 0
 
   return (
     <Document title={`Proforma ${data.numero}`} author="La Oriental Automotors">
@@ -340,13 +343,13 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               {data.estructura ? (
                 <>
                   <View style={s.montosRow2}><Text style={s.montosLabel}>Precio base</Text><Text style={s.montosVal}>${fmt(data.estructura.precioBase)}</Text></View>
-                  <View style={s.montosRow2}><Text style={s.montosLabel}>IVA 16%</Text><Text style={s.montosVal}>${fmt(data.estructura.iva)}</Text></View>
                   {data.estructura.iniBase > 0 && (
                     <View style={s.montosRow2}><Text style={s.montosLabel}>{data.estructura.inicialPct}% del precio base (inicial)</Text><Text style={s.montosVal}>${fmt(data.estructura.iniBase)}</Text></View>
                   )}
-                  {data.estructura.gastos.map((g) => (
-                    <View key={g.label} style={s.montosRow2}><Text style={[s.montosLabel, { paddingLeft: 8 }]}>· {g.label}</Text><Text style={s.montosVal}>${fmt(g.monto)}</Text></View>
-                  ))}
+                  <View style={s.montosRow2}><Text style={s.montosLabel}>IVA 16%</Text><Text style={s.montosVal}>${fmt(data.estructura.iva)}</Text></View>
+                  {gastosTotal > 0 && (
+                    <View style={s.montosRow2}><Text style={[s.montosLabel, { paddingRight: 6 }]}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría, IGTF</Text><Text style={s.montosVal}>${fmt(gastosTotal)}</Text></View>
+                  )}
                   <View style={s.montosTotalRow}>
                     <Text style={s.montosTotalLabel}>{preVenta ? 'INICIAL A PAGAR:' : 'INICIAL PAGADA:'}</Text>
                     <Text style={s.montosTotalVal}>${fmt(data.inicialPagada)}</Text>
@@ -594,9 +597,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             {preVenta ? (
               <Text style={s.legalText}>
                 <Text style={s.legalBold}>CONDICIONES DE COMPRA ACEPTADAS. </Text>
-                El cliente {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, acepta las condiciones de compra del vehículo MARCA: {data.marca}, MODELO: {data.modelo}, descritas en este documento, y se compromete a cumplir el plan de pago acordado.{'\n\n'}
-                Los montos indicados están sujetos a la disponibilidad de la unidad y a la vigencia de la tasa de cambio aplicable a la fecha de la operación, previa aprobación de LA ORIENTAL AUTOMOTORS, C.A.; RIF: J-505692143.{'\n\n'}
-                <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>
+                El cliente {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, acepta las condiciones de compra del vehículo MARCA: {data.marca}, MODELO: {data.modelo}, descritas en este documento, y se compromete a cumplir el plan de pago acordado.
               </Text>
             ) : (
             <Text style={s.legalText}>
