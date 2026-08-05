@@ -33,7 +33,7 @@ export interface FeEntregaData {
 const ACCESORIOS = [
   'Espejo lateral derecho', 'Parabrisas', 'Varilla de aceite',
   'Espejo lateral izquierdo', 'Emblema trasero', 'Llave de rueda',
-  'Espejo retrovisor', 'Cristales de puertas (laterales)', 'Gato',
+  'Espejo retrovisor', 'Cristales de puertas', 'Gato',
   'Alfombras', 'Tapa de encendedor', 'Luces de emergencia',
   'Limpiadores', 'Faros y luces', 'Claxon',
   'Molduras', 'Parachoque trasero', 'Viseras',
@@ -70,48 +70,52 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
   const primario = data.membrete.colorPrimario || '#C41E3A'
   const v = data.vehiculo
   const s = StyleSheet.create({
-    page: { paddingTop: 26, paddingHorizontal: 30, paddingBottom: 40, fontFamily: 'Helvetica', fontSize: 8, color: DARK },
-    title: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: primario, marginTop: 10, textAlign: 'center' },
-    sub: { fontSize: 7.5, color: GRAY, textAlign: 'center', marginBottom: 8 },
-    secTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#fff', backgroundColor: DARK, paddingVertical: 3, paddingHorizontal: 6, marginTop: 8, marginBottom: 0 },
+    page: { paddingTop: 26, paddingHorizontal: 30, paddingBottom: 36, fontFamily: 'Helvetica', fontSize: 7.5, color: DARK },
+    pageNum: { position: 'absolute', top: 12, right: 30, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: GRAY },
+    title: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: primario, marginTop: 8, textAlign: 'center' },
+    sub: { fontSize: 7.5, color: GRAY, textAlign: 'center', marginBottom: 6 },
+    secTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff', backgroundColor: DARK, paddingVertical: 2.5, paddingHorizontal: 6, marginTop: 7 },
     row: { flexDirection: 'row' },
-    box: { width: 9, height: 9, border: `0.7pt solid ${GRAY}`, borderRadius: 1 },
-    // Datos cliente
+    box: { width: 8.5, height: 8.5, border: `0.7pt solid ${GRAY}`, borderRadius: 1 },
     infoRow: { flexDirection: 'row', marginTop: 4, marginBottom: 2 },
     infoCell: { flex: 1 },
     lbl: { fontSize: 6.5, color: GRAY, textTransform: 'uppercase' },
     val: { fontSize: 8.5, fontFamily: 'Helvetica-Bold' },
-    // celdas de tabla
-    th: { fontSize: 6.8, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'center' },
-    cellTxt: { fontSize: 7.2 },
-    tdBorder: { borderBottom: `0.5pt solid ${LINE}`, borderRight: `0.5pt solid ${LINE}` },
+    th: { fontSize: 6.6, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'center' },
+    cellTxt: { fontSize: 6.9 },
     p: { fontSize: 7.2, lineHeight: 1.4, marginBottom: 3, textAlign: 'justify' },
-    firmaBlock: { marginTop: 16, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    firmaCol: { width: '48%', alignItems: 'center', marginTop: 18 },
-    firmaLine: { width: '100%', borderBottom: `0.8pt solid ${DARK}`, height: 20, marginBottom: 3 },
+    firmaBlock: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+    firmaCol: { width: '48%', alignItems: 'center', marginTop: 16 },
+    firmaLine: { width: '100%', borderBottom: `0.8pt solid ${DARK}`, height: 18, marginBottom: 3 },
     firmaLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold' },
     firmaSub: { fontSize: 6.5, color: GRAY },
-    sello: { width: 70, height: 70, objectFit: 'contain', opacity: 0.9 },
+    selloWrap: { height: 62, alignItems: 'center', justifyContent: 'center' },
+    sello: { width: 78, height: 62, objectFit: 'contain', opacity: 0.9 },
   })
 
-  // Celda "item + SI + NO"
+  // Celda "item + SÍ + NO" (una de las 3 columnas del checklist).
   const SiNo = ({ item }: { item: string }) => (
-    <View style={[s.row, { flex: 1, alignItems: 'center', paddingVertical: 1.6, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
+    <View style={[s.row, { flex: 1, alignItems: 'center', paddingVertical: 1.5, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
       <Text style={[s.cellTxt, { flex: 1 }]}>{item}</Text>
-      <View style={[s.box, { marginHorizontal: 6 }]} />
+      <View style={[s.box, { marginHorizontal: 5 }]} />
       <View style={s.box} />
     </View>
   )
-  const marcaModelo = [v.marca, v.modelo].filter(Boolean).join(' ')
+  const Membrete = ({ n }: { n: string }) => (
+    <>
+      <Text style={s.pageNum} fixed>{n}</Text>
+      <PdfMembrete data={data.membrete} />
+    </>
+  )
 
   return (
     <Document title={`Fe de entrega ${data.numeroProforma}`} author={data.membrete.nombre}>
+      {/* ── PÁGINA 1: inspección + firmas ── */}
       <Page size="A4" style={s.page}>
-        <PdfMembrete data={data.membrete} />
+        <Membrete n="1 / 2" />
         <Text style={s.title}>FE DE ENTREGA DEL VEHÍCULO</Text>
         <Text style={s.sub}>Proforma {data.numeroProforma} · {data.fecha}</Text>
 
-        {/* Solicitado / Cliente */}
         <View style={s.infoRow}>
           <View style={s.infoCell}><Text style={s.lbl}>Solicitado por</Text><Text style={s.val}>{data.solicitado || '—'}</Text></View>
           <View style={{ flex: 2 }}><Text style={s.lbl}>Cliente</Text><Text style={s.val}>{data.clienteNombre}{data.clienteCiRif ? `  ·  ${data.clienteCiRif}` : ''}</Text></View>
@@ -122,23 +126,23 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
         <View style={[s.row, { borderTop: `0.5pt solid ${LINE}` }]}>
           <View style={{ flex: 1 }}>
             {[['Marca', v.marca], ['Modelo', v.version ? `${v.modelo} ${v.version}` : v.modelo], ['Serial VIN', v.vin], ['Serial motor', v.serialMotor]].map(([k, val]) => (
-              <View key={k as string} style={[s.row, { paddingVertical: 1.8, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
-                <Text style={[s.cellTxt, { width: 62, color: GRAY }]}>{k}:</Text>
+              <View key={k as string} style={[s.row, { paddingVertical: 1.7, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
+                <Text style={[s.cellTxt, { width: 60, color: GRAY }]}>{k}:</Text>
                 <Text style={[s.cellTxt, { flex: 1, fontFamily: 'Helvetica-Bold' }]}>{val || ''}</Text>
               </View>
             ))}
           </View>
           <View style={{ flex: 1 }}>
             {[['Año', v.anio != null ? String(v.anio) : ''], ['Placa', v.placa], ['Color', v.color], ['Fecha de llegada', v.fechaLlegada]].map(([k, val]) => (
-              <View key={k as string} style={[s.row, { paddingVertical: 1.8, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
-                <Text style={[s.cellTxt, { width: 78, color: GRAY }]}>{k}:</Text>
+              <View key={k as string} style={[s.row, { paddingVertical: 1.7, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
+                <Text style={[s.cellTxt, { width: 76, color: GRAY }]}>{k}:</Text>
                 <Text style={[s.cellTxt, { flex: 1, fontFamily: 'Helvetica-Bold' }]}>{val || ''}</Text>
               </View>
             ))}
           </View>
           <View style={{ flex: 1 }}>
             {['Manuales', 'Póliza de seguros', 'Fecha de entrega', 'Kilometraje llegada', 'Kilometraje de salida'].map(k => (
-              <View key={k} style={[s.row, { alignItems: 'center', paddingVertical: 1.4, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
+              <View key={k} style={[s.row, { alignItems: 'center', paddingVertical: 1.35, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
                 <Text style={[s.cellTxt, { flex: 1 }]}>{k}</Text>
                 <View style={[s.box, { marginRight: 4 }]} />
               </View>
@@ -146,21 +150,22 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
           </View>
         </View>
 
-        {/* Accesorios y herramientas */}
+        {/* Accesorios y herramientas — 3 columnas */}
         <Text style={s.secTitle}>ACCESORIOS Y HERRAMIENTAS</Text>
         <View style={[s.row, { backgroundColor: '#f3f4f6', paddingVertical: 2 }]}>
-          {[0, 1].map(c => (
+          {[0, 1, 2].map(c => (
             <View key={c} style={[s.row, { flex: 1 }]}>
               <Text style={[s.th, { flex: 1, textAlign: 'left', paddingLeft: 3 }]}>Descripción</Text>
-              <Text style={[s.th, { width: 21 }]}>SÍ</Text>
-              <Text style={[s.th, { width: 15 }]}>NO</Text>
+              <Text style={[s.th, { width: 19 }]}>SÍ</Text>
+              <Text style={[s.th, { width: 14 }]}>NO</Text>
             </View>
           ))}
         </View>
-        {Array.from({ length: Math.ceil(ACCESORIOS.length / 2) }).map((_, r) => (
+        {Array.from({ length: Math.ceil(ACCESORIOS.length / 3) }).map((_, r) => (
           <View key={r} style={s.row}>
-            <SiNo item={ACCESORIOS[r * 2] ?? ''} />
-            <SiNo item={ACCESORIOS[r * 2 + 1] ?? ''} />
+            <SiNo item={ACCESORIOS[r * 3] ?? ''} />
+            <SiNo item={ACCESORIOS[r * 3 + 1] ?? ''} />
+            <SiNo item={ACCESORIOS[r * 3 + 2] ?? ''} />
           </View>
         ))}
 
@@ -181,7 +186,7 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
             {[0, 1].map(c => {
               const item = CARROCERIA[r * 2 + c] ?? ''
               return (
-                <View key={c} style={[s.row, { flex: 1, alignItems: 'center', paddingVertical: 1.6, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
+                <View key={c} style={[s.row, { flex: 1, alignItems: 'center', paddingVertical: 1.5, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
                   <Text style={[s.cellTxt, { flex: 1 }]}>{item}</Text>
                   <View style={{ width: 30, alignItems: 'center' }}><View style={s.box} /></View>
                   <View style={{ width: 34, alignItems: 'center' }}><View style={s.box} /></View>
@@ -199,7 +204,7 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
           {['Nueva', '½ vida', '¼ vida', 'Lisa'].map(h => <Text key={h} style={[s.th, { width: 44 }]}>{h}</Text>)}
         </View>
         {CAUCHOS.map(item => (
-          <View key={item} style={[s.row, { alignItems: 'center', paddingVertical: 1.8, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
+          <View key={item} style={[s.row, { alignItems: 'center', paddingVertical: 1.7, paddingHorizontal: 3, borderBottom: `0.5pt solid ${LINE}` }]}>
             <Text style={[s.cellTxt, { flex: 1 }]}>{item}</Text>
             {[0, 1, 2, 3].map(i => <View key={i} style={{ width: 44, alignItems: 'center' }}><View style={s.box} /></View>)}
           </View>
@@ -207,30 +212,35 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
 
         {/* Observaciones */}
         <Text style={s.secTitle}>OBSERVACIONES</Text>
-        <View style={{ borderBottom: `0.5pt solid ${LINE}`, height: 14 }} />
-        <View style={{ borderBottom: `0.5pt solid ${LINE}`, height: 14 }} />
+        <View style={{ borderBottom: `0.5pt solid ${LINE}`, height: 13 }} />
 
-        {/* Garantía */}
-        <Text style={[s.secTitle]} wrap={false}>TÉRMINOS Y CONDICIONES DE GARANTÍA GENERAL</Text>
-        <View style={{ marginTop: 4 }}>
-          {GARANTIA.map((t, i) => <Text key={i} style={s.p}>• {t}</Text>)}
-        </View>
-
-        <Text style={[s.p, { marginTop: 6 }]}>
-          Mediante el presente documento se deja constancia de que se ha recibido un breve resumen de las cláusulas de
-          garantía y quedo conforme a lo antes mencionado. Fecha: <Text style={{ fontFamily: 'Helvetica-Bold' }}>{data.fecha}</Text>.
-        </Text>
-
-        {/* Firmas */}
-        <View style={s.firmaBlock}>
+        {/* Firmas (página 1) — el cliente firma y va el sello */}
+        <View style={s.firmaBlock} wrap={false}>
           <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Dpto. Servicios (Entrega)</Text></View>
           <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Dpto. Ventas</Text></View>
           <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Vendedor</Text></View>
           <View style={s.firmaCol}>
-            {data.selloSrc ? <Image src={data.selloSrc} style={s.sello} /> : <View style={s.firmaLine} />}
+            {data.selloSrc ? <View style={s.selloWrap}><Image src={data.selloSrc} style={s.sello} /></View> : <View style={s.firmaLine} />}
             <Text style={s.firmaLabel}>{data.clienteNombre}</Text><Text style={s.firmaSub}>Cliente (Recibe)</Text>
           </View>
         </View>
+      </Page>
+
+      {/* ── PÁGINA 2: términos y condiciones de garantía ── */}
+      <Page size="A4" style={s.page}>
+        <Membrete n="2 / 2" />
+        <Text style={s.title}>TÉRMINOS Y CONDICIONES DE GARANTÍA GENERAL</Text>
+        <Text style={s.sub}>Fe de entrega · Proforma {data.numeroProforma} · {data.fecha}</Text>
+
+        <View style={{ marginTop: 6 }}>
+          {GARANTIA.map((t, i) => <Text key={i} style={s.p}>• {t}</Text>)}
+        </View>
+
+        <Text style={[s.p, { marginTop: 8 }]}>
+          Mediante el presente documento se deja constancia de que el cliente <Text style={{ fontFamily: 'Helvetica-Bold' }}>{data.clienteNombre}</Text> ha
+          recibido un breve resumen de las cláusulas de garantía y queda conforme con lo antes mencionado, según su firma
+          en la página 1 de este documento. Fecha: <Text style={{ fontFamily: 'Helvetica-Bold' }}>{data.fecha}</Text>.
+        </Text>
       </Page>
     </Document>
   )
