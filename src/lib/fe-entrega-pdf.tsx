@@ -107,6 +107,17 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
       <PdfMembrete data={data.membrete} />
     </>
   )
+  const Firmas = () => (
+    <View style={s.firmaBlock} wrap={false}>
+      <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Dpto. Servicios (Entrega)</Text></View>
+      <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Dpto. Ventas</Text></View>
+      <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Vendedor</Text></View>
+      <View style={s.firmaCol}>
+        {data.selloSrc ? <View style={s.selloWrap}><Image src={data.selloSrc} style={s.sello} /></View> : <View style={s.firmaLine} />}
+        <Text style={s.firmaLabel}>{data.clienteNombre}</Text><Text style={s.firmaSub}>Cliente (Recibe)</Text>
+      </View>
+    </View>
+  )
 
   return (
     <Document title={`Fe de entrega ${data.numeroProforma}`} author={data.membrete.nombre}>
@@ -210,20 +221,12 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
           </View>
         ))}
 
-        {/* Observaciones */}
+        {/* Observaciones — 4 líneas */}
         <Text style={s.secTitle}>OBSERVACIONES</Text>
-        <View style={{ borderBottom: `0.5pt solid ${LINE}`, height: 13 }} />
+        {[0, 1, 2, 3].map(i => <View key={i} style={{ borderBottom: `0.5pt solid ${LINE}`, height: 14 }} />)}
 
         {/* Firmas (página 1) — el cliente firma y va el sello */}
-        <View style={s.firmaBlock} wrap={false}>
-          <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Dpto. Servicios (Entrega)</Text></View>
-          <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Dpto. Ventas</Text></View>
-          <View style={s.firmaCol}><View style={s.firmaLine} /><Text style={s.firmaLabel}>Nombre y firma</Text><Text style={s.firmaSub}>Vendedor</Text></View>
-          <View style={s.firmaCol}>
-            {data.selloSrc ? <View style={s.selloWrap}><Image src={data.selloSrc} style={s.sello} /></View> : <View style={s.firmaLine} />}
-            <Text style={s.firmaLabel}>{data.clienteNombre}</Text><Text style={s.firmaSub}>Cliente (Recibe)</Text>
-          </View>
-        </View>
+        <Firmas />
       </Page>
 
       {/* ── PÁGINA 2: términos y condiciones de garantía ── */}
@@ -238,9 +241,12 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
 
         <Text style={[s.p, { marginTop: 8 }]}>
           Mediante el presente documento se deja constancia de que el cliente <Text style={{ fontFamily: 'Helvetica-Bold' }}>{data.clienteNombre}</Text> ha
-          recibido un breve resumen de las cláusulas de garantía y queda conforme con lo antes mencionado, según su firma
-          en la página 1 de este documento. Fecha: <Text style={{ fontFamily: 'Helvetica-Bold' }}>{data.fecha}</Text>.
+          recibido un breve resumen de las cláusulas de garantía y queda conforme con lo antes mencionado. Fecha:{' '}
+          <Text style={{ fontFamily: 'Helvetica-Bold' }}>{data.fecha}</Text>.
         </Text>
+
+        {/* Firmas (página 2) */}
+        <Firmas />
       </Page>
     </Document>
   )
