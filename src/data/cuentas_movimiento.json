@@ -2,11 +2,6 @@
  "version": "catalogo-2026-08-05-final",
  "cuentas": [
   {
-   "codigo": "1.0",
-   "nombre": "ACTIVOS",
-   "clase": "1"
-  },
-  {
    "codigo": "1.1.01.001",
    "nombre": "Caja - Efectivo Bolivares",
    "clase": "1"
@@ -215,11 +210,6 @@
    "codigo": "1.4.01.001",
    "nombre": "Depositos en Garantias",
    "clase": "1"
-  },
-  {
-   "codigo": "2.0",
-   "nombre": "PASIVOS",
-   "clase": "2"
   },
   {
    "codigo": "2.1.01.001",
@@ -442,11 +432,6 @@
    "clase": "2"
   },
   {
-   "codigo": "3.0",
-   "nombre": "PATRIMONIO",
-   "clase": "3"
-  },
-  {
    "codigo": "3.1.01.001",
    "nombre": "Capital Social Suscrito",
    "clase": "3"
@@ -470,11 +455,6 @@
    "codigo": "3.1.03.003",
    "nombre": "Ganancias y Pérdidas",
    "clase": "3"
-  },
-  {
-   "codigo": "4.0",
-   "nombre": "INGRESOS",
-   "clase": "4"
   },
   {
    "codigo": "4.1.01.001",
@@ -525,11 +505,6 @@
    "codigo": "4.2.01.010",
    "nombre": "Ingresos por intereses de financiamiento propio",
    "clase": "4"
-  },
-  {
-   "codigo": "5.0",
-   "nombre": "COSTOS",
-   "clase": "5"
   },
   {
    "codigo": "5.1.01.001",
@@ -595,11 +570,6 @@
    "codigo": "5.1.04.003",
    "nombre": "Inventario Final  Insumo Autolavado",
    "clase": "5"
-  },
-  {
-   "codigo": "6.0",
-   "nombre": "GASTOS DE ADMINISTRACIÓN Y OPERACIONALES",
-   "clase": "6"
   },
   {
    "codigo": "6.1.01.001",
@@ -877,19 +847,9 @@
    "clase": "6"
   },
   {
-   "codigo": "7.0",
-   "nombre": "OTROS INGRESOS",
-   "clase": "7"
-  },
-  {
    "codigo": "7.1",
    "nombre": "OTROS INGRESOS",
    "clase": "7"
-  },
-  {
-   "codigo": "8.0",
-   "nombre": "OTROS GASTOS",
-   "clase": "8"
   },
   {
    "codigo": "8.1.01.001",

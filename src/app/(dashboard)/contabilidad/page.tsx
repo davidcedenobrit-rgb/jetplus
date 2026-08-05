@@ -25,7 +25,7 @@ export default async function ContabilidadPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Contabilidad</h1>
-            <p className="text-oriental-gray text-sm">Plan de cuentas y capa contable · <span className="text-amber-600 font-semibold">En construcción</span></p>
+            <p className="text-oriental-gray text-sm">Plan de cuentas y capa contable · <span className="text-green-600 font-semibold">Catálogo cargado</span></p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -42,8 +42,9 @@ export default async function ContabilidadPage() {
       <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
         <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-amber-800">
-          Vista previa del catálogo cargado desde el archivo de la contadora. <b>Todavía no se importa nada a la base de datos.</b> La
-          importación se ejecuta desde &quot;Importar catálogo&quot; en modo simulación y solo se aplica tras aprobación contable.
+          El catálogo definitivo ya está <b>cargado y activo</b> en la base de datos. Esta vista muestra la semilla vigente;
+          los movimientos se enlazan a las cuentas desde &quot;Mayor por cuenta&quot;. Cualquier ajuste posterior del catálogo
+          se versiona antes de reemplazar el activo.
         </p>
       </div>
 
