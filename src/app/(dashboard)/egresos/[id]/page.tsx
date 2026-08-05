@@ -57,7 +57,7 @@ export default async function EgresoDetallePage({
 
   return (
     <div className="p-4 lg:p-8 max-w-5xl">
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 print:hidden">
         <Link href="/egresos" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
           <ArrowLeft size={18} className="text-oriental-gray" />
         </Link>
@@ -88,7 +88,7 @@ export default async function EgresoDetallePage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Comprobante */}
-          <div className="card overflow-hidden">
+          <div id="recibo-imprimible" className="card overflow-hidden">
             <div className="bg-oriental-black px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-oriental-red rounded flex items-center justify-center">
@@ -146,8 +146,8 @@ export default async function EgresoDetallePage({
                 <p className="text-3xl font-extrabold text-oriental-red">{formatCurrency(egreso.monto, egreso.moneda)}</p>
               </div>
 
-              {/* Tasa de cambio */}
-              <div className="bg-gray-50 rounded-xl px-4 py-3">
+              {/* Tasa de cambio — versión interactiva (solo pantalla) */}
+              <div className="bg-gray-50 rounded-xl px-4 py-3 print:hidden">
                 {ROLES_EDITAR_TASA.includes(rol) ? (
                   <EgresoTasaEditor
                     egresoId={egreso.id}
@@ -156,6 +156,24 @@ export default async function EgresoDetallePage({
                     tasaActual={egreso.tasa_cambio ? Number(egreso.tasa_cambio) : null}
                   />
                 ) : egreso.tasa_cambio ? (
+                  <div>
+                    <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-0.5">Tasa Bs/$</p>
+                    <p className="text-sm font-mono font-bold text-oriental-black">{Number(egreso.tasa_cambio).toFixed(4)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {egreso.moneda === 'VES'
+                        ? `≈ USD ${(Number(egreso.monto) / Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(egreso.monto) / Number(egreso.tasa_cambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}`
+                        : `Bs ${(Number(egreso.monto) * Number(egreso.tasa_cambio)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(Number(egreso.monto) * Number(egreso.tasa_cambio))*100)%100===0?0:2, maximumFractionDigits: 2 })}`
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">Sin equivalencia registrada — sin tasa</p>
+                )}
+              </div>
+
+              {/* Tasa de cambio — versión estática (solo impresión) */}
+              <div className="hidden print:block bg-gray-50 rounded-xl px-4 py-3">
+                {egreso.tasa_cambio ? (
                   <div>
                     <p className="text-[11px] text-oriental-gray uppercase tracking-wider font-semibold mb-0.5">Tasa Bs/$</p>
                     <p className="text-sm font-mono font-bold text-oriental-black">{Number(egreso.tasa_cambio).toFixed(4)}</p>
@@ -238,7 +256,7 @@ export default async function EgresoDetallePage({
         </div>
 
         {/* Actions */}
-        <div className="space-y-4">
+        <div className="space-y-4 print:hidden">
           <EgresoActionButtons egresoId={egreso.id} estado={egreso.estado} rol={rol} esRegistrador={egreso.registrado_por === user?.id} />
 
           {egreso.ret_iva_aplica && egreso.ret_iva_comprobante && (
