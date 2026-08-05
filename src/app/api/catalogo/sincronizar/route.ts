@@ -12,14 +12,6 @@ const ROLES = ['jose', 'admin', 'director']
 //  · stock → inventario físico PROPIO de cada concesionario (no se pisa).
 const EXCLUIR = new Set(['id', 'created_at', 'updated_at', 'stock'])
 
-// Llave natural para emparejar el mismo carro entre bases (los id son distintos).
-function norm(s: unknown) {
-  return String(s ?? '').trim().replace(/\s+/g, ' ').toUpperCase()
-}
-function llave(v: { brand?: unknown; model?: unknown }) {
-  return `${norm(v.brand)}|${norm(v.model)}`
-}
-
 export async function POST() {
   const auth = await createClient()
   const { data: { user } } = await auth.auth.getUser()
@@ -46,7 +38,6 @@ export async function POST() {
     return NextResponse.json({ error: `No se pudo leer el catálogo de La Oriental: ${origenErr?.message ?? 'desconocido'}` }, { status: 500 })
   }
 
-  const origenLlaves = new Set(origen.map(llave))
   const resultados: Array<{ aliado: string; actualizados: number; insertados: number; extras: string[]; error?: string }> = []
 
   for (const a of aliados) {
@@ -57,31 +48,34 @@ export async function POST() {
         .select('id, brand, model')
       if (destErr) throw new Error(destErr.message)
 
-      const mapa = new Map<string, string>((destino ?? []).map((d: { id: string; brand: string; model: string }) => [llave(d), d.id]))
+      // Los id del catálogo son slugs de texto iguales entre bases (ej. "rx5",
+      // "mg3-at"), así que se emparejan por id (más fiable que marca+modelo).
+      const idsDestino = new Set<string>((destino ?? []).map((d: { id: string }) => d.id))
 
       let actualizados = 0
       let insertados = 0
       for (const v of origen) {
-        // Copia todos los campos de precios/specs, menos los excluidos.
+        // Copia todos los campos de precios/specs, menos los excluidos (id, fechas, stock).
         const fila: Record<string, unknown> = {}
         for (const [k, val] of Object.entries(v)) if (!EXCLUIR.has(k)) fila[k] = val
 
-        const existenteId = mapa.get(llave(v))
-        if (existenteId) {
-          const { error } = await cli.from('catalogo_ventas').update(fila).eq('id', existenteId)
+        if (idsDestino.has(v.id)) {
+          const { error } = await cli.from('catalogo_ventas').update(fila).eq('id', v.id)
           if (error) throw new Error(`update ${v.brand} ${v.model}: ${error.message}`)
           actualizados++
         } else {
-          // Carro nuevo en el aliado: entra con stock 0 (aún no tiene inventario).
-          const { error } = await cli.from('catalogo_ventas').insert([{ ...fila, stock: 0 }])
+          // Carro nuevo en el aliado: se conserva el MISMO id (el id es obligatorio,
+          // no tiene default) y entra con stock 0 (aún no tiene inventario).
+          const { error } = await cli.from('catalogo_ventas').insert([{ ...fila, id: v.id, stock: 0 }])
           if (error) throw new Error(`insert ${v.brand} ${v.model}: ${error.message}`)
           insertados++
         }
       }
 
       // Carros que el aliado tiene y La Oriental no (no se borran; se reportan).
+      const idsOrigen = new Set<string>(origen.map((v: { id: string }) => v.id))
       const extras = (destino ?? [])
-        .filter((d: { brand: string; model: string }) => !origenLlaves.has(llave(d)))
+        .filter((d: { id: string }) => !idsOrigen.has(d.id))
         .map((d: { brand: string; model: string }) => `${d.brand} ${d.model}`)
 
       resultados.push({ aliado: a.label, actualizados, insertados, extras })
