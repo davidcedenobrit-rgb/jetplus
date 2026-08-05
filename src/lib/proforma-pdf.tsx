@@ -610,14 +610,16 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             )}
           </View>
 
-          <Text style={s.condTitle}>CONDICIONES:</Text>
-          <Text style={s.condText}>
-            {preVenta
-              ? (tieneFinanciamiento
-                  ? 'El cliente acepta las condiciones de financiamiento de esta proforma. Los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que La Oriental Automotors, C.A. indique. Los montos están sujetos a la disponibilidad de la unidad y a la tasa de cambio vigente a la fecha de la operación.'
-                  : 'El cliente acepta las condiciones de compra de contado de esta proforma. Los montos están sujetos a la disponibilidad de la unidad y a la tasa de cambio vigente a la fecha de la operación.')
-              : 'El comprador acepta y reconoce que el vehículo objeto de esta proforma es entregado bajo un compromiso de pago con financiamiento aprobado. Los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que La Oriental Automotors, C.A. indique. Esta proforma constituye documento formal de compromiso y podrá ser presentada ante autoridades competentes en caso de incumplimiento.'}
-          </Text>
+          {/* Bloque CONDICIONES: solo en el documento de venta ya registrada.
+              En la proforma pre-venta se omite (pedido de Rojas). */}
+          {!preVenta && (
+            <>
+              <Text style={s.condTitle}>CONDICIONES:</Text>
+              <Text style={s.condText}>
+                El comprador acepta y reconoce que el vehículo objeto de esta proforma es entregado bajo un compromiso de pago con financiamiento aprobado. Los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que La Oriental Automotors, C.A. indique. Esta proforma constituye documento formal de compromiso y podrá ser presentada ante autoridades competentes en caso de incumplimiento.
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Firma + sello — fijos en TODAS las páginas de la proforma */}
