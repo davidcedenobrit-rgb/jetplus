@@ -12,15 +12,22 @@ const ROLES = ['jose', 'admin', 'director']
 //  · stock → inventario físico PROPIO de cada concesionario (no se pisa).
 const EXCLUIR = new Set(['id', 'created_at', 'updated_at', 'stock'])
 
-export async function POST() {
+export async function POST(req: Request) {
   const auth = await createClient()
   const { data: { user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROLES.includes(rol)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
+  // Si viene { id }, se replica SOLO ese carro (auto-sync al guardar). Sin id,
+  // se sincroniza todo el catálogo (botón manual "Sincronizar a aliados").
+  const body = await req.json().catch(() => ({} as Record<string, unknown>))
+  const soloId = typeof body?.id === 'string' && body.id.trim() ? body.id.trim() : null
+
   const aliados = listaConcesionariosExternos()
   if (aliados.length === 0) {
+    // Auto-sync sin aliados configurados: no es un error para el usuario.
+    if (soloId) return NextResponse.json({ ok: true, sinAliados: true, resultados: [] })
     return NextResponse.json({ error: 'No hay concesionarios aliados configurados (faltan sus llaves de conexión).' }, { status: 400 })
   }
 
@@ -30,10 +37,9 @@ export async function POST() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   )
-  const { data: origen, error: origenErr } = await origenDb
-    .from('catalogo_ventas')
-    .select('*')
-    .order('orden')
+  let origenQuery = origenDb.from('catalogo_ventas').select('*').order('orden')
+  if (soloId) origenQuery = origenDb.from('catalogo_ventas').select('*').eq('id', soloId)
+  const { data: origen, error: origenErr } = await origenQuery
   if (origenErr || !origen) {
     return NextResponse.json({ error: `No se pudo leer el catálogo de La Oriental: ${origenErr?.message ?? 'desconocido'}` }, { status: 500 })
   }
@@ -73,8 +79,9 @@ export async function POST() {
       }
 
       // Carros que el aliado tiene y La Oriental no (no se borran; se reportan).
+      // Solo aplica en la sincronización completa (no en la de un solo id).
       const idsOrigen = new Set<string>(origen.map((v: { id: string }) => v.id))
-      const extras = (destino ?? [])
+      const extras = soloId ? [] : (destino ?? [])
         .filter((d: { id: string }) => !idsOrigen.has(d.id))
         .map((d: { brand: string; model: string }) => `${d.brand} ${d.model}`)
 

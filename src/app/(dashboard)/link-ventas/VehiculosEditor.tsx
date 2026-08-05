@@ -418,6 +418,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
     setSaved(prev => ({ ...prev, [id]: true }))
     showToast(`✓ ${v.model} guardado`, true)
     setTimeout(() => setSaved(prev => ({ ...prev, [id]: false })), 2000)
+    replicarAliados(id) // auto-sync a los aliados
     router.refresh()
   }
 
@@ -432,6 +433,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       showToast('Error al actualizar', false)
     } else {
       showToast(newVal ? '✓ Vehículo activado' : 'Vehículo desactivado', newVal)
+      replicarAliados(id) // auto-sync a los aliados
       router.refresh()
     }
   }
@@ -452,7 +454,23 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
     if (fail > 0) showToast(`Sincronizado con ${fail} error(es)`, false)
     else if (activados === 0) showToast('✓ Todos los vehículos con stock ya estaban activos', true)
     else showToast(`✓ Activados ${activados} vehículo${activados !== 1 ? 's' : ''} con stock en showroom`, true)
-    if (activados > 0) router.refresh()
+    if (activados > 0) { replicarAliados(); router.refresh() } // auto-sync a los aliados
+  }
+
+  // Auto-sync: replica a los aliados el carro guardado (o todo el catálogo si no
+  // se pasa id). Silencioso si todo va bien; solo avisa si algún aliado falla.
+  async function replicarAliados(id?: string) {
+    try {
+      const res = await fetch('/api/catalogo/sincronizar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(id ? { id } : {}),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) return
+      const rs: { aliado: string; error?: string }[] = j.resultados ?? []
+      const fallo = rs.filter(r => r.error)
+      if (fallo.length) showToast(`⚠ No se pudo sincronizar a ${fallo.map(f => f.aliado).join(', ')}`, false)
+    } catch { /* silencioso: no bloquea el guardado */ }
   }
 
   // Empuja el catálogo de La Oriental (precios, gastos, cuotas, tasas, IGTF,
@@ -490,8 +508,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
   async function saveNew() {
     if (!newV.id || !newV.model) { showToast('ID y Modelo son obligatorios', false); return }
     setSavingNew(true)
+    const nuevoId = newV.id.trim().toLowerCase().replace(/\s+/g, '-')
     const { error } = await supabase.from('catalogo_ventas').insert([{
-      id: newV.id.trim().toLowerCase().replace(/\s+/g, '-'),
+      id: nuevoId,
       brand: newV.brand, model: newV.model, img_url: newV.img_url || null,
       cash: newV.cash, gc: newV.gc, gcr: newV.gcr, tasa_credito: newV.tasa_credito,
       stock: newV.stock ?? 0, ano: newV.ano ?? 2026, transmision: newV.transmision,
@@ -501,6 +520,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
     setSavingNew(false)
     if (error) { showToast('Error: ' + error.message, false); return }
     showToast('✓ Vehículo agregado', true)
+    replicarAliados(nuevoId) // auto-sync a los aliados
     setShowModal(false)
     setNewV({ id: '', ...EMPTY_VEHICULO })
     const { data } = await supabase.from('catalogo_ventas').select('*').order('orden')
