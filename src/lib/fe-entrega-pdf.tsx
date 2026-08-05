@@ -70,11 +70,11 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
   const primario = data.membrete.colorPrimario || '#C41E3A'
   const v = data.vehiculo
   const s = StyleSheet.create({
-    page: { paddingTop: 26, paddingHorizontal: 30, paddingBottom: 36, fontFamily: 'Helvetica', fontSize: 7.5, color: DARK },
-    pageNum: { position: 'absolute', top: 12, right: 30, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: GRAY },
-    title: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: primario, marginTop: 8, textAlign: 'center' },
-    sub: { fontSize: 7.5, color: GRAY, textAlign: 'center', marginBottom: 6 },
-    secTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff', backgroundColor: DARK, paddingVertical: 2.5, paddingHorizontal: 6, marginTop: 7 },
+    page: { paddingTop: 18, paddingHorizontal: 30, paddingBottom: 22, fontFamily: 'Helvetica', fontSize: 7.5, color: DARK },
+    pageNum: { position: 'absolute', top: 8, right: 30, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: GRAY },
+    title: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: primario, marginTop: 4, textAlign: 'center' },
+    sub: { fontSize: 7.5, color: GRAY, textAlign: 'center', marginBottom: 5 },
+    secTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff', backgroundColor: DARK, paddingVertical: 2, paddingHorizontal: 6, marginTop: 4 },
     row: { flexDirection: 'row' },
     box: { width: 8.5, height: 8.5, border: `0.7pt solid ${GRAY}`, borderRadius: 1 },
     infoRow: { flexDirection: 'row', marginTop: 4, marginBottom: 2 },
@@ -83,14 +83,14 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
     val: { fontSize: 8.5, fontFamily: 'Helvetica-Bold' },
     th: { fontSize: 6.6, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'center' },
     cellTxt: { fontSize: 6.9 },
-    p: { fontSize: 7.2, lineHeight: 1.4, marginBottom: 3, textAlign: 'justify' },
-    firmaBlock: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    firmaCol: { width: '48%', alignItems: 'center', marginTop: 16 },
-    firmaLine: { width: '100%', borderBottom: `0.8pt solid ${DARK}`, height: 18, marginBottom: 3 },
+    p: { fontSize: 7, lineHeight: 1.3, marginBottom: 2, textAlign: 'justify' },
+    firmaBlock: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+    firmaCol: { width: '48%', alignItems: 'center', marginTop: 8 },
+    firmaLine: { width: '100%', borderBottom: `0.8pt solid ${DARK}`, height: 15, marginBottom: 3 },
     firmaLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold' },
     firmaSub: { fontSize: 6.5, color: GRAY },
-    selloWrap: { height: 62, alignItems: 'center', justifyContent: 'center' },
-    sello: { width: 78, height: 62, objectFit: 'contain', opacity: 0.9 },
+    selloWrap: { height: 44, alignItems: 'center', justifyContent: 'center' },
+    sello: { width: 60, height: 44, objectFit: 'contain', opacity: 0.9 },
   })
 
   // Celda "item + SÍ + NO" (una de las 3 columnas del checklist).
@@ -221,9 +221,9 @@ export function FeEntregaPDF({ data }: { data: FeEntregaData }) {
           </View>
         ))}
 
-        {/* Observaciones — 4 líneas */}
+        {/* Observaciones — 3 líneas */}
         <Text style={s.secTitle}>OBSERVACIONES</Text>
-        {[0, 1, 2, 3].map(i => <View key={i} style={{ borderBottom: `0.5pt solid ${LINE}`, height: 14 }} />)}
+        {[0, 1, 2].map(i => <View key={i} style={{ borderBottom: `0.5pt solid ${LINE}`, height: 12 }} />)}
 
         {/* Firmas (página 1) — el cliente firma y va el sello */}
         <Firmas />

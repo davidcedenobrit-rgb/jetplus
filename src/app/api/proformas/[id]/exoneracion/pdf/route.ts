@@ -7,6 +7,13 @@ import { ExoneracionPDF, ExoneracionData } from '@/lib/exoneracion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
+// La exoneración se firma en la sede del CONCESIONARIO que entrega, no en la
+// ciudad del cliente. Ciudad por concesionario de turno.
+const CIUDAD_CONCES: Record<string, string> = {
+  'la-oriental': 'Maturín',
+  'kiauto': 'Puerto Ordaz',
+  'autosurca': 'El Tigre',
+}
 const fFecha = (s?: string | null) => {
   if (!s) return ''
   const d = String(s).slice(0, 10)
@@ -42,7 +49,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const data: ExoneracionData = {
     fecha: hoy,
-    ciudad: (cli.ciudad as string) || 'Maturín',
+    ciudad: CIUDAD_CONCES[concId ?? 'la-oriental'] ?? 'Maturín',
     membrete: { nombre: c.nombre, rif: c.rif, direccion: c.direccion, telefono: c.telefono, correo: c.correo, logoSrc: c.logoSrc, colorPrimario: c.colorPrimario, colorSecundario: c.colorSecundario },
     selloSrc: c.selloSrc,
     numeroProforma: (pro.numero as string) ?? '',
