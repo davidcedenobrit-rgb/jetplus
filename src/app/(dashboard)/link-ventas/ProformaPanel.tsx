@@ -290,6 +290,20 @@ export default function ProformaPanel({
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-indigo-700 text-white text-sm font-semibold hover:bg-indigo-800">
                     <ExternalLink size={14} /> Ver proforma {yaExiste.numero}
                   </a>
+                  <div className="grid grid-cols-2 gap-2">
+                    <a href={`/api/proformas/${yaExiste.proformaId}/acuerdo-pago/pdf`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-red-700">
+                      <FileText size={13} /> Acuerdo de pago (cliente)
+                    </a>
+                    {preview?.acuerdo?.id ? (
+                      <a href={`/api/acuerdos-cobro/${preview.acuerdo.id}/pdf`} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-oriental-black text-white text-xs font-bold hover:bg-gray-800">
+                        <FileText size={13} /> Acuerdo de cobro
+                      </a>
+                    ) : (
+                      <span className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg border border-dashed border-gray-200 text-gray-400 text-xs font-medium">Sin acuerdo de cobro</span>
+                    )}
+                  </div>
                   <button onClick={() => setOpen(false)} className="w-full py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cerrar</button>
                 </div>
               ) : resultado ? (
