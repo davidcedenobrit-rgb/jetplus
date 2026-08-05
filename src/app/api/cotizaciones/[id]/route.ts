@@ -35,6 +35,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const supabase = await createAdminClient()
 
+    // Editar solo la vendedora / ejecutivo(a) de ventas de la cotización.
+    if (body.accion === 'editar_vendedora') {
+      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+        return NextResponse.json({ error: 'Solo el director puede editar la vendedora' }, { status: 403 })
+      }
+      const nombre = typeof body.vendedora_nombre === 'string' ? body.vendedora_nombre.trim() : ''
+      if (!nombre) return NextResponse.json({ error: 'Indica el nombre de la vendedora' }, { status: 400 })
+      const { error } = await supabase
+        .from('cotizaciones')
+        .update({ vendedora_nombre: nombre, vendedoras: [{ nombre }] })
+        .eq('id', id)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, vendedora_nombre: nombre })
+    }
+
     // Editar cotización completa (todos los campos + reenvío opcional + auditoría)
     if (body.accion === 'editar_completa') {
       // Solo el director (Rojas) puede editar/negociar montos.

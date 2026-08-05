@@ -206,6 +206,62 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
   )
 }
 
+// Vendedora editable en el detalle: Rojas puede corregir/asignar el ejecutivo(a)
+// de ventas. Guarda en la cotización (vendedora_nombre + vendedoras).
+function VendedoraEditor({ cotId, nombre }: { cotId: string; nombre: string | null | undefined }) {
+  const router = useRouter()
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(nombre ?? '')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function guardar() {
+    const n = val.trim()
+    if (!n) { setErr('Indica el nombre'); return }
+    setSaving(true); setErr('')
+    try {
+      const r = await fetch(`/api/cotizaciones/${cotId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'editar_vendedora', vendedora_nombre: n }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) { setErr(j.error ?? 'No se pudo guardar'); setSaving(false); return }
+      setEditing(false); setSaving(false); router.refresh()
+    } catch { setErr('Error de conexión'); setSaving(false) }
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
+        <span className="text-xs text-gray-500 font-medium">Vendedora</span>
+        <span className="text-xs font-semibold text-oriental-black text-right flex items-center gap-2">
+          {nombre || '—'}
+          <button onClick={() => { setVal(nombre ?? ''); setErr(''); setEditing(true) }}
+            className="text-[11px] font-bold text-oriental-red hover:underline">Editar</button>
+        </span>
+      </div>
+    )
+  }
+  return (
+    <div className="py-2 border-b border-gray-50 last:border-0">
+      <span className="text-xs text-gray-500 font-medium block mb-1">Vendedora</span>
+      <div className="flex items-center gap-2">
+        <input autoFocus value={val} onChange={e => setVal(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') guardar(); if (e.key === 'Escape') setEditing(false) }}
+          placeholder="Nombre del ejecutivo(a) de ventas"
+          className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-oriental-red" />
+        <button onClick={guardar} disabled={saving}
+          className="px-3 py-1.5 rounded-lg bg-oriental-red text-white text-xs font-bold hover:bg-red-700 disabled:opacity-50">
+          {saving ? '…' : 'Guardar'}
+        </button>
+        <button onClick={() => { setEditing(false); setErr('') }} disabled={saving}
+          className="px-2 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700">Cancelar</button>
+      </div>
+      {err && <p className="text-[11px] text-red-600 mt-1">{err}</p>}
+    </div>
+  )
+}
+
 function MontoRow({ label, value, highlight }: { label: string; value: number | null | undefined; highlight?: boolean }) {
   if (value == null) return null
   return (
@@ -695,7 +751,7 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
           </div>
 
           <InfoRow label="Concesionario" value={concesLabel(cot.concesionario_id, {})} />
-          <InfoRow label="Vendedora" value={cot.vendedora_nombre} />
+          <VendedoraEditor cotId={cot.id} nombre={cot.vendedora_nombre} />
 
           {cot.estado === 'rechazada' && cot.motivo_rechazo && (
             <div className="bg-red-50 border border-red-100 rounded-xl p-4">
