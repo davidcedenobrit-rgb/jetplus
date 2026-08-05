@@ -20,6 +20,8 @@ export interface AcuerdoPagoData {
   inicialTotal: number
   financiado: number
   condiciones: string
+  // ¿El crédito Vehimotor corre en paralelo con el inicial (simultáneo)?
+  creditoSimultaneo?: boolean
   filas: { numero: number; tipo: string; etiqueta: string; monto: number }[]
 }
 
@@ -48,7 +50,10 @@ export function AcuerdoPagoPDF({ data }: { data: AcuerdoPagoData }) {
     sello: { width: 90, height: 90, objectFit: 'contain', opacity: 0.9 },
   })
 
-  const totalPlan = data.filas.reduce((acc, f) => acc + Number(f.monto || 0), 0)
+  // Numeración por serie: Inicial (La Oriental) 1,2,3… y Vehimotor 1,2,3…
+  // (corren en paralelo cuando el crédito es simultáneo con el inicial).
+  let ci = 0, cv = 0
+  const filasRender = data.filas.map(f => ({ ...f, serie: f.tipo === 'Inicial' ? ++ci : ++cv }))
 
   return (
     <Document title={`Acuerdo de pago ${data.numeroProforma}`} author={data.membrete.nombre}>
@@ -78,9 +83,9 @@ export function AcuerdoPagoPDF({ data }: { data: AcuerdoPagoData }) {
           <Text style={[s.tHeadTxt, { flex: 1 }]}>Concepto</Text>
           <Text style={[s.tHeadTxt, { width: 90, textAlign: 'right' }]}>Monto</Text>
         </View>
-        {data.filas.map(f => (
+        {filasRender.map(f => (
           <View key={f.numero} style={[s.tRow, f.tipo === 'Inicial' ? { backgroundColor: '#fffbeb' } : {}]}>
-            <Text style={{ width: 24, color: GRAY }}>{f.numero}</Text>
+            <Text style={{ width: 24, color: GRAY }}>{f.serie}</Text>
             <Text style={{ flex: 1 }}>
               <Text style={[s.tag, { color: f.tipo === 'Inicial' ? '#b45309' : primario }]}>{f.tipo === 'Inicial' ? 'INICIAL ' : 'VEHIMOTOR '}</Text>
               {f.etiqueta}
@@ -88,14 +93,12 @@ export function AcuerdoPagoPDF({ data }: { data: AcuerdoPagoData }) {
             <Text style={{ width: 90, textAlign: 'right', fontFamily: 'Helvetica-Bold' }}>${fmt(f.monto)}</Text>
           </View>
         ))}
-        <View style={s.tTot}>
-          <Text style={[s.b, { flex: 1 }]}>Total programado</Text>
-          <Text style={[s.b, { width: 90, textAlign: 'right' }]}>${fmt(totalPlan)}</Text>
-        </View>
 
         <Text style={[s.p, { marginTop: 12 }]}>
           El cliente declara conocer y aceptar el presente plan de pago, comprometiéndose a cumplir con los montos y fechas
-          aquí establecidos. El crédito Vehimotor inicia una vez completado el pago del inicial.
+          aquí establecidos. {data.creditoSimultaneo
+            ? 'El crédito Vehimotor corre en paralelo con el inicial; sus cuotas mensuales inician a los 30 días de la entrega del vehículo.'
+            : 'El crédito Vehimotor inicia una vez completado el pago del inicial.'}
         </Text>
 
         <View style={s.firmaBlock} wrap={false}>

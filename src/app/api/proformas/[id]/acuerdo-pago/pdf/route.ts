@@ -40,6 +40,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     monto: n(f.monto),
   }))
 
+  // ¿El crédito Vehimotor corre en paralelo con el inicial? Se infiere del
+  // cronograma: es simultáneo si la primera cuota Vehimotor cae dentro del
+  // periodo del inicial (día ≤ último abono del inicial). Si arranca después
+  // (último día del inicial + 30), no es simultáneo.
+  const diasIni = crono.filter(f => ((f.tipo as string) || 'Vehimotor') === 'Inicial').map(f => n(f.dias))
+  const diasVm = crono.filter(f => ((f.tipo as string) || 'Vehimotor') !== 'Inicial').map(f => n(f.dias))
+  const ultimoDiaInicial = diasIni.length ? Math.max(...diasIni) : 0
+  const primerDiaVm = diasVm.length ? Math.min(...diasVm) : null
+  const creditoSimultaneo = primerDiaVm != null && ultimoDiaInicial > 0 && primerDiaVm <= ultimoDiaInicial
+
   const vehiculo = [veh.marca, veh.modelo, veh.placa ? `· ${veh.placa}` : '', veh.color ? `(${veh.color})` : '']
     .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
 
@@ -55,6 +65,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     inicialTotal: n(pro.monto_inicial),
     financiado: n(pro.monto_financiado),
     condiciones: (pro.observaciones as string) || (pro.condiciones_personalizadas as string) || '',
+    creditoSimultaneo,
     filas,
   }
 
