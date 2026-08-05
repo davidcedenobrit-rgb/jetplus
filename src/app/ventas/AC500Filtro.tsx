@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import CotizacionRapidaModal from './CotizacionRapidaModal'
+import type { BrandImg } from './VehiculosFiltro'
 
 export interface AC500Vehiculo {
   id: string
@@ -105,7 +106,7 @@ function schedule(v: AC500Vehiculo, mode: Mode) {
   ]
 }
 
-function AC500Card({ v, waCorp = WA, evento = '', concesionario = '' }: { v: AC500Vehiculo; waCorp?: string; evento?: string; concesionario?: string }) {
+function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: { v: AC500Vehiculo; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg }) {
   const colors = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
   const [mode, setMode] = useState<Mode>(defaultMode(v))
   const [rapida, setRapida] = useState(false)
@@ -224,6 +225,8 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '' }: { v: AC5
           vehiculo={{ brand: v.brand, model: v.model, cash: null, gc: null, gcr: null, tasa_credito: null }}
           onClose={() => setRapida(false)}
           evento={evento} waCorp={waCorp} concesionario={concesionario}
+          brandNombre={brand?.nombre} brandLogo={brand?.logo}
+          colorPrimario={brand?.colorPrimario} colorSecundario={brand?.colorSecundario}
           financiamiento={false} modalidad="ac500"
           planNota={`Plan Asegúrate $500 · entrega en ${mode} meses${color ? ` · ${cap(color)}` : ''}`}
         />
@@ -232,7 +235,7 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '' }: { v: AC5
   )
 }
 
-export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', concesionario = '' }: { vehiculos: AC500Vehiculo[]; waCorp?: string; evento?: string; concesionario?: string }) {
+export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', concesionario = '', brand }: { vehiculos: AC500Vehiculo[]; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
@@ -247,7 +250,7 @@ export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', conce
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
-        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} evento={evento} concesionario={concesionario} />)}
+        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brand} />)}
       </div>
 
       {lista.length === 0 && (

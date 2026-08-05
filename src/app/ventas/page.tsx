@@ -29,7 +29,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
     supabase.from('promocion_vehiculos').select('*').order('orden').order('created_at'),
     supabase.from('promociones_especiales').select('*').limit(1).single(),
     admin.from('config_cotizaciones').select('clave, valor').in('clave', ['tasa_bcv', 'tasa_usdt', 'wa_corporativo', 'concesionario_id']),
-    admin.from('concesionarios').select('id, nombre_comercial, ciudad, estado, logo_url').eq('es_principal', true).limit(1).maybeSingle(),
+    admin.from('concesionarios').select('id, nombre_comercial, ciudad, estado, logo_url, color_primario, color_secundario').eq('es_principal', true).limit(1).maybeSingle(),
   ])
 
   // valor puede venir como NUMERIC (número) desde la base; se normaliza a texto
@@ -58,6 +58,18 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
     wa: waCorp,
     // Marca personalizada → su logo (o ninguno); marca por defecto → logo de La Oriental.
     logo: conc?.logo_url || (personalizado ? '' : LOGO),
+    // Colores del concesionario para el membrete de la imagen compartible
+    // (rojo + negro de La Oriental por defecto; cada base puede sobreescribir).
+    colorPrimario: conc?.color_primario || '#C41E3A',
+    colorSecundario: conc?.color_secundario || '#111827',
+  }
+
+  // Branding que reciben las cotizaciones rápidas para generar la imagen con membrete.
+  const brandImg = {
+    nombre: brand.nombre,
+    logo: brand.logo,
+    colorPrimario: brand.colorPrimario,
+    colorSecundario: brand.colorSecundario,
   }
 
   const lista = catalogo ?? []
@@ -151,7 +163,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede {brand.ciudad} · Atención personalizada</p>
           <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
         </div>
-        <VehiculosFiltro vehiculos={lista} tasas={tasas} evento={evento} waCorp={waCorp} concesionario={concesionario} />
+        <VehiculosFiltro vehiculos={lista} tasas={tasas} evento={evento} waCorp={waCorp} concesionario={concesionario} brand={brandImg} />
       </section>
 
       {/* ── PLAN 40% ──────────────────────────────────────────────────────── */}
@@ -201,7 +213,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               ))}
             </div>
           </div>
-          <AC500Filtro vehiculos={acLista} waCorp={waCorp} evento={evento} concesionario={concesionario} />
+          <AC500Filtro vehiculos={acLista} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brandImg} />
         </section>
       )}
 
