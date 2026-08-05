@@ -284,6 +284,11 @@ export async function crearEgreso(payload: CrearEgresoPayload) {
     )
   }
 
+  // 5. Asiento contable de partida doble (borrador). No bloquea el egreso si falla.
+  if (afectaPlan && cuentaContable) {
+    await admin.rpc('generar_asiento_egreso', { p_egreso_id: inserted.id })
+  }
+
   return { ok: true, egresoId: inserted.id }
 }
 

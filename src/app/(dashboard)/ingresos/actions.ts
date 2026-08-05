@@ -155,5 +155,10 @@ export async function crearIngreso(payload: CrearIngresoPayload) {
     )
   }
 
+  // 6. Asiento contable de partida doble (borrador). No bloquea el ingreso si falla.
+  if (afectaPlan && cuentaContable) {
+    await admin.rpc('generar_asiento_ingreso', { p_ingreso_id: ingresoId })
+  }
+
   return { ok: true, ingresoId }
 }
