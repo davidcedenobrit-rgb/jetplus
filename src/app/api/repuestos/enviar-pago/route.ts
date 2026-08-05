@@ -50,51 +50,19 @@ export async function POST(req: NextRequest) {
       numeroCotizacion: cotiz, correoAdicional: correoExtra,
     })
 
-    // Auto-egreso: registrar el pago de los repuestos (pedidos por SORE) como egreso.
-    // El proveedor de repuestos es Avanza Motors; se busca por nombre para tomar su
-    // id y RIF en la base que corresponda (no duplica si el egreso ya existe).
-    let egresoId: string | null = sol.egreso_pago_id ?? null
-    if (!egresoId) {
-      const year = new Date().getFullYear()
-      const buf = new Uint32Array(1)
-      crypto.getRandomValues(buf)
-      const seq = String(buf[0] % 1_000_000).padStart(6, '0')
-      const numero_egreso = `LOA-EGR-${year}-${seq}`
-
-      const { data: prov } = await supabase
-        .from('proveedores').select('id, nombre, rif').ilike('nombre', 'avanza motors%').limit(1).maybeSingle()
-
-      const { data: egreso } = await supabase.from('egresos').insert({
-        numero_egreso,
-        categoria:        'cr_avanza_motors',
-        concepto:         `Pago repuestos Avanza Motors — ${sol.numero}`,
-        descripcion:      cotiz ? `Cotización Avanza Motors ${cotiz}` : null,
-        monto:            montoNum,
-        moneda:           monedaPago,
-        beneficiario:     prov?.nombre ?? 'AVANZA MOTORS, C.A.',
-        cedula_rif_benef: prov?.rif ?? null,
-        proveedor_id:     prov?.id ?? null,
-        numero_sa:        cotiz,
-        centro_costo_id:  'repuestos',
-        area_responsable: 'Repuestos',
-        tipo_movimiento:  'gasto',
-        fecha_egreso:     new Date().toISOString().split('T')[0],
-        estado:           'pendiente_aprobacion',
-        registrado_por:   user.id,
-      }).select('id').single()
-      egresoId = egreso?.id ?? null
-    }
-
+    // La notificación de pago SOLO envía el correo/comprobante. NO crea egreso:
+    // el egreso real es la compra a Avanza Motors que se registra manualmente con
+    // su retención de IVA (fuente de verdad para el SENIAT). Crear aquí un segundo
+    // egreso duplicaba el gasto (misma N° SA: compra en Bs con retención + este
+    // pago en USD). Ver caso Rojas 2026-08.
     await supabase.from('solicitudes_repuestos').update({
       estado: 'pago_enviado', updated_at: new Date().toISOString(),
       monto_pago: montoNum, moneda_pago: monedaPago,
-      ...(egresoId ? { egreso_pago_id: egresoId } : {}),
     }).eq('id', solicitudId)
 
     revalidatePath('/repuestos')
     revalidatePath(`/repuestos/${solicitudId}`)
-    revalidatePath('/egresos')
-    return NextResponse.json({ ok: true, egresoId })
+    return NextResponse.json({ ok: true })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
