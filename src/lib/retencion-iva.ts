@@ -7,9 +7,10 @@ export function periodoDeFecha(fechaISO: string): string {
   return `${y}${m}`
 }
 
-// Siguiente número de comprobante: AAAAMM (período fiscal) + correlativo de 11
+// Siguiente número de comprobante: AAAAMM (período fiscal) + correlativo de 8
 // dígitos. El correlativo es CONTINUO (no se reinicia cada mes); el período
-// solo antecede como prefijo. Ej.: 202608 + 00000000261 → 20260800000000261.
+// solo antecede como prefijo. Ej.: 202608 + 00000261 → 20260800000261.
+// Al cambiar de mes cambia el prefijo (202609…) y el correlativo sigue.
 //
 // El correlativo arranca desde un "piso" histórico configurable en
 // config_cotizaciones (clave 'retencion_iva_correlativo_piso'), pensado para
@@ -39,7 +40,7 @@ export async function siguienteComprobante(admin: any, periodo: string): Promise
   }
 
   const next = Math.max(piso, maxSeq) + 1
-  return `${periodo}${String(next).padStart(11, '0')}`
+  return `${periodo}${String(next).padStart(8, '0')}`
 }
 
 // Monto retenido = IVA de la factura × (75% ó 100%).
