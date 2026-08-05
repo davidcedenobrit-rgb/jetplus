@@ -107,6 +107,12 @@ export function sugerenciaEgreso(categoria: string | null | undefined): string |
 
 export function sugerenciaIngreso(concepto: string | null | undefined): string | null {
   if (!concepto) return null
-  const c = SUGERENCIA_INGRESO[concepto]
-  return c && existeCuenta(c) ? c : null
+  // 1) Coincidencia exacta con la lista de conceptos.
+  const exacto = SUGERENCIA_INGRESO[concepto]
+  if (exacto && existeCuenta(exacto)) return exacto
+  // 2) Conceptos de texto libre (flujos de acuerdo/reserva): coincidencia por prefijo.
+  const t = concepto.toLowerCase()
+  if (t.startsWith('reserva')) return existeCuenta('2.3.01.001') ? '2.3.01.001' : null   // reserva/AC500 → anticipos clientes
+  if (t.startsWith('pago de inicial') || t.includes('inicial')) return existeCuenta('2.3.01.010') ? '2.3.01.010' : null  // inicial → anticipos/reservas vehículos
+  return null
 }
