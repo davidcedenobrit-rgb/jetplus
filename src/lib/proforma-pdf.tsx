@@ -315,7 +315,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             <Text style={[s.tableHeaderText, s.colMarca]}>MARCA</Text>
             <Text style={[s.tableHeaderText, s.colModelo]}>MODELO {data.anio ? `· ${data.anio}` : ''}{data.color ? ` · ${data.color}` : ''}</Text>
             <Text style={[s.tableHeaderText, s.colPlaca]}>PLACA</Text>
-            <Text style={[s.tableHeaderText, s.colPrecio]}>PRECIO ($)</Text>
+            <Text style={[s.tableHeaderText, s.colPrecio]}>PRECIO BASE ($)</Text>
           </View>
           <View style={s.tableRow}>
             <Text style={[s.tableCell, s.colMarca]}>{data.marca}</Text>
@@ -323,15 +323,14 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             <Text style={[s.tableCell, s.colPlaca]}>{data.placa || '—'}</Text>
             <Text style={[s.tableCell, s.colPrecio, { fontFamily: 'Helvetica-Bold' }]}>{fmt(bnV ? bnV.precio_base : data.totalVehiculo)}</Text>
           </View>
-          {(data.version || data.vin || data.serialMotor || data.color) && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, paddingTop: 4 }}>
-              {data.version ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Versión: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.version}</Text></Text> : null}
-              {data.color ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Color: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.color}</Text></Text> : null}
-              {data.anio ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Año: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.anio}</Text></Text> : null}
-              {data.vin ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>VIN/Chasis: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.vin}</Text></Text> : null}
-              {data.serialMotor ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Serial motor: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.serialMotor}</Text></Text> : null}
-            </View>
-          )}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, paddingTop: 4 }}>
+            {data.version ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Versión: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.version}</Text></Text> : null}
+            {data.color ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Color: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.color}</Text></Text> : null}
+            {data.anio ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Año: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.anio}</Text></Text> : null}
+            {data.vin ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>VIN/Chasis: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.vin}</Text></Text> : null}
+            {data.serialMotor ? <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>Serial motor: <Text style={{ fontFamily: 'Helvetica-Bold', color: DARK }}>{data.serialMotor}</Text></Text> : null}
+            <Text style={{ fontSize: 7, color: GRAY, marginRight: 12, marginBottom: 2 }}>N° Proforma: <Text style={{ fontFamily: 'Helvetica-Bold', color: RED }}>{data.numero}</Text></Text>
+          </View>
 
           {/* Bloque de montos (no en Banca Nacional: su cuadro lo reemplaza) */}
           {!bnV && (
@@ -342,10 +341,10 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
               </View>
               {data.estructura ? (
                 <>
-                  <View style={s.montosRow2}><Text style={s.montosLabel}>IVA 16%</Text><Text style={s.montosVal}>${fmt(data.estructura.iva)}</Text></View>
                   {data.estructura.iniBase > 0 && (
                     <View style={s.montosRow2}><Text style={s.montosLabel}>{data.estructura.inicialPct}% del precio base (inicial)</Text><Text style={s.montosVal}>${fmt(data.estructura.iniBase)}</Text></View>
                   )}
+                  <View style={s.montosRow2}><Text style={s.montosLabel}>IVA 16%</Text><Text style={s.montosVal}>${fmt(data.estructura.iva)}</Text></View>
                   {gastosTotal > 0 && (
                     <View style={s.montosRow2}><Text style={[s.montosLabel, { paddingRight: 6 }]}>Póliza Seguro Vehículo, Traslado, INTT, Gastos Notaría, IGTF</Text><Text style={s.montosVal}>${fmt(gastosTotal)}</Text></View>
                   )}
@@ -596,7 +595,8 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             {preVenta ? (
               <Text style={s.legalText}>
                 <Text style={s.legalBold}>CONDICIONES DE COMPRA ACEPTADAS. </Text>
-                El cliente {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, acepta las condiciones de compra del vehículo MARCA: {data.marca}, MODELO: {data.modelo}, descritas en este documento, y se compromete a cumplir el plan de pago acordado.
+                El cliente {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, acepta las condiciones de compra del vehículo MARCA: {data.marca}, MODELO: {data.modelo}, descritas en este documento, y se compromete a cumplir el plan de pago acordado.{'\n\n'}
+                <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>
               </Text>
             ) : (
             <Text style={s.legalText}>
