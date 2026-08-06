@@ -72,6 +72,7 @@ const SECTIONS: NavSection[] = [
     icon: Coins,
     links: [
       { href: '/ingresos',     label: 'Ingresos',           icon: TrendingUp,   hideFor: ['arianna', 'almacen'] },
+      { href: '/anticipos',    label: 'Anticipos',          icon: Wallet,       hideFor: ['arianna', 'almacen'] },
       { href: '/egresos',      label: 'Egresos',            icon: TrendingDown, hideFor: ['almacen'] },
       { href: '/pagos-portal', label: 'Pagos del portal',   icon: Inbox,        roles: DIR, badge: 'portal' },
       { href: '/ejecutivo',    label: 'Panel ejecutivo',    icon: LayoutDashboard, roles: DIR_CORE },
