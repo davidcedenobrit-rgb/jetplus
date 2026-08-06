@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, CircleDot, PlusCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, User, Car, Calendar, Edit3, CheckCircle2, CircleDot, PlusCircle, AlertCircle, ExternalLink } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import RevertirCuotaButton from './RevertirCuotaButton'
 import PrintButton from './PrintButton'
@@ -275,6 +275,14 @@ export default async function CreditoDetallePage({
               Registrar ingreso
             </Link>
           )}
+          <a
+            href={`/api/creditos/${id}/estado-cuenta/pdf`}
+            target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-oriental-black text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <ExternalLink size={15} />
+            Estado de cuenta
+          </a>
           <Link
             href={`/creditos/${id}/editar`}
             className="flex items-center gap-2 px-4 py-2 bg-oriental-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
