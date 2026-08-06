@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, Car, User, Calendar, Hash, CreditCard, TrendingUp, ExternalLink, CheckCircle2, Clock, AlertCircle, CircleDot } from 'lucide-react'
+import { ArrowLeft, Car, User, Calendar, Hash, CreditCard, TrendingUp, ExternalLink, CheckCircle2, Clock, AlertCircle, CircleDot, FileText, Tag } from 'lucide-react'
 import DeleteButton from '@/components/DeleteButton'
 import VehiculoDocumentos from './VehiculoDocumentos'
 import DesvincularCliente from './DesvincularCliente'
@@ -499,25 +499,35 @@ export default async function VehiculoDetallePage({
             />
           )}
 
-          {/* Expediente de la venta — estado de cuenta en vivo (los demás documentos
-              se guardan como copia al registrar la venta y aparecen abajo). */}
-          {creditos && creditos.length > 0 && (
-            <div className="card p-4 flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-oriental-red/10 flex items-center justify-center">
-                  <CreditCard size={16} className="text-oriental-red" />
-                </div>
-                <div>
-                  <p className="font-bold text-oriental-black text-sm">Expediente de la venta</p>
-                  <p className="text-[11px] text-oriental-gray">El estado de cuenta se genera en vivo; los documentos de entrega quedan guardados abajo.</p>
-                </div>
+          {/* Expediente de la venta — expediente completo (PDF único), etiqueta del
+              carro y estado de cuenta en vivo. Los documentos quedan guardados abajo. */}
+          <div className="card p-4">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-oriental-red/10 flex items-center justify-center">
+                <CreditCard size={16} className="text-oriental-red" />
               </div>
-              <a href={`/api/creditos/${creditos[0].id}/estado-cuenta/pdf`} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3.5 py-2 border border-gray-300 text-oriental-black text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-                <ExternalLink size={14} /> Estado de cuenta
-              </a>
+              <div>
+                <p className="font-bold text-oriental-black text-sm">Expediente de la venta</p>
+                <p className="text-[11px] text-oriental-gray">Expediente completo en un PDF, etiqueta del carro y estado de cuenta.</p>
+              </div>
             </div>
-          )}
+            <div className="flex flex-wrap gap-2">
+              <a href={`/api/vehiculos/${id}/expediente/pdf`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3.5 py-2 bg-oriental-red text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors">
+                <FileText size={14} /> Expediente del cliente
+              </a>
+              <a href={`/api/vehiculos/${id}/etiqueta/pdf`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3.5 py-2 border border-gray-300 text-oriental-black text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                <Tag size={14} /> Etiqueta del cliente
+              </a>
+              {creditos && creditos.length > 0 && (
+                <a href={`/api/creditos/${creditos[0].id}/estado-cuenta/pdf`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3.5 py-2 border border-gray-300 text-oriental-black text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                  <ExternalLink size={14} /> Estado de cuenta
+                </a>
+              )}
+            </div>
+          </div>
 
           {/* Documentos */}
           <VehiculoDocumentos
