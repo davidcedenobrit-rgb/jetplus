@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2, ClipboardCheck, ShieldAlert, BookMarked } from 'lucide-react'
 import ProformaPanel from './ProformaPanel'
+import AcuerdoCobroPanel from './AcuerdoCobroPanel'
 
 type Proforma = {
   id: string
@@ -19,6 +20,7 @@ type Proforma = {
   monto_inicial: number | null
   monto_financiado: number | null
   num_cuotas: number | null
+  vendedoras: { nombre?: string }[] | null
   created_at: string
 }
 
@@ -133,6 +135,14 @@ export default function ProformasTab() {
                     className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50">
                     <ExternalLink size={13} /> PDF
                   </a>
+                  {p.cotizacion_id && (
+                    <AcuerdoCobroPanel
+                      cotId={p.cotizacion_id}
+                      vendedoraNombre={Array.isArray(p.vendedoras) ? p.vendedoras.map(v => v?.nombre).filter(Boolean).join(', ') : undefined}
+                      compact
+                      onChange={cargar}
+                    />
+                  )}
                   <a href={`/api/proformas/${p.id}/acuerdo-pago/pdf`} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-2 border border-oriental-red/30 rounded-lg text-xs font-bold text-oriental-red hover:bg-red-50"
                     title="Generar el PDF del acuerdo de pago del cliente">
