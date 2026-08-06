@@ -12,7 +12,9 @@ import IvaBloque from '@/components/IvaBloque'
 import ProveedorPicker from './ProveedorPicker'
 import { desglosarIva } from '@/lib/iva'
 import CuentaContablePicker from '@/components/CuentaContablePicker'
-import { sugerenciaEgreso, nombreDeCuenta } from '@/lib/contabilidad/cuentas-selector'
+import { sugerenciaEgreso, nombreDeCuenta, categoriaDeCuenta, cuentasPorClase } from '@/lib/contabilidad/cuentas-selector'
+
+type LineaDistribucion = { cuenta: string; categoria: string; monto: string }
 
 type CentroCosto = { id: string; nombre: string }
 
@@ -46,6 +48,10 @@ export default function NuevoEgresoPage() {
   // Plan de cuentas: el movimiento alimenta la contabilidad. Por defecto afecta.
   const [afectaPlan, setAfectaPlan] = useState(true)
   const [cuentaContable, setCuentaContable] = useState('')
+  // Modo "una factura → varias cuentas/categorías" (se crea un egreso por línea,
+  // todos con el mismo N° de factura). La administradora divide el monto.
+  const [multiPlan, setMultiPlan] = useState(false)
+  const [distrib, setDistrib] = useState<LineaDistribucion[]>([{ cuenta: '', categoria: '', monto: '' }])
   const [concepto, setConcepto] = useState('')
   const [conceptoPersonalizado, setConceptoPersonalizado] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -113,15 +119,95 @@ export default function NuevoEgresoPage() {
     if (proveedor?.banco) setBancoDestino(proveedor.banco)
   }, [proveedor])
 
+  // Opciones de categoría (de la BD o el fallback) y de cuentas para la distribución.
+  const catOptions: [string, string][] = categorias.length > 0
+    ? categorias.map(c => [c.clave, c.nombre] as [string, string])
+    : Object.entries(CATEGORIAS_EGRESO_LABEL)
+  const gruposCuentas = cuentasPorClase()
+
+  const distribTotal = Math.round(distrib.reduce((sum, d) => sum + (parseFloat(d.monto) || 0), 0) * 100) / 100
+  const distribRestante = Math.round(((parseFloat(monto) || 0) - distribTotal) * 100) / 100
+
+  function setLinea(i: number, campo: keyof LineaDistribucion, valor: string) {
+    setDistrib(prev => prev.map((d, j) => {
+      if (j !== i) return d
+      const upd = { ...d, [campo]: valor }
+      // Al elegir la cuenta, se autocompleta la categoría (editable).
+      if (campo === 'cuenta') { const cat = categoriaDeCuenta(valor); if (cat) upd.categoria = cat }
+      return upd
+    }))
+  }
+  const addLinea = () => setDistrib(prev => [...prev, { cuenta: '', categoria: '', monto: '' }])
+  const rmLinea = (i: number) => setDistrib(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : prev)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
     const montoNum = parseFloat(monto)
-    if (!categoria) { setError('Selecciona una categoría'); return }
     if (isNaN(montoNum) || montoNum <= 0) { setError('El monto debe ser mayor a 0'); return }
 
     const conceptoFinal = concepto === '__otro__' ? conceptoPersonalizado.trim() : concepto
     if (!conceptoFinal) { setError('El concepto es requerido'); return }
+
+    // ── Modo distribución: una factura → varios egresos (uno por cuenta/categoría),
+    // todos con el mismo N° de factura. Sin retención (una factura = un comprobante).
+    if (afectaPlan && multiPlan) {
+      const rows = distrib
+        .map(d => ({ cuenta: d.cuenta.trim(), categoria: d.categoria, monto: parseFloat(d.monto) }))
+        .filter(r => r.cuenta && r.categoria && r.monto > 0)
+      if (rows.length < 1) { setError('Agrega al menos una línea con cuenta, categoría y monto.'); return }
+      const sum = Math.round(rows.reduce((s, r) => s + r.monto, 0) * 100) / 100
+      if (Math.abs(sum - montoNum) > 0.01) {
+        setError(`La distribución ($${sum.toFixed(2)}) no coincide con el monto total ($${montoNum.toFixed(2)}).`); return
+      }
+      setLoading(true); setError('')
+      const tasaN = parseFloat(tasaCambio)
+      const centroN = centros.find(c => c.id === centroCosto)?.nombre ?? null
+      for (const r of rows) {
+        const catLabel = catOptions.find(([k]) => k === r.categoria)?.[1] ?? r.categoria
+        const res = await crearEgreso({
+          categoria: r.categoria,
+          concepto: `${conceptoFinal} — ${catLabel}`,
+          descripcion: descripcion || null,
+          monto: r.monto,
+          moneda,
+          tasa_cambio: !isNaN(tasaN) && tasaN > 0 ? tasaN : null,
+          metodo_pago: metodoPago || null,
+          banco_origen: bancoOrigen || null,
+          banco_destino: bancoDestino.trim() || null,
+          beneficiario: proveedor?.nombre ?? null,
+          cedula_rif_benef: proveedor?.rif ?? null,
+          beneficiario_direccion: direccionBeneficiario.trim() || null,
+          referencia: referencia || null,
+          fecha_egreso: fechaEgreso,
+          area_responsable: centroN,
+          observaciones: observaciones || null,
+          numero_sa: numeroSa || null,
+          centro_costo_id: esComun ? null : (centroCosto || null),
+          es_comun: esComun,
+          origen_capital: origenCapital.trim() || null,
+          tipo_movimiento: tipoMovimiento,
+          proveedor_id: proveedor?.id ?? null,
+          iva_aplica: ivaAplica,
+          iva_tasa: ivaAplica ? (parseFloat(ivaTasa) || 0) : null,
+          monto_exento: null,
+          tipo_soporte: tipoSoporte || null,
+          fecha_factura: fechaFactura || null,
+          numero_factura: numeroFactura.trim() || null,
+          numero_control: numeroControl.trim() || null,
+          ret_iva_aplica: false,
+          ret_islr_aplica: false,
+          afecta_plan: true,
+          cuenta_contable: r.cuenta,
+          cuenta_contable_nombre: nombreDeCuenta(r.cuenta),
+          comprobantes,
+        })
+        if (res.error) { setError(`Error al registrar una línea (${r.cuenta}): ${res.error}`); setLoading(false); return }
+      }
+      router.push('/egresos'); router.refresh(); return
+    }
+
+    if (!categoria) { setError('Selecciona una categoría'); return }
 
     // Retención de IVA: requiere IVA y datos de factura obligatorios.
     if (retIvaAplica) {
@@ -421,7 +507,69 @@ export default function NuevoEgresoPage() {
 
         {/* 4 ── CLASIFICACIÓN ── */}
         <div className="card p-6">
-          <SectionHead n={4} icon={<Tag size={16} />} title="Clasificación" sub="Centro de costo, categoría y concepto" />
+          <SectionHead n={4} icon={<Tag size={16} />} title="Clasificación" sub="Plan de cuentas, categoría y concepto" />
+
+          {/* Plan de cuentas — PRIMERO: la cuenta marca la categoría. */}
+          <div className="mb-4">
+            <label className="label">Cuenta contable (plan de cuentas)</label>
+            <CuentaContablePicker
+              afecta={afectaPlan}
+              onAfectaChange={setAfectaPlan}
+              value={multiPlan ? '' : cuentaContable}
+              onChange={codigo => { setCuentaContable(codigo); const cat = categoriaDeCuenta(codigo); if (cat) { setCategoria(cat); setConcepto(''); setConceptoPersonalizado('') } }}
+              sugerencia={multiPlan ? null : sugerenciaEgreso(categoria)}
+            />
+            {afectaPlan && (
+              <label className="flex items-center gap-2 mt-2 text-xs text-oriental-gray cursor-pointer">
+                <input type="checkbox" checked={multiPlan} onChange={e => setMultiPlan(e.target.checked)} className="rounded" />
+                Afecta a <b className="text-oriental-black">diferentes planes de cuenta</b> (dividir la factura en varias categorías)
+              </label>
+            )}
+          </div>
+
+          {/* Distribución: una factura → varias cuentas/categorías (un egreso por línea). */}
+          {afectaPlan && multiPlan && (
+            <div className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3">
+              <p className="text-[11px] text-indigo-800/80 mb-3">
+                Cada línea = una <b>cuenta</b> + su <b>categoría</b> + el <b>monto</b>. Se crea un egreso por línea, todos con el mismo N° de factura. La suma debe igualar el monto total.
+              </p>
+              {distrib.map((d, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 mb-2">
+                  <div className="col-span-6">
+                    <select className="select text-sm" value={d.cuenta} onChange={e => setLinea(i, 'cuenta', e.target.value)}>
+                      <option value="">Cuenta contable…</option>
+                      {gruposCuentas.map(g => (
+                        <optgroup key={g.clase} label={`${g.clase} · ${g.nombre}`}>
+                          {g.cuentas.map(c => <option key={c.codigo} value={c.codigo}>{c.codigo} — {c.nombre}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-4">
+                    <select className="select text-sm" value={d.categoria} onChange={e => setLinea(i, 'categoria', e.target.value)}>
+                      <option value="">Categoría…</option>
+                      {catOptions.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-2 flex items-center gap-1">
+                    <input className="input text-sm text-right" inputMode="decimal" placeholder="0,00" value={d.monto} onChange={e => setLinea(i, 'monto', e.target.value)} />
+                    {distrib.length > 1 && (
+                      <button type="button" onClick={() => rmLinea(i)} className="text-gray-400 hover:text-oriental-red px-1 text-lg leading-none" aria-label="Quitar línea">×</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={addLinea} className="text-xs font-bold text-indigo-700 hover:underline mt-1">+ Agregar línea</button>
+              <div className="mt-2 flex items-center justify-between text-[11px] font-semibold">
+                <span className="text-oriental-gray">Distribuido: <b className="text-oriental-black">${distribTotal.toFixed(2)}</b> · Total: <b className="text-oriental-black">${(parseFloat(monto) || 0).toFixed(2)}</b></span>
+                <span className={Math.abs(distribRestante) < 0.01 ? 'text-green-700' : 'text-amber-700'}>
+                  {Math.abs(distribRestante) < 0.01 ? '✓ Cuadra' : `Restante: $${distribRestante.toFixed(2)}`}
+                </span>
+              </div>
+              <p className="text-[10px] text-amber-700 mt-2">Nota: con distribución no se aplican retenciones (una factura = un solo comprobante). Si necesitas retener IVA/ISLR, registra la factura como egreso único.</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Centro de costo {esComun ? '' : '*'}</label>
@@ -436,18 +584,18 @@ export default function NuevoEgresoPage() {
                 Gasto común (se reparte por % entre las líneas de ingreso)
               </label>
             </div>
-            <div>
-              <label className="label">Categoría *</label>
-              <select className="select" value={categoria} onChange={e => { setCategoria(e.target.value); setConcepto(''); setConceptoPersonalizado(''); const sug = sugerenciaEgreso(e.target.value); if (sug) setCuentaContable(sug) }} required>
-                <option value="">Seleccionar...</option>
-                {(categorias.length > 0
-                  ? categorias.map(c => [c.clave, c.nombre] as [string, string])
-                  : Object.entries(CATEGORIAS_EGRESO_LABEL)
-                ).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </div>
+            {!multiPlan && (
+              <div>
+                <label className="label">Categoría *</label>
+                <select className="select" value={categoria} onChange={e => { setCategoria(e.target.value); setConcepto(''); setConceptoPersonalizado(''); const sug = sugerenciaEgreso(e.target.value); if (sug) setCuentaContable(sug) }} required>
+                  <option value="">Seleccionar...</option>
+                  {catOptions.map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-oriental-gray mt-1">Se marca sola al elegir la cuenta; puedes cambiarla.</p>
+              </div>
+            )}
             <div className="md:col-span-2">
               <label className="label">Tipo de movimiento *</label>
               <div className="flex gap-2">
@@ -502,16 +650,6 @@ export default function NuevoEgresoPage() {
             <div className="md:col-span-2">
               <label className="label">Descripción detallada</label>
               <textarea className="textarea" rows={2} placeholder="Detalles adicionales..." value={descripcion} onChange={e => setDescripcion(e.target.value)} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="label">Cuenta contable</label>
-              <CuentaContablePicker
-                afecta={afectaPlan}
-                onAfectaChange={setAfectaPlan}
-                value={cuentaContable}
-                onChange={setCuentaContable}
-                sugerencia={sugerenciaEgreso(categoria)}
-              />
             </div>
           </div>
         </div>

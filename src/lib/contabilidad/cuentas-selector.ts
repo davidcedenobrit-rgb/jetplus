@@ -105,6 +105,23 @@ export function sugerenciaEgreso(categoria: string | null | undefined): string |
   return c && existeCuenta(c) ? c : null
 }
 
+// Mapa inverso cuenta → categoría (por defecto, editable). Como varias categorías
+// pueden compartir una cuenta, se toma la PRIMERA categoría asociada a cada
+// cuenta. Sirve para autocompletar la categoría al elegir la cuenta contable; la
+// administradora puede cambiarla si en un caso puntual no calza.
+const CUENTA_A_CATEGORIA: Record<string, string> = (() => {
+  const map: Record<string, string> = {}
+  for (const [categoria, cuenta] of Object.entries(SUGERENCIA_EGRESO)) {
+    if (!(cuenta in map)) map[cuenta] = categoria
+  }
+  return map
+})()
+
+export function categoriaDeCuenta(codigo: string | null | undefined): string | null {
+  if (!codigo) return null
+  return CUENTA_A_CATEGORIA[codigo] ?? null
+}
+
 export function sugerenciaIngreso(concepto: string | null | undefined): string | null {
   if (!concepto) return null
   // 1) Coincidencia exacta con la lista de conceptos.
