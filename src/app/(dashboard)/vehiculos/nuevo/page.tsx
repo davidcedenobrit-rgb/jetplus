@@ -10,6 +10,7 @@ import type { Cliente, VehiculoShowroom } from '@/types/database'
 import { VehiculoSchema, CreditoSchema } from '@/lib/validations'
 import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
 import { METODOS_PAGO, BANCOS_VE, sanitizeSearch, addMonthsSafe } from '@/lib/utils'
+import { listarAnticiposCliente, aplicarAnticiposAVenta, type AnticipoDisponible } from '../../anticipos/actions'
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
@@ -130,6 +131,11 @@ export default function NuevoVehiculoPage() {
   const [pagosIniciales, setPagosIniciales] = useState<PagoInicial[]>([
     { id: '1', moneda: 'USD', monto: '', metodo: '', referencia: '', bancoEmisor: '', bancoReceptor: '', montoBs: '', tasaCambio: '', observaciones: '', comprobantes: [] }
   ])
+  // Anticipos: objetivo de inicial (para topar) + anticipos del cliente disponibles
+  // y seleccionados para asociar. Al asociar, descuentan del efectivo a pagar.
+  const [inicialObjetivo, setInicialObjetivo] = useState(0)
+  const [anticiposDisp, setAnticiposDisp] = useState<AnticipoDisponible[]>([])
+  const [anticiposSel, setAnticiposSel] = useState<Set<string>>(new Set())
 
   // Showroom
   const [vehiculosShowroom, setVehiculosShowroom] = useState<VehiculoShowroom[]>([])
@@ -329,6 +335,7 @@ export default function NuevoVehiculoPage() {
       const iniProforma = Number(pro.monto_inicial) || 0
       if (iniProforma > 0 && !tieneJalados) {
         setRegistrarIngresoInicial(true)
+        setInicialObjetivo(iniProforma)
         setPagosIniciales(prev => prev.map((p, i) => i === 0 ? { ...p, monto: iniProforma.toFixed(2) } : p))
       }
     })()
@@ -544,8 +551,29 @@ export default function NuevoVehiculoPage() {
       const m = parseFloat(vh4060Inicial) || calc4060?.inicial || 0
       if (m > 0) monto = m.toFixed(2)
     }
-    if (monto) setPagosIniciales(prev => prev.map((p, i) => i === 0 ? { ...p, monto } : p))
+    if (monto) { setInicialObjetivo(parseFloat(monto) || 0); setPagosIniciales(prev => prev.map((p, i) => i === 0 ? { ...p, monto } : p)) }
   }, [tipoCompra, plan, planAC500Sel, vh4060Inicial, calc4060])
+
+  // Anticipos disponibles del cliente seleccionado (para asociar a la inicial).
+  useEffect(() => {
+    if (!clienteSeleccionado?.id) { setAnticiposDisp([]); setAnticiposSel(new Set()); return }
+    listarAnticiposCliente(clienteSeleccionado.id).then(setAnticiposDisp).catch(() => setAnticiposDisp([]))
+    setAnticiposSel(new Set())
+  }, [clienteSeleccionado?.id])
+
+  // Total de anticipos seleccionados, topado al inicial objetivo.
+  const anticiposAplicados = useMemo(() => {
+    const suma = anticiposDisp.filter(a => anticiposSel.has(a.id)).reduce((s, a) => s + Number(a.saldo_usd || 0), 0)
+    const tope = inicialObjetivo > 0 ? inicialObjetivo : suma
+    return Math.round(Math.min(suma, tope) * 100) / 100
+  }, [anticiposDisp, anticiposSel, inicialObjetivo])
+
+  // El efectivo a registrar = inicial − anticipos aplicados (solo cuando hay objetivo).
+  useEffect(() => {
+    if (inicialObjetivo <= 0) return
+    const efectivo = Math.max(0, Math.round((inicialObjetivo - anticiposAplicados) * 100) / 100)
+    setPagosIniciales(prev => prev.map((p, i) => i === 0 ? { ...p, monto: efectivo.toFixed(2) } : p))
+  }, [inicialObjetivo, anticiposAplicados])
 
   const calcCuotaEspecial = useMemo(() => {
     const monto = parseFloat(ceMonto) || 0
@@ -919,6 +947,23 @@ export default function NuevoVehiculoPage() {
       .single()
     if (upsertError || !vehiculo) { setError(upsertError?.message ?? 'Error al guardar'); setLoading(false); return }
 
+    // Asociar anticipos: por cada anticipo seleccionado se crea un ingreso ligado
+    // al carro (cuenta como pagado, sin recobrar) y se reduce su saldo. El efectivo
+    // restante lo cubre el pago inicial normal. Best-effort: no bloquea la venta.
+    if (anticiposSel.size > 0 && clienteSeleccionado) {
+      try {
+        await aplicarAnticiposAVenta({
+          anticipoIds: Array.from(anticiposSel),
+          vehiculoId: vehiculo.id,
+          clienteId: clienteSeleccionado.id,
+          placa: vehiculo.placa || null,
+          vehiculoDesc: `${vehiculo.marca} ${vehiculo.modelo}`,
+          fecha: ingresoInicialFecha,
+          topeInicial: inicialObjetivo > 0 ? inicialObjetivo : anticiposAplicados,
+        })
+      } catch { /* el registro de la venta no se bloquea por los anticipos */ }
+    }
+
     // Vincular la proforma a esta venta (flujo nuevo). Se hace apenas existe el
     // vehículo para cubrir todos los caminos (acuerdo, contado, financiado).
     if (proformaId) {
@@ -1214,6 +1259,45 @@ export default function NuevoVehiculoPage() {
   }
 
   const modelos = marca === 'MG' ? MODELOS_MG : MODELOS_MAXUS
+
+  const fmtUsd = (n: number) => Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const toggleAnticipo = (id: string) => setAnticiposSel(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+
+  // UI compartida para asociar anticipos del cliente a la inicial.
+  const anticiposUI = (registrarIngresoInicial && clienteSeleccionado && anticiposDisp.length > 0) ? (
+    <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+      <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Asociar anticipos del cliente</p>
+      <p className="text-[11px] text-emerald-700/80 mb-2">
+        Selecciona los anticipos ya pagados por <b>{clienteSeleccionado.nombre}</b>. Se convierten en ingresos ligados al carro y <b>descuentan del efectivo a pagar</b>.
+      </p>
+      <div className="space-y-1.5 max-h-44 overflow-y-auto">
+        {anticiposDisp.map(a => {
+          const sel = anticiposSel.has(a.id)
+          return (
+            <button key={a.id} type="button" onClick={() => toggleAnticipo(a.id)}
+              className={`w-full text-left px-2.5 py-2 rounded-lg border text-xs flex items-start gap-2 transition-colors ${sel ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 bg-white hover:bg-emerald-50/50'}`}>
+              <input type="checkbox" checked={sel} readOnly className="mt-0.5 w-3.5 h-3.5 accent-emerald-600" />
+              <span className="flex-1 min-w-0">
+                <span className="font-bold text-oriental-black">${fmtUsd(a.saldo_usd)}</span>
+                <span className="text-gray-500"> · {a.fecha_pago?.slice(0, 10).split('-').reverse().join('/')}{a.metodo_pago ? ` · ${a.metodo_pago}` : ''}</span>
+                {a.concepto && <span className="block text-gray-500 truncate">{a.concepto}</span>}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      {anticiposAplicados > 0 && (
+        <div className="mt-2 text-[11px] text-emerald-800 bg-white border border-emerald-200 rounded-lg px-2.5 py-2">
+          Anticipos a aplicar: <b>${fmtUsd(anticiposAplicados)}</b>
+          {inicialObjetivo > 0 && <> · Inicial: <b>${fmtUsd(inicialObjetivo)}</b> · Efectivo a registrar: <b>${fmtUsd(Math.max(0, inicialObjetivo - anticiposAplicados))}</b></>}
+        </div>
+      )}
+    </div>
+  ) : null
 
   return (
     <div className="p-8 max-w-3xl">
@@ -1951,6 +2035,7 @@ export default function NuevoVehiculoPage() {
                         <label className="label">Fecha de pago *</label>
                         <input type="date" className="input" value={ingresoInicialFecha} onChange={e => setIngresoInicialFecha(e.target.value)} />
                       </div>
+                      {anticiposUI}
                       {/* Filas de pago */}
                       {pagosIniciales.map((pago, idx) => (
                         <div key={pago.id} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-white">
@@ -2486,6 +2571,7 @@ export default function NuevoVehiculoPage() {
                   <label className="label">Fecha de pago *</label>
                   <input type="date" className="input" value={ingresoInicialFecha} onChange={e => setIngresoInicialFecha(e.target.value)} />
                 </div>
+                {anticiposUI}
                 {pagosIniciales.map((pago, idx) => (
                   <div key={pago.id} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-white">
                     <div className="flex items-center justify-between">
