@@ -10,7 +10,7 @@ import type { Cliente, VehiculoShowroom } from '@/types/database'
 import { VehiculoSchema, CreditoSchema } from '@/lib/validations'
 import { MODELOS_MG, MODELOS_MAXUS } from '@/lib/modelos'
 import { METODOS_PAGO, BANCOS_VE, sanitizeSearch, addMonthsSafe } from '@/lib/utils'
-import { listarAnticiposCliente, aplicarAnticiposAVenta, type AnticipoDisponible } from '../../anticipos/actions'
+import { listarAnticiposCliente, aplicarAnticiposAVenta, asociarIngresosAVenta, type AnticipoDisponible } from '../../anticipos/actions'
 
 type Plan = 'credito_40_60' | 'asegurate_500' | 'personalizado'
 
@@ -136,6 +136,11 @@ export default function NuevoVehiculoPage() {
   const [inicialObjetivo, setInicialObjetivo] = useState(0)
   const [anticiposDisp, setAnticiposDisp] = useState<AnticipoDisponible[]>([])
   const [anticiposSel, setAnticiposSel] = useState<Set<string>>(new Set())
+  // Asociar ingresos YA registrados (no anticipos): búsqueda + selección.
+  const [ingVBuscar, setIngVBuscar] = useState('')
+  const [ingVRes, setIngVRes] = useState<{ id: string; numero_recibo: string; concepto: string; monto: number; cliente_nombre: string; vehiculo_id: string | null; proforma_id: string | null }[]>([])
+  const [ingVBuscando, setIngVBuscando] = useState(false)
+  const [ingVSel, setIngVSel] = useState<{ id: string; recibo: string; monto: number }[]>([])
 
   // Showroom
   const [vehiculosShowroom, setVehiculosShowroom] = useState<VehiculoShowroom[]>([])
@@ -556,24 +561,44 @@ export default function NuevoVehiculoPage() {
 
   // Anticipos disponibles del cliente seleccionado (para asociar a la inicial).
   useEffect(() => {
-    if (!clienteSeleccionado?.id) { setAnticiposDisp([]); setAnticiposSel(new Set()); return }
+    if (!clienteSeleccionado?.id) { setAnticiposDisp([]); setAnticiposSel(new Set()); setIngVSel([]); setIngVBuscar(''); setIngVRes([]); return }
     listarAnticiposCliente(clienteSeleccionado.id).then(setAnticiposDisp).catch(() => setAnticiposDisp([]))
-    setAnticiposSel(new Set())
+    setAnticiposSel(new Set()); setIngVSel([]); setIngVBuscar(''); setIngVRes([])
   }, [clienteSeleccionado?.id])
 
-  // Total de anticipos seleccionados, topado al inicial objetivo.
-  const anticiposAplicados = useMemo(() => {
-    const suma = anticiposDisp.filter(a => anticiposSel.has(a.id)).reduce((s, a) => s + Number(a.saldo_usd || 0), 0)
+  // Búsqueda (con debounce) de ingresos ya registrados para asociarlos.
+  useEffect(() => {
+    const q = ingVBuscar.trim()
+    if (q.length < 2) { setIngVRes([]); setIngVBuscando(false); return }
+    setIngVBuscando(true)
+    const t = setTimeout(() => {
+      fetch(`/api/ingresos/buscar?q=${encodeURIComponent(q)}`)
+        .then(r => r.ok ? r.json() : []).then(d => setIngVRes(Array.isArray(d) ? d : []))
+        .catch(() => setIngVRes([])).finally(() => setIngVBuscando(false))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [ingVBuscar])
+
+  // Total de INGRESOS ya registrados asociados (topado al inicial).
+  const ingresosVincTotal = useMemo(() => {
+    const suma = ingVSel.reduce((s, x) => s + (Number(x.monto) || 0), 0)
     const tope = inicialObjetivo > 0 ? inicialObjetivo : suma
     return Math.round(Math.min(suma, tope) * 100) / 100
-  }, [anticiposDisp, anticiposSel, inicialObjetivo])
+  }, [ingVSel, inicialObjetivo])
 
-  // El efectivo a registrar = inicial − anticipos aplicados (solo cuando hay objetivo).
+  // Total de anticipos seleccionados; cubren lo que quede del inicial tras los ingresos.
+  const anticiposAplicados = useMemo(() => {
+    const suma = anticiposDisp.filter(a => anticiposSel.has(a.id)).reduce((s, a) => s + Number(a.saldo_usd || 0), 0)
+    const restante = inicialObjetivo > 0 ? Math.max(0, inicialObjetivo - ingresosVincTotal) : suma
+    return Math.round(Math.min(suma, restante) * 100) / 100
+  }, [anticiposDisp, anticiposSel, inicialObjetivo, ingresosVincTotal])
+
+  // El efectivo a registrar = inicial − ingresos asociados − anticipos (con objetivo).
   useEffect(() => {
     if (inicialObjetivo <= 0) return
-    const efectivo = Math.max(0, Math.round((inicialObjetivo - anticiposAplicados) * 100) / 100)
+    const efectivo = Math.max(0, Math.round((inicialObjetivo - ingresosVincTotal - anticiposAplicados) * 100) / 100)
     setPagosIniciales(prev => prev.map((p, i) => i === 0 ? { ...p, monto: efectivo.toFixed(2) } : p))
-  }, [inicialObjetivo, anticiposAplicados])
+  }, [inicialObjetivo, ingresosVincTotal, anticiposAplicados])
 
   const calcCuotaEspecial = useMemo(() => {
     const monto = parseFloat(ceMonto) || 0
@@ -947,9 +972,16 @@ export default function NuevoVehiculoPage() {
       .single()
     if (upsertError || !vehiculo) { setError(upsertError?.message ?? 'Error al guardar'); setLoading(false); return }
 
-    // Asociar anticipos: por cada anticipo seleccionado se crea un ingreso ligado
-    // al carro (cuenta como pagado, sin recobrar) y se reduce su saldo. El efectivo
-    // restante lo cubre el pago inicial normal. Best-effort: no bloquea la venta.
+    // Asociar INGRESOS ya registrados: se ligan al carro (cuentan como inicial,
+    // sin recobrar). Best-effort. Se hace primero para topar bien los anticipos.
+    if (ingVSel.length > 0) {
+      try { await asociarIngresosAVenta(ingVSel.map(x => x.id), vehiculo.id, vehiculo.placa || null) }
+      catch { /* no bloquea la venta */ }
+    }
+
+    // Asociar ANTICIPOS: por cada anticipo se crea un ingreso ligado al carro
+    // (cuenta como pagado, sin recobrar) y se reduce su saldo. Cubren lo que quede
+    // del inicial tras los ingresos asociados. Best-effort: no bloquea la venta.
     if (anticiposSel.size > 0 && clienteSeleccionado) {
       try {
         await aplicarAnticiposAVenta({
@@ -959,7 +991,7 @@ export default function NuevoVehiculoPage() {
           placa: vehiculo.placa || null,
           vehiculoDesc: `${vehiculo.marca} ${vehiculo.modelo}`,
           fecha: ingresoInicialFecha,
-          topeInicial: inicialObjetivo > 0 ? inicialObjetivo : anticiposAplicados,
+          topeInicial: inicialObjetivo > 0 ? Math.max(0, inicialObjetivo - ingresosVincTotal) : anticiposAplicados,
         })
       } catch { /* el registro de la venta no se bloquea por los anticipos */ }
     }
@@ -1266,6 +1298,10 @@ export default function NuevoVehiculoPage() {
     if (next.has(id)) next.delete(id); else next.add(id)
     return next
   })
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const toggleIngresoV = (r: any) => setIngVSel(prev => prev.some(x => x.id === r.id)
+    ? prev.filter(x => x.id !== r.id)
+    : [...prev, { id: r.id, recibo: r.numero_recibo, monto: Number(r.monto) || 0 }])
 
   // UI compartida para asociar anticipos del cliente a la inicial. Se muestra
   // siempre que haya cliente (con aviso si no tiene anticipos) para que el flujo
@@ -1297,13 +1333,44 @@ export default function NuevoVehiculoPage() {
           )
         })}
       </div>
-      {anticiposAplicados > 0 && (
-        <div className="mt-2 text-[11px] text-emerald-800 bg-white border border-emerald-200 rounded-lg px-2.5 py-2">
-          Anticipos a aplicar: <b>${fmtUsd(anticiposAplicados)}</b>
-          {inicialObjetivo > 0 && <> · Inicial: <b>${fmtUsd(inicialObjetivo)}</b> · Efectivo a registrar: <b>${fmtUsd(Math.max(0, inicialObjetivo - anticiposAplicados))}</b></>}
+      </>)}
+
+      {/* Asociar ingresos YA registrados (para clientes cuyo pago quedó como ingreso, no anticipo) */}
+      <div className="mt-3 pt-3 border-t border-emerald-200">
+        <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Asociar ingresos ya registrados</p>
+        <p className="text-[11px] text-emerald-700/80 mb-2">Si el cliente ya pagó y quedó como <b>Ingreso</b> (con recibo), búscalo por recibo o cliente y asócialo. Cuenta como inicial y <b>no se cobra de nuevo</b>.</p>
+        <input value={ingVBuscar} onChange={e => setIngVBuscar(e.target.value)}
+          className="w-full px-3 py-2 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          placeholder="N° de recibo o nombre / cédula del cliente…" />
+        {ingVBuscando && <p className="text-[10px] text-gray-400 mt-1">Buscando…</p>}
+        {ingVRes.length > 0 && (
+          <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100 bg-white">
+            {ingVRes.map((r) => {
+              const sel = ingVSel.some(x => x.id === r.id)
+              const ligadoOtro = !!r.vehiculo_id && !sel
+              return (
+                <button key={r.id} type="button" disabled={ligadoOtro} onClick={() => toggleIngresoV(r)}
+                  className={`w-full text-left px-2.5 py-2 text-xs flex items-start gap-2 ${ligadoOtro ? 'opacity-50 cursor-not-allowed' : 'hover:bg-emerald-50'} ${sel ? 'bg-emerald-50' : ''}`}>
+                  <input type="checkbox" checked={sel} readOnly disabled={ligadoOtro} className="mt-0.5 w-3.5 h-3.5 accent-emerald-600" />
+                  <span className="flex-1 min-w-0">
+                    <span className="font-bold text-oriental-black">Recibo {r.numero_recibo || '—'}</span>
+                    <span className="text-gray-500"> · {r.cliente_nombre || 'Sin cliente'}</span>
+                    <span className="block text-gray-500 truncate">{r.concepto} · <b className="text-oriental-black">${fmtUsd(r.monto)}</b>{ligadoOtro ? ' · ya ligado a otra venta' : ''}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {(anticiposAplicados > 0 || ingresosVincTotal > 0) && (
+        <div className="mt-3 text-[11px] text-emerald-900 bg-white border border-emerald-300 rounded-lg px-2.5 py-2">
+          {ingresosVincTotal > 0 && <>Ingresos asociados: <b>${fmtUsd(ingresosVincTotal)}</b> · </>}
+          {anticiposAplicados > 0 && <>Anticipos: <b>${fmtUsd(anticiposAplicados)}</b> · </>}
+          {inicialObjetivo > 0 && <>Inicial: <b>${fmtUsd(inicialObjetivo)}</b> · Efectivo a registrar: <b>${fmtUsd(Math.max(0, inicialObjetivo - ingresosVincTotal - anticiposAplicados))}</b></>}
         </div>
       )}
-      </>)}
     </div>
   ) : null
 

@@ -162,6 +162,22 @@ export async function aplicarAnticiposAVenta(p: {
   return { ok: true, totalAplicado }
 }
 
+// Asocia INGRESOS ya registrados (no anticipos) a una venta: los liga al
+// vehículo para que cuenten como inicial pagado, sin crear ni recobrar nada.
+export async function asociarIngresosAVenta(ingresoIds: string[], vehiculoId: string, placa: string | null) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autorizado' }
+  const ids = (ingresoIds ?? []).filter(Boolean)
+  if (ids.length === 0) return { ok: true }
+  const admin = await createAdminClient()
+  const { error } = await admin.from('ingresos')
+    .update({ vehiculo_id: vehiculoId, placa: placa || null })
+    .in('id', ids)
+  if (error) return { error: 'No se pudieron asociar los ingresos' }
+  return { ok: true }
+}
+
 const ROLES_ANULAR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 export async function anularAnticipo(id: string) {
