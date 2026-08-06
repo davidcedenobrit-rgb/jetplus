@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2, ClipboardCheck, ShieldAlert, BookMarked } from 'lucide-react'
+import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2, ClipboardCheck, ShieldAlert, BookMarked, PackageCheck } from 'lucide-react'
 import ProformaPanel from './ProformaPanel'
 import AcuerdoCobroPanel from './AcuerdoCobroPanel'
 
@@ -162,6 +162,11 @@ export default function ProformasTab() {
                     className="flex items-center gap-1.5 px-3 py-2 border border-amber-300 rounded-lg text-xs font-bold text-amber-700 hover:bg-amber-50"
                     title="Generar la exoneración de responsabilidad (papel ahumado)">
                     <ShieldAlert size={13} /> Exores
+                  </a>
+                  <a href={`/api/proformas/${p.id}/resumen-entrega/pdf`} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-2 border border-teal-300 rounded-lg text-xs font-bold text-teal-700 hover:bg-teal-50"
+                    title="Generar el resumen de entrega del vehículo">
+                    <PackageCheck size={13} /> Resumen entrega
                   </a>
                   {vendida ? (
                     <button onClick={() => router.push(`/vehiculos/${p.vehiculo_id}`)}
