@@ -154,6 +154,20 @@ function seedRojasLineas(v: any, base: Modalidad): Record<string, string> {
 
 const num = (s: string | undefined) => parseFloat(String(s ?? '').replace(',', '.')) || 0
 
+// Cargos que se calculan solos a partir del precio base y el % inicial:
+//  · Gastos Vehimotor = precio base × %financiado × 7%  (financiado = 100 − inicial; solo crédito)
+//  · IGTF            = precio base × 3%
+const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
+const calcVhmR = (base: number, iniPct: number) => r2(base * (1 - (iniPct || 0) / 100) * 0.07)
+const calcIgtfR = (base: number) => r2(base * 0.03)
+// Devuelve las líneas con Gastos Vehimotor e IGTF recalculados (salvo edición manual).
+function conAutoRojas(lineas: Record<string, string>, precio: number, iniPct: number, base: Modalidad, vhmManual: boolean, igtfManual: boolean): Record<string, string> {
+  const out = { ...lineas }
+  if (!vhmManual && base === 'credito_24') out.gastos_vhm = String(calcVhmR(precio, iniPct))
+  if (!igtfManual) out.igtf = String(calcIgtfR(precio))
+  return out
+}
+
 export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, modo = 'normal' }: { catalogo: any[]; showroomStock?: ShowroomItem[]; tasas: { bcv: number; usdt: number }; modo?: 'normal' | 'ac500' }) {
   // modo 'ac500' (módulo Precompra): la cotización arranca directo en Asegúrate con $500.
   const esPrecompra = modo === 'ac500'
@@ -208,6 +222,10 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
   const [rojasMeses, setRojasMeses] = useState('24')
   const [rojasTasa, setRojasTasa] = useState('0')
   const [rojasCond, setRojasCond] = useState('')
+  // "Editado a mano": mientras esté en false, se recalculan solos al cambiar
+  // precio base / % inicial. Se marca true si Rojas escribe el valor.
+  const [rojasVhmManual, setRojasVhmManual] = useState(false)
+  const [rojasIgtfManual, setRojasIgtfManual] = useState(false)
 
   // ── Banca Nacional: dos variantes ──
   const [bnVariante, setBnVariante] = useState<'vehimotors' | 'cliente'>('cliente')
@@ -266,17 +284,31 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
 
   function activarRojas() {
     const base: Modalidad = modalidad === 'credito_24' ? 'credito_24' : 'contado'
+    const precio = vehiculoSel?.cash ?? 0
     setRojasMode(true)
     setPlan('vehimotors')
     setRojasBase(base)
-    setRojasPrecio(vehiculoSel?.cash ? String(vehiculoSel.cash) : '')
-    setRojasLineas(seedRojasLineas(vehiculoSel as any, base))
+    setRojasPrecio(precio ? String(precio) : '')
     setRojasIniPct('40'); setRojasMeses('24'); setRojasTasa('0')
+    setRojasVhmManual(false); setRojasIgtfManual(false)
+    // Prellena Gastos Vehimotor (7% del financiado) e IGTF (3%) por fórmula.
+    setRojasLineas(conAutoRojas(seedRojasLineas(vehiculoSel as any, base), precio, 40, base, false, false))
   }
   function cambiarRojasBase(base: Modalidad) {
     setRojasBase(base)
-    setRojasLineas(seedRojasLineas(vehiculoSel as any, base))
+    setRojasLineas(conAutoRojas(seedRojasLineas(vehiculoSel as any, base), num(rojasPrecio), num(rojasIniPct), base, rojasVhmManual, rojasIgtfManual))
   }
+  // Cambios de precio base / % inicial recalculan los cargos automáticos.
+  function onRojasPrecio(v: string) {
+    setRojasPrecio(v)
+    setRojasLineas(prev => conAutoRojas(prev, num(v), num(rojasIniPct), rojasBase, rojasVhmManual, rojasIgtfManual))
+  }
+  function onRojasIniPct(v: string) {
+    setRojasIniPct(v)
+    setRojasLineas(prev => conAutoRojas(prev, num(rojasPrecio), num(v), rojasBase, rojasVhmManual, rojasIgtfManual))
+  }
+  function reautoRojasVhm() { setRojasVhmManual(false); setRojasLineas(prev => ({ ...prev, gastos_vhm: String(calcVhmR(num(rojasPrecio), num(rojasIniPct))) })) }
+  function reautoRojasIgtf() { setRojasIgtfManual(false); setRojasLineas(prev => ({ ...prev, igtf: String(calcIgtfR(num(rojasPrecio))) })) }
 
   const rojasCalc = useMemo(() => {
     const precio = num(rojasPrecio)
@@ -475,7 +507,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
     setPlanAC500Sel(null); setPlanesAC500([])
     setCliQuery(''); setCliResultados([]); setCliOpen(false)
     setCantidad(1); setVendedorasSel([])
-    setRojasMode(false); setRojasCond(''); setRojasLineas({}); setRojasPrecio('')
+    setRojasMode(false); setRojasCond(''); setRojasLineas({}); setRojasPrecio(''); setRojasVhmManual(false); setRojasIgtfManual(false)
     setBnVariante('cliente'); setBnDiferencial(''); setBnCond(''); setBnExpediente([]); setBnCasoMsg(''); setBnBanco('')
     setBnCuotas(false); setBnFinanciado(''); setBnMeses('24'); setBnTasa('16')
   }
@@ -1060,18 +1092,32 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
 
             <div className="mb-3">
               <label className={labelCls}>Precio base ($)</label>
-              <input className={inputCls} inputMode="decimal" value={rojasPrecio} onChange={e => setRojasPrecio(e.target.value)} placeholder="30000" />
+              <input className={inputCls} inputMode="decimal" value={rojasPrecio} onChange={e => onRojasPrecio(e.target.value)} placeholder="30000" />
             </div>
 
             <p className={labelCls}>Estructura de costos ($) — editable</p>
             <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 mb-3">
-              {CLAVES_ROJAS.map(({ k, label }) => (
-                <div key={k} className="flex items-center justify-between px-3 py-1.5">
-                  <span className="text-sm text-gray-600">{label}</span>
-                  <input className="w-28 px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-oriental-red"
-                    inputMode="decimal" value={rojasLineas[k] ?? ''} onChange={e => setRojasLineas(p => ({ ...p, [k]: e.target.value }))} />
-                </div>
-              ))}
+              {CLAVES_ROJAS.map(({ k, label }) => {
+                const autoField = k === 'igtf' || (k === 'gastos_vhm' && rojasBase === 'credito_24')
+                const isManual = k === 'gastos_vhm' ? rojasVhmManual : k === 'igtf' ? rojasIgtfManual : false
+                const reauto = k === 'gastos_vhm' ? reautoRojasVhm : reautoRojasIgtf
+                return (
+                  <div key={k} className="flex items-center justify-between px-3 py-1.5">
+                    <span className="text-sm text-gray-600 flex items-center gap-1.5">
+                      {label}
+                      {autoField && !isManual && <span className="text-[9px] font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">AUTO</span>}
+                      {autoField && isManual && <button type="button" onClick={reauto} className="text-[9px] font-bold text-purple-600 hover:underline">↻ auto</button>}
+                    </span>
+                    <input className="w-28 px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-oriental-red"
+                      inputMode="decimal" value={rojasLineas[k] ?? ''}
+                      onChange={e => {
+                        if (k === 'gastos_vhm') setRojasVhmManual(true)
+                        if (k === 'igtf') setRojasIgtfManual(true)
+                        setRojasLineas(p => ({ ...p, [k]: e.target.value }))
+                      }} />
+                  </div>
+                )
+              })}
               <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
                 <span className="text-xs font-bold text-gray-600 uppercase">Gastos totales</span>
                 <span className="text-sm font-bold text-oriental-black">${fmt(rojasCalc.gastos)}</span>
@@ -1082,7 +1128,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
               <div className="grid grid-cols-3 gap-2 mb-3">
                 <div>
                   <label className={labelCls}>% Inicial</label>
-                  <input className={inputCls} inputMode="decimal" value={rojasIniPct} onChange={e => setRojasIniPct(e.target.value)} />
+                  <input className={inputCls} inputMode="decimal" value={rojasIniPct} onChange={e => onRojasIniPct(e.target.value)} />
                 </div>
                 <div>
                   <label className={labelCls}>Meses</label>

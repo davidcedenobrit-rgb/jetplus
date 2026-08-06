@@ -28,6 +28,13 @@ const CLAVES: { k: keyof Lineas; label: string }[] = [
 ]
 
 const fmt = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
+
+// Cargos que se calculan solos a partir del precio base y el % inicial.
+//  · Gastos Vehimotor = precio base × %financiado × 7%   (financiado = 100 − inicial; solo crédito)
+//  · IGTF            = precio base × 3%
+const calcVhm = (base: number, inicialPct: number) => r2(base * (1 - (inicialPct || 0) / 100) * 0.07)
+const calcIgtf = (base: number) => r2(base * 0.03)
 
 export default function DescuentoPanel({ cotId, numero, onDone }: { cotId: string; numero: string; onDone: () => void }) {
   const [open, setOpen] = useState(false)
@@ -37,26 +44,55 @@ export default function DescuentoPanel({ cotId, numero, onDone }: { cotId: strin
   const [est, setEst] = useState<Estructura | null>(null)
   const [motivo, setMotivo] = useState('')
   const [reenviar, setReenviar] = useState(true)
+  // "Editado a mano": mientras esté en false, el cargo se recalcula solo al
+  // cambiar el precio base o el % inicial. Se marca true si el usuario lo escribe.
+  const [vhmManual, setVhmManual] = useState(false)
+  const [igtfManual, setIgtfManual] = useState(false)
 
   async function abrir() {
     setOpen(true); setError(''); setEst(null); setLoading(true)
+    setVhmManual(false); setIgtfManual(false)
     try {
       const r = await fetch(`/api/cotizaciones/${cotId}/estructura`)
       const j = await r.json()
       if (!r.ok) { setError(j.error ?? 'No se pudo cargar la estructura'); setLoading(false); return }
-      setEst(j.estructura)
+      // Arrancan en "auto": al abrir se prellena Gastos Vehimotor (7% del
+      // financiado) e IGTF (3%) por fórmula; luego se recalculan al cambiar el
+      // precio base o el % inicial. Si Rojas escribe un valor, ese pasa a manual.
+      const e = j.estructura as Estructura
+      const lineas = { ...e.lineas }
+      if (e.modalidad === 'credito_24') lineas.gastos_vhm = calcVhm(e.precioBase, e.inicialPct)
+      lineas.igtf = calcIgtf(e.precioBase)
+      setEst({ ...e, lineas })
     } catch { setError('Error de conexión') }
     setLoading(false)
   }
 
   function setLinea(k: keyof Lineas, v: string) {
-    if (!est) return
-    setEst({ ...est, lineas: { ...est.lineas, [k]: parseFloat(v.replace(',', '.')) || 0 } })
+    // Al escribir un cargo automático, pasa a "manual" y manda lo que puso el usuario.
+    if (k === 'gastos_vhm') setVhmManual(true)
+    if (k === 'igtf') setIgtfManual(true)
+    setEst(prev => prev ? { ...prev, lineas: { ...prev.lineas, [k]: parseFloat(v.replace(',', '.')) || 0 } } : prev)
   }
   function setCampo(campo: 'precioBase' | 'inicialPct' | 'tasaPct' | 'meses' | 'cuotaVehimotors', v: string) {
-    if (!est) return
-    setEst({ ...est, [campo]: parseFloat(v.replace(',', '.')) || 0 })
+    const val = parseFloat(v.replace(',', '.')) || 0
+    setEst(prev => {
+      if (!prev) return prev
+      const next = { ...prev, [campo]: val }
+      // Al cambiar precio base o % inicial, se recalculan los cargos automáticos
+      // (salvo que hayan sido editados a mano).
+      if (campo === 'precioBase' || campo === 'inicialPct') {
+        const lineas = { ...next.lineas }
+        if (!vhmManual && next.modalidad === 'credito_24') lineas.gastos_vhm = calcVhm(next.precioBase, next.inicialPct)
+        if (!igtfManual) lineas.igtf = calcIgtf(next.precioBase)
+        next.lineas = lineas
+      }
+      return next
+    })
   }
+  // Volver a "auto" un cargo que se editó a mano (recalcula al instante).
+  function reautoVhm() { setVhmManual(false); setEst(prev => prev ? { ...prev, lineas: { ...prev.lineas, gastos_vhm: calcVhm(prev.precioBase, prev.inicialPct) } } : prev) }
+  function reautoIgtf() { setIgtfManual(false); setEst(prev => prev ? { ...prev, lineas: { ...prev.lineas, igtf: calcIgtf(prev.precioBase) } } : prev) }
 
   // Vista previa (el cálculo autoritativo se hace en el servidor al guardar).
   const preview = (() => {
@@ -136,12 +172,21 @@ export default function DescuentoPanel({ cotId, numero, onDone }: { cotId: strin
                   <div>
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Estructura de costos (editable)</p>
                     <div className="rounded-xl border border-gray-200 divide-y divide-gray-100">
-                      {CLAVES.map(({ k, label }) => (
-                        <div key={k} className="flex items-center justify-between px-3 py-1.5">
-                          <span className="text-sm text-gray-600">{label}</span>
-                          <input className={inp} inputMode="decimal" value={est.lineas[k]} onChange={e => setLinea(k, e.target.value)} />
-                        </div>
-                      ))}
+                      {CLAVES.map(({ k, label }) => {
+                        const autoField = k === 'igtf' || (k === 'gastos_vhm' && esCredito)
+                        const isManual = k === 'gastos_vhm' ? vhmManual : k === 'igtf' ? igtfManual : false
+                        const reauto = k === 'gastos_vhm' ? reautoVhm : reautoIgtf
+                        return (
+                          <div key={k} className="flex items-center justify-between px-3 py-1.5">
+                            <span className="text-sm text-gray-600 flex items-center gap-1.5">
+                              {label}
+                              {autoField && !isManual && <span className="text-[9px] font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">AUTO</span>}
+                              {autoField && isManual && <button type="button" onClick={reauto} className="text-[9px] font-bold text-indigo-600 hover:underline">↻ auto</button>}
+                            </span>
+                            <input className={inp} inputMode="decimal" value={est.lineas[k]} onChange={e => setLinea(k, e.target.value)} />
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
 
