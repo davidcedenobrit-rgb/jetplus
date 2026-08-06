@@ -89,6 +89,28 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const credito: any = pro.credito_snapshot ?? {}
   const cronograma: CuotaCronogramaItem[] = (pro.cronograma_snapshot ?? []) as CuotaCronogramaItem[]
 
+  // Estructura del "Resumen de la operación". Si la proforma no guardó el
+  // desglose (estructura_costos), se RECONSTRUYE con los datos que sí hay para
+  // que TODAS las proformas de crédito salgan en el formato detallado (40% base,
+  // IVA, gastos, inicial, financiamiento) y no en el resumen pobre.
+  let estructura = buildEstructura(pro.estructura_costos)
+  if (!estructura) {
+    const precioBase = Number(vehiculo.precio_base ?? 0)
+    const inicial = Number(pro.monto_inicial ?? 0)
+    const financiado = Number(pro.monto_financiado ?? 0)
+    // Solo cuando es una venta a crédito (hay financiamiento) y los datos cuadran.
+    if (precioBase > 0 && inicial > 0 && financiado > 0) {
+      const inicialPct = Number((pro.estructura_costos as any)?.inicialPct) || 40
+      const iva = Math.round(precioBase * 0.16 * 100) / 100
+      const iniBase = Math.round(precioBase * inicialPct / 100 * 100) / 100
+      const gastos = Math.round((inicial - iniBase - iva) * 100) / 100
+      estructura = {
+        precioBase, iva, inicialPct, iniBase,
+        gastos: gastos > 0 ? [{ label: 'Gastos (placa, pólizas, notaría, IGTF)', monto: gastos }] : [],
+      }
+    }
+  }
+
   // Crédito de la INICIAL otorgado por La Oriental (acuerdo de gestión de cobro).
   // Es un compromiso aparte del crédito Vehimotor. Solo aplica cuando existe un
   // acuerdo aceptado ligado a la cotización de esta proforma.
@@ -145,7 +167,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     vin: vehiculo.vin ?? null,
     serialMotor: vehiculo.serial_motor ?? null,
     proformaVehimotors,
-    estructura: buildEstructura(pro.estructura_costos),
+    estructura,
     precioBase: Number(vehiculo.precio_base ?? 0),
     totalVehiculo: Number(pro.precio_vehiculo ?? 0),
     inicialPagada: Number(pro.monto_inicial ?? 0),

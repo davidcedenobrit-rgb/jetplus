@@ -383,6 +383,12 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
                   </View>
                 </>
               )}
+              {acLO && (
+                <>
+                  <View style={s.montosRow2}><Text style={s.montosLabel}>Financiamiento Concesionario</Text><Text style={s.montosVal}>${fmt(acLO.montoFinanciado)}</Text></View>
+                  <View style={s.montosRow2}><Text style={s.montosLabel}>{acLO.numCuotas} cuotas de</Text><Text style={[s.montosVal, { color: '#7c3aed' }]}>${fmt(acLO.cuotaMonto)}</Text></View>
+                </>
+              )}
             </View>
           </View>
           )}
