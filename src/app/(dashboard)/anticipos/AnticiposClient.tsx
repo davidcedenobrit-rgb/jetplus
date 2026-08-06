@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Wallet, Plus, Search, X, Loader2, Trash2, Check } from 'lucide-react'
 import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
+import FileUpload from '@/components/FileUpload'
 import { buscarClientesAnticipo, crearAnticipo, anularAnticipo, type ClienteBusca } from './actions'
 
 type Anticipo = {
@@ -59,6 +60,7 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
   const [fecha, setFecha] = useState(hoy())
   const [concepto, setConcepto] = useState('')
   const [observaciones, setObservaciones] = useState('')
+  const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
 
   useEffect(() => {
     if (!open) return
@@ -71,7 +73,7 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
 
   function resetForm() {
     setCliQuery(''); setCliRes([]); setCliSel(null); setMoneda('USD'); setMonto(''); setTasa('')
-    setMetodo(''); setBancoEmisor(''); setBancoReceptor(''); setReferencia(''); setFecha(hoy()); setConcepto(''); setObservaciones(''); setError('')
+    setMetodo(''); setBancoEmisor(''); setBancoReceptor(''); setReferencia(''); setFecha(hoy()); setConcepto(''); setObservaciones(''); setComprobantes([]); setError('')
   }
   function abrir() { resetForm(); setOpen(true) }
 
@@ -96,6 +98,7 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
       fechaPago: fecha,
       concepto: concepto || null,
       observaciones: observaciones || null,
+      comprobantes,
     })
     setSaving(false)
     if (res.error) { setError(res.error); return }
@@ -293,6 +296,10 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 mb-1">Concepto / observaciones</label>
                 <input className={inp} value={concepto} onChange={e => setConcepto(e.target.value)} placeholder="Ej: abono para reservar el MG RX5" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">Comprobante del pago</label>
+                <FileUpload files={comprobantes} onFilesChange={setComprobantes} maxFiles={3} disabled={saving} />
               </div>
 
               <div className="flex gap-2 pt-1">

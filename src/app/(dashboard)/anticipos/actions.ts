@@ -33,6 +33,7 @@ export type CrearAnticipoPayload = {
   fechaPago: string
   concepto: string | null
   observaciones: string | null
+  comprobantes?: { url: string; nombre: string }[]
 }
 
 export async function crearAnticipo(p: CrearAnticipoPayload) {
@@ -73,6 +74,14 @@ export async function crearAnticipo(p: CrearAnticipoPayload) {
   }).select('id').single()
 
   if (error || !data) return { error: 'No se pudo registrar el anticipo' }
+
+  // Comprobante(s) del pago (ya subidos a storage por el cliente).
+  const comps = (p.comprobantes ?? []).filter(c => c?.url)
+  if (comps.length) {
+    await admin.from('archivos').insert(
+      comps.map(c => ({ tipo: 'comprobante', url: c.url, nombre: c.nombre, anticipo_id: data.id, subido_por: user.id }))
+    )
+  }
   return { ok: true, anticipoId: data.id }
 }
 
