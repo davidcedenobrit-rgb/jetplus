@@ -37,7 +37,9 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional, showroomId, montos } = body ?? {}
+  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional, showroomId, montos, ingresosVinculados } = body ?? {}
+  // IDs de ingresos ya registrados que se "jalan" a esta proforma (opcional).
+  const idsJalados: string[] = Array.isArray(ingresosVinculados) ? ingresosVinculados.filter((x: unknown) => typeof x === 'string') : []
   const ov = (montos ?? {}) as Record<string, any>
   const hasOv = (k: string) => ov[k] != null && ov[k] !== ''
   if (!cotizacionId) return NextResponse.json({ error: 'Falta la cotización' }, { status: 400 })
@@ -246,6 +248,15 @@ export async function POST(req: Request) {
   if (insertErr || !proforma) {
     console.error('[proformas/desde-cotizacion] insert error:', insertErr)
     return NextResponse.json({ error: 'Error al guardar la proforma' }, { status: 500 })
+  }
+
+  // Jalar ingresos ya registrados a esta proforma: se marcan con proforma_id para
+  // la trazabilidad y para que, al registrar la venta, NO se dupliquen (cuentan
+  // como el inicial ya pagado). Best-effort: no bloquea la creación de la proforma.
+  if (idsJalados.length) {
+    await supabase.from('ingresos')
+      .update({ proforma_id: proforma.id })
+      .in('id', idsJalados)
   }
 
   // Reservar la unidad del showroom para este cliente/proforma.

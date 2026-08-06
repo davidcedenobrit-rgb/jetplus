@@ -41,6 +41,16 @@ export default function ProformaPanel({
   const [yaExiste, setYaExiste] = useState<{ proformaId: string; numero: string } | null>(null)
   const [unidades, setUnidades] = useState<{ id: string; label: string; coincide: boolean; reservado?: boolean }[]>([])
   const [showroomId, setShowroomId] = useState('')
+  // "Jalar ingresos": vincular ingresos ya registrados (ventas cobradas antes de
+  // pasar por el flujo) a esta proforma, para trazabilidad y sin duplicar dinero.
+  const [ingBuscar, setIngBuscar] = useState('')
+  const [ingResultados, setIngResultados] = useState<any[]>([])
+  const [ingBuscando, setIngBuscando] = useState(false)
+  const [ingSel, setIngSel] = useState<{ id: string; recibo: string; monto: number; cliente: string }[]>([])
+  const totalJalado = ingSel.reduce((s, x) => s + (Number(x.monto) || 0), 0)
+  const toggleIngreso = (r: any) => setIngSel(prev => prev.some(x => x.id === r.id)
+    ? prev.filter(x => x.id !== r.id)
+    : [...prev, { id: r.id, recibo: r.numero_recibo, monto: Number(r.monto) || 0, cliente: r.cliente_nombre }])
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const [preview, setPreview] = useState<any | null>(null)
   const [montos, setMontos] = useState({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
@@ -135,6 +145,7 @@ export default function ProformaPanel({
     setEnviarCorreo(false); setCorreo(correoCliente ?? ''); setObservaciones('')
     setAprobadoBanco(''); setRestanteMetodo('contado')
     setShowroomId(''); setUnidades([]); setPreview(null)
+    setIngBuscar(''); setIngResultados([]); setIngSel([])
     setMontos({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
     setAbonos([{ monto: '', dias: '0' }]); setTextoManual(false); setTasa(''); setCreditoSimultaneo(false)
     fetch(`/api/showroom/disponibles?cotizacionId=${cotId}`).then(r => r.ok ? r.json() : []).then(d => setUnidades(Array.isArray(d) ? d : [])).catch(() => {})
@@ -197,6 +208,22 @@ export default function ProformaPanel({
   // Auto-abrir (usado por el botón Editar de la lista).
   useEffect(() => { if (autoOpen) abrir() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [])
 
+  // Búsqueda (con debounce) de ingresos ya registrados para "jalarlos".
+  useEffect(() => {
+    if (esEdit || !open) return
+    const q = ingBuscar.trim()
+    if (q.length < 2) { setIngResultados([]); setIngBuscando(false); return }
+    setIngBuscando(true)
+    const t = setTimeout(() => {
+      fetch(`/api/ingresos/buscar?q=${encodeURIComponent(q)}`)
+        .then(r => r.ok ? r.json() : [])
+        .then(d => setIngResultados(Array.isArray(d) ? d : []))
+        .catch(() => setIngResultados([]))
+        .finally(() => setIngBuscando(false))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [ingBuscar, open, esEdit])
+
   const cronogramaBody = () => cronograma.map(c => ({ numero: c.numero, tipo: c.tipo, etiqueta: c.etiqueta, monto: c.monto, dias: c.dias, estado: 'pendiente', monto_pagado: 0, fecha_vencimiento: null }))
 
   async function generar() {
@@ -232,6 +259,7 @@ export default function ProformaPanel({
           correoDestino: enviarCorreo ? correo.trim() : null,
           observaciones: observaciones.trim() || null,
           showroomId: showroomId || null,
+          ingresosVinculados: ingSel.map(x => x.id),
           montos: {
             precioBase: montos.precioBase, inicial: montos.inicial,
             financiado: montos.financiado, cuotaMensual: montos.cuotaMensual, meses: montos.meses,
@@ -511,6 +539,49 @@ export default function ProformaPanel({
                     {showroomId && !unidades.find(u => u.id === showroomId)?.reservado && <p className="text-[10px] text-amber-600 mt-1">La unidad quedará <b>RESERVADA</b> para este cliente al generar la proforma.</p>}
                     {unidades.length === 0 && <p className="text-[10px] text-gray-400 mt-1">No hay unidades en agencia disponibles; el carro se elige al registrar la venta.</p>}
                   </div>
+
+                  {!esEdit && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+                      <label className="block text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Jalar ingresos ya registrados (opcional)</label>
+                      <p className="text-[11px] text-emerald-700/80 mb-2">
+                        Si esta venta ya se cobró y quedó como <b>Ingreso</b>, búscalo por N° de recibo o cliente y jálalo. Contará como el inicial pagado y <b>no se cobrará de nuevo</b> al registrar la venta.
+                      </p>
+                      <input value={ingBuscar} onChange={e => setIngBuscar(e.target.value)}
+                        className="w-full px-3 py-2 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="N° de recibo o nombre / cédula del cliente…" />
+                      {ingBuscando && <p className="text-[10px] text-gray-400 mt-1">Buscando…</p>}
+                      {ingResultados.length > 0 && (
+                        <div className="mt-2 max-h-44 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100 bg-white">
+                          {ingResultados.map((r: any) => {
+                            const sel = ingSel.some(x => x.id === r.id)
+                            const ligadoOtra = r.proforma_id && !sel
+                            return (
+                              <button key={r.id} type="button" disabled={ligadoOtra} onClick={() => toggleIngreso(r)}
+                                className={`w-full text-left px-2.5 py-2 text-xs flex items-start gap-2 ${ligadoOtra ? 'opacity-50 cursor-not-allowed' : 'hover:bg-emerald-50'} ${sel ? 'bg-emerald-50' : ''}`}>
+                                <input type="checkbox" checked={sel} readOnly disabled={ligadoOtra} className="mt-0.5 w-3.5 h-3.5 accent-emerald-600" />
+                                <span className="flex-1 min-w-0">
+                                  <span className="font-bold text-oriental-black">Recibo {r.numero_recibo || '—'}</span>
+                                  <span className="text-gray-500"> · {r.cliente_nombre || 'Sin cliente'}</span>
+                                  <span className="block text-gray-500 truncate">{r.concepto} · <b className="text-oriental-black">${fmt(r.monto)}</b>{ligadoOtra ? ' · ya ligado a otra proforma' : ''}</span>
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                      {ingSel.length > 0 && (
+                        <div className="mt-2 text-[11px] text-emerald-800 bg-white border border-emerald-200 rounded-lg px-2.5 py-2">
+                          <b>Jalados:</b> {ingSel.map(x => `#${x.recibo}`).join(', ')} · Total <b>${fmt(totalJalado)}</b>
+                          {nz(montos.inicial) > 0 && (
+                            <span className={Math.abs(totalJalado - nz(montos.inicial)) < 0.01 ? ' text-emerald-700' : ' text-amber-700'}>
+                              {' '}· Inicial de la proforma: ${fmt(nz(montos.inicial))}
+                              {Math.abs(totalJalado - nz(montos.inicial)) >= 0.01 ? ' (no coincide, revisa)' : ' ✓'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div>
                     <div className="flex items-center justify-between mb-1">

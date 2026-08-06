@@ -148,6 +148,9 @@ export default function NuevoVehiculoPage() {
   // Venta desde proforma (flujo nuevo): id + número para vincular al guardar.
   const [proformaId, setProformaId] = useState<string | null>(null)
   const [proformaNumero, setProformaNumero] = useState<string | null>(null)
+  // Ingresos ya registrados "jalados" a la proforma: la venta NO crea ingresos
+  // nuevos (el inicial ya está pagado); solo se amarran al vehículo al guardar.
+  const [ingresosJalados, setIngresosJalados] = useState<{ id: string; numero_recibo: string; monto: number }[]>([])
   // Modelo/marca de la cotización, para preseleccionar el carro en el showroom.
   const [cotMarca, setCotMarca] = useState<string | null>(null)
   const [cotModelo, setCotModelo] = useState<string | null>(null)
@@ -305,11 +308,26 @@ export default function NuevoVehiculoPage() {
         if (cli) { setClienteSeleccionado(cli); setClienteQuery(cli.nombre) }
       }
       if (pro.cotizacion_id) await prefillDesdeCotizacion(pro.cotizacion_id)
+
+      // ¿La proforma trae ingresos "jalados"? (ventas ya cobradas y registradas
+      // como ingreso). Si es así, el inicial YA está pagado: no se registra un
+      // pago nuevo; solo se amarran esos recibos al vehículo al guardar.
+      const { data: jalados } = await supabase
+        .from('ingresos')
+        .select('id, numero_recibo, monto')
+        .eq('proforma_id', pro.id)
+      const tieneJalados = Array.isArray(jalados) && jalados.length > 0
+      if (tieneJalados) {
+        setIngresosJalados(jalados.map(j => ({ id: j.id, numero_recibo: j.numero_recibo ?? '', monto: Number(j.monto) || 0 })))
+        setRegistrarIngresoInicial(false)
+      }
+
       // Fase 3: el pago inicial se prellenar con el inicial negociado en la
       // proforma y se activa el registro de ingreso (queda 'pendiente de
       // aprobación'; el cajero solo confirma el método/comprobante).
+      // Salvo que ya haya ingresos jalados (el inicial ya se cobró).
       const iniProforma = Number(pro.monto_inicial) || 0
-      if (iniProforma > 0) {
+      if (iniProforma > 0 && !tieneJalados) {
         setRegistrarIngresoInicial(true)
         setPagosIniciales(prev => prev.map((p, i) => i === 0 ? { ...p, monto: iniProforma.toFixed(2) } : p))
       }
@@ -879,6 +897,14 @@ export default function NuevoVehiculoPage() {
         ...(clienteSeleccionado.id ? { cliente_id: clienteSeleccionado.id } : {}),
         updated_at: new Date().toISOString(),
       }).eq('id', proformaId)
+
+      // Amarrar los ingresos "jalados" al vehículo vendido (trazabilidad). No se
+      // crean ingresos nuevos: el inicial ya estaba cobrado en esos recibos.
+      if (ingresosJalados.length) {
+        await supabase.from('ingresos')
+          .update({ vehiculo_id: vehiculo.id, placa: vehiculo.placa || null })
+          .in('id', ingresosJalados.map(j => j.id))
+      }
       // Fase 3: sembrar el borrador de división contable ligado a esta venta
       // (best-effort; no bloquea el registro si falla).
       fetch('/api/ventas-division/seed', {
@@ -1179,6 +1205,16 @@ export default function NuevoVehiculoPage() {
             <div className="mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center gap-2">
               <span className="text-indigo-800 text-xs font-bold uppercase tracking-wider">Venta desde proforma {proformaNumero}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">Proforma → Venta</span>
+            </div>
+          )}
+
+          {ingresosJalados.length > 0 && (
+            <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+              <p className="text-emerald-800 text-xs font-bold uppercase tracking-wider mb-1">Inicial ya pagado (ingresos jalados)</p>
+              <p className="text-[12px] text-emerald-800">
+                Recibo(s) <b>{ingresosJalados.map(j => `#${j.numero_recibo}`).join(', ')}</b> · Total <b>${ingresosJalados.reduce((s, j) => s + j.monto, 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>.
+                No se registrará un pago nuevo; estos recibos se amarran a este vehículo al guardar.
+              </p>
             </div>
           )}
 
