@@ -60,6 +60,9 @@ export async function POST(req: Request) {
       // del carro seleccionado y adjunta una propuesta de condiciones libre.
       precioBaseOverride,
       gastosOverride,
+      // Rojas Personalizada: líneas de la estructura de costos (para persistir el
+      // desglose por línea, no solo el total).
+      estructuraLineas,
       condicionesPersonalizadas,
       // Banca Nacional: banco del crédito (para estadísticas).
       banco,
@@ -449,6 +452,24 @@ export async function POST(req: Request) {
     const clienteIdVinculado = clienteExistente?.id ?? null
 
     // Insertar cotización (trigger auto-genera numero y numero_seq)
+    // Estructura de costos por línea (Rojas Personalizada): se guarda con la misma
+    // forma que usa "Aplicar descuento", para poder re-editarla y mostrar el
+    // desglose en el PDF/proforma. Solo cuando llegan las líneas (cotización Rojas).
+    let estructuraCostos: Record<string, unknown> | null = null
+    if (estructuraLineas && typeof estructuraLineas === 'object') {
+      const CLAVES_EST = ['placa', 'poliza_vehiculo', 'poliza_vida', 'gastos_vhm', 'honorarios', 'gastos_int', 'alfombras', 'transporte', 'accesorios', 'igtf', 'diferencial'] as const
+      const lineas: Record<string, number> = {}
+      for (const k of CLAVES_EST) lineas[k] = Math.max(0, Number((estructuraLineas as Record<string, unknown>)[k]) || 0)
+      estructuraCostos = {
+        precioBase, modalidad, plan,
+        inicialPct: plan === 'personalizado' ? persIniPct : 0,
+        tasaPct: plan === 'personalizado' ? persTasaPct : 0,
+        meses: plan === 'personalizado' ? persMeses : 24,
+        cuotaVehimotors: 0,
+        lineas,
+      }
+    }
+
     const { data: cot, error: insertError } = await supabase
       .from('cotizaciones')
       .insert([{
@@ -496,6 +517,7 @@ export async function POST(req: Request) {
         condiciones_personalizadas: condPersonalizadas,
         bn_vehimotors: bnVehimotorsData,
         banco: bancoCot,
+        estructura_costos: estructuraCostos,
       }])
       .select()
       .single()

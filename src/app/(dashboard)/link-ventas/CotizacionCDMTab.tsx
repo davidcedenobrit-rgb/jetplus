@@ -446,6 +446,8 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
     const rojasPayload = rojasMode ? {
       precioBaseOverride: rojasCalc.precio,
       gastosOverride: rojasCalc.gastos,
+      // Líneas de la estructura (para persistir el desglose por línea, no solo el total).
+      estructuraLineas: { ...Object.fromEntries(CLAVES_ROJAS.map(({ k }) => [k, num(rojasLineas[k])])), diferencial: 0 },
       condicionesPersonalizadas: rojasCond.trim() || null,
       ...(rojasBase === 'credito_24' ? {
         personalizadoInicialPct: num(rojasIniPct),
