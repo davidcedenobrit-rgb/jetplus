@@ -52,12 +52,6 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
     const msg = `Hola 👋 vengo del perfil de ventas. Me interesa el ${model}.`
     window.open(`https://wa.me/${waCorp}?text=${encodeURIComponent(msg)}`, '_blank')
   }
-  async function compartir(v: Vehiculo) {
-    const url = new URL(window.location.href); url.searchParams.set('car', v.id)
-    const link = url.toString()
-    if (navigator.share) { try { await navigator.share({ title: v.model, url: link }); return } catch {} }
-    try { await navigator.clipboard.writeText(link) } catch {}
-  }
 
   return (
     <div>
@@ -140,10 +134,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
 
                 {/* Botones */}
                 <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <button onClick={() => goWA(v.model)} className="lo-cbtn-dark">WhatsApp</button>
-                    <button onClick={() => compartir(v)} className="lo-cbtn-out">Compartir</button>
-                  </div>
+                  <button onClick={() => goWA(v.model)} className="lo-cbtn-dark">WhatsApp</button>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <button onClick={() => { trackEvento('cotizacion_rapida', v.brand, v.model); setRapidaVehiculo(v) }} className="lo-cbtn-out">
                       📩 Me interesa

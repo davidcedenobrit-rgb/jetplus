@@ -125,13 +125,6 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
     const msg = `Hola 👋 vengo del perfil de ventas. Me interesa el ${v.model} en el Plan Asegúrate con $500 (${entrega}).${colorPart} ¿Me comparten disponibilidad y próximos pasos?`
     window.open(`https://wa.me/${waCorp}?text=${encodeURIComponent(msg)}`, '_blank')
   }
-  async function compartir() {
-    const url = new URL(window.location.href); url.searchParams.set('car', v.id)
-    const link = url.toString()
-    if (navigator.share) { try { await navigator.share({ title: `La Oriental | AC500 | ${v.model}`, url: link }); return } catch {} }
-    try { await navigator.clipboard.writeText(link) } catch {}
-  }
-
   return (
     <article id={`car-${v.id}`} className="lo-card">
       <div className="lo-card-imgwrap" style={{ height: 185 }}>
@@ -216,7 +209,6 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
             setRapida(true)
           }}>📩 Me interesa</button>
           <button className="lo-cbtn-dark" onClick={goWA}>Solicitar información</button>
-          <button className="lo-cbtn-out" onClick={compartir}>Compartir esta oferta</button>
         </div>
       </div>
 
