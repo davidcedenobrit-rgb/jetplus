@@ -37,9 +37,12 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional, showroomId, montos, ingresosVinculados } = body ?? {}
-  // IDs de ingresos ya registrados que se "jalan" a esta proforma (opcional).
+  const { cotizacionId, enviarCorreo, correoDestino, observaciones, bancaNacional, showroomId, montos, ingresosVinculados, anticiposVinculados } = body ?? {}
+  // IDs de ingresos ya registrados que se "jalan" a esta proforma (opcional, legacy).
   const idsJalados: string[] = Array.isArray(ingresosVinculados) ? ingresosVinculados.filter((x: unknown) => typeof x === 'string') : []
+  // IDs de anticipos del cliente que se asocian a esta proforma (reserva; se
+  // aplican al registrar la venta).
+  const idsAnticipos: string[] = Array.isArray(anticiposVinculados) ? anticiposVinculados.filter((x: unknown) => typeof x === 'string') : []
   const ov = (montos ?? {}) as Record<string, any>
   const hasOv = (k: string) => ov[k] != null && ov[k] !== ''
   if (!cotizacionId) return NextResponse.json({ error: 'Falta la cotización' }, { status: 400 })
@@ -257,6 +260,12 @@ export async function POST(req: Request) {
     await supabase.from('ingresos')
       .update({ proforma_id: proforma.id })
       .in('id', idsJalados)
+  }
+  // Asociar (reservar) anticipos del cliente a esta proforma. Best-effort.
+  if (idsAnticipos.length) {
+    await supabase.from('anticipos')
+      .update({ proforma_id: proforma.id, updated_at: new Date().toISOString() })
+      .in('id', idsAnticipos)
   }
 
   // Reservar la unidad del showroom para este cliente/proforma.

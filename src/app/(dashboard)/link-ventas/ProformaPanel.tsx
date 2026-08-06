@@ -41,7 +41,7 @@ export default function ProformaPanel({
   const [yaExiste, setYaExiste] = useState<{ proformaId: string; numero: string } | null>(null)
   const [unidades, setUnidades] = useState<{ id: string; label: string; coincide: boolean; reservado?: boolean }[]>([])
   const [showroomId, setShowroomId] = useState('')
-  // "Jalar ingresos": vincular ingresos ya registrados (ventas cobradas antes de
+  // "Asociar anticipo": vincular anticipos del cliente (dinero adelantado antes de
   // pasar por el flujo) a esta proforma, para trazabilidad y sin duplicar dinero.
   const [ingBuscar, setIngBuscar] = useState('')
   const [ingResultados, setIngResultados] = useState<any[]>([])
@@ -50,7 +50,7 @@ export default function ProformaPanel({
   const totalJalado = ingSel.reduce((s, x) => s + (Number(x.monto) || 0), 0)
   const toggleIngreso = (r: any) => setIngSel(prev => prev.some(x => x.id === r.id)
     ? prev.filter(x => x.id !== r.id)
-    : [...prev, { id: r.id, recibo: r.numero_recibo, monto: Number(r.monto) || 0, cliente: r.cliente_nombre }])
+    : [...prev, { id: r.id, recibo: r.referencia ?? '', monto: Number(r.saldo_usd) || 0, cliente: r.cliente_nombre }])
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const [preview, setPreview] = useState<any | null>(null)
   const [montos, setMontos] = useState({ precioBase: '', inicial: '', financiado: '', cuotaMensual: '', meses: '' })
@@ -215,7 +215,7 @@ export default function ProformaPanel({
     if (q.length < 2) { setIngResultados([]); setIngBuscando(false); return }
     setIngBuscando(true)
     const t = setTimeout(() => {
-      fetch(`/api/ingresos/buscar?q=${encodeURIComponent(q)}`)
+      fetch(`/api/anticipos/buscar?q=${encodeURIComponent(q)}`)
         .then(r => r.ok ? r.json() : [])
         .then(d => setIngResultados(Array.isArray(d) ? d : []))
         .catch(() => setIngResultados([]))
@@ -259,7 +259,7 @@ export default function ProformaPanel({
           correoDestino: enviarCorreo ? correo.trim() : null,
           observaciones: observaciones.trim() || null,
           showroomId: showroomId || null,
-          ingresosVinculados: ingSel.map(x => x.id),
+          anticiposVinculados: ingSel.map(x => x.id),
           montos: {
             precioBase: montos.precioBase, inicial: montos.inicial,
             financiado: montos.financiado, cuotaMensual: montos.cuotaMensual, meses: montos.meses,
@@ -542,13 +542,13 @@ export default function ProformaPanel({
 
                   {!esEdit && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
-                      <label className="block text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Jalar ingresos ya registrados (opcional)</label>
+                      <label className="block text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Asociar anticipo (opcional)</label>
                       <p className="text-[11px] text-emerald-700/80 mb-2">
-                        Si esta venta ya se cobró y quedó como <b>Ingreso</b>, búscalo por N° de recibo o cliente y jálalo. Contará como el inicial pagado y <b>no se cobrará de nuevo</b> al registrar la venta.
+                        Si el cliente ya adelantó dinero (registrado en <b>Anticipos</b>), búscalo por cliente/cédula y asócialo a esta proforma. Al registrar la venta contará como inicial pagado y <b>no se cobrará de nuevo</b>.
                       </p>
                       <input value={ingBuscar} onChange={e => setIngBuscar(e.target.value)}
                         className="w-full px-3 py-2 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                        placeholder="N° de recibo o nombre / cédula del cliente…" />
+                        placeholder="Nombre / cédula del cliente o referencia…" />
                       {ingBuscando && <p className="text-[10px] text-gray-400 mt-1">Buscando…</p>}
                       {ingResultados.length > 0 && (
                         <div className="mt-2 max-h-44 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100 bg-white">
@@ -560,9 +560,9 @@ export default function ProformaPanel({
                                 className={`w-full text-left px-2.5 py-2 text-xs flex items-start gap-2 ${ligadoOtra ? 'opacity-50 cursor-not-allowed' : 'hover:bg-emerald-50'} ${sel ? 'bg-emerald-50' : ''}`}>
                                 <input type="checkbox" checked={sel} readOnly disabled={ligadoOtra} className="mt-0.5 w-3.5 h-3.5 accent-emerald-600" />
                                 <span className="flex-1 min-w-0">
-                                  <span className="font-bold text-oriental-black">Recibo {r.numero_recibo || '—'}</span>
+                                  <span className="font-bold text-oriental-black">${fmt(r.saldo_usd)}</span>
                                   <span className="text-gray-500"> · {r.cliente_nombre || 'Sin cliente'}</span>
-                                  <span className="block text-gray-500 truncate">{r.concepto} · <b className="text-oriental-black">${fmt(r.monto)}</b>{ligadoOtra ? ' · ya ligado a otra proforma' : ''}</span>
+                                  <span className="block text-gray-500 truncate">{r.fecha_pago ? String(r.fecha_pago).slice(0, 10).split('-').reverse().join('/') : ''}{r.metodo_pago ? ` · ${r.metodo_pago}` : ''}{r.concepto ? ` · ${r.concepto}` : ''}{ligadoOtra ? ' · ya asociado a otra proforma' : ''}</span>
                                 </span>
                               </button>
                             )
@@ -571,7 +571,7 @@ export default function ProformaPanel({
                       )}
                       {ingSel.length > 0 && (
                         <div className="mt-2 text-[11px] text-emerald-800 bg-white border border-emerald-200 rounded-lg px-2.5 py-2">
-                          <b>Jalados:</b> {ingSel.map(x => `#${x.recibo}`).join(', ')} · Total <b>${fmt(totalJalado)}</b>
+                          <b>Anticipos asociados:</b> {ingSel.length} · Total <b>${fmt(totalJalado)}</b>
                           {nz(montos.inicial) > 0 && (
                             <span className={Math.abs(totalJalado - nz(montos.inicial)) < 0.01 ? ' text-emerald-700' : ' text-amber-700'}>
                               {' '}· Inicial de la proforma: ${fmt(nz(montos.inicial))}
