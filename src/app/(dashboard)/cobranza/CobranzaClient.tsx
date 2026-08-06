@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Coins, TrendingUp, AlertTriangle, FileDown, Search } from 'lucide-react'
+import { ArrowLeft, Coins, TrendingUp, AlertTriangle, FileDown, Search, FileText, Sheet } from 'lucide-react'
 import Link from 'next/link'
 import { cuotaEsPropia } from '@/lib/centros-costo'
 
@@ -151,6 +151,27 @@ export default function CobranzaClient() {
     URL.revokeObjectURL(url)
   }
 
+  const [exportando, setExportando] = useState<'pdf' | 'excel' | null>(null)
+  async function exportar(tipo: 'pdf' | 'excel') {
+    const titularLbl = titular === 'oriental' ? 'La Oriental' : titular === 'vehimotors' ? 'Vehimotors' : 'Ambos'
+    const filtroLbl = filtro === 'con_saldo' ? 'Con saldo' : filtro === 'vencidos' ? 'Vencidos' : 'Todos'
+    const payload = {
+      subtitulo: `${filtroLbl} · ${titularLbl}`,
+      tot, split,
+      filas: filas.map(r => ({ cliente: r.cliente, cedula: r.cedula ?? '', placa: r.placa ?? '', planLbl: planLabel(r.plan), total: r.total, cobrado: r.cobrado, porCobrar: r.porCobrar, vencido: r.vencido, cuotasPend: r.cuotasPend, pct: r.pct })),
+    }
+    setExportando(tipo)
+    try {
+      const res = await fetch(`/api/cobranza/${tipo}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `cartera-cobranza.${tipo === 'excel' ? 'xlsx' : 'pdf'}`; a.click()
+      URL.revokeObjectURL(url)
+    } finally { setExportando(null) }
+  }
+
   const pctGlobal = tot.total > 0 ? Math.round((tot.cobrado / tot.total) * 100) : 0
 
   return (
@@ -203,6 +224,8 @@ export default function CobranzaClient() {
           {([['con_saldo', 'Con saldo'], ['vencidos', 'Vencidos'], ['todos', 'Todos']] as const).map(([v, l]) => (
             <button key={v} onClick={() => setFiltro(v)} className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${filtro === v ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>{l}</button>
           ))}
+          <button onClick={() => exportar('pdf')} disabled={filas.length === 0 || exportando !== null} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-oriental-red/30 text-oriental-red hover:bg-red-50 disabled:opacity-50"><FileText size={14} /> {exportando === 'pdf' ? 'Generando…' : 'PDF'}</button>
+          <button onClick={() => exportar('excel')} disabled={filas.length === 0 || exportando !== null} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50"><Sheet size={14} /> {exportando === 'excel' ? 'Generando…' : 'Excel'}</button>
           <button onClick={exportarCsv} disabled={filas.length === 0} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-oriental-gray hover:bg-gray-50 disabled:opacity-50"><FileDown size={14} /> CSV</button>
         </div>
       </div>
