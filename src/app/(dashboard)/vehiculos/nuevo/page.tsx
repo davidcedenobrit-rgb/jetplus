@@ -1267,10 +1267,17 @@ export default function NuevoVehiculoPage() {
     return next
   })
 
-  // UI compartida para asociar anticipos del cliente a la inicial.
-  const anticiposUI = (registrarIngresoInicial && clienteSeleccionado && anticiposDisp.length > 0) ? (
+  // UI compartida para asociar anticipos del cliente a la inicial. Se muestra
+  // siempre que haya cliente (con aviso si no tiene anticipos) para que el flujo
+  // sea visible aunque todavía no existan anticipos registrados.
+  const anticiposUI = (registrarIngresoInicial && clienteSeleccionado) ? (
     <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
       <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Asociar anticipos del cliente</p>
+      {anticiposDisp.length === 0 ? (
+        <p className="text-[11px] text-emerald-700/80">
+          <b>{clienteSeleccionado.nombre}</b> no tiene anticipos disponibles. Regístralos en <b>Finanzas → Anticipos</b> y aparecerán aquí para asociarlos a la inicial.
+        </p>
+      ) : (<>
       <p className="text-[11px] text-emerald-700/80 mb-2">
         Selecciona los anticipos ya pagados por <b>{clienteSeleccionado.nombre}</b>. Se convierten en ingresos ligados al carro y <b>descuentan del efectivo a pagar</b>.
       </p>
@@ -1296,6 +1303,7 @@ export default function NuevoVehiculoPage() {
           {inicialObjetivo > 0 && <> · Inicial: <b>${fmtUsd(inicialObjetivo)}</b> · Efectivo a registrar: <b>${fmtUsd(Math.max(0, inicialObjetivo - anticiposAplicados))}</b></>}
         </div>
       )}
+      </>)}
     </div>
   ) : null
 
