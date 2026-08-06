@@ -499,6 +499,26 @@ export default async function VehiculoDetallePage({
             />
           )}
 
+          {/* Expediente de la venta — estado de cuenta en vivo (los demás documentos
+              se guardan como copia al registrar la venta y aparecen abajo). */}
+          {creditos && creditos.length > 0 && (
+            <div className="card p-4 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-oriental-red/10 flex items-center justify-center">
+                  <CreditCard size={16} className="text-oriental-red" />
+                </div>
+                <div>
+                  <p className="font-bold text-oriental-black text-sm">Expediente de la venta</p>
+                  <p className="text-[11px] text-oriental-gray">El estado de cuenta se genera en vivo; los documentos de entrega quedan guardados abajo.</p>
+                </div>
+              </div>
+              <a href={`/api/creditos/${creditos[0].id}/estado-cuenta/pdf`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3.5 py-2 border border-gray-300 text-oriental-black text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                <ExternalLink size={14} /> Estado de cuenta
+              </a>
+            </div>
+          )}
+
           {/* Documentos */}
           <VehiculoDocumentos
             vehiculoId={id}

@@ -685,6 +685,36 @@ export default function NuevoVehiculoPage() {
     return creados
   }
 
+  // Expediente del carro: guarda una COPIA PDF (snapshot) de cada documento de
+  // entrega en el vehículo. Se genera desde las rutas ya existentes y se sube a
+  // storage + tabla archivos. Best-effort y en paralelo; nunca bloquea la venta.
+  async function guardarExpedienteVenta(proformaId: string, vehiculoId: string, numero: string | null) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const base = `/api/proformas/${proformaId}`
+      const docs = [
+        { tipo: 'proforma', ruta: `${base}/pdf`, nombre: `Proforma${numero ? '-' + numero : ''}.pdf` },
+        { tipo: 'formato_entrega', ruta: `${base}/fe-entrega/pdf`, nombre: 'Fe-de-entrega.pdf' },
+        { tipo: 'exoneracion', ruta: `${base}/exoneracion/pdf`, nombre: 'Exoneracion.pdf' },
+        { tipo: 'acuerdo_pago', ruta: `${base}/acuerdo-pago/pdf`, nombre: 'Acuerdo-de-pago.pdf' },
+        { tipo: 'reserva', ruta: `${base}/reserva/pdf`, nombre: 'Acuerdo-de-reserva.pdf' },
+        { tipo: 'resumen_entrega', ruta: `${base}/resumen-entrega/pdf`, nombre: 'Resumen-de-entrega.pdf' },
+      ]
+      await Promise.all(docs.map(async d => {
+        try {
+          const resp = await fetch(d.ruta, { signal: AbortSignal.timeout(20000) })
+          if (!resp.ok) return
+          const blob = await resp.blob()
+          const path = `vehiculos/${vehiculoId}/${d.tipo}/${Date.now()}-${Math.round(Math.random() * 1e6)}.pdf`
+          const { error: upErr } = await supabase.storage.from('comprobantes').upload(path, blob, { contentType: 'application/pdf', upsert: false })
+          if (upErr) return
+          const { data: urlData } = supabase.storage.from('comprobantes').getPublicUrl(path)
+          await supabase.from('archivos').insert({ tipo: d.tipo, url: urlData.publicUrl, nombre: d.nombre, vehiculo_id: vehiculoId, subido_por: user?.id ?? null })
+        } catch { /* seguir con los demás documentos */ }
+      }))
+    } catch { /* el expediente no bloquea el registro de la venta */ }
+  }
+
   function updatePago(id: string, field: keyof PagoInicial, value: string) {
     setPagosIniciales(prev => prev.map(p => {
       if (p.id !== id) return p
@@ -911,6 +941,10 @@ export default function NuevoVehiculoPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vehiculoId: vehiculo.id, precioVenta: parseFloat(precioTotalVehiculo) || 0 }),
       }).catch(() => {})
+
+      // Expediente del carro: guarda COPIAS PDF (snapshot) de los documentos de
+      // entrega en el vehículo. Best-effort y en paralelo; no bloquea si algo falla.
+      await guardarExpedienteVenta(proformaId, vehiculo.id, proformaNumero)
     }
 
     // Vincular showroom (local, o el ya transferido desde el aliado) a la venta

@@ -6,7 +6,7 @@ import {
   FileText, Upload, ExternalLink, Loader2,
   Receipt, Award, ShieldCheck, HeartPulse,
   FileSignature, CreditCard, ClipboardList, Trash2,
-  ClipboardCheck, Percent, Banknote, Wrench
+  ClipboardCheck, Percent, Banknote, Wrench, ShieldAlert, BookMarked, PackageCheck
 } from 'lucide-react'
 
 const CATEGORIAS = [
@@ -97,6 +97,38 @@ const CATEGORIAS = [
     color: 'bg-slate-50 border-slate-100',
     iconColor: 'text-slate-500',
     badge: 'bg-slate-100 text-slate-700',
+  },
+  {
+    tipo: 'acuerdo_pago',
+    label: 'Acuerdo de Pago',
+    icon: FileSignature,
+    color: 'bg-red-50 border-red-100',
+    iconColor: 'text-red-500',
+    badge: 'bg-red-100 text-red-700',
+  },
+  {
+    tipo: 'reserva',
+    label: 'Acuerdo de Reserva',
+    icon: BookMarked,
+    color: 'bg-indigo-50 border-indigo-100',
+    iconColor: 'text-indigo-500',
+    badge: 'bg-indigo-100 text-indigo-700',
+  },
+  {
+    tipo: 'exoneracion',
+    label: 'Exoneración (Exores)',
+    icon: ShieldAlert,
+    color: 'bg-amber-50 border-amber-100',
+    iconColor: 'text-amber-600',
+    badge: 'bg-amber-100 text-amber-700',
+  },
+  {
+    tipo: 'resumen_entrega',
+    label: 'Resumen de Entrega',
+    icon: PackageCheck,
+    color: 'bg-teal-50 border-teal-100',
+    iconColor: 'text-teal-500',
+    badge: 'bg-teal-100 text-teal-700',
   },
 ] as const
 
