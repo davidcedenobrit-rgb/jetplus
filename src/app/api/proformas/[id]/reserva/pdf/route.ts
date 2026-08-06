@@ -61,8 +61,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       modelo: (veh.version ? `${veh.modelo ?? ''} ${veh.version}` : (veh.modelo as string)) ?? '',
       placa: (veh.placa as string) ?? '',
     },
-    // Se deja en blanco para escribir a mano el monto real de la reserva.
-    reservaInicial: '',
+    // Reserva prellenada con el inicial de la proforma (queda editable a mano
+    // si la reserva real fuese otra). Vacío → línea en blanco.
+    reservaInicial: pro.monto_inicial != null
+      ? `$${Number(pro.monto_inicial).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : '',
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
