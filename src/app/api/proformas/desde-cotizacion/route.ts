@@ -68,22 +68,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Esta cotización ya tiene proforma', proformaId: existente.id, numero: existente.numero }, { status: 409 })
   }
 
-  // Gate del acuerdo de gestión de cobro: cuando La Oriental financia la
-  // inicial, existe un acuerdo ligado a la cotización. En ese caso NO se puede
-  // crear la proforma hasta que (a) la vendedora aceptó el acuerdo Y (b) el
-  // cliente aprobó la cotización. Sin acuerdo, el flujo normal no cambia.
-  const { data: acuerdo } = await supabase
-    .from('acuerdos_cobro')
-    .select('estado')
-    .eq('cotizacion_id', cotizacionId)
-    .maybeSingle()
-  if (acuerdo) {
-    if (acuerdo.estado !== 'aceptado') {
-      return NextResponse.json({ error: 'La vendedora debe aceptar el acuerdo de gestión de cobro antes de crear la proforma.' }, { status: 409 })
-    }
-    if (cot.estado !== 'aceptada') {
-      return NextResponse.json({ error: 'El cliente debe aprobar la cotización antes de crear la proforma.' }, { status: 409 })
-    }
+  // Gate de estado: solo se convierte en proforma una cotización ACEPTADA. Si el
+  // cliente aceptó por teléfono, se marca como Aceptada a mano antes de convertir.
+  // (El acuerdo de gestión de cobro ya no bloquea aquí: ahora se hace en Proformas.)
+  if (cot.estado !== 'aceptada') {
+    return NextResponse.json({ error: 'La cotización debe estar Aceptada antes de convertirla en proforma.' }, { status: 409 })
   }
 
   const modalidad = String(cot.modalidad ?? 'credito_24')

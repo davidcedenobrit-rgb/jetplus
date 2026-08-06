@@ -11,7 +11,7 @@ const nz = (s: string) => parseFloat(String(s).replace(',', '.')) || 0
 // cotización → aprobación → PROFORMA → venta). La proforma es la cotización
 // negociada + las condiciones de pago para ese cliente.
 export default function ProformaPanel({
-  cotId, numero, correoCliente, onDone, compact = false, plan, total = 0, editProforma = null, autoOpen = false,
+  cotId, numero, correoCliente, onDone, compact = false, plan, total = 0, editProforma = null, autoOpen = false, estado,
 }: {
   cotId: string
   numero: string
@@ -22,9 +22,13 @@ export default function ProformaPanel({
   total?: number
   editProforma?: any
   autoOpen?: boolean
+  estado?: string
 }) {
   const esBancaNacional = plan === 'banca_nacional'
   const esEdit = !!editProforma
+  // Solo se convierte en proforma una cotización ACEPTADA. Si el cliente aceptó
+  // por teléfono, márcala como Aceptada primero (botones de estado del detalle).
+  const bloqueadoPorEstado = !esEdit && estado != null && estado !== 'aceptada'
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -255,10 +259,27 @@ export default function ProformaPanel({
   return (
     <>
       {esEdit ? null : compact ? (
-        <button onClick={abrir}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors">
-          <FileText size={12} /> Convertir en proforma
-        </button>
+        bloqueadoPorEstado ? (
+          <button disabled title="La cotización debe estar Aceptada para convertirla en proforma"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 text-gray-400 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-not-allowed">
+            <FileText size={12} /> Convertir en proforma
+          </button>
+        ) : (
+          <button onClick={abrir}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors">
+            <FileText size={12} /> Convertir en proforma
+          </button>
+        )
+      ) : bloqueadoPorEstado ? (
+        <div>
+          <button disabled
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gray-100 text-gray-400 font-bold rounded-xl text-sm cursor-not-allowed">
+            <FileText size={15} /> Generar proforma
+          </button>
+          <p className="text-[11px] text-amber-700 mt-1.5 text-center font-medium">
+            La cotización debe estar <b>Aceptada</b> para convertirla en proforma. Si el cliente aceptó por teléfono, márcala como Aceptada arriba.
+          </p>
+        </div>
       ) : (
         <button onClick={abrir}
           className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-xl text-sm transition-colors">

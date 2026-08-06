@@ -6,7 +6,6 @@ import EmailTrackingBadge from '@/components/email-tracking/EmailTrackingBadge'
 import { waCotizacionUrl } from '@/lib/whatsapp-cotizacion'
 import DescuentoPanel from './DescuentoPanel'
 import ProformaPanel from './ProformaPanel'
-import AcuerdoCobroPanel from './AcuerdoCobroPanel'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -479,19 +478,17 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
         </div>
 
         <div className="flex-1 px-5 py-4 space-y-5">
-          {/* Acuerdo de gestión de cobro (solo cuando La Oriental financia la
-              inicial). Si existe y no está aceptado, bloquea la proforma. */}
-          <AcuerdoCobroPanel cotId={cot.id} vendedoraNombre={cot.vendedora_nombre} onChange={() => router.refresh()} />
-
           {/* Flujo de venta: convertir la cotización en proforma (documento previo
-              a la venta). Disponible en cualquier estado, porque muchos clientes
-              avisan que aceptan por teléfono y no por el botón del correo. */}
+              a la venta). Solo si la cotización está Aceptada; si el cliente aceptó
+              por teléfono, márcala como Aceptada con los botones de estado. El
+              acuerdo de gestión de cobro se hace luego, en el panel de Proformas. */}
           <ProformaPanel
             cotId={cot.id}
             numero={cot.numero}
             correoCliente={cot.cliente_correo}
             plan={cot.plan}
             total={cot.total_inicial}
+            estado={cot.estado}
             onDone={() => { onClose(); router.refresh() }}
           />
 
@@ -1093,8 +1090,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                         >
                           Ver PDF
                         </a>
-                        <AcuerdoCobroPanel cotId={c.id} vendedoraNombre={c.vendedora_nombre} compact onChange={() => router.refresh()} />
-                        <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} compact onDone={() => router.refresh()} />
+                        <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} estado={c.estado} compact onDone={() => router.refresh()} />
                       </div>
                     </td>
                   </tr>
@@ -1131,8 +1127,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                   <p className="text-sm font-bold text-oriental-black">${fmt(c.total_inicial)}</p>
                 </div>
                 <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                  <AcuerdoCobroPanel cotId={c.id} vendedoraNombre={c.vendedora_nombre} compact onChange={() => router.refresh()} />
-                  <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} compact onDone={() => router.refresh()} />
+                  <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} estado={c.estado} compact onDone={() => router.refresh()} />
                 </div>
               </div>
             ))}
