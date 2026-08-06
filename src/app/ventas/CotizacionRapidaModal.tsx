@@ -62,9 +62,18 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
     setCompartiendo(true); setError('')
     try {
       const html2canvas = (await import('html2canvas')).default
-      const canvas = await html2canvas(captureRef.current, {
-        backgroundColor: '#ffffff', scale: 2, useCORS: true, allowTaint: false, logging: false,
+      const render = html2canvas(captureRef.current, {
+        backgroundColor: '#ffffff', scale: 2, useCORS: true, allowTaint: false,
+        // Si el logo remoto no carga por CORS, no bloquear la generación:
+        // html2canvas lo omite pasado este tiempo y sigue con el resto.
+        imageTimeout: 4000, logging: false,
       })
+      // Tope duro: aunque html2canvas se quede esperando un recurso, el botón
+      // nunca se queda pegado en «Generando imagen…».
+      const canvas = await Promise.race([
+        render,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
+      ])
       const fileName = `Cotizacion_${vehiculo.brand}_${vehiculo.model}`.replace(/[^\w-]+/g, '_') + '.png'
       const blob: Blob | null = await new Promise(res => canvas.toBlob(res, 'image/png'))
       const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }

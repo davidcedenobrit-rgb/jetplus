@@ -64,10 +64,24 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
     colorSecundario: conc?.color_secundario || '#111827',
   }
 
+  // El logo se incrusta como data URI para el membrete de la imagen compartible:
+  // html2canvas no puede exportar imágenes remotas sin CORS, así que al pasarlo
+  // como base64 (mismo origen) el logo siempre aparece en la foto. Cae al URL si falla.
+  async function logoDataUri(url: string): Promise<string> {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
+      if (!res.ok) return url
+      const ct = res.headers.get('content-type') || 'image/png'
+      const buf = Buffer.from(await res.arrayBuffer())
+      return `data:${ct};base64,${buf.toString('base64')}`
+    } catch { return url }
+  }
+  const logoImg = brand.logo ? await logoDataUri(brand.logo) : ''
+
   // Branding que reciben las cotizaciones rápidas para generar la imagen con membrete.
   const brandImg = {
     nombre: brand.nombre,
-    logo: brand.logo,
+    logo: logoImg,
     colorPrimario: brand.colorPrimario,
     colorSecundario: brand.colorSecundario,
   }
