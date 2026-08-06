@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Wallet, Plus, Search, X, Loader2, Trash2, Check } from 'lucide-react'
+import { Wallet, Plus, Search, X, Loader2, Trash2, Check, BookMarked } from 'lucide-react'
 import { METODOS_PAGO, BANCOS_VE } from '@/lib/utils'
 import FileUpload from '@/components/FileUpload'
-import { buscarClientesAnticipo, crearAnticipo, anularAnticipo, type ClienteBusca } from './actions'
+import { buscarClientesAnticipo, crearAnticipo, anularAnticipo, listarShowroomDisponible, type ClienteBusca, type ShowroomOpt } from './actions'
 
 type Anticipo = {
   id: string
@@ -20,6 +20,7 @@ type Anticipo = {
   concepto: string | null
   estado: string
   created_at: string
+  reserva_vehiculo: { marca?: string; modelo?: string; placa?: string | null } | null
   clientes: { nombre: string; cedula_rif: string | null } | null
 }
 
@@ -61,6 +62,10 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
   const [concepto, setConcepto] = useState('')
   const [observaciones, setObservaciones] = useState('')
   const [comprobantes, setComprobantes] = useState<{ url: string; nombre: string }[]>([])
+  // Carro a reservar (opcional) — para generar el acuerdo de reserva.
+  const [vehQuery, setVehQuery] = useState('')
+  const [vehRes, setVehRes] = useState<ShowroomOpt[]>([])
+  const [vehSel, setVehSel] = useState<ShowroomOpt | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -71,9 +76,17 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
     return () => clearTimeout(t)
   }, [cliQuery, open, cliSel])
 
+  useEffect(() => {
+    if (!open) return
+    const q = vehQuery.trim()
+    if (vehSel && `${vehSel.marca} ${vehSel.modelo}` === q) return
+    const t = setTimeout(() => { listarShowroomDisponible(q).then(setVehRes).catch(() => setVehRes([])) }, 300)
+    return () => clearTimeout(t)
+  }, [vehQuery, open, vehSel])
+
   function resetForm() {
     setCliQuery(''); setCliRes([]); setCliSel(null); setMoneda('USD'); setMonto(''); setTasa('')
-    setMetodo(''); setBancoEmisor(''); setBancoReceptor(''); setReferencia(''); setFecha(hoy()); setConcepto(''); setObservaciones(''); setComprobantes([]); setError('')
+    setMetodo(''); setBancoEmisor(''); setBancoReceptor(''); setReferencia(''); setFecha(hoy()); setConcepto(''); setObservaciones(''); setComprobantes([]); setVehQuery(''); setVehRes([]); setVehSel(null); setError('')
   }
   function abrir() { resetForm(); setOpen(true) }
 
@@ -99,6 +112,7 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
       concepto: concepto || null,
       observaciones: observaciones || null,
       comprobantes,
+      reservaVehiculo: vehSel ? { marca: vehSel.marca, modelo: [vehSel.modelo, vehSel.version].filter(Boolean).join(' '), placa: vehSel.placa, color: vehSel.color, showroom_id: vehSel.id } : null,
     })
     setSaving(false)
     if (res.error) { setError(res.error); return }
@@ -109,6 +123,7 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
       id: res.anticipoId!, cliente_id: cliSel.id, monto: parseFloat(monto.replace(',', '.')) || 0, moneda,
       monto_usd: montoUsd, saldo_usd: montoUsd, metodo_pago: metodo || null, referencia: referencia || null,
       fecha_pago: fecha, concepto: concepto || null, estado: 'disponible', created_at: new Date().toISOString(),
+      reserva_vehiculo: vehSel ? { marca: vehSel.marca, modelo: vehSel.modelo, placa: vehSel.placa } : null,
       clientes: { nombre: cliSel.nombre, cedula_rif: cliSel.cedula_rif },
     }, ...prev])
   }
@@ -181,9 +196,15 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
                 <td className="px-4 py-2.5 text-right font-mono font-bold text-oriental-black">${fmt(a.saldo_usd)}</td>
                 <td className="px-4 py-2.5"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ESTADO_STYLE[a.estado] ?? 'bg-gray-100 text-gray-600'}`}>{a.estado}</span></td>
                 <td className="px-4 py-2.5 text-right">
-                  {a.estado === 'disponible' && (
-                    <button onClick={() => anular(a)} title="Anular" className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    {a.reserva_vehiculo?.modelo && (
+                      <a href={`/api/anticipos/${a.id}/reserva/pdf`} target="_blank" rel="noopener noreferrer" title="Acuerdo de reserva del vehículo"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline"><BookMarked size={13} /> Reserva</a>
+                    )}
+                    {a.estado === 'disponible' && (
+                      <button onClick={() => anular(a)} title="Anular" className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -296,6 +317,31 @@ export default function AnticiposClient({ anticiposIniciales }: { anticiposInici
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 mb-1">Concepto / observaciones</label>
                 <input className={inp} value={concepto} onChange={e => setConcepto(e.target.value)} placeholder="Ej: abono para reservar el MG RX5" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">Carro a reservar (opcional)</label>
+                {vehSel ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+                    <Check size={14} className="text-indigo-600" />
+                    <span className="flex-1 text-sm text-oriental-black">{vehSel.marca} {vehSel.modelo}{vehSel.version ? ` ${vehSel.version}` : ''}{vehSel.placa ? ` · ${vehSel.placa}` : ''}{vehSel.color ? ` · ${vehSel.color}` : ''}</span>
+                    <button onClick={() => { setVehSel(null); setVehQuery('') }} className="text-gray-400 hover:text-oriental-red"><X size={14} /></button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input className={inp} value={vehQuery} onChange={e => setVehQuery(e.target.value)} placeholder="Buscar carro del showroom (marca, modelo o placa)…" />
+                    {vehRes.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full max-h-44 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                        {vehRes.map(v => (
+                          <button key={v.id} onClick={() => { setVehSel(v); setVehQuery(`${v.marca} ${v.modelo}`); setVehRes([]) }} className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50">
+                            <span className="font-medium text-oriental-black">{v.marca} {v.modelo}{v.version ? ` ${v.version}` : ''}</span>
+                            <span className="text-oriental-gray">{v.placa ? ` · ${v.placa}` : ''}{v.color ? ` · ${v.color}` : ''}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-gray-400 mt-1">Si eliges un carro, luego podrás generar el <b>Acuerdo de reserva</b> desde la lista.</p>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 mb-1">Comprobante del pago</label>

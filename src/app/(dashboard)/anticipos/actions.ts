@@ -21,6 +21,28 @@ export async function buscarClientesAnticipo(q: string): Promise<ClienteBusca[]>
   return (data ?? []) as ClienteBusca[]
 }
 
+export type ShowroomOpt = { id: string; marca: string; modelo: string; version: string | null; color: string | null; placa: string | null }
+
+// Carros del showroom disponibles para reservar (en agencia o ya reservados).
+export async function listarShowroomDisponible(q: string): Promise<ShowroomOpt[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const admin = await createAdminClient()
+  let sel = admin.from('vehiculos_showroom')
+    .select('id, marca, modelo, version, color, placa')
+    .in('estado', ['en_agencia', 'reservado'])
+  const query = q.trim().replace(/[%,()*]/g, ' ')
+  if (query.length >= 2) {
+    const like = `%${query}%`
+    sel = sel.or(`marca.ilike.${like},modelo.ilike.${like},placa.ilike.${like}`)
+  }
+  const { data } = await sel.order('marca').limit(20)
+  return (data ?? []) as ShowroomOpt[]
+}
+
+export type ReservaVehiculo = { marca: string; modelo: string; placa: string | null; color: string | null; showroom_id: string | null }
+
 export type CrearAnticipoPayload = {
   clienteId: string
   monto: number
@@ -34,6 +56,7 @@ export type CrearAnticipoPayload = {
   concepto: string | null
   observaciones: string | null
   comprobantes?: { url: string; nombre: string }[]
+  reservaVehiculo?: ReservaVehiculo | null
 }
 
 export async function crearAnticipo(p: CrearAnticipoPayload) {
@@ -69,6 +92,7 @@ export async function crearAnticipo(p: CrearAnticipoPayload) {
     fecha_pago: p.fechaPago,
     concepto: p.concepto?.trim() || null,
     observaciones: p.observaciones?.trim() || null,
+    reserva_vehiculo: p.reservaVehiculo && p.reservaVehiculo.modelo ? p.reservaVehiculo : null,
     estado: 'disponible',
     registrado_por: user.id,
   }).select('id').single()
