@@ -76,6 +76,83 @@ export async function crearAnticipo(p: CrearAnticipoPayload) {
   return { ok: true, anticipoId: data.id }
 }
 
+export type AnticipoDisponible = {
+  id: string; monto: number; moneda: string; monto_usd: number; saldo_usd: number
+  metodo_pago: string | null; referencia: string | null; fecha_pago: string; concepto: string | null
+}
+
+// Anticipos con saldo disponible de un cliente (para asociar a proforma/venta).
+export async function listarAnticiposCliente(clienteId: string): Promise<AnticipoDisponible[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !clienteId) return []
+  const admin = await createAdminClient()
+  const { data } = await admin
+    .from('anticipos')
+    .select('id, monto, moneda, monto_usd, saldo_usd, metodo_pago, referencia, fecha_pago, concepto')
+    .eq('cliente_id', clienteId)
+    .in('estado', ['disponible', 'parcial'])
+    .gt('saldo_usd', 0.009)
+    .order('fecha_pago')
+  return (data ?? []) as AnticipoDisponible[]
+}
+
+// Aplica los anticipos a una venta: por cada uno crea un INGRESO (ligado al
+// vehículo) por el monto aplicado, reduce su saldo y actualiza su estado. El
+// total aplicado se topa en `topeInicial` (el inicial que le toca al cliente).
+export async function aplicarAnticiposAVenta(p: {
+  anticipoIds: string[]; vehiculoId: string; clienteId: string; placa: string | null
+  vehiculoDesc: string; fecha: string; topeInicial: number
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autorizado' }
+  const ids = (p.anticipoIds ?? []).filter(Boolean)
+  if (ids.length === 0) return { ok: true, totalAplicado: 0 }
+
+  const admin = await createAdminClient()
+  const { data: ants } = await admin
+    .from('anticipos')
+    .select('id, saldo_usd')
+    .in('id', ids)
+    .eq('cliente_id', p.clienteId)
+    .in('estado', ['disponible', 'parcial'])
+    .order('fecha_pago')
+
+  let restante = Number.isFinite(p.topeInicial) ? Math.max(0, p.topeInicial) : Number.POSITIVE_INFINITY
+  let totalAplicado = 0
+  for (const a of ants ?? []) {
+    if (restante <= 0.009) break
+    const saldo = Number(a.saldo_usd) || 0
+    if (saldo <= 0) continue
+    const aplica = Math.round(Math.min(saldo, restante) * 100) / 100
+    if (aplica <= 0) continue
+    const { error: insErr } = await admin.from('ingresos').insert({
+      cliente_id: p.clienteId,
+      vehiculo_id: p.vehiculoId,
+      placa: p.placa || null,
+      concepto: `Anticipo aplicado a inicial — ${p.vehiculoDesc}`,
+      monto: aplica,
+      moneda: 'USD',
+      metodo_pago: 'Anticipo',
+      fecha_pago: p.fecha,
+      estado: 'registrado',
+      anticipo_id: a.id,
+      registrado_por: user.id,
+    })
+    if (insErr) continue
+    const nuevoSaldo = Math.round((saldo - aplica) * 100) / 100
+    await admin.from('anticipos').update({
+      saldo_usd: nuevoSaldo,
+      estado: nuevoSaldo <= 0.009 ? 'aplicado' : 'parcial',
+      updated_at: new Date().toISOString(),
+    }).eq('id', a.id)
+    totalAplicado = Math.round((totalAplicado + aplica) * 100) / 100
+    restante = Math.round((restante - aplica) * 100) / 100
+  }
+  return { ok: true, totalAplicado }
+}
+
 const ROLES_ANULAR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 export async function anularAnticipo(id: string) {
