@@ -194,7 +194,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
         <div style={row}><span style={lbl}>100% Precio Base:</span><span style={val}>${fmt(precio)}</span></div>
         <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmt(iva)}</span></div>
         <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
-          <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza Seguro Vehículo, Traslado, Gastos, INTT, Gastos Notaría</span>
+          <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza auto, Póliza de Vida, Traslado, INTT, Gastos Notaría, IGTF</span>
           <span style={{ ...val, flexShrink: 0 }}>${fmt(gc)}</span>
         </div>
         <div style={{ ...row, background: '#fef9c3', border: 'none' }}>
@@ -206,7 +206,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
         <div style={row}><span style={lbl}>40% Precio Base:</span><span style={val}>${fmt(ini40)}</span></div>
         <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmt(iva)}</span></div>
         <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
-          <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza Seguro Vehículo, Traslado, Gastos, INTT, Gastos Notaría</span>
+          <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza auto, Póliza de Vida, Traslado, INTT, Gastos Notaría, IGTF</span>
           <span style={{ ...val, flexShrink: 0 }}>${fmt(gcr)}</span>
         </div>
         <div style={{ ...row, background: '#dcfce7', border: 'none' }}>

@@ -103,7 +103,7 @@ export function CotizacionRapidaPDF({ data }: { data: CotizacionRapidaData }) {
             <Text style={[s.secHdr, { backgroundColor: '#7c2d12', color: '#fde68a' }]}>MODALIDAD DE CONTADO</Text>
             <View style={s.row}><Text style={s.lbl}>100% Precio Base:</Text><Text style={s.val}>${fmt(precio)}</Text></View>
             <View style={s.row}><Text style={s.lbl}>I.V.A. (16%):</Text><Text style={s.val}>${fmt(iva)}</Text></View>
-            <View style={s.row}><Text style={s.lbl}>Póliza, Traslado, INTT, Gastos Notaría:</Text><Text style={s.val}>${fmt(gc)}</Text></View>
+            <View style={s.row}><Text style={s.lbl}>Póliza auto, Póliza de Vida, Traslado, INTT, Gastos Notaría, IGTF:</Text><Text style={s.val}>${fmt(gc)}</Text></View>
             <View style={[s.totalRow, { backgroundColor: '#fef9c3' }]}>
               <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>TOTAL A PAGAR:</Text>
               <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(total)}</Text>
@@ -112,7 +112,7 @@ export function CotizacionRapidaPDF({ data }: { data: CotizacionRapidaData }) {
             <Text style={[s.secHdr, { backgroundColor: '#064e3b', color: '#6ee7b7', marginTop: 4 }]}>CRÉDITO 24 MESES (40% INICIAL)</Text>
             <View style={s.row}><Text style={s.lbl}>40% Precio Base:</Text><Text style={s.val}>${fmt(ini40)}</Text></View>
             <View style={s.row}><Text style={s.lbl}>I.V.A. (16%):</Text><Text style={s.val}>${fmt(iva)}</Text></View>
-            <View style={s.row}><Text style={s.lbl}>Póliza, Traslado, INTT, Gastos Notaría:</Text><Text style={s.val}>${fmt(gcr)}</Text></View>
+            <View style={s.row}><Text style={s.lbl}>Póliza auto, Póliza de Vida, Traslado, INTT, Gastos Notaría, IGTF:</Text><Text style={s.val}>${fmt(gcr)}</Text></View>
             <View style={[s.totalRow, { backgroundColor: '#dcfce7' }]}>
               <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#065f46' }}>TOTAL INICIAL A PAGAR:</Text>
               <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#065f46' }}>${fmt(totalIni)}</Text>
