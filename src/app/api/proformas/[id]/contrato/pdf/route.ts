@@ -118,7 +118,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     vehSerialMotor: (veh.serial_motor as string) ?? '',
     vehPlaca: (veh.placa as string) ?? '',
     certificadoOrigenNro: (veh.certificado_origen as string) ?? '',
-    certificadoOrigenFecha: '',
+    certificadoOrigenFecha: fechaLarga(veh.certificado_origen_fecha as string) || '',
     precioTotalVenta,
     placaMonto,
     iva,

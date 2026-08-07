@@ -60,11 +60,23 @@ export default function ProformasTab() {
 
   async function editarCertificado(p: Proforma) {
     const actual = p.vehiculo_snapshot?.certificado_origen ?? ''
-    const val = window.prompt('Certificado de origen (N° de control) del vehículo:', actual)
+    const val = window.prompt('N° del certificado de origen (ej: AA2623133):', actual)
     if (val == null) return
+    // Fecha de emisión (opcional), en formato DD/MM/AAAA → se guarda como ISO.
+    const isoActual = p.vehiculo_snapshot?.certificado_origen_fecha ?? ''
+    const fechaActual = /^\d{4}-\d{2}-\d{2}$/.test(isoActual) ? `${+isoActual.slice(8, 10)}/${+isoActual.slice(5, 7)}/${isoActual.slice(0, 4)}` : ''
+    const fechaIn = window.prompt('Fecha de emisión del certificado (DD/MM/AAAA):', fechaActual)
+    let fechaIso: string | undefined
+    if (fechaIn != null) {
+      const t = fechaIn.trim()
+      const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t)
+      fechaIso = t === '' ? '' : (m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : t)
+    }
+    const body: Record<string, string> = { certificadoOrigen: val }
+    if (fechaIso !== undefined) body.certificadoOrigenFecha = fechaIso
     const r = await fetch(`/api/proformas/${p.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ certificadoOrigen: val }),
+      body: JSON.stringify(body),
     })
     if (r.ok) cargar()
     else alert((await r.json().catch(() => ({}))).error ?? 'No se pudo guardar el certificado')

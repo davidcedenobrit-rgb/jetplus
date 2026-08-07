@@ -82,10 +82,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
   }
 
-  // Certificado de origen (N° de control) del vehículo — se guarda en el snapshot.
-  if (typeof b.certificadoOrigen === 'string') {
+  // Certificado de origen (número + fecha de emisión) del vehículo — en el snapshot.
+  if (typeof b.certificadoOrigen === 'string' || typeof b.certificadoOrigenFecha === 'string') {
     const baseSnap = (patch.vehiculo_snapshot ?? pro.vehiculo_snapshot ?? {}) as Record<string, any>
-    patch.vehiculo_snapshot = { ...baseSnap, certificado_origen: b.certificadoOrigen.trim() || null }
+    const merged = { ...baseSnap }
+    if (typeof b.certificadoOrigen === 'string') merged.certificado_origen = b.certificadoOrigen.trim() || null
+    if (typeof b.certificadoOrigenFecha === 'string') merged.certificado_origen_fecha = b.certificadoOrigenFecha.trim() || null
+    patch.vehiculo_snapshot = merged
   }
 
   const { error } = await supabase.from('proformas').update(patch).eq('id', id)
