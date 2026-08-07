@@ -179,8 +179,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         .maybeSingle()
       const clienteIdVinculado = clienteExistente?.id ?? null
 
+      // Invariante: los planes personalizado y 100% Banco son SIEMPRE a crédito.
+      // Sin esto, una cotización que nació Contado y se pasa a personalizado podía
+      // quedar con modalidad='contado' + total de inicial (50%), y el PDF la pintaba
+      // como Contado con un "TOTAL A PAGAR" menor al precio base.
+      const modalidadFinal = (plan === 'personalizado' || plan === 'banco_100') ? 'credito_24' : modalidad
+
       const nuevos = {
-        precio_base, iva_monto, gastos_monto, modalidad, plan,
+        precio_base, iva_monto, gastos_monto, modalidad: modalidadFinal, plan,
         total_inicial, financiamiento_monto,
         cuota_mensual: cuota_mensual_final, costo_total,
         cliente_id: clienteIdVinculado,
@@ -323,8 +329,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const L = est.lineas ?? {}
       const num = (x: any) => Math.max(0, Number(x) || 0)
       const precioBase = num(est.precioBase ?? cotActual.precio_base)
-      const modalidad = (est.modalidad ?? cotActual.modalidad) as 'contado' | 'credito_24'
       const plan = (est.plan ?? cotActual.plan ?? 'vehimotors') as any
+      // Invariante: personalizado y 100% Banco son SIEMPRE a crédito.
+      const modalidadRaw = (est.modalidad ?? cotActual.modalidad) as 'contado' | 'credito_24'
+      const modalidad = (plan === 'personalizado' || plan === 'banco_100') ? 'credito_24' : modalidadRaw
       if (!['contado', 'credito_24'].includes(modalidad)) return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
       // AC500: sus montos vienen del plan (reserva + cuotas), no de líneas de costo.
       // Aplicar un descuento por estructura corrompería las cifras, así que se bloquea.
@@ -372,6 +380,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const estructuraGuardar = { precioBase, modalidad, plan, inicialPct, tasaPct, meses, cuotaVehimotors: cuotaVhmDesc, lineas }
       const nuevos = {
         precio_base: precioBase,
+        modalidad, plan,
         iva_monto: t.iva,
         gastos_monto: t.gastos,
         diferencial_monto: lineas.diferencial > 0 ? lineas.diferencial : null,
