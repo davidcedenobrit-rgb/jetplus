@@ -1,6 +1,6 @@
 import React from 'react'
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
-import { PdfMembrete, MembreteData } from './pdf-membrete'
+import { MembreteData } from './pdf-membrete'
 
 export interface AmortRow {
   nro: number
@@ -115,8 +115,6 @@ export function ContratoCreditoPDF({ data }: { data: ContratoCreditoData }) {
   return (
     <Document title={`Contrato de venta a crédito — ${data.compradorNombre}`} author={V}>
       <Page size="A4" style={s.page} wrap>
-        <PdfMembrete data={data.membrete} />
-
         <Text style={s.title}>CONTRATO DE VENTA A CRÉDITO</Text>
         <Text style={s.subtitle}>CON RESERVA DE DOMINIO</Text>
 
