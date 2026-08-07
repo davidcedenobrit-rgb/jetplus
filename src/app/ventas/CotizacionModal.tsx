@@ -84,7 +84,8 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   const [pinLoading, setPinLoading] = useState(false)
   const [vendedoraNombre, setVendedoraNombre] = useState('')
   const [modalidad, setModalidad] = useState<Modalidad>('contado')
-  const [plan, setPlan] = useState<Plan>('vehimotors')
+  // Plan fijo Vehimotors: el crédito 100% Banco se retiró del cotizador de vendedores.
+  const [plan] = useState<Plan>('vehimotors')
   const [form, setForm] = useState({
     clienteNombre: '', clienteCiRif: '', clienteCorreo: '',
     clienteTelefono: '', clienteDireccion: '',
@@ -113,7 +114,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
     if (q.length < 2) { setCliResultados([]); setCliBuscando(false); return }
     setCliBuscando(true)
     const t = setTimeout(() => {
-      fetch(`/api/cotizaciones/clientes-buscar?q=${encodeURIComponent(q)}`)
+      fetch(`/api/cotizaciones/clientes-buscar?q=${encodeURIComponent(q)}&codigo=${encodeURIComponent(pin)}`)
         .then(r => r.json())
         .then(d => { if (Array.isArray(d)) setCliResultados(d) })
         .catch(() => {})
@@ -409,21 +410,6 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                   ))}
                 </div>
               </div>
-
-              {/* Plan (solo para crédito, no en promociones) */}
-              {modalidad === 'credito_24' && !esPromo && (
-                <div style={{ marginBottom: 18 }}>
-                  <label style={label}>Plan de financiamiento</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {(['vehimotors', 'banco_100'] as Plan[]).map(p => (
-                      <button key={p} onClick={() => setPlan(p)}
-                        style={{ flex: 1, padding: '10px 8px', border: `2px solid ${plan === p ? '#111' : '#e5e7eb'}`, borderRadius: 10, background: plan === p ? '#111' : '#fff', color: plan === p ? '#fff' : '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}>
-                        {p === 'vehimotors' ? 'Plan Vehimotors' : 'Plan 100% Banco'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Preview de montos */}
               <div style={{ background: '#fffbeb', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>

@@ -50,7 +50,7 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
     if (q.length < 2) { setCliResultados([]); setCliBuscando(false); return }
     setCliBuscando(true)
     const t = setTimeout(() => {
-      fetch(`/api/cotizaciones/clientes-buscar?q=${encodeURIComponent(q)}`)
+      fetch(`/api/cotizaciones/clientes-buscar?q=${encodeURIComponent(q)}&codigo=${encodeURIComponent(pin)}`)
         .then(r => r.json())
         .then(d => { if (Array.isArray(d)) setCliResultados(d) })
         .catch(() => {})

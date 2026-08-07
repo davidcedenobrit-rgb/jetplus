@@ -7,18 +7,29 @@ const ROLES = ['jose', 'admin', 'director']
 // Busca clientes ya existentes (cotizaciones previas + tabla de clientes)
 // para autocompletar los datos al generar una cotización.
 export async function GET(req: Request) {
+  const url = new URL(req.url)
+  const supabase = await createAdminClient()
+
+  // Autorización: (a) staff con sesión y rol permitido, o (b) desde el link de
+  // vendedores, un código de vendedor(a) válido (letra + 3 dígitos). Así el
+  // buscador jala clientes ya registrados sin exponer la base sin credencial.
   const auth = await createClient()
   const { data: { user } } = await auth.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  const rol = user.app_metadata?.rol as string
-  if (!ROLES.includes(rol)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+  const rol = (user?.app_metadata?.rol as string) ?? ''
+  let permitido = !!user && ROLES.includes(rol)
+  if (!permitido) {
+    const codigo = String(url.searchParams.get('codigo') ?? '').trim()
+    if (/^[A-Za-z]\d{3}$/.test(codigo)) {
+      const { data: v } = await supabase.from('vendedoras').select('activa').eq('codigo', codigo).maybeSingle()
+      if (v && (v.activa || codigo.toUpperCase() === 'R000')) permitido = true
+    }
+  }
+  if (!permitido) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const url = new URL(req.url)
   // Se limpian los caracteres que rompen el filtro .or() de PostgREST
   const q = (url.searchParams.get('q') ?? '').replace(/[,()%*]/g, ' ').trim()
   if (q.length < 2) return NextResponse.json([])
 
-  const supabase = await createAdminClient()
   const like = `%${q}%`
 
   const [{ data: cotRows }, { data: cliRows }] = await Promise.all([

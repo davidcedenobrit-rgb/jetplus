@@ -30,6 +30,11 @@ export async function middleware(request: NextRequest) {
     // Sin esto el POST se redirige al login (307) y el navegador recibe HTML
     // en vez de JSON → "Error de conexión" al ingresar el código.
     '/api/vendedoras/verificar',
+    // PDF del "rapidito" (resumen de cotización) compartible desde el link.
+    '/api/cotizacion-rapida/pdf',
+    // Búsqueda de clientes desde el link de vendedores (validada por código de
+    // vendedor(a) dentro del handler; no expone la base sin código válido).
+    '/api/cotizaciones/clientes-buscar',
   ]
 
   // PDF de la cotización: público (se comparte al cliente por WhatsApp/correo).
