@@ -30,45 +30,45 @@ export function EtiquetaPDF({ data }: { data: EtiquetaData }) {
   const secundario = data.colorSecundario || DARK
 
   const s = StyleSheet.create({
-    page: { paddingTop: 26, paddingBottom: 30, paddingHorizontal: 34, fontFamily: 'Helvetica', color: INK, fontSize: 10 },
+    page: { paddingTop: 20, paddingBottom: 22, paddingHorizontal: 32, fontFamily: 'Helvetica', color: INK, fontSize: 10 },
 
     // Encabezado de marca
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10 },
-    logo: { height: 30, maxWidth: 150, objectFit: 'contain' },
-    empresaWrap: { alignItems: 'flex-end', maxWidth: 220 },
-    empresaName: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: secundario, textAlign: 'right' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 7 },
+    logo: { height: 26, maxWidth: 140, objectFit: 'contain' },
+    empresaWrap: { alignItems: 'flex-end', maxWidth: 210 },
+    empresaName: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: secundario, textAlign: 'right' },
     empresaRif: { fontSize: 7.5, color: MUTED, marginTop: 2, textAlign: 'right' },
     rule: { height: 2.5, backgroundColor: primario, borderRadius: 2 },
 
     // Título principal
-    titleBar: { backgroundColor: secundario, borderRadius: 5, paddingVertical: 9, marginTop: 18, marginBottom: 16 },
-    titleTxt: { color: '#ffffff', fontSize: 14, fontFamily: 'Helvetica-Bold', textAlign: 'center', letterSpacing: 1.5 },
+    titleBar: { backgroundColor: secundario, borderRadius: 5, paddingVertical: 7, marginTop: 11, marginBottom: 11 },
+    titleTxt: { color: '#ffffff', fontSize: 13, fontFamily: 'Helvetica-Bold', textAlign: 'center', letterSpacing: 1.5 },
 
     // Tarjeta de datos del vehículo
     card: { borderWidth: 1, borderColor: LINE, borderRadius: 6 },
-    cardHead: { backgroundColor: primario, paddingVertical: 6, paddingHorizontal: 12, borderTopLeftRadius: 5, borderTopRightRadius: 5 },
+    cardHead: { backgroundColor: primario, paddingVertical: 5, paddingHorizontal: 12, borderTopLeftRadius: 5, borderTopRightRadius: 5 },
     cardHeadTxt: { color: '#ffffff', fontSize: 9, fontFamily: 'Helvetica-Bold', letterSpacing: 1 },
 
-    dataRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: LINE },
+    dataRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5.5, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: LINE },
     dataRowAlt: { backgroundColor: SOFT },
     dataRowLast: { borderBottomWidth: 0 },
     k: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: primario, letterSpacing: 0.5, width: 92 },
     v: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: INK, flex: 1 },
 
     // Fecha de recepción
-    fechaWrap: { paddingVertical: 12, paddingHorizontal: 12, alignItems: 'center' },
-    fechaLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: MUTED, letterSpacing: 1, marginBottom: 8 },
+    fechaWrap: { paddingVertical: 9, paddingHorizontal: 12, alignItems: 'center' },
+    fechaLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: MUTED, letterSpacing: 1, marginBottom: 6 },
     fechaRow: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
-    fechaCell: { borderWidth: 1, borderColor: LINE, borderRadius: 5, backgroundColor: SOFT, width: 74, paddingVertical: 8, alignItems: 'center' },
-    fechaVal: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: secundario },
+    fechaCell: { borderWidth: 1, borderColor: LINE, borderRadius: 5, backgroundColor: SOFT, width: 70, paddingVertical: 6, alignItems: 'center' },
+    fechaVal: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: secundario },
     fechaSub: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: MUTED, letterSpacing: 1, marginTop: 3 },
 
     // Tarjeta cliente / venta
-    row2: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: LINE },
+    row2: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6.5, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: LINE },
     k2: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: primario, letterSpacing: 0.5, width: 110 },
     v2: { fontSize: 10.5, fontFamily: 'Helvetica-Bold', color: INK, flex: 1 },
 
-    footer: { position: 'absolute', bottom: 18, left: 34, right: 34, textAlign: 'center', fontSize: 7, color: MUTED, letterSpacing: 0.5 },
+    footer: { position: 'absolute', bottom: 12, left: 32, right: 32, textAlign: 'center', fontSize: 7, color: MUTED, letterSpacing: 0.5 },
   })
 
   const veh: [string, string][] = [
@@ -99,7 +99,7 @@ export function EtiquetaPDF({ data }: { data: EtiquetaData }) {
         </View>
 
         {/* Datos del vehículo */}
-        <View style={s.card}>
+        <View style={s.card} wrap={false}>
           <View style={s.cardHead}><Text style={s.cardHeadTxt}>IDENTIFICACIÓN</Text></View>
           {veh.map(([k, v], i) => (
             <View key={k} style={[s.dataRow, i % 2 === 1 ? s.dataRowAlt : {}]}>
@@ -118,7 +118,7 @@ export function EtiquetaPDF({ data }: { data: EtiquetaData }) {
         </View>
 
         {/* Datos de la venta */}
-        <View style={[s.card, { marginTop: 16 }]}>
+        <View style={[s.card, { marginTop: 12 }]} wrap={false}>
           <View style={s.cardHead}><Text style={s.cardHeadTxt}>DATOS DE LA VENTA</Text></View>
           <View style={s.row2}><Text style={s.k2}>CLIENTE</Text><Text style={s.v2}>{data.cliente || '—'}</Text></View>
           <View style={s.row2}><Text style={s.k2}>VENDEDOR</Text><Text style={s.v2}>{data.vendedor || '—'}</Text></View>
