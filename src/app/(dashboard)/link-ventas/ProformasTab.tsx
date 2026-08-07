@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2, ClipboardCheck, ShieldAlert, BookMarked, PackageCheck } from 'lucide-react'
+import { FileText, Search, ExternalLink, ShoppingCart, CheckCircle2, Pencil, Trash2, ClipboardCheck, ShieldAlert, BookMarked, PackageCheck, Receipt, ScrollText } from 'lucide-react'
 import ProformaPanel from './ProformaPanel'
 import AcuerdoCobroPanel from './AcuerdoCobroPanel'
 
@@ -168,6 +168,20 @@ export default function ProformasTab() {
                     title="Generar el resumen de entrega del vehículo">
                     <PackageCheck size={13} /> Resumen entrega
                   </a>
+                  {Number(p.monto_financiado) > 0 && (
+                    <>
+                      <a href={`/api/proformas/${p.id}/contrato/pdf`} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2 border border-slate-400 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50"
+                        title="Generar el contrato de venta a crédito con reserva de dominio">
+                        <ScrollText size={13} /> Contrato
+                      </a>
+                      <a href={`/api/proformas/${p.id}/giros/pdf`} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2 border border-purple-300 rounded-lg text-xs font-bold text-purple-700 hover:bg-purple-50"
+                        title="Generar los giros (letras de cambio) del crédito">
+                        <Receipt size={13} /> Giros
+                      </a>
+                    </>
+                  )}
                   {vendida ? (
                     <button onClick={() => router.push(`/vehiculos/${p.vehiculo_id}`)}
                       className="flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold">
