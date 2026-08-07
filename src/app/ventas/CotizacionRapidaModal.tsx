@@ -50,43 +50,15 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
 
   const [compartiendo, setCompartiendo] = useState(false)
   const [error, setError] = useState('')
-  const [telCliente, setTelCliente] = useState('')
 
-  // Payload común del PDF (sin logo: para el link se resuelve en el servidor).
-  function payloadBase(incluirLogo: boolean) {
+  // Payload del PDF que se comparte.
+  function payloadBase() {
     return {
       marca: vehiculo.brand, modelo: vehiculo.model, planNota, financiamiento,
       precio, gastosContado: gc, gastosCredito: gcr, cuota,
-      brandNombre, colorPrimario, colorSecundario, conc: concesionario,
-      ...(incluirLogo ? { brandLogo } : {}),
+      brandNombre, brandLogo, colorPrimario, colorSecundario, conc: concesionario,
       ac500: ac500 ? { meses: ac500.meses, color: ac500.color, total: ac500.total, rows: ac500.rows } : null,
     }
-  }
-
-  // Link estable al PDF (GET) para enviarlo por WhatsApp al cliente.
-  function pdfLink() {
-    const json = JSON.stringify(payloadBase(false))
-    const b64 = btoa(unescape(encodeURIComponent(json)))
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    return `${origin}/api/cotizacion-rapida/pdf?d=${encodeURIComponent(b64)}`
-  }
-
-  // Normaliza el teléfono a formato internacional (Venezuela por defecto).
-  function normalizarTel(t: string): string {
-    let d = (t || '').replace(/\D/g, '')
-    if (!d) return ''
-    if (d.startsWith('58')) return d
-    if (d.startsWith('0')) d = d.slice(1)
-    if (d.length === 10) return '58' + d       // 4149989010 → 584149989010
-    return d.startsWith('58') ? d : '58' + d
-  }
-
-  function enviarAlCliente() {
-    const tel = normalizarTel(telCliente)
-    if (tel.length < 11) { setError('Escribe un teléfono válido del cliente (ej: 0414-1234567).'); return }
-    setError('')
-    const msg = `Hola 👋 Le comparto su cotización de *${vehiculo.brand} ${vehiculo.model}* de ${brandNombre}:\n${pdfLink()}`
-    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer')
   }
 
   // Compone el resumen en un PDF (en el servidor) y lo comparte por el compartir
@@ -97,7 +69,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
     setCompartiendo(true); setError('')
     try {
       const res = await fetch('/api/cotizacion-rapida/pdf', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadBase(true)),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadBase()),
       })
       if (!res.ok) throw new Error('pdf')
       const blob = await res.blob()
@@ -233,30 +205,11 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
         </div>
 
         {/* Compartir el resumen como PDF */}
-        <div style={{ padding: '14px 18px 6px' }}>
+        <div style={{ padding: '14px 18px 18px' }}>
           <button onClick={compartirPdf} disabled={compartiendo}
             style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: colorPrimario, color: '#fff', fontSize: 14, fontWeight: 800, cursor: compartiendo ? 'default' : 'pointer', opacity: compartiendo ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             {compartiendo ? 'Generando PDF…' : '📄 Compartir como PDF'}
           </button>
-        </div>
-
-        {/* Enviar el PDF al WhatsApp del cliente */}
-        <div style={{ padding: '8px 18px 18px', borderTop: '6px solid #f3f4f6', marginTop: 8 }}>
-          <p style={{ fontSize: 12.5, fontWeight: 800, color: '#111', margin: '4px 0 8px' }}>Enviar al WhatsApp del cliente</p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              value={telCliente}
-              onChange={e => setTelCliente(e.target.value)}
-              placeholder="Teléfono del cliente (ej: 0414-1234567)"
-              inputMode="tel"
-              style={{ flex: 1, padding: '11px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 14, boxSizing: 'border-box' }}
-            />
-            <button onClick={enviarAlCliente}
-              style={{ padding: '11px 16px', borderRadius: 10, border: 'none', background: '#16a34a', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              Enviar
-            </button>
-          </div>
-          <p style={{ fontSize: 10.5, color: '#9ca3af', margin: '8px 0 0' }}>Se abre el WhatsApp del cliente con el enlace a esta cotización en PDF.</p>
           {error && <p style={{ fontSize: 12, color: '#C41E3A', textAlign: 'center', margin: '8px 0 0' }}>{error}</p>}
         </div>
 
