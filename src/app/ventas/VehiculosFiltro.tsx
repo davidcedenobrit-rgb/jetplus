@@ -48,11 +48,6 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
     fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento, marca: brand, modelo: model }) }).catch(() => {})
   }
 
-  function goWA(model: string) {
-    const msg = `Hola 👋 vengo del perfil de ventas. Me interesa el ${model}.`
-    window.open(`https://wa.me/${waCorp}?text=${encodeURIComponent(msg)}`, '_blank')
-  }
-
   return (
     <div>
       {modalVehiculo && (
@@ -132,18 +127,15 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
 
                 <div style={{ flex: 1 }} />
 
-                {/* Botones */}
-                <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <button onClick={() => goWA(v.model)} className="lo-cbtn-dark">WhatsApp</button>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <button onClick={() => { trackEvento('cotizacion_rapida', v.brand, v.model); setRapidaVehiculo(v) }} className="lo-cbtn-out">
-                      📩 Me interesa
-                    </button>
-                    <button onClick={() => { trackEvento('cotizacion_formal_click', v.brand, v.model); setModalVehiculo(v) }} className="lo-cbtn-red">
-                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
-                      Cotización
-                    </button>
-                  </div>
+                {/* Botones del vendedor: cotización rápida (imagen) + cotización formal */}
+                <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <button onClick={() => { trackEvento('cotizacion_rapida', v.brand, v.model); setRapidaVehiculo(v) }} className="lo-cbtn-out">
+                    ⚡ Cotización rápida
+                  </button>
+                  <button onClick={() => { trackEvento('cotizacion_formal_click', v.brand, v.model); setModalVehiculo(v) }} className="lo-cbtn-red">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
+                    Cotización
+                  </button>
                 </div>
               </div>
             </div>

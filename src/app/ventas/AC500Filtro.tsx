@@ -124,13 +124,6 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
   const entregaMes = mode === '6' ? 6 : mode === '9' ? 9 : 12
   const rows = schedule(v, mode)
 
-  function goWA() {
-    fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_whatsapp', marca: v.brand, modelo: v.model }) }).catch(() => {})
-    const colorPart = color ? ` Color: ${color}.` : ''
-    const entrega = `${mode} meses`
-    const msg = `Hola 👋 vengo del perfil de ventas. Me interesa el ${v.model} en el Plan Asegúrate con $500 (${entrega}).${colorPart} ¿Me comparten disponibilidad y próximos pasos?`
-    window.open(`https://wa.me/${waCorp}?text=${encodeURIComponent(msg)}`, '_blank')
-  }
   return (
     <article id={`car-${v.id}`} className="lo-card">
       <div className="lo-card-imgwrap" style={{ height: 185 }}>
@@ -209,18 +202,15 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
           ✱ La última cuota puede cancelarse en Bs.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button className="lo-cbtn-out" onClick={() => {
-              fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_interesado', marca: v.brand, modelo: v.model }) }).catch(() => {})
-              setRapida(true)
-            }}>📩 Me interesa</button>
-            <button className="lo-cbtn-red" onClick={() => {
-              fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_cotizacion_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
-              setCotizar(true)
-            }}>📄 Cotización</button>
-          </div>
-          <button className="lo-cbtn-dark" onClick={goWA}>Solicitar información</button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 'auto' }}>
+          <button className="lo-cbtn-out" onClick={() => {
+            fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_interesado', marca: v.brand, modelo: v.model }) }).catch(() => {})
+            setRapida(true)
+          }}>⚡ Cotización rápida</button>
+          <button className="lo-cbtn-red" onClick={() => {
+            fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_cotizacion_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
+            setCotizar(true)
+          }}>📄 Cotización</button>
         </div>
       </div>
 

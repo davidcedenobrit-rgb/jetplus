@@ -1,8 +1,7 @@
 'use client'
 
-const WA_FICHAS = encodeURIComponent('Hola 👋 Vengo de la web y quiero que me envíen las fichas técnicas de los vehículos MG y MAXUS disponibles.')
-
-export default function StickyNav({ hasAC500, waCorp = '584149989010' }: { hasAC500: boolean; waCorp?: string }) {
+// Navegación inferior del link de vendedores: accesos rápidos a las secciones.
+export default function StickyNav({ hasAC500, hasPromos }: { hasAC500: boolean; hasPromos?: boolean }) {
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -10,8 +9,8 @@ export default function StickyNav({ hasAC500, waCorp = '584149989010' }: { hasAC
   const btnBase: React.CSSProperties = {
     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontFamily: "'Inter', system-ui, sans-serif",
-    fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none',
-    padding: '14px 8px', transition: 'opacity .15s', letterSpacing: '.2px',
+    fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: 'none',
+    padding: '14px 6px', transition: 'opacity .15s', letterSpacing: '.2px', color: '#fff',
   }
 
   return (
@@ -19,36 +18,26 @@ export default function StickyNav({ hasAC500, waCorp = '584149989010' }: { hasAC
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
       display: 'flex', boxShadow: '0 -2px 20px rgba(0,0,0,.18)',
     }}>
-      <button
-        onClick={() => scrollTo('vehiculos')}
-        style={{ ...btnBase, background: '#111827', color: '#fff' }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')}
-        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-      >
-        🚗 Showroom
+      <button onClick={() => scrollTo('registro')} style={{ ...btnBase, background: '#0f766e' }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+        👤 Registrar
       </button>
-
+      <button onClick={() => scrollTo('vehiculos')} style={{ ...btnBase, background: '#111827' }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+        🚗 Vehículos
+      </button>
       {hasAC500 && (
-        <button
-          onClick={() => scrollTo('ac500')}
-          style={{ ...btnBase, background: '#C41E3A', color: '#fff' }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '.85')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
+        <button onClick={() => scrollTo('ac500')} style={{ ...btnBase, background: '#C41E3A' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
           🛡️ Plan $500
         </button>
       )}
-
-      <a
-        href={`https://wa.me/${waCorp}?text=${WA_FICHAS}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ ...btnBase, background: '#111827', color: '#fff', textDecoration: 'none' }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')}
-        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-      >
-        📋 Fichas Técnicas
-      </a>
+      {hasPromos && (
+        <button onClick={() => scrollTo('promociones')} style={{ ...btnBase, background: '#a16207' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+          🏷️ Promos
+        </button>
+      )}
     </div>
   )
 }

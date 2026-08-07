@@ -4,13 +4,11 @@ import VehiculosFiltro from './VehiculosFiltro'
 import AC500Filtro from './AC500Filtro'
 import PromoCotizar from './PromoCotizar'
 import StickyNav from './StickyNav'
+import RegistrarLead from './RegistrarLead'
 
 const LOGO    = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
 const MG_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e64a9efded9c776ffb5.png'
 const MX_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e646bac2400279a352f.png'
-const WA_MSG  = encodeURIComponent('Hola 👋 Vengo de la página web y quiero información sobre los planes de compra.')
-const WA_FIN  = encodeURIComponent('Hola 👋 Vengo de la web y quiero información sobre el plan de financiamiento 40% inicial + 24 cuotas.')
-
 export const revalidate = 60
 
 export default async function VentasPage({ searchParams }: { searchParams: Promise<{ evento?: string }> }) {
@@ -103,7 +101,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
             {brand.logo && <div style={{ width: 1, height: 24, background: '#e5e7eb' }} />}
             <div>
               <p style={{ fontSize: 13, fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>{brand.nombre}</p>
-              <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1 }}>Representantes oficiales · MG y MAXUS</p>
+              <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1 }}>Link de vendedores · MG y MAXUS</p>
             </div>
           </div>
           {/* Brand pills + ubicación */}
@@ -124,21 +122,21 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           {/* Columna izquierda */}
           <div className="lo-glass" style={{ padding: '32px 36px' }}>
             <span className="lo-pill-online" style={{ marginBottom: 18, display: 'inline-flex' }}>
-              <span className="lo-dot" /> Asesores disponibles · Atención en {brand.ciudad}
+              <span className="lo-dot" /> Herramienta de ventas · {brand.ciudad}
             </span>
             <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, lineHeight: 1.1, color: '#111827', marginBottom: 14, letterSpacing: '-0.5px' }}>
-              Tu próximo vehículo <span style={{ color: '#a16207' }}>MG</span><br />o <span style={{ color: '#a16207' }}>MAXUS</span> está aquí.
+              Link de <span style={{ color: '#a16207' }}>vendedores</span><br /><span style={{ color: '#a16207' }}>MG</span> y <span style={{ color: '#a16207' }}>MAXUS</span>
             </h1>
             <p style={{ fontSize: 15, color: '#6b7280', lineHeight: 1.65, marginBottom: 28, maxWidth: 480 }}>
-              Explora precios base y planes de financiamiento disponibles en nuestra sede de <strong style={{ color: '#374151' }}>{brand.ciudad}</strong>. Nuestros asesores te acompañan en cada paso.
+              Pasa cotizaciones rápidas y formales del Plan Asegúrate $500, vehículos de piso y promociones especiales. Registra a tus clientes y comparte todo desde aquí.
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {promoActiva && promoVehiculosList.length > 0 && <a href="#promociones" className="lo-btn-gold">🏷️ Promociones →</a>}
-              {acLista.length > 0 && <a href="#ac500" className="lo-btn-gold">🛡️ Plan $500 →</a>}
+              <a href="#registro" className="lo-btn-gold">👤 Registrar cliente →</a>
+              {acLista.length > 0 && <a href="#ac500" className="lo-btn-glass">🛡️ Plan $500 ↓</a>}
+              {promoActiva && promoVehiculosList.length > 0 && <a href="#promociones" className="lo-btn-glass">🏷️ Promociones ↓</a>}
               <a href="#vehiculos" className="lo-btn-glass">Ver vehículos ↓</a>
-              <a href={`https://wa.me/${brand.wa}?text=${WA_MSG}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">WhatsApp</a>
             </div>
-            <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 18 }}>* Los precios mostrados son referenciales y pueden variar. Consulta disponibilidad con tu asesor.</p>
+            <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 18 }}>* Precios referenciales. Las cotizaciones formales que generes llegan a la bandeja del director.</p>
           </div>
 
           {/* Columna derecha */}
@@ -147,9 +145,9 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
             <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '20px 22px' }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14 }}>¿Cómo funciona?</p>
               {[
-                { icon: '🔍', t: 'Revisa los', b: 'precios base y planes', d: 'disponibles en esta página.' },
-                { icon: '💬', t: 'Contacta a un', b: 'asesor por WhatsApp', d: 'para confirmar disponibilidad.' },
-                { icon: '📄', t: 'Tu asesor genera la', b: 'cotización formal', d: 'desde el catálogo.' },
+                { icon: '👤', t: 'Registra al', b: 'cliente nuevo', d: 'con sus datos básicos.' },
+                { icon: '⚡', t: 'Pasa una', b: 'cotización rápida', d: 'y compártela como imagen.' },
+                { icon: '📄', t: 'Genera la', b: 'cotización formal', d: 'con tu código; llega a la bandeja del director.' },
               ].map((s, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i < 2 ? 12 : 0 }}>
                   <span style={{ fontSize: 16, flexShrink: 0 }}>{s.icon}</span>
@@ -171,6 +169,11 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
         </div>
       </div>
 
+      {/* ── REGISTRO DE CLIENTE / LEAD ────────────────────────────────────── */}
+      <section id="registro" style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 20px 24px' }}>
+        <RegistrarLead evento={evento} concesionario={concesionario} />
+      </section>
+
       {/* ── VEHÍCULOS ─────────────────────────────────────────────────────── */}
       <section id="vehiculos" style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 20px 56px' }}>
         <div style={{ marginBottom: 22 }}>
@@ -178,36 +181,6 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
         </div>
         <VehiculosFiltro vehiculos={lista} tasas={tasas} evento={evento} waCorp={waCorp} concesionario={concesionario} brand={brandImg} />
-      </section>
-
-      {/* ── PLAN 40% ──────────────────────────────────────────────────────── */}
-      <section style={{ background: '#fff', borderTop: '1px solid #ececec', borderBottom: '1px solid #ececec', padding: '60px 16px' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
-          <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>📈 Financiamiento directo</span>
-          <h2 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 900, color: '#111827', marginBottom: 14, lineHeight: 1.2 }}>
-            Estrena con <span style={{ color: '#a16207' }}>40% de inicial</span> y 24 cuotas fijas
-          </h2>
-          <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 520, margin: '0 auto 36px', lineHeight: 1.6 }}>
-            Sin bancos, sin trámites eternos. Financiamiento directo con {brand.nombre}.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, maxWidth: 660, margin: '0 auto 32px' }}>
-            {[
-              { n: '01', icon: '🚗', t: 'Elige tu modelo', d: 'SUVs, sedanes, pickups — el que se adapte a tu estilo.' },
-              { n: '02', icon: '💰', t: 'Entrega el 40% de inicial', d: 'El 60% restante en cuotas mensuales fijas.' },
-              { n: '03', icon: '🔑', t: 'Sal manejando ese día', d: 'Al entregar la inicial, te llevas tu vehículo.' },
-            ].map(s => (
-              <div key={s.n} className="lo-info-box" style={{ textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#ca8a04', letterSpacing: '.5px' }}>{s.n}</span>
-                  <span style={{ fontSize: 22 }}>{s.icon}</span>
-                </div>
-                <p style={{ fontWeight: 700, fontSize: 13, color: '#111', marginBottom: 5 }}>{s.t}</p>
-                <p style={{ color: '#6b7280', fontSize: 12, lineHeight: 1.5 }}>{s.d}</p>
-              </div>
-            ))}
-          </div>
-          <a href={`https://wa.me/${brand.wa}?text=${WA_FIN}`} target="_blank" rel="noopener noreferrer" className="lo-btn-wa">Consultar plan de financiamiento</a>
-        </div>
       </section>
 
       {/* ── AC500 ─────────────────────────────────────────────────────────── */}
@@ -298,6 +271,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
                       gastos_credito: v.gastos_credito, cuota_mensual: v.cuota_mensual,
                     }}
                     tasas={tasas}
+                    evento={evento} waCorp={waCorp} concesionario={concesionario} brand={brandImg}
                   />
                 </div>
               )
@@ -305,21 +279,6 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           </div>
         </section>
       )}
-
-      {/* ── CONTACTO ──────────────────────────────────────────────────────── */}
-      <section style={{ background: '#fff', borderTop: '1px solid #ececec', padding: '56px 16px' }}>
-        <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 12 }}>Contacto directo</p>
-          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#111827', marginBottom: 8 }}>Sede {brand.ciudad}</h2>
-          <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
-            Atención personalizada en <strong style={{ color: '#374151' }}>{brand.ciudad}, {brand.estado}</strong>.<br />Cotizaciones aprobadas en tiempo real.
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-            <a href="https://wa.link/uc69id" target="_blank" rel="noopener noreferrer" className="lo-btn-wa">WhatsApp oficial</a>
-            <a href="https://wa.link/posuml" target="_blank" rel="noopener noreferrer" className="lo-btn-glass">Servicio técnico</a>
-          </div>
-        </div>
-      </section>
 
       {/* ── FOOTER ────────────────────────────────────────────────────────── */}
       <footer style={{ background: '#111827', padding: '30px 16px', textAlign: 'center' }}>
@@ -329,7 +288,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
       </footer>
 
       {/* ── STICKY BOTTOM NAV ─────────────────────────────────────────────── */}
-      <StickyNav hasAC500={acLista.length > 0} waCorp={waCorp} />
+      <StickyNav hasAC500={acLista.length > 0} hasPromos={promoActiva && promoVehiculosList.length > 0} />
     </div>
   )
 }
