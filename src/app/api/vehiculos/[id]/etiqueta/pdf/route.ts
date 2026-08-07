@@ -53,7 +53,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const data: EtiquetaData = {
     logoSrc: c.logoSrc,
     empresa: c.nombre,
+    rif: c.rif,
     colorPrimario: c.colorPrimario,
+    colorSecundario: c.colorSecundario,
     marca: (veh.marca as string) ?? '',
     modelo: [veh.modelo, veh.version].filter(Boolean).join(' ') || (veh.modelo as string) || '',
     placa: (veh.placa as string) ?? '',
