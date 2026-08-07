@@ -58,6 +58,18 @@ export default function ProformasTab() {
     else alert((await r.json().catch(() => ({}))).error ?? 'No se pudo liberar')
   }
 
+  async function editarCertificado(p: Proforma) {
+    const actual = p.vehiculo_snapshot?.certificado_origen ?? ''
+    const val = window.prompt('Certificado de origen (N° de control) del vehículo:', actual)
+    if (val == null) return
+    const r = await fetch(`/api/proformas/${p.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ certificadoOrigen: val }),
+    })
+    if (r.ok) cargar()
+    else alert((await r.json().catch(() => ({}))).error ?? 'No se pudo guardar el certificado')
+  }
+
   async function borrar(p: Proforma) {
     if (!confirm(`¿Borrar la proforma ${p.numero}? Esta acción no se puede deshacer${p.vehiculo_snapshot?.showroom_id ? ' y libera la unidad reservada' : ''}.`)) return
     const r = await fetch(`/api/proformas/${p.id}`, { method: 'DELETE' })
@@ -175,6 +187,13 @@ export default function ProformasTab() {
                         title="Generar el contrato de venta a crédito con reserva de dominio">
                         <ScrollText size={13} /> Contrato
                       </a>
+                      {!vendida && (
+                        <button onClick={() => editarCertificado(p)}
+                          className="flex items-center gap-1.5 px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50"
+                          title={p.vehiculo_snapshot?.certificado_origen ? `Certificado de origen: ${p.vehiculo_snapshot.certificado_origen}` : 'Registrar el certificado de origen (N° de control) del vehículo'}>
+                          <FileText size={13} /> {p.vehiculo_snapshot?.certificado_origen ? 'Cert. ✓' : 'N° Cert.'}
+                        </button>
+                      )}
                       <a href={`/api/proformas/${p.id}/giros/pdf`} target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-1.5 px-3 py-2 border border-purple-300 rounded-lg text-xs font-bold text-purple-700 hover:bg-purple-50"
                         title="Generar los giros (letras de cambio) del crédito">

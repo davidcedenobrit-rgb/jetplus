@@ -82,6 +82,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
   }
 
+  // Certificado de origen (N° de control) del vehículo — se guarda en el snapshot.
+  if (typeof b.certificadoOrigen === 'string') {
+    const baseSnap = (patch.vehiculo_snapshot ?? pro.vehiculo_snapshot ?? {}) as Record<string, any>
+    patch.vehiculo_snapshot = { ...baseSnap, certificado_origen: b.certificadoOrigen.trim() || null }
+  }
+
   const { error } = await supabase.from('proformas').update(patch).eq('id', id)
   if (error) return NextResponse.json({ error: 'No se pudo actualizar' }, { status: 500 })
   return NextResponse.json({ ok: true })
