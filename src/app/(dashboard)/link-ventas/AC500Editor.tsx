@@ -120,6 +120,15 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
     setSaved(prev => ({ ...prev, [id]: false }))
   }
 
+  // Replica el plan a los concesionarios aliados (Autosurca / Ki Auto…) para que
+  // el AC500 quede igual en todos los links. Silencioso: no interrumpe el guardado.
+  function syncAliados(id: string) {
+    fetch('/api/catalogo/sincronizar-ac500', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    }).catch(() => {})
+  }
+
   // Recalcula el total del plan automáticamente al guardar (reserva + cuotas)
   async function save(id: string) {
     const v = items.find(x => x.id === id)
@@ -145,6 +154,7 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
     setDirty(prev => ({ ...prev, [id]: false }))
     setSaved(prev => ({ ...prev, [id]: true }))
     showToast(`✓ ${v.model} guardado`, true)
+    syncAliados(id)
     setTimeout(() => setSaved(prev => ({ ...prev, [id]: false })), 2000)
   }
 
@@ -157,7 +167,7 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
     if (error) {
       setItems(prev => prev.map(x => x.id === id ? { ...x, disponible: !newVal } : x))
       showToast('Error al actualizar', false)
-    } else showToast(newVal ? '✓ Activado' : 'Desactivado', newVal)
+    } else { showToast(newVal ? '✓ Activado' : 'Desactivado', newVal); syncAliados(id) }
   }
 
   async function saveNew() {
@@ -173,6 +183,7 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
     setSavingNew(false)
     if (error) { showToast('Error: ' + error.message, false); return }
     showToast('✓ Vehículo AC500 agregado', true)
+    syncAliados(newV.id.trim().toLowerCase().replace(/\s+/g, '-'))
     setShowModal(false)
     setNewV({ id: '', ...EMPTY })
     const { data } = await supabase.from('ac500_vehiculos').select('*').order('orden')

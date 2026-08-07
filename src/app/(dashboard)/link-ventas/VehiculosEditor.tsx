@@ -480,6 +480,8 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
     if (!confirm('Se copiará el catálogo de La Oriental (precios, gastos, cuotas, tasas e IGTF) a los concesionarios aliados configurados.\n\nEl stock/inventario de cada aliado NO se modifica. ¿Continuar?')) return
     setSyncAliados(true)
     try {
+      // Empuja también el AC500 (Asegúrate $500) para que quede igual en todos.
+      fetch('/api/catalogo/sincronizar-ac500', { method: 'POST' }).catch(() => {})
       const res = await fetch('/api/catalogo/sincronizar', { method: 'POST' })
       const json = await res.json()
       if (!res.ok || !json.ok) { showToast(json.error || 'Error al sincronizar', false); return }
