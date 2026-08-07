@@ -126,19 +126,25 @@ export async function POST(req: Request) {
 
     const supabase = await createAdminClient()
 
-    // Concesionario del encabezado. Solo el código de la casa (R000) puede
-    // cotizar para otro concesionario; el resto de vendedoras siempre va a La
-    // Oriental. Además debe ser un concesionario ACTIVO.
+    // Concesionario del encabezado. Cada sede tiene su propia base; el
+    // predeterminado es el concesionario LOCAL (config o principal), no La
+    // Oriental. Solo el código de la casa (R000) puede cotizar para otro.
+    async function resolverConcLocal(): Promise<string | null> {
+      const { data: cfg } = await supabase.from('config_cotizaciones').select('valor').eq('clave', 'concesionario_id').maybeSingle()
+      if (cfg?.valor) return String(cfg.valor)
+      const { data: prin } = await supabase.from('concesionarios').select('id').eq('es_principal', true).limit(1).maybeSingle()
+      return prin?.id ?? 'la-oriental'
+    }
     const esCodigoCasa = String(codigo || '').trim().toUpperCase() === 'R000'
-    let concIdSolicitado: string | null = concesionarioId ?? null
-    if (!esCodigoCasa) concIdSolicitado = 'la-oriental'
-    if (concIdSolicitado && concIdSolicitado !== 'la-oriental') {
+    const concLocal = await resolverConcLocal()
+    let concIdSolicitado: string | null = esCodigoCasa ? (concesionarioId ?? concLocal) : concLocal
+    if (concIdSolicitado && concIdSolicitado !== concLocal) {
       const { data: cRow } = await supabase
         .from('concesionarios')
         .select('activo')
         .eq('id', concIdSolicitado)
         .maybeSingle()
-      if (!cRow || !cRow.activo) concIdSolicitado = 'la-oriental'
+      if (!cRow || !cRow.activo) concIdSolicitado = concLocal
     }
     const conces = await getConcesionarioIdentity(supabase, concIdSolicitado)
 
