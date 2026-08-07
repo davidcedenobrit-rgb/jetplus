@@ -32,9 +32,8 @@ const VENDEDORES: Record<string, VendedorLegal> = {
     registroFecha: '2024',
     registroNro: '24',
     registroTomo: '34-A',
-    // TODO: representante legal (Director) que firma el contrato + su cédula.
-    representante: '',
-    representanteCedula: '',
+    representante: 'JOSÉ GREGORIO ROJAS YÁNEZ',
+    representanteCedula: 'V-15.788.401',
     representanteCargo: 'Director',
     domicilioEspecial: 'Maturín, estado Monagas',
   },
