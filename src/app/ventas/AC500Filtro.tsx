@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import CotizacionRapidaModal from './CotizacionRapidaModal'
+import CotizacionAC500Modal from './CotizacionAC500Modal'
 import type { BrandImg } from './VehiculosFiltro'
 
 export interface AC500Vehiculo {
@@ -48,13 +49,13 @@ function transNote(model: string) {
   return ''
 }
 
-type Mode = '6' | '9' | '12'
+export type Mode = '6' | '9' | '12'
 type Filtro = 'ALL' | 'MG' | 'MAXUS'
 
 function has(v: AC500Vehiculo, mode: Mode) {
   return mode === '6' ? v.p6_activo : mode === '9' ? v.p9_activo : v.p12_activo
 }
-function activeModes(v: AC500Vehiculo): Mode[] {
+export function activeModes(v: AC500Vehiculo): Mode[] {
   const arr: Mode[] = []
   if (v.p6_activo) arr.push('6')
   if (v.p9_activo) arr.push('9')
@@ -63,7 +64,11 @@ function activeModes(v: AC500Vehiculo): Mode[] {
 }
 function defaultMode(v: AC500Vehiculo): Mode { return activeModes(v)[0] ?? '6' }
 
-function schedule(v: AC500Vehiculo, mode: Mode) {
+export function planTotal(v: AC500Vehiculo, mode: Mode): number | null {
+  return mode === '6' ? v.p6_total : mode === '9' ? v.p9_total : v.p12_total
+}
+
+export function schedule(v: AC500Vehiculo, mode: Mode) {
   if (mode === '6') {
     return [
       { label: 'Cuota 0 - Reserva', val: v.reserva, highlight: true },
@@ -110,6 +115,7 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
   const colors = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
   const [mode, setMode] = useState<Mode>(defaultMode(v))
   const [rapida, setRapida] = useState(false)
+  const [cotizar, setCotizar] = useState(false)
   const [color, setColor] = useState(colors[0] || '')
 
   const modes = activeModes(v)
@@ -204,10 +210,16 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto' }}>
-          <button className="lo-cbtn-red" onClick={() => {
-            fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_interesado', marca: v.brand, modelo: v.model }) }).catch(() => {})
-            setRapida(true)
-          }}>📩 Me interesa</button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button className="lo-cbtn-out" onClick={() => {
+              fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_interesado', marca: v.brand, modelo: v.model }) }).catch(() => {})
+              setRapida(true)
+            }}>📩 Me interesa</button>
+            <button className="lo-cbtn-red" onClick={() => {
+              fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_cotizacion_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
+              setCotizar(true)
+            }}>📄 Cotización</button>
+          </div>
           <button className="lo-cbtn-dark" onClick={goWA}>Solicitar información</button>
         </div>
       </div>
@@ -221,6 +233,16 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
           colorPrimario={brand?.colorPrimario} colorSecundario={brand?.colorSecundario}
           financiamiento={false} modalidad="ac500"
           planNota={`Plan Asegúrate $500 · entrega en ${mode} meses${color ? ` · ${cap(color)}` : ''}`}
+          ac500={{ meses: mode, color: color ? cap(color) : undefined, rows, total }}
+        />
+      )}
+
+      {cotizar && (
+        <CotizacionAC500Modal
+          plan={v}
+          defaultMode={mode}
+          defaultColor={color ? cap(color) : ''}
+          onClose={() => setCotizar(false)}
         />
       )}
     </article>

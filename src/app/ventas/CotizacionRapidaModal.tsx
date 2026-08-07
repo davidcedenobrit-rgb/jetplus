@@ -16,7 +16,14 @@ function fmt(n: number | null | undefined) {
   return n.toLocaleString('de-DE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
-export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', waCorp = '584149989010', concesionario = '', financiamiento = true, modalidad = '', planNota = '', brandNombre = 'La Oriental Automotors', brandLogo = '', colorPrimario = '#C41E3A', colorSecundario = '#111827' }: {
+export interface AC500RapidaData {
+  meses: string
+  color?: string
+  rows: { label: string; val: number | null; highlight?: boolean; delivery?: boolean }[]
+  total: number | null
+}
+
+export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', waCorp = '584149989010', concesionario = '', financiamiento = true, modalidad = '', planNota = '', brandNombre = 'La Oriental Automotors', brandLogo = '', colorPrimario = '#C41E3A', colorSecundario = '#111827', ac500 = null }: {
   vehiculo: Vehiculo
   onClose: () => void
   evento?: string
@@ -29,6 +36,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
   brandLogo?: string         // logo del concesionario de turno
   colorPrimario?: string     // color TOP del concesionario (barra de membrete)
   colorSecundario?: string   // color secundario (encabezado del vehículo)
+  ac500?: AC500RapidaData | null  // cronograma del plan $500 para el "rapidito" compartible
 }) {
   const precio    = vehiculo.cash ?? 0
   const iva       = precio * 0.16
@@ -182,6 +190,30 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
           </div>
         )}
 
+        {/* Cronograma del plan Asegúrate $500 (para compartir como imagen) */}
+        {ac500 && <>
+          <div style={hdr('#7c2d12', '#fde68a')}>Plan Asegúrate $500 · Entrega mes {ac500.meses}</div>
+          {ac500.rows.map((r, i) => (
+            <div key={i} style={{ ...row, ...(r.highlight ? { background: '#fffbeb' } : {}) }}>
+              <span style={lbl}>
+                {r.label}
+                {r.delivery && <span style={{ background: '#dcfce7', color: '#15803d', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>Entrega</span>}
+              </span>
+              <span style={val}>${fmt(r.val)}</span>
+            </div>
+          ))}
+          <div style={{ ...row, background: '#fef9c3', border: 'none' }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#92400e' }}>TOTAL DEL PLAN:</span>
+            <span style={{ fontSize: 17, fontWeight: 900, color: '#92400e', fontFamily: 'monospace' }}>${fmt(ac500.total)}</span>
+          </div>
+          {ac500.color && (
+            <div style={{ ...row, border: 'none' }}>
+              <span style={lbl}>Color seleccionado:</span>
+              <span style={{ ...val, fontFamily: 'inherit' }}>{ac500.color}</span>
+            </div>
+          )}
+        </>}
+
         {financiamiento && <>
         {/* CONTADO */}
         <div style={hdr('#7c2d12', '#fde68a')}>Modalidad de Contado</div>
@@ -235,8 +267,8 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, evento = '', 
         </div>
         {/* ── fin del cuadro capturable ── */}
 
-        {/* Compartir el cuadro como imagen (solo cuando hay desglose de precios) */}
-        {financiamiento && (
+        {/* Compartir el cuadro como imagen (desglose de precios o cronograma $500) */}
+        {(financiamiento || ac500) && (
           <div style={{ padding: '12px 18px 0' }}>
             <button onClick={compartirImagen} disabled={compartiendo}
               style={{ width: '100%', padding: '11px', borderRadius: 10, border: `1.5px solid ${colorPrimario}`, background: '#fff', color: colorPrimario, fontSize: 13.5, fontWeight: 800, cursor: compartiendo ? 'default' : 'pointer', opacity: compartiendo ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
