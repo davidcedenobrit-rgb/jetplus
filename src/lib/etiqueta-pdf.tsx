@@ -76,8 +76,8 @@ export function EtiquetaPDF({ data }: { data: EtiquetaData }) {
     ['MODELO', data.modelo],
     ['PLACA', data.placa],
     ['COLOR', data.color],
-    ['SERIAL DE MOTOR', data.serialMotor],
-    ['SERIAL DE CARROCERÍA', data.serialCarroceria],
+    ['S/M', data.serialMotor],
+    ['S/C', data.serialCarroceria],
   ]
 
   return (
