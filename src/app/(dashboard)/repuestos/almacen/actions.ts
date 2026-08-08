@@ -225,28 +225,33 @@ export async function editarItem(input: EditarItemInput): Promise<{ ok?: boolean
 // Verificación de inventario (chequeo físico durante la mudanza). Marca el
 // repuesto como verificado y deja constancia en la bitácora. Opcionalmente
 // corrige el conteo si el físico difiere del sistema.
-export async function verificarItem(input: { itemId: string; contado?: number | null }): Promise<{ ok?: boolean; error?: string }> {
+export async function verificarItem(input: { itemId: string; contado?: number | null; cantidadActual?: number | null }): Promise<{ ok?: boolean; error?: string }> {
   const auth = await requireStaff()
   if ('error' in auth) return { error: auth.error }
   const { user } = auth
   const admin = await createAdminClient()
 
-  const { data: it } = await admin.from('almacen_items').select('id, cantidad').eq('id', input.itemId).maybeSingle()
-  if (!it) return { error: 'El repuesto no existe en el almacén' }
-
-  const antes = num(it.cantidad)
-  let saldo = antes
-  let motivo = 'Verificación de inventario ✓'
-  // Si viene un conteo físico y difiere, se corrige el stock y se anota.
-  if (input.contado != null && Number.isFinite(Number(input.contado)) && num(input.contado) !== antes) {
-    saldo = num(input.contado)
-    motivo = `Verificación de inventario — conteo corregido (${antes} → ${saldo})`
+  const hayContado = input.contado != null && Number.isFinite(Number(input.contado))
+  // El stock actual lo manda el cliente (evita una consulta extra por cada clic);
+  // solo consultamos la BD si de verdad hace falta (conteo corregido sin dato).
+  let antes = input.cantidadActual != null ? num(input.cantidadActual) : null
+  if (antes == null && hayContado) {
+    const { data: it } = await admin.from('almacen_items').select('cantidad').eq('id', input.itemId).maybeSingle()
+    if (!it) return { error: 'El repuesto no existe en el almacén' }
+    antes = num(it.cantidad)
   }
 
   const nowIso = new Date().toISOString()
-  const { error: upErr } = await admin.from('almacen_items')
-    .update({ cantidad: saldo, verificado_at: nowIso, verificado_por: user.email ?? user.id, updated_at: nowIso })
-    .eq('id', input.itemId)
+  const patch: Record<string, unknown> = { verificado_at: nowIso, verificado_por: user.email ?? user.id, updated_at: nowIso }
+  let saldo = antes ?? 0
+  let motivo = 'Verificación de inventario ✓'
+  if (hayContado && antes != null && num(input.contado) !== antes) {
+    saldo = num(input.contado)
+    patch.cantidad = saldo
+    motivo = `Verificación de inventario — conteo corregido (${antes} → ${saldo})`
+  }
+
+  const { error: upErr } = await admin.from('almacen_items').update(patch).eq('id', input.itemId)
   if (upErr) return { error: `No se pudo verificar: ${upErr.message}` }
 
   await admin.from('almacen_movimientos').insert({
@@ -258,8 +263,8 @@ export async function verificarItem(input: { itemId: string; contado?: number | 
     usuario_id: user.id,
     usuario_email: user.email ?? null,
   })
-
-  revalidatePath('/repuestos/almacen')
+  // Sin revalidatePath: el check es optimista en el cliente; recargar todo el
+  // almacén en cada clic era lo que lo hacía lento.
   return { ok: true }
 }
 
@@ -272,7 +277,6 @@ export async function desverificarItem(itemId: string): Promise<{ ok?: boolean; 
     .update({ verificado_at: null, verificado_por: null, updated_at: new Date().toISOString() })
     .eq('id', itemId)
   if (error) return { error: `No se pudo quitar la verificación: ${error.message}` }
-  revalidatePath('/repuestos/almacen')
   return { ok: true }
 }
 

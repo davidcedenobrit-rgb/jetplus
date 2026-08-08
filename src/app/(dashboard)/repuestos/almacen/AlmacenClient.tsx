@@ -51,7 +51,7 @@ export default function AlmacenClient({ items, movimientos }: { items: AlmacenIt
     // Optimista: marca/desmarca al instante.
     setVerSet(prev => { const n = new Set(prev); estaVer ? n.delete(it.id) : n.add(it.id); return n })
     setVerBusy(prev => new Set(prev).add(it.id))
-    const res = estaVer ? await desverificarItem(it.id) : await verificarItem({ itemId: it.id })
+    const res = estaVer ? await desverificarItem(it.id) : await verificarItem({ itemId: it.id, cantidadActual: Number(it.cantidad) })
     setVerBusy(prev => { const n = new Set(prev); n.delete(it.id); return n })
     if (res.error) {
       // Revertir si falló.
