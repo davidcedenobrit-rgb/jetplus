@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
+import { listaConcesionariosExternos } from '@/lib/concesionarios-externos'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import { CotizacionPDF } from '@/lib/cotizacion-pdf'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
@@ -614,6 +616,19 @@ export async function POST(req: Request) {
   }
 }
 
+const COT_COLS = 'id, numero, fecha, vencimiento, vendedora_nombre, concesionario_id, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, retencion_pct, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, descuento_solicitado, motivo_descuento, condiciones_personalizadas, created_at, resend_email_id, email_ultimo_estado, email_ultimo_evento_at'
+
+// Tope de tiempo por base externa para no colgar el panel si una sede tarda.
+function conTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([p, new Promise<T>(res => setTimeout(() => res(fallback), ms))])
+}
+
+async function traerCotizaciones(db: SupabaseClient, limit: number): Promise<any[]> {
+  const { data } = await db.from('cotizaciones').select(COT_COLS)
+    .order('created_at', { ascending: false }).limit(limit)
+  return (data ?? []) as any[]
+}
+
 export async function GET(req: Request) {
   const authClient = await createClient()
   const { data: { user: authUser } } = await authClient.auth.getUser()
@@ -623,12 +638,29 @@ export async function GET(req: Request) {
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100)
   const supabase = await createAdminClient()
 
-  const { data, error } = await supabase
-    .from('cotizaciones')
-    .select('id, numero, fecha, vencimiento, vendedora_nombre, concesionario_id, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, retencion_pct, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, descuento_solicitado, motivo_descuento, condiciones_personalizadas, created_at, resend_email_id, email_ultimo_estado, email_ultimo_evento_at')
-    .order('created_at', { ascending: false })
-    .limit(limit)
+  // Panel central: agrega las cotizaciones de la base local + las de las otras
+  // sedes del grupo (cada una con su propia BD). Las externas son best-effort:
+  // si una falla o no está configurada, se ignora sin romper el panel.
+  const externos = listaConcesionariosExternos()
+  const tareas: Promise<any[]>[] = [
+    conTimeout(traerCotizaciones(supabase, limit), 4000, []).catch(() => []),
+    ...externos.map(a => {
+      const cli = createServiceClient(a.url, a.serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
+      return conTimeout(traerCotizaciones(cli, limit), 3500, []).catch(() => [])
+    }),
+  ]
+  const todas = (await Promise.all(tareas)).flat()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  // Dedup por id (uuid único por base) y orden por fecha desc.
+  const map = new Map<string, any>()
+  for (const c of todas) {
+    const key = String(c?.id ?? '')
+    if (!key || map.has(key)) continue
+    map.set(key, c)
+  }
+  const merged = Array.from(map.values())
+    .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))
+    .slice(0, limit)
+
+  return NextResponse.json(merged)
 }
