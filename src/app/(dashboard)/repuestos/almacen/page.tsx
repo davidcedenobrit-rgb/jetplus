@@ -20,6 +20,8 @@ export type AlmacenItem = {
   stock_minimo: number
   notas: string | null
   updated_at: string
+  verificado_at: string | null
+  verificado_por: string | null
 }
 
 export type AlmacenMovimiento = {
@@ -45,7 +47,7 @@ export default async function AlmacenPage() {
 
   const items = await fetchAllRows<AlmacenItem>((from, to) => supabase
     .from('almacen_items')
-    .select('id, descripcion, referencia, marca, categoria, cantidad, ubicacion, costo_unitario, moneda, stock_minimo, notas, updated_at')
+    .select('id, descripcion, referencia, marca, categoria, cantidad, ubicacion, costo_unitario, moneda, stock_minimo, notas, updated_at, verificado_at, verificado_por')
     .eq('activo', true)
     .order('descripcion', { ascending: true })
     .range(from, to))

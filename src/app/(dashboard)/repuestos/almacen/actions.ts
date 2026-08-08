@@ -170,7 +170,8 @@ export async function ajustarStock(input: AjusteInput): Promise<{ ok?: boolean; 
 
   const antes = num(it.cantidad)
   const delta = r2(nueva - antes)
-  await admin.from('almacen_items').update({ cantidad: nueva, updated_at: new Date().toISOString() }).eq('id', input.itemId)
+  const { error: ajErr } = await admin.from('almacen_items').update({ cantidad: nueva, updated_at: new Date().toISOString() }).eq('id', input.itemId)
+  if (ajErr) return { error: `No se pudo ajustar: ${ajErr.message}` }
 
   await admin.from('almacen_movimientos').insert({
     item_id: input.itemId,
@@ -216,7 +217,61 @@ export async function editarItem(input: EditarItemInput): Promise<{ ok?: boolean
   if (input.notas !== undefined) patch.notas = input.notas?.trim() || null
 
   const { error } = await admin.from('almacen_items').update(patch).eq('id', input.itemId)
-  if (error) return { error: 'No se pudo guardar' }
+  if (error) return { error: `No se pudo guardar: ${error.message}` }
+  revalidatePath('/repuestos/almacen')
+  return { ok: true }
+}
+
+// Verificación de inventario (chequeo físico durante la mudanza). Marca el
+// repuesto como verificado y deja constancia en la bitácora. Opcionalmente
+// corrige el conteo si el físico difiere del sistema.
+export async function verificarItem(input: { itemId: string; contado?: number | null }): Promise<{ ok?: boolean; error?: string }> {
+  const auth = await requireStaff()
+  if ('error' in auth) return { error: auth.error }
+  const { user } = auth
+  const admin = await createAdminClient()
+
+  const { data: it } = await admin.from('almacen_items').select('id, cantidad').eq('id', input.itemId).maybeSingle()
+  if (!it) return { error: 'El repuesto no existe en el almacén' }
+
+  const antes = num(it.cantidad)
+  let saldo = antes
+  let motivo = 'Verificación de inventario ✓'
+  // Si viene un conteo físico y difiere, se corrige el stock y se anota.
+  if (input.contado != null && Number.isFinite(Number(input.contado)) && num(input.contado) !== antes) {
+    saldo = num(input.contado)
+    motivo = `Verificación de inventario — conteo corregido (${antes} → ${saldo})`
+  }
+
+  const nowIso = new Date().toISOString()
+  const { error: upErr } = await admin.from('almacen_items')
+    .update({ cantidad: saldo, verificado_at: nowIso, verificado_por: user.email ?? user.id, updated_at: nowIso })
+    .eq('id', input.itemId)
+  if (upErr) return { error: `No se pudo verificar: ${upErr.message}` }
+
+  await admin.from('almacen_movimientos').insert({
+    item_id: input.itemId,
+    tipo: 'verificacion',
+    cantidad: saldo,
+    motivo,
+    saldo_resultante: saldo,
+    usuario_id: user.id,
+    usuario_email: user.email ?? null,
+  })
+
+  revalidatePath('/repuestos/almacen')
+  return { ok: true }
+}
+
+// Quita la marca de verificado (por si se marcó por error). No borra la bitácora.
+export async function desverificarItem(itemId: string): Promise<{ ok?: boolean; error?: string }> {
+  const auth = await requireStaff()
+  if ('error' in auth) return { error: auth.error }
+  const admin = await createAdminClient()
+  const { error } = await admin.from('almacen_items')
+    .update({ verificado_at: null, verificado_por: null, updated_at: new Date().toISOString() })
+    .eq('id', itemId)
+  if (error) return { error: `No se pudo quitar la verificación: ${error.message}` }
   revalidatePath('/repuestos/almacen')
   return { ok: true }
 }

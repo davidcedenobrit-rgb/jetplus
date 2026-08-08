@@ -4,12 +4,12 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, Send, Pencil, Trash2, History, X, Loader2, Upload,
-  PackagePlus, PackageMinus, AlertTriangle, Boxes,
+  PackagePlus, PackageMinus, AlertTriangle, Boxes, CheckCircle2, Circle, ClipboardCheck,
 } from 'lucide-react'
 import type { AlmacenItem, AlmacenMovimiento } from './page'
 import {
   registrarEntrada, transferirATaller, ajustarStock, editarItem, eliminarItem,
-  cargaMasiva, TALLERES, type TallerKey,
+  cargaMasiva, verificarItem, desverificarItem, TALLERES, type TallerKey,
 } from './actions'
 
 const fmt = (n: number | null | undefined, dec = 2) =>
@@ -29,6 +29,7 @@ const TIPO_LABEL: Record<string, { label: string; cls: string }> = {
   transferencia: { label: 'Transferencia', cls: 'bg-indigo-100 text-indigo-700' },
   salida: { label: 'Salida', cls: 'bg-orange-100 text-orange-700' },
   ajuste: { label: 'Ajuste', cls: 'bg-gray-100 text-gray-600' },
+  verificacion: { label: 'Verificación', cls: 'bg-teal-100 text-teal-700' },
 }
 
 export default function AlmacenClient({ items, movimientos }: { items: AlmacenItem[]; movimientos: AlmacenMovimiento[] }) {
@@ -39,15 +40,36 @@ export default function AlmacenClient({ items, movimientos }: { items: AlmacenIt
   const [transferir, setTransferir] = useState<AlmacenItem | null>(null)
   const [editar, setEditar] = useState<AlmacenItem | null>(null)
   const [bitacoraItem, setBitacoraItem] = useState<AlmacenItem | null>(null)
+  // Verificación de inventario (chequeo físico durante la mudanza).
+  const [verSet, setVerSet] = useState<Set<string>>(() => new Set(items.filter(i => i.verificado_at).map(i => i.id)))
+  const [soloPendientes, setSoloPendientes] = useState(false)
+  const [verBusy, setVerBusy] = useState<Set<string>>(new Set())
+
+  async function toggleVerificado(it: AlmacenItem) {
+    if (verBusy.has(it.id)) return
+    const estaVer = verSet.has(it.id)
+    // Optimista: marca/desmarca al instante.
+    setVerSet(prev => { const n = new Set(prev); estaVer ? n.delete(it.id) : n.add(it.id); return n })
+    setVerBusy(prev => new Set(prev).add(it.id))
+    const res = estaVer ? await desverificarItem(it.id) : await verificarItem({ itemId: it.id })
+    setVerBusy(prev => { const n = new Set(prev); n.delete(it.id); return n })
+    if (res.error) {
+      // Revertir si falló.
+      setVerSet(prev => { const n = new Set(prev); estaVer ? n.add(it.id) : n.delete(it.id); return n })
+      alert(res.error)
+    }
+  }
 
   const filtrados = useMemo(() => {
     const nq = norm(q.trim())
-    if (!nq) return items
-    return items.filter(it =>
+    let base = items
+    if (soloPendientes) base = base.filter(it => !verSet.has(it.id))
+    if (!nq) return base
+    return base.filter(it =>
       norm(it.descripcion).includes(nq) || norm(it.referencia ?? '').includes(nq) ||
       norm(it.marca ?? '').includes(nq) || norm(it.categoria ?? '').includes(nq) ||
       norm(it.ubicacion ?? '').includes(nq))
-  }, [items, q])
+  }, [items, q, soloPendientes, verSet])
 
   const totales = useMemo(() => {
     let unidades = 0, valor = 0, bajo = 0
@@ -64,11 +86,12 @@ export default function AlmacenClient({ items, movimientos }: { items: AlmacenIt
   return (
     <div className="mt-5">
       {/* Resumen */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
         <Stat icon={<Boxes size={16} />} label="Repuestos distintos" value={String(totales.refs)} tint="bg-teal-50 text-teal-700" />
         <Stat icon={<PackagePlus size={16} />} label="Unidades en stock" value={fmt(totales.unidades, 0)} tint="bg-emerald-50 text-emerald-700" />
         <Stat icon={<Boxes size={16} />} label="Valor del inventario" value={`$${fmt(totales.valor)}`} tint="bg-indigo-50 text-indigo-700" />
         <Stat icon={<AlertTriangle size={16} />} label="Bajo stock mínimo" value={String(totales.bajo)} tint="bg-amber-50 text-amber-700" />
+        <Stat icon={<ClipboardCheck size={16} />} label="Verificados (chequeo)" value={`${verSet.size}/${totales.refs}`} tint="bg-green-50 text-green-700" />
       </div>
 
       {/* Acciones */}
@@ -87,6 +110,11 @@ export default function AlmacenClient({ items, movimientos }: { items: AlmacenIt
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-teal-200 text-teal-700 hover:bg-teal-50 text-sm font-semibold">
           <Upload size={15} /> Carga masiva
         </button>
+        <button onClick={() => setSoloPendientes(v => !v)}
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold ${soloPendientes ? 'bg-green-600 border-green-600 text-white' : 'border-green-200 text-green-700 hover:bg-green-50'}`}
+          title="Mostrar solo los repuestos que faltan por verificar">
+          <ClipboardCheck size={15} /> {soloPendientes ? 'Viendo pendientes' : 'Solo pendientes'}
+        </button>
         <button onClick={() => { setBitacoraItem(null); setModal('bitacora') }}
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold">
           <History size={15} /> Bitácora
@@ -103,6 +131,7 @@ export default function AlmacenClient({ items, movimientos }: { items: AlmacenIt
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wide">
               <tr>
+                <th className="text-center font-semibold px-2 py-2.5 w-10" title="Verificado en el chequeo">✓</th>
                 <th className="text-left font-semibold px-3 py-2.5">Repuesto</th>
                 <th className="text-left font-semibold px-3 py-2.5 hidden md:table-cell">Referencia</th>
                 <th className="text-left font-semibold px-3 py-2.5 hidden lg:table-cell">Ubicación</th>
@@ -115,8 +144,19 @@ export default function AlmacenClient({ items, movimientos }: { items: AlmacenIt
               {filtrados.map(it => {
                 const bajo = Number(it.stock_minimo) > 0 && Number(it.cantidad) <= Number(it.stock_minimo)
                 const agotado = Number(it.cantidad) <= 0
+                const verificado = verSet.has(it.id)
+                const busy = verBusy.has(it.id)
                 return (
-                  <tr key={it.id} className="hover:bg-gray-50/60">
+                  <tr key={it.id} className={verificado ? 'bg-green-50/60 hover:bg-green-50' : 'hover:bg-gray-50/60'}>
+                    <td className="px-2 py-2.5 text-center">
+                      <button type="button" onClick={() => toggleVerificado(it)} disabled={busy}
+                        title={verificado ? `Verificado${it.verificado_por ? ' por ' + it.verificado_por : ''} — clic para quitar` : 'Marcar como verificado en el chequeo'}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-black/5 disabled:opacity-40">
+                        {busy ? <Loader2 size={16} className="animate-spin text-gray-400" />
+                          : verificado ? <CheckCircle2 size={18} className="text-green-600" />
+                          : <Circle size={18} className="text-gray-300" />}
+                      </button>
+                    </td>
                     <td className="px-3 py-2.5">
                       <p className="font-semibold text-oriental-black">{it.descripcion}</p>
                       <p className="text-[11px] text-gray-400">
