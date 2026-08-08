@@ -2,19 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { TALLERES, type TallerKey } from './constants'
 
 // Ari (arianna), José Manuel (taller) y Rojas (admin/director) gestionan el
 // almacén. Se incluyen los demás roles administrativos por consistencia.
 const ROL_ALMACEN = ['taller', 'arianna', 'admin', 'director', 'jose', 'mary', 'leysdem', 'almacen', 'almacenista']
-
-// Talleres a los que Ari puede transferir un repuesto que sale del almacén.
-export const TALLERES = [
-  { key: 'la-oriental', label: 'Taller La Oriental' },
-  { key: 'ki-auto', label: 'Taller Ki Auto' },
-  { key: 'autosurca', label: 'Taller Autosurca' },
-] as const
-
-export type TallerKey = typeof TALLERES[number]['key']
 
 async function requireStaff() {
   const supabase = await createClient()

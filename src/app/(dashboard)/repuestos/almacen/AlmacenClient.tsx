@@ -9,8 +9,9 @@ import {
 import type { AlmacenItem, AlmacenMovimiento } from './page'
 import {
   registrarEntrada, transferirATaller, ajustarStock, editarItem, eliminarItem,
-  cargaMasiva, verificarItem, desverificarItem, TALLERES, type TallerKey,
+  cargaMasiva, verificarItem, desverificarItem,
 } from './actions'
+import { TALLERES, type TallerKey } from './constants'
 
 const fmt = (n: number | null | undefined, dec = 2) =>
   Number(n ?? 0).toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: dec })
