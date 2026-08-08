@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2, PenLine, Send, Vault, Calculator } from 'lucide-react'
+import { X, Loader2, FileDown, Upload, FileText, ShieldCheck, CheckCircle2, PenLine, Send, Vault, Calculator, Link2 } from 'lucide-react'
 import { porcentajeContabilidadAC500, baseContabilidadAC500 } from '@/lib/ac500-porcentaje'
+import { listarAnticiposCliente, type AnticipoDisponible } from '../anticipos/actions'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const fmt = (n: number | null | undefined) => Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -94,9 +95,51 @@ function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; s
   const [enviando, setEnviando] = useState(false)
   const [msg, setMsg] = useState('')
   const [cobrando, setCobrando] = useState(false)
+  // Asociar anticipos/ingresos ya pagados por el cliente (cubren la cuota 1).
+  const [mostrarAsociar, setMostrarAsociar] = useState(false)
+  const [antDisp, setAntDisp] = useState<AnticipoDisponible[]>([])
+  const [antSel, setAntSel] = useState<Set<string>>(new Set())
+  const [antCargando, setAntCargando] = useState(false)
+  const [ingBuscar, setIngBuscar] = useState('')
+  const [ingRes, setIngRes] = useState<any[]>([])
+  const [ingBuscando, setIngBuscando] = useState(false)
+  const [ingSel, setIngSel] = useState<{ id: string; recibo: string; monto: number }[]>([])
   const tipos = p.tipo_persona === 'juridica' ? DOC_TIPOS_JURIDICA : DOC_TIPOS_NATURAL
   const docs: any[] = Array.isArray(p.documentos) ? p.documentos : []
   const tieneDoc = (t: string) => docs.some(d => d.tipo === t)
+
+  // Al abrir el panel de asociación, carga los anticipos disponibles del cliente.
+  useEffect(() => {
+    if (!mostrarAsociar || !p.cliente_id) return
+    setAntCargando(true)
+    listarAnticiposCliente(p.cliente_id)
+      .then(d => setAntDisp(Array.isArray(d) ? d : []))
+      .catch(() => setAntDisp([]))
+      .finally(() => setAntCargando(false))
+  }, [mostrarAsociar, p.cliente_id])
+
+  // Búsqueda (con debounce) de ingresos ya registrados para asociarlos.
+  useEffect(() => {
+    if (!mostrarAsociar) return
+    const q = ingBuscar.trim()
+    if (q.length < 2) { setIngRes([]); setIngBuscando(false); return }
+    setIngBuscando(true)
+    const t = setTimeout(() => {
+      fetch(`/api/ingresos/buscar?q=${encodeURIComponent(q)}`)
+        .then(r => r.ok ? r.json() : []).then(d => setIngRes(Array.isArray(d) ? d : []))
+        .catch(() => setIngRes([])).finally(() => setIngBuscando(false))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [ingBuscar, mostrarAsociar])
+
+  const toggleAnt = (id: string) => setAntSel(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n
+  })
+  const toggleIng = (r: any) => setIngSel(prev => prev.some(x => x.id === r.id)
+    ? prev.filter(x => x.id !== r.id)
+    : [...prev, { id: r.id, recibo: r.numero_recibo, monto: Number(r.monto) || 0 }])
+  const antAplicados = antDisp.filter(a => antSel.has(a.id)).reduce((s, a) => s + (Number(a.saldo_usd) || 0), 0)
+  const ingAsociados = ingSel.reduce((s, x) => s + (Number(x.monto) || 0), 0)
 
   const emailValido = (s: string) => /\S+@\S+\.\S+/.test(s)
   function agregarCorreo(raw: string) {
@@ -122,13 +165,21 @@ function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; s
   }
 
   async function cobrarCuota1() {
-    if (!confirm('¿Registrar el pago de la cuota 1? Esto hará caer $500 en la bóveda.')) return
+    const asociando = antSel.size > 0 || ingSel.length > 0
+    const extra = asociando ? ' Se asociarán los anticipos/ingresos ya pagados por el cliente (no se cobra dos veces).' : ''
+    if (!confirm(`¿Registrar el pago de la cuota 1? Esto hará caer $500 en la bóveda.${extra}`)) return
     setCobrando(true); setMsg('')
-    const r = await fetch(`/api/precompra/proforma/${p.id}/cuota1`, { method: 'POST' })
+    const r = await fetch(`/api/precompra/proforma/${p.id}/cuota1`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anticipoIds: Array.from(antSel), ingresoIds: ingSel.map(x => x.id) }),
+    })
     const j = await r.json().catch(() => ({}))
     setCobrando(false)
-    if (r.ok) { setMsg('Cuota 1 registrada · $500 a bóveda ✓'); onChange() }
-    else setMsg(j.error ?? 'No se pudo registrar')
+    if (r.ok) {
+      const asoc = (Number(j.anticiposAplicados) || 0) + (Number(j.ingresosAsociados) || 0)
+      setMsg(`Cuota 1 registrada · $500 a bóveda ✓${asoc > 0 ? ` · $${fmt(asoc)} cubierto con anticipos/ingresos` : ''}`)
+      onChange()
+    } else setMsg(j.error ?? 'No se pudo registrar')
   }
 
   async function subir(tipo: string, file: File) {
@@ -208,6 +259,85 @@ function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; s
             <div className="flex justify-between"><span className="text-gray-500">− Comisión {pct}% (sobre ${fmt(base)}, c1-c5)</span><span className="text-gray-600">${fmt(comision)}</span></div>
             <div className="flex justify-between border-t border-gray-200 mt-1 pt-1 font-bold"><span className="text-blue-900">Total depósito a Vehimotors</span><span className="text-blue-900">${fmt(deposito)}</span></div>
           </div>
+          {!p.cuota1_pagada && (
+            <div className="mb-3">
+              {!mostrarAsociar ? (
+                <button onClick={() => setMostrarAsociar(true)}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-800 hover:underline">
+                  <Link2 size={12} /> ¿El cliente ya pagó con anticipo o ingreso? Asociarlo
+                </button>
+              ) : (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+                  <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Asociar pagos ya hechos por el cliente</p>
+                  {!p.cliente_id ? (
+                    <p className="text-[11px] text-emerald-700/80">Esta proforma no tiene un cliente vinculado. Edita los datos con su cédula/RIF para poder asociar sus anticipos.</p>
+                  ) : (<>
+                    {/* Anticipos disponibles */}
+                    {antCargando ? (
+                      <p className="text-[10px] text-gray-400">Cargando anticipos…</p>
+                    ) : antDisp.length === 0 ? (
+                      <p className="text-[11px] text-emerald-700/80"><b>{p.cliente_nombre}</b> no tiene anticipos disponibles.</p>
+                    ) : (<>
+                      <p className="text-[11px] text-emerald-700/80 mb-2">Anticipos ya pagados por <b>{p.cliente_nombre}</b>. Cubren la cuota 1 y <b>descuentan su saldo</b>.</p>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {antDisp.map(a => {
+                          const sel = antSel.has(a.id)
+                          return (
+                            <button key={a.id} type="button" onClick={() => toggleAnt(a.id)}
+                              className={`w-full text-left px-2.5 py-2 rounded-lg border text-xs flex items-start gap-2 transition-colors ${sel ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 bg-white hover:bg-emerald-50/50'}`}>
+                              <input type="checkbox" checked={sel} readOnly className="mt-0.5 w-3.5 h-3.5 accent-emerald-600" />
+                              <span className="flex-1 min-w-0">
+                                <span className="font-bold text-oriental-black">${fmt(a.saldo_usd)}</span>
+                                <span className="text-gray-500"> · {a.fecha_pago?.slice(0, 10).split('-').reverse().join('/')}{a.metodo_pago ? ` · ${a.metodo_pago}` : ''}</span>
+                                {a.concepto && <span className="block text-gray-500 truncate">{a.concepto}</span>}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>)}
+
+                    {/* Ingresos ya registrados */}
+                    <div className="mt-3 pt-3 border-t border-emerald-200">
+                      <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Asociar ingresos ya registrados</p>
+                      <p className="text-[11px] text-emerald-700/80 mb-2">Si el pago quedó como <b>Ingreso</b> (con recibo), búscalo y asócialo. Cuenta para la cuota 1 y <b>no se cobra de nuevo</b>.</p>
+                      <input value={ingBuscar} onChange={e => setIngBuscar(e.target.value)}
+                        className="w-full px-3 py-2 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="N° de recibo o nombre / cédula del cliente…" />
+                      {ingBuscando && <p className="text-[10px] text-gray-400 mt-1">Buscando…</p>}
+                      {ingRes.length > 0 && (
+                        <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100 bg-white">
+                          {ingRes.map((r) => {
+                            const sel = ingSel.some(x => x.id === r.id)
+                            const ligadoOtro = (!!r.vehiculo_id || !!r.proforma_id) && !sel
+                            return (
+                              <button key={r.id} type="button" disabled={ligadoOtro} onClick={() => toggleIng(r)}
+                                className={`w-full text-left px-2.5 py-2 text-xs flex items-start gap-2 ${ligadoOtro ? 'opacity-50 cursor-not-allowed' : 'hover:bg-emerald-50'} ${sel ? 'bg-emerald-50' : ''}`}>
+                                <input type="checkbox" checked={sel} readOnly disabled={ligadoOtro} className="mt-0.5 w-3.5 h-3.5 accent-emerald-600" />
+                                <span className="flex-1 min-w-0">
+                                  <span className="font-bold text-oriental-black">Recibo {r.numero_recibo || '—'}</span>
+                                  <span className="text-gray-500"> · {r.cliente_nombre || 'Sin cliente'}</span>
+                                  <span className="block text-gray-500 truncate">{r.concepto} · <b className="text-oriental-black">${fmt(r.monto)}</b>{ligadoOtro ? ' · ya ligado a otra venta' : ''}</span>
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {(antAplicados > 0 || ingAsociados > 0) && (
+                      <div className="mt-3 text-[11px] text-emerald-900 bg-white border border-emerald-300 rounded-lg px-2.5 py-2">
+                        {ingAsociados > 0 && <>Ingresos: <b>${fmt(ingAsociados)}</b> · </>}
+                        {antAplicados > 0 && <>Anticipos: <b>${fmt(antAplicados)}</b> · </>}
+                        Total a asociar a la cuota 1: <b>${fmt(antAplicados + ingAsociados)}</b>
+                      </div>
+                    )}
+                  </>)}
+                </div>
+              )}
+            </div>
+          )}
           {p.cuota1_pagada ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-bold">
               <Vault size={13} /> Cuota 1 pagada · $500 bóveda{p.monto_contabilidad != null ? ` · ${p.pct_contabilidad}% contab. $${fmt(p.monto_contabilidad)}` : ''}
@@ -215,7 +345,7 @@ function ProformaCard({ p, seccion = 'proforma', onEdit, onChange }: { p: any; s
           ) : (
             <button onClick={cobrarCuota1} disabled={cobrando}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 disabled:opacity-50">
-              {cobrando ? <Loader2 size={13} className="animate-spin" /> : <Vault size={13} />} Registrar pago cuota 1
+              {cobrando ? <Loader2 size={13} className="animate-spin" /> : <Vault size={13} />} Registrar pago cuota 1{(antSel.size > 0 || ingSel.length > 0) ? ' + asociar' : ''}
             </button>
           )}
         </>
