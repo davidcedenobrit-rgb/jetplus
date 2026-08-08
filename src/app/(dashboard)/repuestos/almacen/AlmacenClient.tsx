@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, Send, Pencil, Trash2, History, X, Loader2, Upload,
@@ -32,8 +32,12 @@ const TIPO_LABEL: Record<string, { label: string; cls: string }> = {
   verificacion: { label: 'Verificación', cls: 'bg-teal-100 text-teal-700' },
 }
 
-export default function AlmacenClient({ items, movimientos }: { items: AlmacenItem[]; movimientos: AlmacenMovimiento[] }) {
+export default function AlmacenClient({ items: itemsProp, movimientos }: { items: AlmacenItem[]; movimientos: AlmacenMovimiento[] }) {
   const router = useRouter()
+  // Copia local para poder actualizar filas al instante (edición/verificación)
+  // sin recargar todo el almacén. Se re-sincroniza si el servidor manda datos
+  // nuevos (entradas/transferencias que sí usan router.refresh()).
+  const [items, setItems] = useState<AlmacenItem[]>(itemsProp)
   const [q, setQ] = useState('')
   const [modal, setModal] = useState<null | 'entrada' | 'carga' | 'bitacora'>(null)
   const [entradaItem, setEntradaItem] = useState<AlmacenItem | null>(null)     // sumar a existente
@@ -44,6 +48,12 @@ export default function AlmacenClient({ items, movimientos }: { items: AlmacenIt
   const [verSet, setVerSet] = useState<Set<string>>(() => new Set(items.filter(i => i.verificado_at).map(i => i.id)))
   const [soloPendientes, setSoloPendientes] = useState(false)
   const [verBusy, setVerBusy] = useState<Set<string>>(new Set())
+
+  // Re-sincroniza cuando el servidor manda datos frescos (router.refresh()).
+  useEffect(() => {
+    setItems(itemsProp)
+    setVerSet(new Set(itemsProp.filter(i => i.verificado_at).map(i => i.id)))
+  }, [itemsProp])
 
   async function toggleVerificado(it: AlmacenItem) {
     if (verBusy.has(it.id)) return
@@ -206,7 +216,10 @@ export default function AlmacenClient({ items, movimientos }: { items: AlmacenIt
         <TransferirModal item={transferir} onClose={() => setTransferir(null)} onDone={() => { setTransferir(null); refrescar() }} />
       )}
       {editar && (
-        <EditarModal item={editar} onClose={() => setEditar(null)} onDone={() => { setEditar(null); refrescar() }} />
+        <EditarModal item={editar} onClose={() => setEditar(null)}
+          onSaved={(patch) => { setItems(prev => prev.map(x => x.id === patch.id ? { ...x, ...patch } : x)); setEditar(null) }}
+          onDeleted={(id) => { setItems(prev => prev.filter(x => x.id !== id)); setEditar(null) }}
+        />
       )}
     </div>
   )
@@ -402,7 +415,7 @@ function TransferirModal({ item, onClose, onDone }: { item: AlmacenItem; onClose
 }
 
 // ── Editar ítem + ajuste de stock ───────────────────────────────────
-function EditarModal({ item, onClose, onDone }: { item: AlmacenItem; onClose: () => void; onDone: () => void }) {
+function EditarModal({ item, onClose, onSaved, onDeleted }: { item: AlmacenItem; onClose: () => void; onSaved: (patch: Partial<AlmacenItem> & { id: string }) => void; onDeleted: (id: string) => void }) {
   const [descripcion, setDescripcion] = useState(item.descripcion)
   const [referencia, setReferencia] = useState(item.referencia ?? '')
   const [marca, setMarca] = useState(item.marca ?? '')
@@ -420,21 +433,32 @@ function EditarModal({ item, onClose, onDone }: { item: AlmacenItem; onClose: ()
     setError('')
     if (!descripcion.trim()) { setError('La descripción no puede quedar vacía'); return }
     setLoading(true)
+    const costoNum = costo ? parseFloat(costo.replace(',', '.')) : null
+    const stockMinNum = stockMin ? parseFloat(stockMin.replace(',', '.')) : null
     const res = await editarItem({
       itemId: item.id, descripcion, referencia: referencia || null, marca: marca || null,
       categoria: categoria || null, ubicacion: ubicacion || null,
-      costoUnitario: costo ? parseFloat(costo.replace(',', '.')) : null, moneda,
-      stockMinimo: stockMin ? parseFloat(stockMin.replace(',', '.')) : null, notas: notas || null,
+      costoUnitario: costoNum, moneda,
+      stockMinimo: stockMinNum, notas: notas || null,
     })
     if (res.error) { setLoading(false); setError(res.error); return }
     // Si cambió la cantidad, se registra un ajuste de conteo.
     const nueva = parseFloat(ajuste.replace(',', '.'))
+    let cantidadFinal = Number(item.cantidad)
     if (!isNaN(nueva) && nueva !== Number(item.cantidad)) {
       const aj = await ajustarStock({ itemId: item.id, nuevaCantidad: nueva })
       if (aj.error) { setLoading(false); setError(aj.error); return }
+      cantidadFinal = nueva
     }
     setLoading(false)
-    onDone()
+    onSaved({
+      id: item.id, descripcion: descripcion.trim(),
+      referencia: referencia.trim() || null, marca: marca.trim() || null,
+      categoria: categoria.trim() || null, ubicacion: ubicacion.trim() || null,
+      costo_unitario: costoNum != null && isFinite(costoNum) ? costoNum : null,
+      moneda, stock_minimo: stockMinNum != null && isFinite(stockMinNum) ? stockMinNum : 0,
+      notas: notas.trim() || null, cantidad: cantidadFinal,
+    })
   }
 
   async function borrar() {
@@ -443,7 +467,7 @@ function EditarModal({ item, onClose, onDone }: { item: AlmacenItem; onClose: ()
     const res = await eliminarItem(item.id)
     setLoading(false)
     if (res.error) { setError(res.error); return }
-    onDone()
+    onDeleted(item.id)
   }
 
   return (

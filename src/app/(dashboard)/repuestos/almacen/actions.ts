@@ -182,8 +182,7 @@ export async function ajustarStock(input: AjusteInput): Promise<{ ok?: boolean; 
     usuario_id: user.id,
     usuario_email: user.email ?? null,
   })
-
-  revalidatePath('/repuestos/almacen')
+  // Sin revalidatePath: el cliente actualiza el stock localmente.
   return { ok: true }
 }
 
@@ -218,7 +217,7 @@ export async function editarItem(input: EditarItemInput): Promise<{ ok?: boolean
 
   const { error } = await admin.from('almacen_items').update(patch).eq('id', input.itemId)
   if (error) return { error: `No se pudo guardar: ${error.message}` }
-  revalidatePath('/repuestos/almacen')
+  // Sin revalidatePath: el cliente actualiza la fila localmente (guardado rápido).
   return { ok: true }
 }
 
