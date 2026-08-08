@@ -16,16 +16,22 @@ function fmtDate(d: Date) {
 
 export async function POST(req: Request) {
   try {
+    // La cotización desde el link de vendedores se autoriza por el CÓDIGO de la
+    // vendedora (se valida más abajo contra la tabla `vendedoras`), NO por sesión:
+    // los vendedores usan el link público sin estar logueados. Si hay sesión de
+    // staff, se aprovecha solo para el rate limit.
     const authClient = await createClient()
     const { data: { user: authUser } } = await authClient.auth.getUser()
-    if (!authUser) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    // Rate limit: máx. 20 cotizaciones por minuto por usuario (genera PDF + envía correo)
-    if (!(await permitido(`cotizacion:${authUser.id}`, 20, 60))) {
+    const body = await req.json()
+
+    // Rate limit: 20/min por vendedora (o por usuario si hay sesión de staff).
+    const rlKey = authUser?.id
+      ?? (typeof body?.codigo === 'string' && body.codigo.trim() ? `cod:${body.codigo.trim().toUpperCase()}` : 'anon')
+    if (!(await permitido(`cotizacion:${rlKey}`, 20, 60))) {
       return NextResponse.json({ error: 'Demasiadas cotizaciones seguidas. Espera un momento.' }, { status: 429 })
     }
 
-    const body = await req.json()
     const {
       // Vista previa: genera el PDF con los datos actuales SIN guardar la
       // cotización ni enviar correos (para que la vendedora lo revise/comparta).
