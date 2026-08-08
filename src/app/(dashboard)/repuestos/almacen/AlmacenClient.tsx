@@ -59,15 +59,18 @@ export default function AlmacenClient({ items: itemsProp, movimientos }: { items
   async function toggleVerificado(it: AlmacenItem) {
     if (verBusy.has(it.id)) return
     const estaVer = verSet.has(it.id)
+    const revertir = () => setVerSet(prev => { const n = new Set(prev); estaVer ? n.add(it.id) : n.delete(it.id); return n })
     // Optimista: marca/desmarca al instante.
     setVerSet(prev => { const n = new Set(prev); estaVer ? n.delete(it.id) : n.add(it.id); return n })
     setVerBusy(prev => new Set(prev).add(it.id))
-    const res = estaVer ? await desverificarItem(it.id) : await verificarItem({ itemId: it.id, cantidadActual: Number(it.cantidad) })
-    setVerBusy(prev => { const n = new Set(prev); n.delete(it.id); return n })
-    if (res.error) {
-      // Revertir si falló.
-      setVerSet(prev => { const n = new Set(prev); estaVer ? n.add(it.id) : n.delete(it.id); return n })
-      alert(res.error)
+    try {
+      const res = estaVer ? await desverificarItem(it.id) : await verificarItem({ itemId: it.id, cantidadActual: Number(it.cantidad) })
+      if (res?.error) { revertir(); alert(res.error) }   // el servidor rechazó → no dejar verde en falso
+    } catch {
+      revertir()
+      alert('No se pudo guardar la verificación. Revisa tu conexión e intenta de nuevo.')
+    } finally {
+      setVerBusy(prev => { const n = new Set(prev); n.delete(it.id); return n })
     }
   }
 
@@ -436,30 +439,35 @@ function EditarModal({ item, onClose, onSaved, onDeleted }: { item: AlmacenItem;
     setLoading(true)
     const costoNum = costo ? parseFloat(costo.replace(',', '.')) : null
     const stockMinNum = stockMin ? parseFloat(stockMin.replace(',', '.')) : null
-    const res = await editarItem({
-      itemId: item.id, descripcion, referencia: referencia || null, marca: marca || null,
-      categoria: categoria || null, ubicacion: ubicacion || null,
-      costoUnitario: costoNum, moneda,
-      stockMinimo: stockMinNum, notas: notas || null,
-    })
-    if (res.error) { setLoading(false); setError(res.error); return }
-    // Si cambió la cantidad, se registra un ajuste de conteo.
-    const nueva = parseFloat(ajuste.replace(',', '.'))
-    let cantidadFinal = Number(item.cantidad)
-    if (!isNaN(nueva) && nueva !== Number(item.cantidad)) {
-      const aj = await ajustarStock({ itemId: item.id, nuevaCantidad: nueva })
-      if (aj.error) { setLoading(false); setError(aj.error); return }
-      cantidadFinal = nueva
+    try {
+      const res = await editarItem({
+        itemId: item.id, descripcion, referencia: referencia || null, marca: marca || null,
+        categoria: categoria || null, ubicacion: ubicacion || null,
+        costoUnitario: costoNum, moneda,
+        stockMinimo: stockMinNum, notas: notas || null,
+      })
+      if (res.error) { setError(res.error); return }
+      // Si cambió la cantidad, se registra un ajuste de conteo.
+      const nueva = parseFloat(ajuste.replace(',', '.'))
+      let cantidadFinal = Number(item.cantidad)
+      if (!isNaN(nueva) && nueva !== Number(item.cantidad)) {
+        const aj = await ajustarStock({ itemId: item.id, nuevaCantidad: nueva })
+        if (aj.error) { setError(aj.error); return }
+        cantidadFinal = nueva
+      }
+      onSaved({
+        id: item.id, descripcion: descripcion.trim(),
+        referencia: referencia.trim() || null, marca: marca.trim() || null,
+        categoria: categoria.trim() || null, ubicacion: ubicacion.trim() || null,
+        costo_unitario: costoNum != null && isFinite(costoNum) ? costoNum : null,
+        moneda, stock_minimo: stockMinNum != null && isFinite(stockMinNum) ? stockMinNum : 0,
+        notas: notas.trim() || null, cantidad: cantidadFinal,
+      })
+    } catch {
+      setError('No se pudo guardar. Revisa tu conexión e intenta de nuevo.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
-    onSaved({
-      id: item.id, descripcion: descripcion.trim(),
-      referencia: referencia.trim() || null, marca: marca.trim() || null,
-      categoria: categoria.trim() || null, ubicacion: ubicacion.trim() || null,
-      costo_unitario: costoNum != null && isFinite(costoNum) ? costoNum : null,
-      moneda, stock_minimo: stockMinNum != null && isFinite(stockMinNum) ? stockMinNum : 0,
-      notas: notas.trim() || null, cantidad: cantidadFinal,
-    })
   }
 
   async function borrar() {
