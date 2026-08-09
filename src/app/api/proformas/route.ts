@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
-import { listaConcesionariosExternos } from '@/lib/concesionarios-externos'
+import { sedesExternas } from '@/lib/cotizacion-federada'
 import { enviarProformaCliente } from '@/lib/email-proformas'
 
 const planLabel: Record<string, string> = {
@@ -278,7 +278,7 @@ export async function GET(req: Request) {
   }
 
   // Panel central: proformas de la base local + las de las otras sedes.
-  const externos = listaConcesionariosExternos()
+  const externos = sedesExternas()
   const tareas: Promise<any[]>[] = [
     conTimeout(traerProformas(supabase, limit).catch(() => []), 4500, []),
     ...externos.map(a => {

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { resolverPrecompraProformaDB } from '@/lib/cotizacion-federada'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const BUCKET = 'comprobantes'
@@ -20,9 +21,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const bytes = Buffer.from(m[2], 'base64')
   if (bytes.length > 2 * 1024 * 1024) return NextResponse.json({ error: 'Firma muy grande' }, { status: 400 })
 
-  const supabase = await createAdminClient()
-  const { data: pf } = await supabase.from('precompra_proformas').select('id').eq('id', id).maybeSingle()
-  if (!pf) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const resuelta = await resolverPrecompraProformaDB(id)
+  if (!resuelta) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const supabase = resuelta.db
 
   const path = `precompra/${id}/firma-${crypto.randomUUID()}.png`
   const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, bytes, { contentType: 'image/png', upsert: true })

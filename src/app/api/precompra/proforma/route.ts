@@ -1,8 +1,19 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { basesFederadas, resolverCotizacionDB, resolverPrecompraProformaDB } from '@/lib/cotizacion-federada'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
+
+function conTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([p, new Promise<T>(res => setTimeout(() => res(fallback), ms))])
+}
+
+async function traerPrecompra(db: SupabaseClient): Promise<any[]> {
+  const { data } = await db.from('precompra_proformas').select('*').order('created_at', { ascending: false }).limit(200)
+  return (data ?? []) as any[]
+}
 const num = (x: unknown) => { const n = Number(x); return Number.isFinite(n) ? n : 0 }
 const r2 = (n: number) => Math.round(n * 100) / 100
 
@@ -24,14 +35,17 @@ export async function GET() {
   const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROLES.includes(rol)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
-  const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('precompra_proformas')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(200)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data ?? [])
+  // Federado: proformas de precompra de la base local + las de las otras sedes.
+  const bases = await basesFederadas()
+  const listas = await Promise.all(bases.map(b => conTimeout(
+    traerPrecompra(b.db).catch(() => [] as any[]),
+    b.externo ? 3500 : 4500, [] as any[])))
+  const map = new Map<string, any>()
+  for (const p of listas.flat()) { const k = String(p?.id ?? ''); if (k && !map.has(k)) map.set(k, p) }
+  const merged = Array.from(map.values())
+    .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))
+    .slice(0, 200)
+  return NextResponse.json(merged)
 }
 
 export async function POST(req: Request) {
@@ -42,15 +56,22 @@ export async function POST(req: Request) {
   if (!ROLES.includes(rol)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const b = await req.json().catch(() => ({}))
-  const supabase = await createAdminClient()
 
-  // Datos que llegan de la cotización (arrastrados) + completados en la proforma.
+  // Base donde se crea/edita la proforma: si edita (b.id) por la proforma; si
+  // crea, por la cotización. Así el director genera proformas AC500 de cualquier
+  // sede, guardándolas en la base de esa sede.
   const cotizacionId = b.cotizacionId ?? null
-  let cot: Record<string, any> | null = null
+  let supabase = await createAdminClient()
+  let cot: any = null
+  if (b.id) {
+    const r = await resolverPrecompraProformaDB(b.id)
+    if (r) supabase = r.db
+  }
   if (cotizacionId) {
-    const { data } = await supabase.from('cotizaciones').select('*').eq('id', cotizacionId).maybeSingle()
-    cot = data
-    if (!cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+    const r = await resolverCotizacionDB(cotizacionId)
+    if (!r) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+    supabase = r.db
+    cot = r.cot
     if (cot.plan !== 'ac500') return NextResponse.json({ error: 'La cotización no es del plan Asegúrate $500' }, { status: 400 })
   }
 

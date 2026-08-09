@@ -3,10 +3,11 @@ import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { Resend } from 'resend'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { AnexoADocument } from '@/lib/anexo-a-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 import { buildAnexoData } from '@/lib/precompra-anexo'
+import { resolverPrecompraProformaDB } from '@/lib/cotizacion-federada'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const num = (x: unknown) => { const n = Number(x); return Number.isFinite(n) ? n : 0 }
@@ -27,9 +28,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!destinatarios.length) return NextResponse.json({ error: 'Indica un correo de destino válido' }, { status: 400 })
   const cc: string[] = String(b.cc ?? '').split(/[,;\s]+/).map((s: string) => s.trim()).filter((s: string) => /\S+@\S+\.\S+/.test(s))
 
-  const supabase = await createAdminClient()
-  const { data: pf } = await supabase.from('precompra_proformas').select('*').eq('id', id).maybeSingle()
-  if (!pf) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const resuelta = await resolverPrecompraProformaDB(id)
+  if (!resuelta) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const { db: supabase, proforma: pf } = resuelta
 
   const conces = await getConcesionarioIdentity(supabase, pf.concesionario_id ?? 'la-oriental')
   const data = buildAnexoData(pf, conces, 'vehimotors')

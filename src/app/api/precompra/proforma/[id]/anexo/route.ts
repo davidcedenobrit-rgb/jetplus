@@ -2,10 +2,11 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { AnexoADocument } from '@/lib/anexo-a-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 import { buildAnexoData } from '@/lib/precompra-anexo'
+import { resolverPrecompraProformaDB } from '@/lib/cotizacion-federada'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
@@ -21,9 +22,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const variante: 'oriental' | 'vehimotors' = url.searchParams.get('variante') === 'vehimotors' ? 'vehimotors' : 'oriental'
   const descargar = url.searchParams.get('download') === '1'
 
-  const supabase = await createAdminClient()
-  const { data: pf } = await supabase.from('precompra_proformas').select('*').eq('id', id).maybeSingle()
-  if (!pf) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const resuelta = await resolverPrecompraProformaDB(id)
+  if (!resuelta) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const { db: supabase, proforma: pf } = resuelta
 
   const conces = await getConcesionarioIdentity(supabase, pf.concesionario_id ?? 'la-oriental')
   const data = buildAnexoData(pf, conces, variante)

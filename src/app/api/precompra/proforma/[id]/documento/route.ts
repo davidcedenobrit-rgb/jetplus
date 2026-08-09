@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { resolverPrecompraProformaDB } from '@/lib/cotizacion-federada'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const BUCKET = 'comprobantes'
@@ -20,9 +21,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!file) return NextResponse.json({ error: 'Falta el archivo' }, { status: 400 })
   if (file.size > MAX) return NextResponse.json({ error: 'El archivo supera 10 MB' }, { status: 400 })
 
-  const supabase = await createAdminClient()
-  const { data: pf } = await supabase.from('precompra_proformas').select('id, cliente_id, documentos').eq('id', id).maybeSingle()
-  if (!pf) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const resuelta = await resolverPrecompraProformaDB(id)
+  if (!resuelta) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const { db: supabase, proforma: pf } = resuelta
 
   const safeName = (file.name || 'archivo').replace(/[^\w.\-]+/g, '_').slice(-60)
   const path = `precompra/${id}/${crypto.randomUUID()}-${safeName}`

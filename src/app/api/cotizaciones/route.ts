@@ -4,7 +4,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
-import { listaConcesionariosExternos } from '@/lib/concesionarios-externos'
+import { sedesExternas } from '@/lib/cotizacion-federada'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import { CotizacionPDF } from '@/lib/cotizacion-pdf'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
@@ -652,7 +652,7 @@ export async function GET(req: Request) {
   // Panel central: agrega las cotizaciones de la base local + las de las otras
   // sedes del grupo (cada una con su propia BD). Las externas son best-effort:
   // si una falla o no está configurada, se ignora sin romper el panel.
-  const externos = listaConcesionariosExternos()
+  const externos = sedesExternas()
   const local = await conTimeout(
     traerCotizaciones(supabase, limit).then(okRows).catch(errRows), 4500, errRows('timeout'))
   const extResultados = await Promise.all(externos.map(async a => {
