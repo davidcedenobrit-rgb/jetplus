@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
+import { resolverCotizacionDB } from '@/lib/cotizacion-federada'
 import { calcularTotalesCotizacion } from '@/lib/cotizacion-calc'
 
 // Editar/negociar montos de una cotización es potestad del director (Rojas).
@@ -33,11 +34,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params
     const body = await req.json()
 
-    const supabase = await createAdminClient()
+    // El rol se valida contra la base LOCAL (donde vive el usuario Rojas). La
+    // cotización se lee/escribe en la base donde vive (local o la de otra sede),
+    // para que el director gestione cotizaciones de cualquier agencia.
+    const localAdmin = await createAdminClient()
+    const resuelta = await resolverCotizacionDB(id)
+    if (!resuelta) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+    const supabase = resuelta.db
 
     // Editar solo la vendedora / ejecutivo(a) de ventas de la cotización.
     if (body.accion === 'editar_vendedora') {
-      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+      if (!(await puedeEditarCotizaciones(localAdmin, authUser))) {
         return NextResponse.json({ error: 'Solo el director puede editar la vendedora' }, { status: 403 })
       }
       const nombre = typeof body.vendedora_nombre === 'string' ? body.vendedora_nombre.trim() : ''
@@ -53,7 +60,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Editar cotización completa (todos los campos + reenvío opcional + auditoría)
     if (body.accion === 'editar_completa') {
       // Solo el director (Rojas) puede editar/negociar montos.
-      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+      if (!(await puedeEditarCotizaciones(localAdmin, authUser))) {
         return NextResponse.json({ error: 'Solo el director puede editar cotizaciones' }, { status: 403 })
       }
 
@@ -275,7 +282,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             mesesCredito: plan === 'personalizado' ? (Number(cotActual.personalizado_meses) || 24) : undefined,
             condicionesPersonalizadas: cotActual.condiciones_personalizadas ?? null,
           }
-          await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id)
+          await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id, supabase)
           correoReenviado = true
         } catch (emailErr: any) {
           console.error('[cotizaciones/patch] email reenvio error:', emailErr)
@@ -295,7 +302,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // de venta libre. Si el cliente acepta la cotización, ese texto pasa a ser la
     // modalidad/observación de la proforma.
     if (body.accion === 'guardar_condiciones') {
-      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+      if (!(await puedeEditarCotizaciones(localAdmin, authUser))) {
         return NextResponse.json({ error: 'Solo el director puede definir condiciones de pago' }, { status: 403 })
       }
       const texto = String(body.condiciones ?? '').trim()
@@ -319,7 +326,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // Aplicar descuento: Rojas negocia editando la estructura de costos completa.
     if (body.accion === 'aplicar_descuento') {
-      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+      if (!(await puedeEditarCotizaciones(localAdmin, authUser))) {
         return NextResponse.json({ error: 'Solo el director puede aplicar descuentos' }, { status: 403 })
       }
       const { data: cotActual } = await supabase.from('cotizaciones').select('*').eq('id', id).single()
@@ -426,7 +433,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             costoTotal: t.costoTotal,
             condicionesPersonalizadas: cotActual.condiciones_personalizadas ?? null,
           }
-          await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id)
+          await enviarCotizacionCliente(pdfData, cotActual.token_respuesta, id, supabase)
           correoReenviado = true
         } catch (e: any) {
           console.error('[aplicar_descuento] reenvio error:', e?.message)
@@ -438,7 +445,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // Editar montos (compatibilidad con la acción anterior)
     if (body.accion === 'editar_montos') {
-      if (!(await puedeEditarCotizaciones(supabase, authUser))) {
+      if (!(await puedeEditarCotizaciones(localAdmin, authUser))) {
         return NextResponse.json({ error: 'Solo el director puede editar cotizaciones' }, { status: 403 })
       }
       const { precio_base, gastos_monto, cuota_mensual, modalidad, plan } = body
@@ -518,13 +525,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('cotizaciones')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error || !data) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-  return NextResponse.json(data)
+  // Federado: busca la cotización en la base local o en la de otra sede.
+  const resuelta = await resolverCotizacionDB(id)
+  if (!resuelta) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+  return NextResponse.json(resuelta.cot)
 }
