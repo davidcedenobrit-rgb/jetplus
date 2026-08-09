@@ -623,11 +623,21 @@ function conTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([p, new Promise<T>(res => setTimeout(() => res(fallback), ms))])
 }
 
-async function traerCotizaciones(db: SupabaseClient, limit: number): Promise<any[]> {
-  const { data } = await db.from('cotizaciones').select(COT_COLS)
+// `full=true` (bases externas) usa select('*') para ser resistente a que una
+// sede tenga un esquema ligeramente distinto (p. ej. le falte una columna);
+// se limpian los campos sensibles (token de respuesta) antes de devolver.
+async function traerCotizaciones(db: SupabaseClient, limit: number, full = false): Promise<any[]> {
+  const { data, error } = await db.from('cotizaciones').select(full ? '*' : COT_COLS)
     .order('created_at', { ascending: false }).limit(limit)
-  return (data ?? []) as any[]
+  if (error) throw new Error(error.message)
+  let rows = (data ?? []) as any[]
+  if (full) rows = rows.map(({ token_respuesta, ...r }: any) => r)
+  return rows
 }
+
+type FuenteResultado = { ok: boolean; rows: any[]; error: string | null }
+const okRows = (rows: any[]): FuenteResultado => ({ ok: true, rows, error: null })
+const errRows = (e: unknown): FuenteResultado => ({ ok: false, rows: [], error: String((e as any)?.message ?? e) })
 
 export async function GET(req: Request) {
   const authClient = await createClient()
@@ -636,20 +646,33 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100)
+  const debug = searchParams.get('debug') === '1'
   const supabase = await createAdminClient()
 
   // Panel central: agrega las cotizaciones de la base local + las de las otras
   // sedes del grupo (cada una con su propia BD). Las externas son best-effort:
   // si una falla o no está configurada, se ignora sin romper el panel.
   const externos = listaConcesionariosExternos()
-  const tareas: Promise<any[]>[] = [
-    conTimeout(traerCotizaciones(supabase, limit), 4000, []).catch(() => []),
-    ...externos.map(a => {
-      const cli = createServiceClient(a.url, a.serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
-      return conTimeout(traerCotizaciones(cli, limit), 3500, []).catch(() => [])
-    }),
-  ]
-  const todas = (await Promise.all(tareas)).flat()
+  const local = await conTimeout(
+    traerCotizaciones(supabase, limit).then(okRows).catch(errRows), 4500, errRows('timeout'))
+  const extResultados = await Promise.all(externos.map(async a => {
+    const cli = createServiceClient(a.url, a.serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
+    const r = await conTimeout(traerCotizaciones(cli, limit, true).then(okRows).catch(errRows), 4000, errRows('timeout'))
+    let host = a.url
+    try { host = new URL(a.url).host } catch { /* url mal formada */ }
+    return { key: a.key, label: a.label, host, ...r }
+  }))
+
+  // Diagnóstico (?debug=1): no expone secretos, solo host + conteos + error.
+  if (debug) {
+    return NextResponse.json({
+      local: { ok: local.ok, count: local.rows.length, error: local.error },
+      externosConfigurados: externos.length,
+      externos: extResultados.map(e => ({ key: e.key, label: e.label, host: e.host, ok: e.ok, count: e.rows.length, error: e.error })),
+    })
+  }
+
+  const todas = [local.rows, ...extResultados.map(e => e.rows)].flat()
 
   // Dedup por id (uuid único por base) y orden por fecha desc.
   const map = new Map<string, any>()
