@@ -4,7 +4,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { createAdminClient } from '@/lib/supabase/server'
+import { resolverProformaDB } from '@/lib/cotizacion-federada'
 import { ProformaPDF } from '@/lib/proforma-pdf'
 import type { ProformaPDFData, CuotaCronogramaItem } from '@/lib/proforma-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
@@ -67,14 +67,10 @@ const planLabel: Record<string, string> = {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const supabase = await createAdminClient()
-  const { data: pro, error } = await supabase
-    .from('proformas')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error || !pro) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  // Resuelve la proforma en la base local o en la de otra sede (panel central).
+  const resuelta = await resolverProformaDB(id)
+  if (!resuelta) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const { db: supabase, proforma: pro } = resuelta
 
   const cliente: any = pro.cliente_snapshot ?? {}
   const vehiculo: any = pro.vehiculo_snapshot ?? {}

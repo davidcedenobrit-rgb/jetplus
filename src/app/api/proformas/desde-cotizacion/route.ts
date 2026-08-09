@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { enviarProformaCliente } from '@/lib/email-proformas'
+import { resolverCotizacionDB } from '@/lib/cotizacion-federada'
 
 function fmtDate(d: string | Date) {
   const date = typeof d === 'string' ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')) : d
@@ -47,10 +48,12 @@ export async function POST(req: Request) {
   const hasOv = (k: string) => ov[k] != null && ov[k] !== ''
   if (!cotizacionId) return NextResponse.json({ error: 'Falta la cotización' }, { status: 400 })
 
-  const supabase = await createAdminClient()
-
-  const { data: cot } = await supabase.from('cotizaciones').select('*').eq('id', cotizacionId).single()
-  if (!cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+  // Resuelve la base de la cotización (local o la de otra sede). Todo lo que
+  // sigue —proforma, reserva de showroom, anticipos, numeración— cae en ESA
+  // base, para que el director convierta cotizaciones de cualquier agencia.
+  const resuelta = await resolverCotizacionDB(cotizacionId)
+  if (!resuelta) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+  const { db: supabase, cot } = resuelta
 
   // Unidad del showroom a reservar (opcional). Debe estar en agencia.
   let unidad: Record<string, any> | null = null

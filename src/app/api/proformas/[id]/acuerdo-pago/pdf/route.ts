@@ -2,7 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { resolverProformaDB } from '@/lib/cotizacion-federada'
 import { AcuerdoPagoPDF, AcuerdoPagoData } from '@/lib/acuerdo-pago-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 
@@ -17,9 +18,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!ROLES.includes(rol)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const { id } = await params
-  const admin = await createAdminClient()
-  const { data: pro } = await admin.from('proformas').select('*').eq('id', id).maybeSingle()
-  if (!pro) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const resuelta = await resolverProformaDB(id)
+  if (!resuelta) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
+  const { db: admin, proforma: pro } = resuelta
 
   // Identidad del concesionario (para el membrete) desde la cotización.
   let concId: string | null = null

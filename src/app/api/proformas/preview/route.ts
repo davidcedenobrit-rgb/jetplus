@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { resolverCotizacionDB } from '@/lib/cotizacion-federada'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const num = (x: unknown) => { const n = Number(x); return Number.isFinite(n) ? n : 0 }
@@ -19,9 +20,10 @@ export async function GET(req: Request) {
   const cotizacionId = new URL(req.url).searchParams.get('cotizacionId')
   if (!cotizacionId) return NextResponse.json({ error: 'Falta la cotización' }, { status: 400 })
 
-  const supabase = await createAdminClient()
-  const { data: cot } = await supabase.from('cotizaciones').select('*').eq('id', cotizacionId).maybeSingle()
-  if (!cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+  // Resuelve la base donde vive la cotización (local o la de otra sede).
+  const resuelta = await resolverCotizacionDB(cotizacionId)
+  if (!resuelta) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+  const { db: supabase, cot } = resuelta
 
   const est = (cot.estructura_costos ?? {}) as Record<string, any>
   const modalidad = String(cot.modalidad ?? 'credito_24')

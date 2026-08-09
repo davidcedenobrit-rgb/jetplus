@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
+import { listaConcesionariosExternos } from '@/lib/concesionarios-externos'
 import { enviarProformaCliente } from '@/lib/email-proformas'
 
 const planLabel: Record<string, string> = {
@@ -239,6 +241,18 @@ export async function POST(req: Request) {
   }
 }
 
+const PROF_COLS = 'id, numero, fecha_emision, cliente_id, credito_id, vehiculo_id, cotizacion_id, cliente_snapshot, vehiculo_snapshot, precio_vehiculo, monto_inicial, monto_financiado, num_cuotas, vendedoras, correo_destino, correo_enviado_at, created_at'
+
+function conTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([p, new Promise<T>(res => setTimeout(() => res(fallback), ms))])
+}
+
+async function traerProformas(db: SupabaseClient, limit: number, externa = false): Promise<any[]> {
+  const { data } = await db.from('proformas').select(externa ? '*' : PROF_COLS)
+    .order('created_at', { ascending: false }).limit(limit)
+  return (data ?? []) as any[]
+}
+
 export async function GET(req: Request) {
   const authClient = await createClient()
   const { data: { user: authUser } } = await authClient.auth.getUser()
@@ -250,17 +264,33 @@ export async function GET(req: Request) {
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100)
 
   const supabase = await createAdminClient()
-  let query = supabase
-    .from('proformas')
-    .select('id, numero, fecha_emision, cliente_id, credito_id, vehiculo_id, cotizacion_id, cliente_snapshot, vehiculo_snapshot, precio_vehiculo, monto_inicial, monto_financiado, num_cuotas, vendedoras, correo_destino, correo_enviado_at, created_at')
-    .order('created_at', { ascending: false })
-    .limit(limit)
 
-  if (creditoId) query = query.eq('credito_id', creditoId)
-  if (clienteId) query = query.eq('cliente_id', clienteId)
+  // Búsqueda por id específico (credito/cliente): solo base local (esos ids son
+  // referencias locales). El listado general del panel sí es federado.
+  if (creditoId || clienteId) {
+    let query = supabase.from('proformas').select(PROF_COLS)
+      .order('created_at', { ascending: false }).limit(limit)
+    if (creditoId) query = query.eq('credito_id', creditoId)
+    if (clienteId) query = query.eq('cliente_id', clienteId)
+    const { data, error } = await query
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data)
+  }
 
-  const { data, error } = await query
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  // Panel central: proformas de la base local + las de las otras sedes.
+  const externos = listaConcesionariosExternos()
+  const tareas: Promise<any[]>[] = [
+    conTimeout(traerProformas(supabase, limit).catch(() => []), 4500, []),
+    ...externos.map(a => {
+      const cli = createServiceClient(a.url, a.serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
+      return conTimeout(traerProformas(cli, limit, true).catch(() => []), 4000, [])
+    }),
+  ]
+  const todas = (await Promise.all(tareas)).flat()
+  const map = new Map<string, any>()
+  for (const p of todas) { const k = String(p?.id ?? ''); if (k && !map.has(k)) map.set(k, p) }
+  const merged = Array.from(map.values())
+    .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))
+    .slice(0, limit)
+  return NextResponse.json(merged)
 }

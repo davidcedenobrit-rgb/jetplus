@@ -215,7 +215,7 @@ export default function ProformaPanel({
     if (q.length < 2) { setIngResultados([]); setIngBuscando(false); return }
     setIngBuscando(true)
     const t = setTimeout(() => {
-      fetch(`/api/anticipos/buscar?q=${encodeURIComponent(q)}`)
+      fetch(`/api/anticipos/buscar?q=${encodeURIComponent(q)}&cotizacionId=${encodeURIComponent(cotId)}`)
         .then(r => r.ok ? r.json() : [])
         .then(d => setIngResultados(Array.isArray(d) ? d : []))
         .catch(() => setIngResultados([]))

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { fetchAllRows } from '@/lib/supabase/fetch-all'
+import { resolverCotizacionDB } from '@/lib/cotizacion-federada'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
@@ -16,13 +17,18 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url)
   const cotizacionId = url.searchParams.get('cotizacionId')
-  const supabase = await createAdminClient()
+  // El showroom a reservar es el de la SEDE de la cotización (no siempre la
+  // local): se resuelve la base por la cotización para listar sus unidades.
+  let supabase = await createAdminClient()
 
   let marca = '', modelo = ''
   if (cotizacionId) {
-    const { data: cot } = await supabase.from('cotizaciones').select('marca, modelo').eq('id', cotizacionId).maybeSingle()
-    marca = String(cot?.marca ?? '').toUpperCase()
-    modelo = String(cot?.modelo ?? '').toUpperCase()
+    const resuelta = await resolverCotizacionDB(cotizacionId)
+    if (resuelta) {
+      supabase = resuelta.db
+      marca = String(resuelta.cot?.marca ?? '').toUpperCase()
+      modelo = String(resuelta.cot?.modelo ?? '').toUpperCase()
+    }
   }
 
   // Unidades disponibles (en_agencia) Y reservadas: Rojas puede reservar una que

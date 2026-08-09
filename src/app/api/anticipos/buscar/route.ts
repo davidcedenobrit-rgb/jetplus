@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { resolverCotizacionDB } from '@/lib/cotizacion-federada'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
@@ -17,7 +18,14 @@ export async function GET(req: Request) {
   const q = (url.searchParams.get('q') ?? '').replace(/[,()%*]/g, ' ').trim()
   if (q.length < 2) return NextResponse.json([])
 
-  const admin = await createAdminClient()
+  // Si viene cotizacionId, los anticipos se buscan en la base de esa sede
+  // (para asociarlos a una proforma de otra agencia desde el panel central).
+  const cotizacionId = url.searchParams.get('cotizacionId')
+  let admin = await createAdminClient()
+  if (cotizacionId) {
+    const resuelta = await resolverCotizacionDB(cotizacionId)
+    if (resuelta) admin = resuelta.db
+  }
   const like = `%${q}%`
 
   // Clientes que coinciden, para traer sus anticipos.
