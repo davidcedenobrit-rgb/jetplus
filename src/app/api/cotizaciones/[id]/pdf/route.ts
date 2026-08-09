@@ -2,10 +2,10 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
-import { createAdminClient } from '@/lib/supabase/server'
 import { CotizacionPDF } from '@/lib/cotizacion-pdf'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
+import { resolverCotizacionDB } from '@/lib/cotizacion-federada'
 
 function fmtDate(s: string) {
   try { return new Date(s + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
@@ -16,14 +16,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params
   const descargar = new URL(_req.url).searchParams.get('download') === '1'
 
-  const supabase = await createAdminClient()
-  const { data: cot, error } = await supabase
-    .from('cotizaciones')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error || !cot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+  // Resuelve en la base local o en la de otra sede (panel central federado).
+  const resuelta = await resolverCotizacionDB(id)
+  if (!resuelta) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+  const { db: supabase, cot } = resuelta
 
   const conces = await getConcesionarioIdentity(supabase, cot.concesionario_id ?? null)
 

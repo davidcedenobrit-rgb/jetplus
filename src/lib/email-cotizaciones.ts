@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { CotizacionPDF, type CotizacionPDFData, type AC500ScheduleData } from './cotizacion-pdf'
 import { registrarEnvioEmail, extraerResendId } from './email-tracking'
 
@@ -57,7 +58,9 @@ function row(label: string, value: string) {
   </tr>`
 }
 
-export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenRespuesta: string, cotizacionId?: string) {
+// `db` opcional: base donde registrar el tracking (para reenviar cotizaciones
+// de otra sede desde el panel central). Si se omite, usa la base local.
+export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenRespuesta: string, cotizacionId?: string, db?: SupabaseClient) {
   const resend = getResend()
 
   const pdfBuffer = await renderToBuffer(
@@ -187,7 +190,7 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
       destinatarios: [data.clienteCorreo],
       asunto,
       metadata: { numero: data.numero, marca: data.marca, modelo: data.modelo },
-    })
+    }, db)
   }
 }
 

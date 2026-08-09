@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type EntidadEmail =
   | 'cotizacion'
@@ -32,12 +33,13 @@ interface RegistrarEnvioOpts {
  *
  * Nunca lanza. Si algo falla, lo logea y devuelve.
  */
-export async function registrarEnvioEmail(opts: RegistrarEnvioOpts): Promise<void> {
+export async function registrarEnvioEmail(opts: RegistrarEnvioOpts, db?: SupabaseClient): Promise<void> {
   const { resendEmailId, entidadTipo, entidadId, destinatarios, asunto, metadata } = opts
   if (!resendEmailId) return
 
   try {
-    const supabase = await createAdminClient()
+    // `db` permite registrar el tracking en la base de OTRA sede (panel central).
+    const supabase = db ?? await createAdminClient()
 
     await supabase.from('email_eventos').insert([{
       resend_email_id: resendEmailId,

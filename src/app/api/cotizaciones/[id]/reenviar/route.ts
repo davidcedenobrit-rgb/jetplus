@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
 import { enviarCotizacionCliente } from '@/lib/email-cotizaciones'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
+import { resolverCotizacionDB } from '@/lib/cotizacion-federada'
 
 function fmtDate(s: string) {
   try { return new Date(s + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
@@ -13,15 +13,12 @@ function fmtDate(s: string) {
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createAdminClient()
 
-    const { data: cot } = await supabase
-      .from('cotizaciones')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (!cot) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
+    // Resuelve la cotización en la base correcta (local o la de otra sede),
+    // para que el reenvío funcione desde el panel central de dirección.
+    const resuelta = await resolverCotizacionDB(id)
+    if (!resuelta) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
+    const { db: supabase, cot } = resuelta
 
     // No enviar a correos vacíos o de relleno (evita rebotes a direcciones inventadas).
     const correoCliente = (cot.cliente_correo ?? '').trim()
@@ -91,7 +88,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       bnVehimotors: cot.bn_vehimotors ?? null,
     }
 
-    await enviarCotizacionCliente(pdfData, cot.token_respuesta, id)
+    await enviarCotizacionCliente(pdfData, cot.token_respuesta, id, supabase)
 
     await supabase
       .from('cotizaciones')
