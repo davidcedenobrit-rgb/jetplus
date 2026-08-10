@@ -38,6 +38,10 @@ export async function POST(req: Request) {
       // Vista previa: genera el PDF con los datos actuales SIN guardar la
       // cotización ni enviar correos (para que la vendedora lo revise/comparta).
       preview,
+      // "Guardar primero": crea la cotización pero NO envía el correo al cliente
+      // (queda registrada para revisarla y enviarla luego desde el panel).
+      // Por defecto true (comportamiento anterior: crear y enviar).
+      enviarAlCliente,
       codigo,
       vehiculoId,
       clienteNombre,
@@ -110,6 +114,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
     const correoCliente = clienteCorreo?.trim().toLowerCase() || ''
+    // Si enviarAlCliente === false → se guarda sin mandarle el correo al cliente.
+    const debeEnviarCliente = enviarAlCliente !== false
     if (!['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
     }
@@ -586,7 +592,7 @@ export async function POST(req: Request) {
     // Enviar emails (ambos en paralelo, errores no bloqueantes).
     // El correo al cliente solo se envía si dejó su correo (ahora es opcional).
     const emailResults = await Promise.allSettled([
-      correoCliente ? enviarCotizacionCliente(pdfData, cot.token_respuesta, cot.id) : Promise.resolve(null),
+      (correoCliente && debeEnviarCliente) ? enviarCotizacionCliente(pdfData, cot.token_respuesta, cot.id) : Promise.resolve(null),
       enviarNotificacionRojas({
         numero: cot.numero,
         vendedoraNombre: vendedora.nombre,
@@ -609,7 +615,7 @@ export async function POST(req: Request) {
       if (r.status === 'rejected') console.error(`[cotizaciones] email ${i} error:`, r.reason)
     })
 
-    return NextResponse.json({ ok: true, numero: cot.numero, id: cot.id }, { status: 201 })
+    return NextResponse.json({ ok: true, numero: cot.numero, id: cot.id, enviado: !!(correoCliente && debeEnviarCliente) }, { status: 201 })
   } catch (err) {
     console.error('[cotizaciones] unexpected error:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

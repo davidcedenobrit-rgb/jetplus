@@ -97,6 +97,8 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   const [cotId, setCotId] = useState('')
   const [compartiendo, setCompartiendo] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
+  // ¿La cotización se envió al cliente o solo se guardó? (para el mensaje final)
+  const [fueEnviada, setFueEnviada] = useState(true)
 
   // Concesionario — solo el código de la casa (R000) puede elegir; el resto va a La Oriental
   const esCasa = pin.trim().toUpperCase() === 'R000'
@@ -175,12 +177,19 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
     }
   }
 
-  async function enviar() {
-    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim() || !form.clienteCorreo.trim()) {
-      setErrorMsg('Nombre, C.I./RIF y correo son obligatorios.')
+  // Crea la cotización. `conEnvio=true` → la manda al correo del cliente (como
+  // siempre). `conEnvio=false` → solo la guarda (Rojas la revisa y la envía luego
+  // desde el panel). Al guardar, el correo del cliente es opcional.
+  async function crear(conEnvio: boolean) {
+    if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) {
+      setErrorMsg('Nombre y C.I./RIF son obligatorios.')
       return
     }
-    if (!/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) {
+    if (conEnvio && !form.clienteCorreo.trim()) {
+      setErrorMsg('El correo es obligatorio para enviar la cotización al cliente.')
+      return
+    }
+    if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) {
       setErrorMsg('El correo no es válido.')
       return
     }
@@ -192,10 +201,11 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           codigo: pin,
+          enviarAlCliente: conEnvio,
           ...(esPromo && promoId ? { promoVehiculoId: promoId } : { vehiculoId: vehiculo.id }),
           clienteNombre: form.clienteNombre,
           clienteCiRif: form.clienteCiRif,
-          clienteCorreo: form.clienteCorreo,
+          clienteCorreo: form.clienteCorreo || null,
           clienteTelefono: form.clienteTelefono || null,
           clienteDireccion: form.clienteDireccion || null,
           clienteCiudadEstado: form.clienteCiudadEstado || null,
@@ -210,6 +220,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
       if (json.ok) {
         setNumeroCot(json.numero)
         setCotId(json.id ?? '')
+        setFueEnviada(!!json.enviado)
         setStep('success')
       } else {
         setErrorMsg(json.error ?? 'Error al generar la cotización.')
@@ -325,7 +336,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>
-              {step === 'pin' ? 'Acceso vendedora' : step === 'success' ? '¡Cotización enviada!' : `${vehiculo.brand} · ${vendedoraNombre}`}
+              {step === 'pin' ? 'Acceso vendedora' : step === 'success' ? (fueEnviada ? '¡Cotización enviada!' : '¡Cotización guardada!') : `${vehiculo.brand} · ${vendedoraNombre}`}
             </p>
             <h2 style={{ fontSize: 16, fontWeight: 800, color: '#111', margin: 0 }}>
               {step === 'pin' ? 'Generar cotización' : step === 'success' ? '' : vehiculo.model}
@@ -537,16 +548,26 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                 {previewLoading ? 'Generando vista previa…' : '👁 Ver PDF (vista previa)'}
               </button>
 
+              {/* Guardar sin enviar: registra la cotización para revisarla/enviarla
+                  luego desde el panel (Rojas pidió "guardar primero"). */}
+              <button
+                onClick={() => crear(false)}
+                disabled={step === 'sending'}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '12px', marginTop: 10, background: '#fff', border: '1.5px solid #111', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#111', cursor: step === 'sending' ? 'default' : 'pointer', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              >
+                💾 Guardar (sin enviar al cliente)
+              </button>
+
               <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                 <button onClick={onClose} style={{ flex: 1, padding: '12px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' }}>
                   Cancelar
                 </button>
                 <button
-                  onClick={enviar}
+                  onClick={() => crear(true)}
                   disabled={step === 'sending'}
                   style={{ flex: 2, padding: '12px', background: step === 'sending' ? '#9ca3af' : '#dc2626', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: step === 'sending' ? 'default' : 'pointer', fontFamily: 'inherit', transition: 'background .15s' }}
                 >
-                  {step === 'sending' ? 'Enviando cotización...' : '📄 Enviar cotización al cliente'}
+                  {step === 'sending' ? 'Procesando...' : '📄 Enviar cotización al cliente'}
                 </button>
               </div>
             </div>
@@ -556,11 +577,22 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
           {step === 'success' && (
             <div style={{ textAlign: 'center', padding: '10px 0 8px' }}>
               <div style={{ width: 64, height: 64, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 28 }}>✓</div>
-              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111', marginBottom: 6 }}>¡Cotización enviada!</h3>
-              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
-                Se ha enviado la cotización <strong style={{ color: '#C41E3A' }}>{numeroCot}</strong> al correo del cliente.
-              </p>
-              <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20 }}>También recibiste una copia por correo y José Rojas fue notificado.</p>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111', marginBottom: 6 }}>{fueEnviada ? '¡Cotización enviada!' : '¡Cotización guardada!'}</h3>
+              {fueEnviada ? (
+                <>
+                  <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
+                    Se ha enviado la cotización <strong style={{ color: '#C41E3A' }}>{numeroCot}</strong> al correo del cliente.
+                  </p>
+                  <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20 }}>También recibiste una copia por correo y José Rojas fue notificado.</p>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
+                    La cotización <strong style={{ color: '#C41E3A' }}>{numeroCot}</strong> quedó <strong>guardada</strong> (no se envió al cliente).
+                  </p>
+                  <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20 }}>Aparece en el panel para revisarla y enviarla al cliente cuando quieras.</p>
+                </>
+              )}
 
               {cotId && (
                 <>
