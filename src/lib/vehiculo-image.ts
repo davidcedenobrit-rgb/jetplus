@@ -18,7 +18,7 @@ function normalizarModelo(modelo: string) {
 }
 
 /** Foto local aprobada para el modelo; conserva img_url para el resto del catálogo. */
-export function imagenVehiculo(modelo: string, imgUrl?: string | null) {
-  const nombre = normalizarModelo(modelo)
+export function imagenVehiculo(modelo: string, imgUrl?: string | null, transmision?: string | null) {
+  const nombre = normalizarModelo(`${modelo} ${transmision ?? ''}`)
   return IMAGENES_MODELO.find(([patron]) => patron.test(nombre))?.[1] ?? imgUrl ?? null
 }

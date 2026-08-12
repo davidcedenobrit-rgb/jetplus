@@ -74,7 +74,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
         {lista.map(v => {
           const init = v.cash ? v.cash * 0.4 : 0
-          const imagen = imagenVehiculo(v.model, v.img_url)
+          const imagen = imagenVehiculo(v.model, v.img_url, v.transmision)
           return (
             <div key={v.id} id={`car-${v.id}`} className="lo-card">
               {/* Imagen */}
