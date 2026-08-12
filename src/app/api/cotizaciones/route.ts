@@ -247,7 +247,8 @@ export async function POST(req: Request) {
 
     // Precio base: normalmente del catálogo; Rojas Personalizada puede sobreescribirlo.
     const precioBase = (precioOverride != null && precioOverride > 0) ? precioOverride : (Number(vehiculo.cash) || 0)
-    const iva = precioBase * 0.16
+    // Jetplus: exonerado de IVA (Puerto Libre de Margarita).
+    const iva = precioBase * 0
 
     // AC500 plan lookup
     let ac500Schedule: AC500ScheduleData | null = null

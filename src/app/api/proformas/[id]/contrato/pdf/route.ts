@@ -51,7 +51,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const cuotasCron = cronograma.filter(r => r.tipo === 'Vehimotor')
 
   const precioBase = Number(pro.precio_vehiculo) || Number(est.precioBase) || 0
-  const iva = Math.round(precioBase * 0.16 * 100) / 100
+  // Jetplus: exonerado de IVA (Puerto Libre de Margarita).
+  const iva = 0
   const placaMonto = Number(lineas.placa) || 400
   const numCuotas = Number(pro.num_cuotas) || cuotasCron.length || 24
   const cuota = Number(cuotasCron[0]?.monto) || (numCuotas > 0 ? Math.round((financiamiento / numCuotas) * 100) / 100 : 0)

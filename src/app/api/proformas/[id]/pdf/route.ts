@@ -46,7 +46,8 @@ function buildEstructura(est: any) {
   const precioBase = Number(est.precioBase) || 0
   if (precioBase <= 0) return null
   const lineas = (est.lineas ?? {}) as Record<string, any>
-  const iva = Math.round(precioBase * 0.16 * 100) / 100
+  // Jetplus: exonerado de IVA (Puerto Libre de Margarita).
+  const iva = 0
   const inicialPct = Number(est.inicialPct) || 0
   const iniBase = Math.round(precioBase * inicialPct / 100 * 100) / 100
   const gastos = GASTOS_LABELS
@@ -97,7 +98,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     // Solo cuando es una venta a crédito (hay financiamiento) y los datos cuadran.
     if (precioBase > 0 && inicial > 0 && financiado > 0) {
       const inicialPct = Number((pro.estructura_costos as any)?.inicialPct) || 40
-      const iva = Math.round(precioBase * 0.16 * 100) / 100
+      // Jetplus: exonerado de IVA (Puerto Libre de Margarita).
+  const iva = 0
       const iniBase = Math.round(precioBase * inicialPct / 100 * 100) / 100
       const gastos = Math.round((inicial - iniBase - iva) * 100) / 100
       estructura = {

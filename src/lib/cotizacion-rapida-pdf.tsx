@@ -35,7 +35,8 @@ export function CotizacionRapidaPDF({ data }: { data: CotizacionRapidaData }) {
   const primario = data.colorPrimario || '#C41E3A'
   const secundario = data.colorSecundario || '#111827'
   const precio = Number(data.precio) || 0
-  const iva = data.iva != null ? Number(data.iva) : precio * 0.16
+  // Jetplus: exonerado de IVA (Puerto Libre de Margarita).
+  const iva = data.iva != null ? Number(data.iva) : 0
   const gc = Number(data.gastosContado) || 0
   const gcr = Number(data.gastosCredito) || 0
   const cuota = Number(data.cuota) || 0

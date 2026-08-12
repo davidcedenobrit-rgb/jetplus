@@ -88,7 +88,8 @@ export async function POST(req: Request) {
     const plan = overrides.plan ?? original.plan ?? 'vehimotors'
 
     const precioBase = Number(overrides.precioBase ?? vehiculo.cash) || 0
-    const iva = precioBase * 0.16
+    // Jetplus: exonerado de IVA (Puerto Libre de Margarita).
+    const iva = precioBase * 0
 
     // AC500 schedule (si aplica)
     let ac500Schedule: AC500ScheduleData | null = null

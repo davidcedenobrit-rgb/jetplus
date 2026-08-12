@@ -18,7 +18,9 @@ export type ModalidadCot = 'contado' | 'credito_24'
 // un % y el cliente cubre el resto (eso se define al pasar a proforma).
 export type PlanCot = 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado' | 'banca_nacional'
 
-export const IVA_TASA = 0.16
+// Jetplus opera bajo el régimen de Puerto Libre de Margarita: la venta del
+// vehículo está exonerada de IVA (no aplica el 16% que sí llevaba La Oriental).
+export const IVA_TASA = 0
 
 export interface TotalesInput {
   precioBase: number

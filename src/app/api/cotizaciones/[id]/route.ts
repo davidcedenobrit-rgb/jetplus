@@ -459,7 +459,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (!['vehimotors', 'banco_100'].includes(plan))
         return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
 
-      const iva_monto = precio_base * 0.16
+      // Jetplus: exonerado de IVA (Puerto Libre de Margarita).
+      const iva_monto = precio_base * 0
       let total_inicial: number
       let financiamiento_monto: number | null = null
       let cuota_mensual_final: number | null = null
