@@ -5,7 +5,7 @@ const IMAGENES_MODELO: Array<[RegExp, string]> = [
   [/\b(?:MG\s*)?RX\s*9\b/i, '/vehiculos/rx9.png'],
   [/\b(?:MAXUS\s*)?T\s*60\b/i, '/vehiculos/maxus-t60.png'],
   [/(?:\b(?:NEW|NUEVA?)\b.*\bMG\s*ZS\b|\bMG\s*ZS\b.*\b(?:NEW|NUEVA?)\b)/i, '/vehiculos/mg-zs-new.png'],
-  [/\bMG\s*ZS\b.*\b(?:SINCRONICA|CLASICA)\b/i, '/vehiculos/mg-zs-clasica-sincronica.png'],
+  [/\b(?:MG\s*)?ZS\b.*\b(?:MT|SINCRONICA|CLASICA)\b/i, '/vehiculos/mg-zs-clasica-sincronica.png'],
 ]
 
 function normalizarModelo(modelo: string) {
