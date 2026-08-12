@@ -44,7 +44,9 @@ function fmt(n: number | null | undefined) {
 
 function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: { bcv: number; usdt: number }) {
   const precio = v.cash ?? 0
-  const iva = precio * 0.16
+  // Jetplus opera bajo el régimen de Puerto Libre de Margarita: la venta del
+  // vehículo está exonerada de IVA (no aplica el 16% que sí llevaba La Oriental).
+  const iva = 0
   // Diferencial cambiario = (USDT - BCV) / BCV. Se activa por vehículo (Rojas decide).
   const difPct = (tasas.bcv > 0 && tasas.usdt > tasas.bcv) ? (tasas.usdt - tasas.bcv) / tasas.bcv : 0
   if (modalidad === 'contado') {
@@ -103,7 +105,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   // Concesionario — solo el código de la casa (R000) puede elegir; el resto va a Jetplus
   const esCasa = pin.trim().toUpperCase() === 'R000'
   const [concesionarios, setConcesionarios] = useState<{ id: string; nombre: string; es_principal: boolean }[]>([])
-  const [concesionarioId, setConcesionarioId] = useState('la-oriental')
+  const [concesionarioId, setConcesionarioId] = useState('jetplus')
 
   // Buscador de clientes existentes
   const [cliQuery, setCliQuery] = useState('')
@@ -431,7 +433,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                   {modalidad === 'contado' ? (
                     <>
                       <span style={{ fontSize: 11, color: '#6b7280' }}>Precio base</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(vehiculo.cash)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>IVA 16%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.iva)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>IVA (exonerado — Puerto Libre)</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.iva)}</span>
                       <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
                       <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>TOTAL</span>
                       <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
@@ -449,7 +451,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                   ) : (
                     <>
                       <span style={{ fontSize: 11, color: '#6b7280' }}>40% Precio base</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt((vehiculo.cash ?? 0) * 0.4)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>IVA 16%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.iva)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>IVA (exonerado — Puerto Libre)</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.iva)}</span>
                       <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
                       <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>INICIAL</span>
                       <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>

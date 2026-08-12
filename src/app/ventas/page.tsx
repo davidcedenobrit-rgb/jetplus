@@ -221,7 +221,8 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               precio_base: number; gastos_label: string; gastos_contado: number;
               mostrar_credito: boolean; gastos_credito: number; cuota_mensual: number;
             }) => {
-              const iva = v.precio_base * 0.16
+              // Jetplus opera bajo el régimen de Puerto Libre de Margarita: exonerado de IVA.
+              const iva = 0
               const totalContado = v.precio_base + iva + v.gastos_contado
               const ini40 = v.precio_base * 0.40
               const fin60 = v.precio_base * 0.60
@@ -247,14 +248,14 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
                       <tr><td style={tdL}>MODELO:</td><td style={tdV}>{v.modelo}</td></tr>
                       <tr><td colSpan={2} style={tdSH}>MODALIDAD DE CONTADO</td></tr>
                       <tr><td style={tdL}>100% PRECIO BASE:</td><td style={tdV}>${fmt(v.precio_base)}</td></tr>
-                      <tr><td style={tdL}>I.V.A. (16%):</td><td style={tdV}>${fmt(iva)}</td></tr>
+                      <tr><td style={tdL}>I.V.A. (exonerado):</td><td style={tdV}>${fmt(iva)}</td></tr>
                       <tr><td style={tdL}>{v.gastos_label}</td><td style={tdV}>${fmt(v.gastos_contado)}</td></tr>
                       <tr><td style={tdTotal}>TOTAL A PAGAR</td><td style={tdTotalV}>${fmt(totalContado)}</td></tr>
                       {v.mostrar_credito && (
                         <>
                           <tr><td colSpan={2} style={tdSH}>MODALIDAD CRÉDITO 24 MESES (40% INICIAL)</td></tr>
                           <tr><td style={tdL}>40% PRECIO BASE:</td><td style={tdV}>${fmt(ini40)}</td></tr>
-                          <tr><td style={tdL}>I.V.A. (16%):</td><td style={tdV}>${fmt(iva)}</td></tr>
+                          <tr><td style={tdL}>I.V.A. (exonerado):</td><td style={tdV}>${fmt(iva)}</td></tr>
                           <tr><td style={tdL}>{v.gastos_label}</td><td style={tdV}>${fmt(v.gastos_credito)}</td></tr>
                           <tr><td style={tdTotal}>TOTAL INICIAL A PAGAR</td><td style={tdTotalV}>${fmt(totalInicial)}</td></tr>
                           <tr><td style={tdL}>FINANCIAMIENTO 60%</td><td style={tdV}>${fmt(fin60)}</td></tr>

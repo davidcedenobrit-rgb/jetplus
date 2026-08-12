@@ -39,7 +39,8 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
   ac500?: AC500RapidaData | null  // cronograma del plan $500
 }) {
   const precio    = vehiculo.cash ?? 0
-  const iva       = precio * 0.16
+  // Jetplus opera bajo el régimen de Puerto Libre de Margarita: exonerado de IVA.
+  const iva       = 0
   const gc        = vehiculo.gc ?? 0
   const gcr       = vehiculo.gcr ?? 0
   const cuota     = vehiculo.tasa_credito ?? 0
@@ -164,7 +165,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
         {financiamiento && <>
         <div style={hdr('#7c2d12', '#fde68a')}>Modalidad de Contado</div>
         <div style={row}><span style={lbl}>100% Precio Base:</span><span style={val}>${fmt(precio)}</span></div>
-        <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmt(iva)}</span></div>
+        <div style={row}><span style={lbl}>I.V.A. (exonerado):</span><span style={val}>${fmt(iva)}</span></div>
         <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
           <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza auto, Póliza de Vida, Traslado, INTT, Gastos Notaría, IGTF</span>
           <span style={{ ...val, flexShrink: 0 }}>${fmt(gc)}</span>
@@ -176,7 +177,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
 
         <div style={{ ...hdr('#064e3b', '#6ee7b7'), marginTop: 6 }}>Modalidad Crédito 24 Meses (40% Inicial)</div>
         <div style={row}><span style={lbl}>40% Precio Base:</span><span style={val}>${fmt(ini40)}</span></div>
-        <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmt(iva)}</span></div>
+        <div style={row}><span style={lbl}>I.V.A. (exonerado):</span><span style={val}>${fmt(iva)}</span></div>
         <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
           <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza auto, Póliza de Vida, Traslado, INTT, Gastos Notaría, IGTF</span>
           <span style={{ ...val, flexShrink: 0 }}>${fmt(gcr)}</span>

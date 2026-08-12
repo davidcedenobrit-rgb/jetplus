@@ -100,7 +100,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
                 <div style={{ marginTop: 18 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 4 }}>Precio base (contado)</p>
                   <p style={{ fontSize: 25, fontWeight: 800, color: '#111' }}>${fm(v.cash)}</p>
-                  <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>*Sin incluir: IVA, placa, seguro, gastos</p>
+                  <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>*IVA exonerado (Puerto Libre) · No incluye placa, seguro, gastos</p>
                 </div>
 
                 {/* Plan 40% */}
