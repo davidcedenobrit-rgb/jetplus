@@ -8,8 +8,8 @@ export default function VentasLayout({ children }: { children: React.ReactNode }
     <>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
-        body { background: #0a0a0a url('/fondo-jetplus.jpg') center top / cover no-repeat fixed !important; color: #111827; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-        @media (max-width:820px){ body{ background-attachment: scroll !important; } }
+        body { background: #0a0a0a url('/fondo-jetplus.jpg') center center / cover no-repeat fixed !important; color: #111827; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+        @media (max-width:820px){ body{ background-image: url('/fondo-jetplus-movil.jpg') !important; background-attachment: scroll !important; } }
 
         /* ── Glass / hero card ── */
         .lo-glass { background:#fff; border:1px solid #ececec; box-shadow:0 4px 30px rgba(0,0,0,.05); border-radius:28px; }
