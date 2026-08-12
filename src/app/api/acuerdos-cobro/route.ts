@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   if (!cotizacionId) return NextResponse.json({ error: 'Falta cotizacionId' }, { status: 400 })
   const financiado = num(montoFinanciado)
   if (!financiado || financiado <= 0) {
-    return NextResponse.json({ error: 'Indica el monto financiado por La Oriental.' }, { status: 400 })
+    return NextResponse.json({ error: 'Indica el monto financiado por Jetplus.' }, { status: 400 })
   }
 
   const supabase = await createAdminClient()

@@ -231,9 +231,9 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
       </style></head><body>
       <div class="header">
         <div class="header-left">
-          <img src="${base}/logo-la-oriental.jpg" class="header-logo" alt="Logo" />
+          <img src="${base}/logo-jetplus.jpg" class="header-logo" alt="Logo" />
           <div class="header-text">
-            <h1>La Oriental Automotors MG &amp; MAXUS</h1>
+            <h1>JETPLUS</h1>
             <p class="sub">${subtituloImprimir} — Antigüedad de Cartera Vencida${tramoLabel}</p>
             <p class="sub">Fecha: ${fecha} &nbsp;·&nbsp; Para: José · Carla · Carlos</p>
           </div>
@@ -256,9 +256,9 @@ function AgingVencidosBlock({ lista, subtituloImprimir }: { lista: ClienteVencid
           </table>`
       }
       <div class="footer">
-        <img src="${base}/sello-la-oriental.jpeg" class="sello-img" alt="Sello" />
+        <img src="${base}/sello-jetplus.jpeg" class="sello-img" alt="Sello" />
         <div class="firmas">
-          <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Director</p><p class="firma-sub">La Oriental Automotors</p></div>
+          <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Director</p><p class="firma-sub">JETPLUS</p></div>
           <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Responsable</p><p class="firma-sub">Responsable</p></div>
         </div>
       </div>
@@ -464,7 +464,7 @@ function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitul
     : e === 'pendiente' ? `<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Por cobrar</span>`
     : `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700">Al día</span>`
   const tipoBadge = (t: string) =>
-    t === 'inicial_la_oriental' ? `<span style="background:#ede9fe;color:#6d28d9;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">La Oriental</span>`
+    t === 'inicial_la_oriental' ? `<span style="background:#ede9fe;color:#6d28d9;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">Jetplus</span>`
     : t === 'financiamiento_vehimotors' ? `<span style="background:#e0e7ff;color:#3730a3;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">Vehimotors</span>`
     : ''
   const filas = lista.map((c, i) => {
@@ -519,9 +519,9 @@ function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitul
     </style></head><body>
     <div class="header">
       <div class="header-left">
-        <img src="${base}/logo-la-oriental.jpg" class="header-logo" alt="Logo" />
+        <img src="${base}/logo-jetplus.jpg" class="header-logo" alt="Logo" />
         <div class="header-text">
-          <h1>La Oriental Automotors MG &amp; MAXUS</h1>
+          <h1>JETPLUS</h1>
           <p class="sub">${subtitulo} — ${filtroLabel}</p>
           <p class="sub">Fecha: ${fecha} &nbsp;·&nbsp; Para: José · Carla · Carlos</p>
         </div>
@@ -545,10 +545,10 @@ function generarPrintHtml(lista: ClienteCartera[], filtroLabel: string, subtitul
     </div>
     <div class="footer">
       <div class="sello-wrap">
-        <img src="${base}/sello-la-oriental.jpeg" class="sello-img" alt="Sello" />
+        <img src="${base}/sello-jetplus.jpeg" class="sello-img" alt="Sello" />
       </div>
       <div class="firmas">
-        <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Director</p><p class="firma-sub">La Oriental Automotors</p></div>
+        <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Director</p><p class="firma-sub">JETPLUS</p></div>
         <div class="firma"><div class="firma-line"></div><p class="firma-label">Firma del Responsable</p><p class="firma-sub">Responsable</p></div>
       </div>
     </div>
@@ -628,7 +628,7 @@ function ListaClientesBlock({
                     <div className="flex flex-wrap gap-1">
                       {c.tiposCredito?.map(t => (
                         <span key={t} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t === 'inicial_la_oriental' ? 'bg-purple-100 text-purple-700' : t === 'financiamiento_vehimotors' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {t === 'inicial_la_oriental' ? 'La Oriental' : t === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Especial'}
+                          {t === 'inicial_la_oriental' ? 'Jetplus' : t === 'financiamiento_vehimotors' ? 'Vehimotors' : 'Especial'}
                         </span>
                       ))}
                     </div>
@@ -719,7 +719,7 @@ export default function ReportesPage() {
   const [vhMontoPendiente, setVhMontoPendiente] = useState(0)
   const [vhMontoVencido, setVhMontoVencido] = useState(0)   // solo cuotas vencidas
 
-  // ── La Oriental (créditos de inicial)
+  // ── Jetplus (créditos de inicial)
   const [orPagadas, setOrPagadas] = useState(0)
   const [orPendientes, setOrPendientes] = useState(0)
   const [orVencidas, setOrVencidas] = useState(0)
@@ -841,7 +841,7 @@ export default function ReportesPage() {
     setVhMontoVencido(vhVenc.reduce((s: number, c: any) =>
       s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
 
-    // ── La Oriental
+    // ── Jetplus
     const orCreditos = creditos.filter((c: any) => c.plan_tipo === 'inicial_la_oriental')
     const orCreditoIds = new Set(orCreditos.map((c: any) => c.id))
     const orCuotas = cuotas.filter((c: any) => orCreditoIds.has(c.credito_id))
@@ -861,7 +861,7 @@ export default function ReportesPage() {
     setOrMontoVencido(orVenc.reduce((s: number, c: any) =>
       s + Math.max(0, Number(c.monto ?? 0) - Number(c.monto_pagado ?? 0)), 0))
 
-    // ── Listado de clientes La Oriental por crédito
+    // ── Listado de clientes Jetplus por crédito
     const orList: Record<string, any> = {}
     orCreditos.forEach((c: any) => {
       const cl = c.clientes
@@ -1092,7 +1092,7 @@ export default function ReportesPage() {
       }
       return monto
     }
-    // Solo ingresos propios de La Oriental (excluye custodia de Vehimotors / terceros)
+    // Solo ingresos propios de Jetplus (excluye custodia de Vehimotors / terceros)
     const ingAprobados = ingData?.filter(i => i.estado === 'aprobado' && ((i.titular_fondos ?? 'propio') === 'propio')) ?? []
     const egrAprobados = egrData?.filter(e => e.estado === 'aprobado') ?? []
 
@@ -1251,9 +1251,9 @@ export default function ReportesPage() {
             </div>
           </section>
 
-          {/* ══ 4. CARTERA LA ORIENTAL ════════════════════════════════════ */}
+          {/* ══ 4. CARTERA JETPLUS ════════════════════════════════════ */}
           <section>
-            <SectionTitle>Cartera La Oriental — financiamiento interno</SectionTitle>
+            <SectionTitle>Cartera Jetplus — financiamiento interno</SectionTitle>
             <div className="card p-6 space-y-5">
 
               {/* KPIs de cuotas */}
@@ -1282,7 +1282,7 @@ export default function ReportesPage() {
               <div className="border-t border-gray-100 pt-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Building2 size={15} className="text-purple-500" />
-                  <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Reporte a Directores La Oriental</p>
+                  <p className="text-xs font-bold text-oriental-gray uppercase tracking-wider">Reporte a Directores Jetplus</p>
                   <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">José · Carla · Carlos</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1301,12 +1301,12 @@ export default function ReportesPage() {
 
               <ListaClientesBlock
                 lista={orClienteList} filtro={orFiltro} setFiltro={setOrFiltro}
-                subtituloImprimir="Reporte Cartera La Oriental"
+                subtituloImprimir="Reporte Cartera Jetplus"
               />
               {orClienteList.length === 0 && !loading && (
-                <p className="text-center text-sm text-oriental-gray py-4 border-t border-gray-100">No hay créditos de La Oriental registrados</p>
+                <p className="text-center text-sm text-oriental-gray py-4 border-t border-gray-100">No hay créditos de Jetplus registrados</p>
               )}
-              <AgingVencidosBlock lista={orVencidosList} subtituloImprimir="Cartera La Oriental" />
+              <AgingVencidosBlock lista={orVencidosList} subtituloImprimir="Cartera Jetplus" />
             </div>
           </section>
 
@@ -1373,7 +1373,7 @@ export default function ReportesPage() {
           <section>
             <SectionTitle>Listado general de clientes — todos los créditos</SectionTitle>
             <div className="card p-6">
-              <p className="text-sm text-oriental-gray mb-4">Vista consolidada: cada cliente aparece una sola vez con el total de todos sus créditos (La Oriental + Vehimotors). El estado refleja el peor estatus activo.</p>
+              <p className="text-sm text-oriental-gray mb-4">Vista consolidada: cada cliente aparece una sola vez con el total de todos sus créditos (Jetplus + Vehimotors). El estado refleja el peor estatus activo.</p>
               <ListaClientesBlock
                 lista={generalClienteList} filtro={generalFiltro} setFiltro={setGeneralFiltro}
                 subtituloImprimir="Reporte General de Clientes"

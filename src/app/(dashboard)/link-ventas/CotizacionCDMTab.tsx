@@ -232,7 +232,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
   const [bnDiferencial, setBnDiferencial] = useState('')
   const [bnCond, setBnCond] = useState('')
   const [bnBanco, setBnBanco] = useState('')
-  // Cuotas referenciales del banco (informativo — el crédito lo da el banco, no La Oriental).
+  // Cuotas referenciales del banco (informativo — el crédito lo da el banco, no Jetplus).
   const [bnCuotas, setBnCuotas] = useState(false)
   const [bnFinanciado, setBnFinanciado] = useState('')
   const [bnMeses, setBnMeses] = useState('24')
@@ -460,7 +460,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
     let bnCondFinal = bnCond.trim()
     if (bnVariante === 'cliente' && bnCuotas && bnCuotaRef > 0) {
       const mesesRef = Math.max(1, Math.round(num(bnMeses) || 24))
-      const linea = `Financiamiento con su banco: ${mesesRef} cuotas de $${fmt(bnCuotaRef)}. El crédito lo otorga y cobra su banco, no La Oriental.`
+      const linea = `Financiamiento con su banco: ${mesesRef} cuotas de $${fmt(bnCuotaRef)}. El crédito lo otorga y cobra su banco, no Jetplus.`
       bnCondFinal = bnCondFinal ? `${linea}\n${bnCondFinal}` : linea
     }
     const bnPayload = (!rojasMode && plan === 'banca_nacional' && bnVariante === 'cliente') ? {
@@ -787,7 +787,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
               {bnVariante === 'cliente' ? (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-3">
                   <p className="text-[11px] text-emerald-800 leading-relaxed">
-                    Proforma en dólares (como contado). El <b>diferencial cambiario se suma al precio base</b>. El cliente lleva la proforma a su banco y regresa con la transferencia directa a La Oriental.
+                    Proforma en dólares (como contado). El <b>diferencial cambiario se suma al precio base</b>. El cliente lleva la proforma a su banco y regresa con la transferencia directa a Jetplus.
                   </p>
                   <div>
                     <label className={labelCls}>Banco del cliente</label>
@@ -827,7 +827,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
                         <span className="text-xs text-gray-500">Cuota mensual referencial × {Math.max(1, Math.round(num(bnMeses) || 24))}</span>
                         <span className="text-sm font-bold text-emerald-900">${fmt(bnCuotaRef)}</span>
                       </div>
-                      <p className="col-span-3 text-[11px] text-emerald-600">Informativo: el crédito y las cuotas son con su banco, no con La Oriental.</p>
+                      <p className="col-span-3 text-[11px] text-emerald-600">Informativo: el crédito y las cuotas son con su banco, no con Jetplus.</p>
                     </div>
                   )}
 
@@ -1407,7 +1407,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
                 {/* Propuesta de condiciones (Rojas personalizada / BN Cliente directo) */}
                 {(() => {
                   const bnRef = (!rojasMode && plan === 'banca_nacional' && bnVariante === 'cliente' && bnCuotas && bnCuotaRef > 0)
-                    ? `Financiamiento referencial con el banco: ${Math.max(1, Math.round(num(bnMeses) || 24))} cuotas de $${fmt(bnCuotaRef)}. El crédito lo otorga y cobra su banco, no La Oriental.` : ''
+                    ? `Financiamiento referencial con el banco: ${Math.max(1, Math.round(num(bnMeses) || 24))} cuotas de $${fmt(bnCuotaRef)}. El crédito lo otorga y cobra su banco, no Jetplus.` : ''
                   const bnTxt = (!rojasMode && plan === 'banca_nacional' && bnVariante === 'cliente') ? [bnRef, bnCond.trim()].filter(Boolean).join('\n') : ''
                   const txt = rojasMode ? rojasCond.trim() : bnTxt
                   if (!txt) return null

@@ -128,7 +128,7 @@ export async function registrarEgresoDePagoFijo(id: string): Promise<{ ok?: bool
   const buf = new Uint32Array(1)
   crypto.getRandomValues(buf)
   const seq = String(buf[0] % 1_000_000).padStart(6, '0')
-  const numero_egreso = `LOA-EGR-${year}-${seq}`
+  const numero_egreso = `JPLUS-EGR-${year}-${seq}`
 
   const { data: inserted, error: insErr } = await admin.from('egresos').insert({
     numero_egreso,

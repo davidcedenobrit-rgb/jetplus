@@ -10,6 +10,7 @@ const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 // La reserva se firma en la sede del CONCESIONARIO de turno, no en la ciudad
 // del cliente. Ciudad por concesionario (igual que la exoneración).
 const CIUDAD_CONCES: Record<string, string> = {
+  'jetplus': 'Porlamar',
   'la-oriental': 'Maturín',
   'kiauto': 'Puerto Ordaz',
   'autosurca': 'El Tigre',
@@ -47,7 +48,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const data: ReservaData = {
     fecha: hoy,
-    ciudad: CIUDAD_CONCES[concId ?? 'la-oriental'] ?? 'Maturín',
+    ciudad: CIUDAD_CONCES[concId ?? 'jetplus'] ?? 'Porlamar',
     diaTexto: dia,
     mesTexto: mes,
     anioTexto: String(anio).replace(/^(\d)(\d{3})$/, '$1.$2'),

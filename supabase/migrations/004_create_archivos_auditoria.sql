@@ -32,7 +32,7 @@ create index idx_auditoria_fecha on auditoria(created_at);
 create or replace function generar_numero_recibo()
 returns trigger language plpgsql as $$
 begin
-  new.numero_recibo := 'LOA-REC-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('seq_recibos')::text, 6, '0');
+  new.numero_recibo := 'JPLUS-REC-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('seq_recibos')::text, 6, '0');
   return new;
 end;
 $$;
@@ -45,7 +45,7 @@ execute function generar_numero_recibo();
 create or replace function generar_numero_egreso()
 returns trigger language plpgsql as $$
 begin
-  new.numero_egreso := 'LOA-EGR-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('seq_egresos')::text, 6, '0');
+  new.numero_egreso := 'JPLUS-EGR-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('seq_egresos')::text, 6, '0');
   return new;
 end;
 $$;

@@ -23,6 +23,12 @@ export interface VendedorLegal {
 }
 
 const VENDEDORES: Record<string, VendedorLegal> = {
+  'jetplus': {
+    rif: 'J-50372874-4',
+    // Registro Mercantil pendiente por confirmar con el cliente — se deja en
+    // blanco a propósito (ver nota arriba) hasta tener el dato real.
+    domicilioEspecial: 'Porlamar, estado Nueva Esparta',
+  },
   'la-oriental': {
     nombre: 'LA ORIENTAL AUTOMOTORS, C.A.',
     rif: 'J-505692143',
@@ -50,5 +56,5 @@ const VENDEDORES: Record<string, VendedorLegal> = {
 }
 
 export function getVendedorLegal(id: string | null | undefined): VendedorLegal {
-  return VENDEDORES[id ?? 'la-oriental'] ?? VENDEDORES['la-oriental']
+  return VENDEDORES[id ?? 'jetplus'] ?? VENDEDORES['jetplus']
 }

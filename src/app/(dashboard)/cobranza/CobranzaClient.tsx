@@ -16,7 +16,7 @@ type Credito = {
 const POR_COBRAR = new Set(['pendiente', 'vencida', 'abono_parcial'])
 
 const planLabel = (t: string | null): string =>
-  t === 'inicial_la_oriental' ? 'La Oriental' :
+  t === 'inicial_la_oriental' ? 'Jetplus' :
   t === 'financiamiento_vehimotors' ? 'Vehimotors' :
   t === 'cuota_especial' ? 'Cuota Especial' :
   t === 'asegurate_500' ? 'Asegúrate $500' :
@@ -153,7 +153,7 @@ export default function CobranzaClient() {
 
   const [exportando, setExportando] = useState<'pdf' | 'excel' | null>(null)
   async function exportar(tipo: 'pdf' | 'excel') {
-    const titularLbl = titular === 'oriental' ? 'La Oriental' : titular === 'vehimotors' ? 'Vehimotors' : 'Ambos'
+    const titularLbl = titular === 'oriental' ? 'Jetplus' : titular === 'vehimotors' ? 'Vehimotors' : 'Ambos'
     const filtroLbl = filtro === 'con_saldo' ? 'Con saldo' : filtro === 'vencidos' ? 'Vencidos' : 'Todos'
     const payload = {
       subtitulo: `${filtroLbl} · ${titularLbl}`,
@@ -200,12 +200,12 @@ export default function CobranzaClient() {
         </div>
         <div className="card p-4">
           <p className="text-[11px] uppercase tracking-wider font-semibold text-oriental-gray">Por cobrar</p>
-          <p className="text-sm font-black text-green-800">La Oriental ${fmt(split.orientalPC)}</p>
+          <p className="text-sm font-black text-green-800">Jetplus ${fmt(split.orientalPC)}</p>
           <p className="text-sm font-black text-amber-700">Vehimotors ${fmt(split.vehPC)}</p>
         </div>
         <div className="card p-4 bg-red-50 border-red-200">
           <div className="flex items-center gap-1.5 text-oriental-red mb-0.5"><AlertTriangle size={14} /><p className="text-[11px] uppercase tracking-wider font-semibold">Vencido</p></div>
-          <p className="text-sm font-black text-oriental-red">La Oriental ${fmt(split.orientalV)}</p>
+          <p className="text-sm font-black text-oriental-red">Jetplus ${fmt(split.orientalV)}</p>
           <p className="text-sm font-black text-amber-700">Vehimotors ${fmt(split.vehV)}</p>
         </div>
       </div>
@@ -217,7 +217,7 @@ export default function CobranzaClient() {
           <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar por cliente, cédula o placa…" className="input pl-9" />
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {([['todas', 'Ambos'], ['oriental', 'La Oriental'], ['vehimotors', 'Vehimotors']] as const).map(([v, l]) => (
+          {([['todas', 'Ambos'], ['oriental', 'Jetplus'], ['vehimotors', 'Vehimotors']] as const).map(([v, l]) => (
             <button key={v} onClick={() => setTitular(v)} className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${titular === v ? (v === 'vehimotors' ? 'bg-amber-600 text-white border-amber-600' : v === 'oriental' ? 'bg-green-700 text-white border-green-700' : 'bg-oriental-black text-white border-oriental-black') : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>{l}</button>
           ))}
           <span className="w-px bg-gray-200 mx-0.5" />
@@ -293,7 +293,7 @@ export default function CobranzaClient() {
 
       <p className="text-[11px] text-oriental-gray mt-4">
         Cobrado = financiado − saldo pendiente de cuotas. &quot;Por cobrar&quot; incluye cuotas pendientes, vencidas y con abono parcial. Montos en la moneda del crédito (mayoría USD).
-        Las cuotas se separan por titular: <span className="font-semibold">La Oriental</span> (inicial, reserva $500, cuota especial) y <span className="font-semibold">Vehimotors</span> (financiamiento Vehimotors y mensuales del plan Asegúrate $500, que son fondos de terceros). El filtro de arriba cambia qué titular se muestra en la tabla.
+        Las cuotas se separan por titular: <span className="font-semibold">Jetplus</span> (inicial, reserva $500, cuota especial) y <span className="font-semibold">Vehimotors</span> (financiamiento Vehimotors y mensuales del plan Asegúrate $500, que son fondos de terceros). El filtro de arriba cambia qué titular se muestra en la tabla.
       </p>
     </div>
   )

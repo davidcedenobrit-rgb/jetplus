@@ -113,7 +113,7 @@ export default function RespuestaForm({
         <p style={{ color: '#6b7280', fontSize: 15, marginBottom: 8 }}>
           Tu respuesta <strong style={{ color: '#111' }}>"{respuestaLabel}"</strong> fue registrada.
         </p>
-        <p style={{ color: '#9ca3af', fontSize: 13 }}>Un asesor de La Oriental se pondrá en contacto contigo pronto.</p>
+        <p style={{ color: '#9ca3af', fontSize: 13 }}>Un asesor de Jetplus se pondrá en contacto contigo pronto.</p>
       </div>
     )
   }
@@ -126,7 +126,7 @@ export default function RespuestaForm({
         <p style={{ color: '#6b7280', fontSize: 15, marginBottom: 8 }}>
           Hemos notificado a nuestro equipo. Te contactaremos con una propuesta actualizada pronto.
         </p>
-        <p style={{ color: '#9ca3af', fontSize: 13 }}>La Oriental Automotors · MG &amp; MAXUS</p>
+        <p style={{ color: '#9ca3af', fontSize: 13 }}>JETPLUS · MG &amp; MAXUS</p>
       </div>
     )
   }
@@ -145,7 +145,7 @@ export default function RespuestaForm({
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", maxWidth: 520, margin: '0 auto', padding: '24px 20px 40px' }}>
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <img src={LOGO} alt="La Oriental" style={{ height: 36, objectFit: 'contain', marginBottom: 16 }} />
+        <img src={LOGO} alt="Jetplus" style={{ height: 36, objectFit: 'contain', marginBottom: 16 }} />
         <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Cotización oficial</p>
         <p style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 800, color: '#C41E3A', marginBottom: 0 }}>{numero}</p>
       </div>
@@ -246,7 +246,7 @@ export default function RespuestaForm({
       )}
 
       <p style={{ textAlign: 'center', fontSize: 11, color: '#9ca3af', marginTop: 28 }}>
-        La Oriental Automotors · MG &amp; MAXUS · Maturín, Venezuela
+        JETPLUS · MG &amp; MAXUS · Porlamar, Venezuela
       </p>
     </div>
   )

@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
 const MIME_PERMITIDOS = new Set([
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
 function shell(titulo: string, color: string, cuerpo: string) {
   return `<!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${titulo} · La Oriental Automotors</title>
+<title>${titulo} · JETPLUS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <style>
   body{margin:0;background:#f9fafb;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
@@ -236,9 +236,9 @@ function shell(titulo: string, color: string, cuerpo: string) {
   .divider{border:none;border-top:1px solid #f3f4f6;margin:16px 0}
 </style></head><body>
 <div class="card">
-  <div class="hdr"><img src="${APP_URL}/logo-la-oriental-blanco.png" alt="La Oriental" style="height:40px;width:auto"/><div style="padding-left:12px"><p class="hname">LA ORIENTAL AUTOMOTORS</p><p class="hsub">MG & Maxus · Maturín, Venezuela</p></div></div>
+  <div class="hdr"><img src="${APP_URL}/logo-jetplus-blanco.png" alt="JETPLUS" style="height:40px;width:auto"/><div style="padding-left:12px"><p class="hname">JETPLUS</p><p class="hsub">MG & Maxus · Porlamar, Venezuela</p></div></div>
   <div class="body">${cuerpo}</div>
-  <div class="ftr">La Oriental Automotors · MG & Maxus · Maturín, Venezuela</div>
+  <div class="ftr">JETPLUS · MG & Maxus · Porlamar, Venezuela</div>
 </div></body></html>`
 }
 
@@ -329,7 +329,7 @@ function paginaGracias(numero: string, cotizacionUrl: string | null) {
   const cuerpo = `<div class="emoji">🎉</div>
     <div class="badge" style="background:#dcfce7;color:#16a34a">Información enviada — ${numero}</div>
     <h2>¡Listo! Información recibida</h2>
-    <p>El equipo de La Oriental revisará la información y le notificaremos a la brevedad.</p>
+    <p>El equipo de Jetplus revisará la información y le notificaremos a la brevedad.</p>
     ${cotizacionUrl ? `<p style="font-size:12px;color:#9ca3af">Archivo adjunto correctamente.</p>` : ''}`
   return shell('Información enviada', '#16a34a', cuerpo)
 }

@@ -51,7 +51,7 @@ export default function EtiquetaVentaButton(p: Props) {
   @media print { body { padding:0; } }
 </style></head><body>
 <div class="label">
-  <div class="head"><div class="lo">LA ORIENTAL <span>AUTOMOTORS</span></div><div class="t">Venta</div></div>
+  <div class="head"><div class="lo">JETPLUS <span>AUTOMOTORS</span></div><div class="t">Venta</div></div>
   <div class="veh">${esc(p.marca)} ${esc(p.modelo)}${p.placa ? ' · ' + esc(p.placa) : ''}</div>
   <table><tbody>
     <tr><td class="k">Cliente</td><td class="v">${esc(p.clienteNombre)}</td></tr>

@@ -12,7 +12,7 @@ import type { ReportePayload } from '@/lib/reporte-tipos'
 const MODALIDAD: Record<string, string> = {
   contado: 'Contado',
   financiamiento_vehimotors: 'Vehimotors',
-  inicial_la_oriental: 'Crédito La Oriental',
+  inicial_la_oriental: 'Crédito Jetplus',
   asegurate_500: 'Asegúrate 500',
   cuota_especial: 'Cuota especial',
   otro: 'Otro / sin especificar',

@@ -100,7 +100,7 @@ export default function BalancePage() {
   const netoIng = (i: MovIngreso): number => conv(i.iva_aplica && i.base_imponible ? Number(i.base_imponible) : i.monto, i.moneda, i.tasa_cambio, aBs)
   const netoEgr = (e: MovEgreso): number => conv(e.iva_aplica && e.base_imponible ? Number(e.base_imponible) : e.monto, e.moneda, e.tasa_cambio, aBs)
 
-  // Ingreso propio (lo que de verdad es de La Oriental), neto de IVA débito.
+  // Ingreso propio (lo que de verdad es de Jetplus), neto de IVA débito.
   const ingresoPropio = ingresos.filter(esPropio).reduce((s, i) => s + netoIng(i), 0)
   // Fondos de terceros en custodia (NO es ingreso) — se muestra aparte.
   const fondosCustodia = ingresos.filter(i => !esPropio(i)).reduce((s, i) => s + conv(i.monto, i.moneda, i.tasa_cambio, aBs), 0)
@@ -200,7 +200,7 @@ export default function BalancePage() {
               </div>
               <p className="text-2xl font-bold text-oriental-black">{simb}{fmt(totalIngresos)}</p>
               <p className="text-[11px] text-oriental-gray mt-1">
-                Neto de IVA · solo La Oriental
+                Neto de IVA · solo Jetplus
                 {fondosCustodia > 0 && <span className="block text-amber-700 font-semibold">+ {simb}{fmt(fondosCustodia)} en custodia (no es ingreso)</span>}
               </p>
             </div>

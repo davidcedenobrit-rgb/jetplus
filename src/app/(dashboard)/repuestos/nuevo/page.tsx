@@ -210,7 +210,7 @@ export default function NuevaSolicitudPage() {
   const [catalogo, setCatalogo] = useState<CatalogoItem[]>([])
   const [modalAbierto, setModalAbierto] = useState<number | null>(null)
 
-  // Destinatario: cliente registrado / cliente externo / La Oriental
+  // Destinatario: cliente registrado / cliente externo / Jetplus
   const [destino, setDestino] = useState<'cliente' | 'externo' | 'oriental'>('cliente')
   const [clienteSel, setClienteSel] = useState<ClienteLite | null>(null)
   const [buscaCliente, setBuscaCliente] = useState('')
@@ -549,7 +549,7 @@ export default function NuevaSolicitudPage() {
                   <Building2 size={16} className="text-blue-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-oriental-black">La Oriental Automotors</p>
+                  <p className="text-sm font-bold text-oriental-black">JETPLUS</p>
                   <p className="text-[11px] text-oriental-gray">Solicitud interna, no vinculada a un cliente específico.</p>
                 </div>
               </div>

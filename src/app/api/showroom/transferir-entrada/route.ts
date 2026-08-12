@@ -7,8 +7,8 @@ import { concesionarioExternoPorKey } from '@/lib/concesionarios-externos'
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 // Trae un carro que está en un concesionario aliado (Ki Auto) hacia el showroom
-// de La Oriental, para poder venderlo aquí. Es el inverso de salida-alternativa:
-//   · crea (o reutiliza) la fila en el showroom de La Oriental,
+// de Jetplus, para poder venderlo aquí. Es el inverso de salida-alternativa:
+//   · crea (o reutiliza) la fila en el showroom de Jetplus,
 //   · arrastra sus documentos,
 //   · marca la unidad en el aliado como salida por transferencia.
 // Devuelve el id del showroom local para que la venta lo use.
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   const placa = (ext.placa ?? '').trim() || null
   const vin = (ext.vin ?? '').trim() || null
 
-  // 2. Ubicar o crear la fila en el showroom de La Oriental (sin duplicar por VIN/placa).
+  // 2. Ubicar o crear la fila en el showroom de Jetplus (sin duplicar por VIN/placa).
   let localId: string | null = null
   if (vin || placa) {
     const filtro = [vin ? `vin.eq.${vin}` : null, placa ? `placa.eq.${placa}` : null].filter(Boolean).join(',')
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       observaciones: `Transferido desde ${target.label}`,
     }).select('id').single()
     if (insErr || !nuevo) {
-      console.error('[transferir-entrada] fallo creando en La Oriental:', insErr?.message)
+      console.error('[transferir-entrada] fallo creando en Jetplus:', insErr?.message)
       return NextResponse.json({ error: 'No se pudo traer el vehículo' }, { status: 500 })
     }
     localId = nuevo.id
@@ -94,11 +94,11 @@ export async function POST(req: Request) {
     console.error('[transferir-entrada] error copiando documentos:', e)
   }
 
-  // 4. Marcar la unidad como salida en el aliado (transferida a La Oriental).
+  // 4. Marcar la unidad como salida en el aliado (transferida a Jetplus).
   try {
     await src.from('vehiculos_showroom').update({
       estado: 'vendido',
-      transferido_a: 'La Oriental',
+      transferido_a: 'Jetplus',
       transferido_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq('id', externoId)
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       estado_anterior: ext.estado,
       estado_nuevo: 'vendido',
       usuario_email: user.email ?? null,
-      notas: 'Salida por transferencia a La Oriental',
+      notas: 'Salida por transferencia a Jetplus',
     })
   } catch (e) {
     console.error('[transferir-entrada] error marcando salida en el aliado:', e)

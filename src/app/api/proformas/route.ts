@@ -6,7 +6,7 @@ import { sedesExternas } from '@/lib/cotizacion-federada'
 import { enviarProformaCliente } from '@/lib/email-proformas'
 
 const planLabel: Record<string, string> = {
-  inicial_la_oriental: 'La Oriental',
+  inicial_la_oriental: 'Jetplus',
   financiamiento_vehimotors: 'Financiamiento Vehimotors',
   cuota_especial: 'Cuota Especial Vehimotors',
   asegurate_500: 'Asegúrate $500',

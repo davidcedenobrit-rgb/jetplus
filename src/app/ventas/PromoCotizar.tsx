@@ -16,7 +16,7 @@ interface PromoVehiculo {
   cuota_mensual: number
 }
 
-export default function PromoCotizar({ promo, tasas, evento = '', waCorp = '584149989010', concesionario = '', brand }: {
+export default function PromoCotizar({ promo, tasas, evento = '', waCorp = '584248705174', concesionario = '', brand }: {
   promo: PromoVehiculo
   tasas: { bcv: number; usdt: number }
   evento?: string

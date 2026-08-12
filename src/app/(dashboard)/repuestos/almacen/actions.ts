@@ -104,7 +104,7 @@ export type TransferenciaInput = {
   notas?: string | null
 }
 
-// Salida del almacén hacia un taller (La Oriental / Ki Auto / Autosurca).
+// Salida del almacén hacia un taller (Jetplus / Ki Auto / Autosurca).
 // Descuenta el stock y deja la transferencia en la bitácora.
 export async function transferirATaller(input: TransferenciaInput): Promise<{ ok?: boolean; error?: string }> {
   const auth = await requireStaff()

@@ -147,7 +147,7 @@ export async function POST(req: Request) {
       const { data: cfg } = await supabase.from('config_cotizaciones').select('valor').eq('clave', 'concesionario_id').maybeSingle()
       if (cfg?.valor) return String(cfg.valor)
       const { data: prin } = await supabase.from('concesionarios').select('id').eq('es_principal', true).limit(1).maybeSingle()
-      return prin?.id ?? 'la-oriental'
+      return prin?.id ?? 'jetplus'
     }
     const esCodigoCasa = String(codigo || '').trim().toUpperCase() === 'R000'
     const concLocal = await resolverConcLocal()

@@ -10,7 +10,7 @@ const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 // Prueba de correo de cumpleaños: envía un aviso de muestra al correo indicado
 // (por defecto Rojas). Requiere estar logueado como dirección. Usa el próximo
 // cumpleaños real para que se vea igual al de producción.
-//   /api/cron/cumpleanos/test            → envía a rojasjgx@gmail.com
+//   /api/cron/cumpleanos/test            → envía a davidcedenobrit@gmail.com
 //   /api/cron/cumpleanos/test?to=correo  → envía a ese correo
 export async function GET(req: Request) {
   const supabase = await createClient()
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   if (!ROLES.includes(rol)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const url = new URL(req.url)
-  const to = url.searchParams.get('to')?.trim() || 'rojasjgx@gmail.com'
+  const to = url.searchParams.get('to')?.trim() || 'davidcedenobrit@gmail.com'
   if (!/\S+@\S+\.\S+/.test(to)) return NextResponse.json({ error: 'Correo inválido' }, { status: 400 })
 
   const admin = await createAdminClient()

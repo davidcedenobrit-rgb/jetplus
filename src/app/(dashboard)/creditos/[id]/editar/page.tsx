@@ -29,7 +29,7 @@ const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 const FRECUENCIAS = ['mensual', 'quincenal', 'semanal', 'único pago']
 
 const planLabel = (tipo: string | null) =>
-  tipo === 'inicial_la_oriental' ? 'La Oriental' :
+  tipo === 'inicial_la_oriental' ? 'Jetplus' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
   tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' :
   tipo === 'asegurate_500' ? 'Asegúrate $500' :
@@ -301,7 +301,7 @@ export default function EditarCreditoPage() {
             const frecActual   = frecuenciaPago || credito?.frecuencia_pago || 'mensual'
             const fechaBase    = fechaInicio    || credito?.fecha_inicio
             const conceptoCuota =
-              (planTipo || credito?.plan_tipo) === 'inicial_la_oriental'    ? 'Crédito de Inicial — La Oriental' :
+              (planTipo || credito?.plan_tipo) === 'inicial_la_oriental'    ? 'Crédito de Inicial — Jetplus' :
               (planTipo || credito?.plan_tipo) === 'financiamiento_vehimotors' ? 'Crédito Financiamiento — Vehimotors' :
               'Cuota'
 
@@ -848,7 +848,7 @@ export default function EditarCreditoPage() {
               <label className="label">Tipo de crédito</label>
               <select className="select" value={planTipo} onChange={e => setPlanTipo(e.target.value)}>
                 <option value="">Sin clasificar</option>
-                <option value="inicial_la_oriental">Crédito Inicial — La Oriental</option>
+                <option value="inicial_la_oriental">Crédito Inicial — Jetplus</option>
                 <option value="financiamiento_vehimotors">Financiamiento Vehimotors</option>
                 <option value="cuota_especial">Cuota especial</option>
               </select>

@@ -3,12 +3,12 @@
  * Usado en el mensaje de recordatorio de WhatsApp.
  */
 export function getNombreRemitente(email: string | undefined, rol: string | undefined): string {
-  if (!email && !rol) return 'La Oriental Automotors'
+  if (!email && !rol) return 'JETPLUS'
 
   // Por email (más específico)
   if (email === 'admin@gmail.com' || email === 'admin@gmail.co') return 'José'
-  if (email === 'marymarquez@gmail.com') return 'Mary'
-  if (email === 'leysdm@gmail.com') return 'Leysdem'
+  if (email === 'davidcedenobrit@gmail.com') return 'Mary'
+  if (email === 'davidcedenobrit@gmail.com') return 'Leysdem'
 
   // Por rol como fallback
   switch (rol) {
@@ -20,6 +20,6 @@ export function getNombreRemitente(email: string | undefined, rol: string | unde
     case 'carla':   return 'Carla'
     case 'arianna':      return 'Arianna'
     case 'almacenista':  return 'José Manuel'
-    default:        return 'La Oriental Automotors'
+    default:        return 'JETPLUS'
   }
 }

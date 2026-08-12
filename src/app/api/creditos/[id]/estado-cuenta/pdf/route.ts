@@ -50,7 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const totalCuotas = cuotas.reduce((a, c) => a + c.monto, 0)
   const totalPagado = cuotas.reduce((a, c) => a + c.pagado, 0)
 
-  // Concesionario de turno: se resuelve desde la proforma/cotización del vehículo; cae a La Oriental.
+  // Concesionario de turno: se resuelve desde la proforma/cotización del vehículo; cae a Jetplus.
   let concId: string | null = null
   const { data: pro } = await admin.from('proformas').select('cotizacion_id').eq('vehiculo_id', cr.vehiculo_id).order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (pro?.cotizacion_id) {

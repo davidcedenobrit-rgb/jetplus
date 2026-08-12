@@ -19,7 +19,7 @@ export default function AppleIcon() {
           overflow: 'hidden',
         }}
       >
-        {/* Líneas rojas de velocidad — estilo La Oriental */}
+        {/* Líneas rojas de velocidad — estilo Jetplus */}
         <div style={{ position: 'absolute', left: 14, top: 52, width: 34, height: 10, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 2 }} />
         <div style={{ position: 'absolute', left: 10, top: 72, width: 44, height: 14, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 2 }} />
         <div style={{ position: 'absolute', left: 14, top: 96, width: 34, height: 10, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 2 }} />

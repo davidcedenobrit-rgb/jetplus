@@ -5,7 +5,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
-const FROM = 'La Oriental Automotors <cotizaciones@laoriental.co>'
+const FROM = 'JETPLUS <cotizaciones@navigroup.co>'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function rolDe(supabase: any, user: any): Promise<string> {

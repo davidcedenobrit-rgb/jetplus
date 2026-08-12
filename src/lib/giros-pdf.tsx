@@ -11,7 +11,7 @@ export interface GiroItem {
 
 export interface GirosData {
   membrete: MembreteData
-  empresa: string          // "LA ORIENTAL AUTOMOTORS, C.A."
+  empresa: string          // "JETPLUS"
   fechaEmision: string     // fecha larga
   cliente: string
   clienteCiRif: string

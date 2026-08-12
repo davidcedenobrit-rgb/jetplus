@@ -72,7 +72,7 @@ export async function crearPrestamo(input: {
     const year = new Date().getFullYear()
     const buf = new Uint32Array(1)
     crypto.getRandomValues(buf)
-    const numero_egreso = `LOA-EGR-${year}-${String(buf[0] % 1_000_000).padStart(6, '0')}`
+    const numero_egreso = `JPLUS-EGR-${year}-${String(buf[0] % 1_000_000).padStart(6, '0')}`
     const { data: eg } = await admin.from('egresos').insert({
       numero_egreso,
       categoria: 'cuentas_cobrar',

@@ -9,7 +9,7 @@ export async function GET() {
     await enviarReporteVehimotors({
       ingresoId: 'test-000',
       token: 'tokentest123abc',
-      numeroRecibo: 'LOA-REC-2026-000001',
+      numeroRecibo: 'JPLUS-REC-2026-000001',
       clienteNombre: 'Carlos Martínez Pérez',
       clienteCedula: 'V-12.345.678',
       clienteTelefono: '+58 412-555-0000',
@@ -25,7 +25,7 @@ export async function GET() {
       ],
     })
 
-    return NextResponse.json({ ok: true, mensaje: 'Correo de prueba enviado a rojasjgx@gmail.com y davidcedenobrit@gmail.com' })
+    return NextResponse.json({ ok: true, mensaje: 'Correo de prueba enviado a davidcedenobrit@gmail.com y davidcedenobrit@gmail.com' })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

@@ -192,7 +192,7 @@ export default function RepuestosActivasGrid({ solicitudes, puedeEliminar, puede
                     {s.para_la_oriental ? (
                       <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 cursor-pointer transition-colors">
                         <Building2 size={11} className="text-blue-700" />
-                        <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wide">La Oriental</span>
+                        <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wide">Jetplus</span>
                         <Pencil size={9} className="text-blue-700 opacity-60" />
                       </div>
                     ) : s.clientes ? (

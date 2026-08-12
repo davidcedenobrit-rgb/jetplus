@@ -1,27 +1,7 @@
-﻿# La Oriental Finanzas — CLAUDE.md
+# JETPLUS — CLAUDE.md
 
 ## Proyecto
-Sistema de gestión financiera para La Oriental Automotors (MG & MAXUS).
-Cliente confidencial — no mencionar IA ni herramientas internas en entregables.
-
-## Seguridad — OBLIGATORIO
-Este proyecto maneja datos financieros sensibles.
-Aplica SIEMPRE las reglas de:
-~/.claude/skills/seguridad/SKILL.md
-
-Prioridad máxima en:
-- Autenticación y roles de usuario
-- Validación de todos los inputs numéricos y montos
-- Logs de auditoría de transacciones (sin datos sensibles)
-- Rate limiting en endpoints de reportes y pagos
-
-## Stack del proyecto
-- Con
-@'
-# La Oriental Finanzas — CLAUDE.md
-
-## Proyecto
-Sistema de gestión financiera para La Oriental Automotors (MG & MAXUS).
+Sistema de gestión financiera para JETPLUS.
 Cliente confidencial — no mencionar IA ni herramientas internas en entregables.
 
 ## Seguridad — OBLIGATORIO
@@ -40,16 +20,22 @@ Prioridad máxima en:
 - Mantener consistencia con lo que ya está implementado
 
 ## Contexto de negocio
-- Concesionario de vehículos MG y MAXUS en oriente de Venezuela
-- Reportes dirigidos a director José Rojas
+- JETPLUS — RIF J-50372874-4, Av. Rómulo Gallegos, Porlamar, Nueva Esparta
+- Vende principalmente vehículos MG y MAXUS
 - Moneda principal: USD y VES
+
+## Federación entre sedes — NO ACTIVAR
+Este código base es compartido con otras sedes del grupo (La Oriental, Ki Auto,
+Autosurca, Capital Motors). Jetplus es un cliente independiente, sin relación
+con Grupo Oriente. Las variables `PANEL_MATRIZ` y `CONCESIONARIO_*_URL` /
+`CONCESIONARIO_*_SERVICE_KEY` deben permanecer sin configurar en este
+despliegue (ver `src/lib/cotizacion-federada.ts` y
+`src/lib/concesionarios-externos.ts`), para que el panel central y la
+sincronización entre concesionarios queden inertes.
 
 ## PDFs — REGLA OBLIGATORIA
 TODOS los PDF que genere el centro de mando deben llevar el membrete/diseño TOP
-del concesionario de turno (logo, sello, datos legales y colores del concesionario).
+de JETPLUS (logo, sello, datos legales y colores).
 - Usar el membrete compartido `src/lib/pdf-membrete.tsx` y la identidad de
   `getConcesionarioIdentity` (logo, sello, nombre, RIF, dirección, colores).
-- Colores por defecto: rojo #C41E3A + negro #111827 (La Oriental). Cada
-  concesionario puede sobreescribir color_primario/color_secundario.
-- Ningún PDF nuevo o existente debe quedar sin membrete ni con colores fijos
-  que no respeten al concesionario de turno.
+- Colores por defecto: rojo #C41E3A + negro #111827.

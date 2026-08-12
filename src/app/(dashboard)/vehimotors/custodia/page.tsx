@@ -27,7 +27,7 @@ export default async function CustodiaVehimotorsPage() {
   const rol = (user.app_metadata?.rol as string) ?? ''
   if (!ROL_PERMITIDO.includes(rol)) redirect('/dashboard')
 
-  // Ingresos marcados como custodia de Vehimotors (dinero que NO es de La Oriental)
+  // Ingresos marcados como custodia de Vehimotors (dinero que NO es de Jetplus)
   const fondos = await fetchAllRows<any>((from, to) => supabase
     .from('ingresos')
     .select('id, numero_recibo, concepto, monto, moneda, fecha_pago, estado, titular_fondos, confirmado_vehimotors_at, clientes(nombre, cedula_rif)')
@@ -60,7 +60,7 @@ export default async function CustodiaVehimotorsPage() {
           <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center"><Coins size={20} className="text-amber-700" /></div>
           <div>
             <h1 className="text-2xl font-bold text-oriental-black">Fondos en custodia — Vehimotors</h1>
-            <p className="text-oriental-gray text-sm">Dinero que La Oriental cobró y debe entregar a Vehimotors (no es ingreso propio)</p>
+            <p className="text-oriental-gray text-sm">Dinero que Jetplus cobró y debe entregar a Vehimotors (no es ingreso propio)</p>
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@ export default async function CustodiaVehimotorsPage() {
       <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
         <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-amber-800">
-          Aquí solo aparecen los ingresos marcados como <b>&quot;Vehimotors (custodia)&quot;</b> al registrarlos. Es dinero de terceros: <b>no</b> cuenta como ingreso propio de La Oriental.
+          Aquí solo aparecen los ingresos marcados como <b>&quot;Vehimotors (custodia)&quot;</b> al registrarlos. Es dinero de terceros: <b>no</b> cuenta como ingreso propio de Jetplus.
         </p>
       </div>
 

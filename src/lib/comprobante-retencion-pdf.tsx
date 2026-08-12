@@ -100,10 +100,10 @@ export function ComprobanteRetencionPDF({ data }: { data: ComprobanteRetencionDa
         <View style={s.header}>
           <Image src={data.logoSrc ?? LOGO} style={s.logo} />
           <View style={s.companyBlock}>
-            <Text style={s.companyName}>{data.agenteNombre || 'LA ORIENTAL AUTOMOTORS, C.A.'}</Text>
-            <Text style={s.companyRif}>RIF: {data.agenteRif || 'J-505692143'}</Text>
-            <Text style={s.companyLine}>{data.agenteDireccion || 'AVENIDA ALIRIO UGARTE PELAYO, CENTRO PROFESIONAL DAVIS, QTA/GALPÓN NRO S/N, SECTOR CENTRO, MATURÍN - MONAGAS, ZONA POSTAL 6201'}</Text>
-            <Text style={s.companyLine}>TEL: 0414-9989010 · laorientalautomotorsc@gmail.com</Text>
+            <Text style={s.companyName}>{data.agenteNombre || 'JETPLUS'}</Text>
+            <Text style={s.companyRif}>RIF: {data.agenteRif || 'J-50372874-4'}</Text>
+            <Text style={s.companyLine}>{data.agenteDireccion || 'AV. RÓMULO GALLEGOS, PORLAMAR - NUEVA ESPARTA'}</Text>
+            <Text style={s.companyLine}>TEL: 0424-8705174 · davidcedenobrit@gmail.com</Text>
           </View>
         </View>
 

@@ -52,7 +52,7 @@ export function AcuerdoPagoPDF({ data }: { data: AcuerdoPagoData }) {
     sello: { width: 90, height: 90, objectFit: 'contain', opacity: 0.9 },
   })
 
-  // Numeración por serie: Inicial (La Oriental) 1,2,3… y Vehimotor 1,2,3…
+  // Numeración por serie: Inicial (Jetplus) 1,2,3… y Vehimotor 1,2,3…
   // (corren en paralelo cuando el crédito es simultáneo con el inicial).
   let ci = 0, cv = 0
   const filasRender = data.filas.map(f => ({ ...f, serie: f.tipo === 'Inicial' ? ++ci : ++cv }))

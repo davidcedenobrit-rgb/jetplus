@@ -65,7 +65,7 @@ const tipoVentaLabel = (k: string | null) => TIPOS_VENTA.find(t => t.key === k)?
 
 // Fórmula de la división contable de una venta (cuadro resumen en 3 bloques):
 //   Monto comisión de venta = precio × % comisión de venta   (= ingreso bruto venta)
-//   Monto base de La Oriental = precio − comisión de venta
+//   Monto base de Jetplus = precio − comisión de venta
 //   Comisión de vendedores = base × % vendedores   (pool repartido entre los vendedores)
 //   Comisión de directiva  = base × % directiva
 //   A) Ingreso bruto oriental = monto proforma oriental − pagado a Vehimotors
@@ -501,7 +501,7 @@ function DivisionModal({ venta, esRojas = false, onClose, onSaved }: { venta: Ve
   const x = nf(precioVenta)                                  // precio de venta
   const pctVenta = nf(comisionPct)                           // % comisión de venta
   const comisionVentaMonto = r2(x * pctVenta / 100)          // monto comisión de venta (= ingreso bruto venta)
-  const montoBase = x - comisionVentaMonto                   // monto base de La Oriental
+  const montoBase = x - comisionVentaMonto                   // monto base de Jetplus
   const pctVend = nf(comVendPct)
   const comVendMonto = r2(montoBase * pctVend / 100)         // pool de comisión de vendedores (100%)
   const pctDir = nf(comDirPct)
@@ -587,9 +587,9 @@ function DivisionModal({ venta, esRojas = false, onClose, onSaved }: { venta: Ve
             <span>Monto comisión de venta</span><span className="font-bold text-indigo-700">${fmt(comisionVentaMonto)}</span>
           </div>
 
-          {/* 4. Monto base de La Oriental */}
+          {/* 4. Monto base de Jetplus */}
           <div>
-            <label className={lbl}>Monto base de La Oriental $ <span className="font-normal text-gray-400">= precio − comisión de venta</span></label>
+            <label className={lbl}>Monto base de Jetplus $ <span className="font-normal text-gray-400">= precio − comisión de venta</span></label>
             <input className={inpRO} value={fmt(montoBase)} readOnly tabIndex={-1} />
           </div>
 

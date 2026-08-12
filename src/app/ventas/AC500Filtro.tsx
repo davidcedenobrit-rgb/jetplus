@@ -29,7 +29,7 @@ export interface AC500Vehiculo {
   p12_total: number | null
 }
 
-const WA = '584149989010'
+const WA = '584248705174'
 
 const COLOR_MAP: Record<string, string> = {
   blanco: '#ffffff', negro: '#111827', gris: '#9ca3af',

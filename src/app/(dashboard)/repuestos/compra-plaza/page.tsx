@@ -90,7 +90,7 @@ export default async function CompraPlazaPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {compras.map(c => {
-                  const destinatario = c.para_la_oriental ? 'La Oriental' : (c.clientes?.nombre ?? c.cliente_externo ?? '—')
+                  const destinatario = c.para_la_oriental ? 'Jetplus' : (c.clientes?.nombre ?? c.cliente_externo ?? '—')
                   return (
                     <tr key={c.id} className="hover:bg-gray-50">
                       <td className="px-4 py-2.5">

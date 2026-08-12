@@ -42,7 +42,7 @@ export default async function PerfilPortalPage() {
           Si algún dato no es correcto, contacte a su asesor para actualizarlo.
         </p>
         <a
-          href="https://wa.me/584149989010"
+          href="https://wa.me/584248705174"
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700"

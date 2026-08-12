@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 
 const ROLES_PERMITIDOS = ['mary', 'leysdem', 'jose', 'admin', 'director']
-const CORREO_ROJAS = 'jose@laoriental.co'
+const CORREO_ROJAS = 'jose@navigroup.co'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -57,12 +57,12 @@ export async function POST(req: Request) {
   // Notificar a Rojas por correo
   try {
     const resend = new Resend(process.env.RESEND_API_KEY)
-    const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
     const cliente = (ingreso as any).clientes
     const solicitante = user.user_metadata?.nombre ?? user.email ?? rol
 
     await resend.emails.send({
-      from: 'Centro de Mando <administracion@laoriental.co>',
+      from: 'Centro de Mando <administracion@navigroup.co>',
       to: [CORREO_ROJAS],
       subject: `⚠️ Solicitud de anulación — ${ingreso.numero_recibo}`,
       html: `
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
           <a href="${APP_URL}/anulaciones" style="display:inline-block;background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold">
             Revisar anulaciones
           </a>
-          <p style="color:#999;font-size:12px;margin-top:24px">La Oriental Automotors · Centro de Mando</p>
+          <p style="color:#999;font-size:12px;margin-top:24px">JETPLUS · Centro de Mando</p>
         </div>
       `,
     })

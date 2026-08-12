@@ -5,7 +5,7 @@ const fmtNum = (n: number) => Number(n || 0).toLocaleString('es-VE', { minimumFr
 
 // Arma los datos del comprobante de retención de ISLR a partir de un egreso.
 export async function buildComprobanteIslrData(admin: any, egreso: any): Promise<ComprobanteIslrData> {
-  const { data: conc } = await admin.from('concesionarios').select('nombre, rif, direccion').eq('id', 'la-oriental').maybeSingle()
+  const { data: conc } = await admin.from('concesionarios').select('nombre, rif, direccion').eq('id', 'jetplus').maybeSingle()
 
   let sujetoNombre = egreso.beneficiario ?? '—'
   let sujetoRif = egreso.cedula_rif_benef ?? '—'
@@ -32,7 +32,7 @@ export async function buildComprobanteIslrData(admin: any, egreso: any): Promise
     numeroComprobante: egreso.ret_islr_comprobante ?? '',
     fechaEmision: egreso.ret_islr_fecha_emision ?? egreso.fecha_egreso,
     periodoLabel: `${mes}-${anio}`,
-    agenteNombre: conc?.nombre ?? 'LA ORIENTAL AUTOMOTORS, C.A.',
+    agenteNombre: conc?.nombre ?? 'JETPLUS',
     agenteRif: conc?.rif ?? '',
     agenteDireccion: (conc?.direccion ?? '').replace(/\n/g, ' '),
     sujetoNombre,

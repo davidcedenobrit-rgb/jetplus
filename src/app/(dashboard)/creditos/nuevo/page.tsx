@@ -120,7 +120,7 @@ export default function NuevoCreditoPage() {
   const [planAC500Sel, setPlanAC500Sel] = useState<PlanAC500 | null>(null)
   const [loadingPlanes, setLoadingPlanes] = useState(false)
 
-  // Plan personalizado — Crédito Inicial La Oriental
+  // Plan personalizado — Crédito Inicial Jetplus
   const [inicialOrientalMonto, setInicialOrientalMonto] = useState('')
   const [inicialOrientalCuotas, setInicialOrientalCuotas] = useState('12')
   const [inicialOrientalMontoCuota, setInicialOrientalMontoCuota] = useState('')
@@ -298,7 +298,7 @@ export default function NuevoCreditoPage() {
     return getCuotasFromPlan(planAC500Sel)
   }, [planAC500Sel])
 
-  // Auto-calcular monto por cuota — La Oriental
+  // Auto-calcular monto por cuota — Jetplus
   // Siempre recalcula; si no hay monto/cuotas válidos, limpia el campo
   useEffect(() => {
     const monto  = parseFloat(inicialOrientalMonto)
@@ -471,10 +471,10 @@ export default function NuevoCreditoPage() {
           frecuencia_pago: inicialOrientalFrecuencia,
           fecha_inicio: inicialOrientalFecha, moneda: 'USD', estado: 'activo',
           plan_tipo: 'inicial_la_oriental',
-          observaciones: inicialOrientalObs || 'Crédito de Inicial — La Oriental',
+          observaciones: inicialOrientalObs || 'Crédito de Inicial — Jetplus',
         }).select().single()
         if (errO || !resO) { setError(errO?.message ?? 'Error crédito inicial'); setLoading(false); return }
-        await supabase.from('cuotas').insert(buildCuotas(resO.id, calcInicialOriental.numCuotas, calcInicialOriental.montoCuota, inicialOrientalFrecuencia, inicialOrientalFecha, 'Crédito de Inicial — La Oriental', parseFloat(orMontoHistorico) || 0))
+        await supabase.from('cuotas').insert(buildCuotas(resO.id, calcInicialOriental.numCuotas, calcInicialOriental.montoCuota, inicialOrientalFrecuencia, inicialOrientalFecha, 'Crédito de Inicial — Jetplus', parseFloat(orMontoHistorico) || 0))
         primerCreditoId = resO.id
       }
 
@@ -701,7 +701,7 @@ export default function NuevoCreditoPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
             {[
               { value: 'asegurate_500', title: 'Asegúrate con $500', desc: '$500 reserva + cuotas según modelo' },
-              { value: 'personalizado', title: 'Personalizado "La Oriental"', desc: 'Define el plan libremente' },
+              { value: 'personalizado', title: 'Personalizado "Jetplus"', desc: 'Define el plan libremente' },
             ].map(p => (
               <button
                 key={p.value}
@@ -874,7 +874,7 @@ export default function NuevoCreditoPage() {
                       placeholder="16" value={calcIvaPct} onChange={e => setCalcIvaPct(e.target.value)} />
                   </div>
                   <div>
-                    <label className="label">% Inicial (La Oriental)</label>
+                    <label className="label">% Inicial (Jetplus)</label>
                     <input type="number" step="1" min="1" max="99" className="input"
                       placeholder="40" value={calcPctInicial} onChange={e => setCalcPctInicial(e.target.value)} />
                   </div>
@@ -901,7 +901,7 @@ export default function NuevoCreditoPage() {
                 {calculadora && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white border border-amber-200 rounded-xl p-4 space-y-2 text-sm">
-                      <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Total Inicial — La Oriental</p>
+                      <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Total Inicial — Jetplus</p>
                       <div className="flex justify-between"><span className="text-oriental-gray">{Math.round(calculadora.pctInicial * 100)}% Precio base</span><span className="font-semibold">{formatUSD(calculadora.inicialBase)}</span></div>
                       <div className="flex justify-between"><span className="text-oriental-gray">IVA ({calculadora.ivaPct}%)</span><span className="font-semibold">{formatUSD(calculadora.iva)}</span></div>
                       <div className="flex justify-between"><span className="text-oriental-gray">Gastos</span><span className="font-semibold">{formatUSD(calculadora.gastosCredito)}</span></div>
@@ -925,14 +925,14 @@ export default function NuevoCreditoPage() {
             </div>
           )}
 
-          {/* ── PLAN PERSONALIZADO LA ORIENTAL ── */}
+          {/* ── PLAN PERSONALIZADO JETPLUS ── */}
           {plan === 'personalizado' && (
             <div className="space-y-5">
-              {/* Sub-crédito 1: Inicial La Oriental */}
+              {/* Sub-crédito 1: Inicial Jetplus */}
               <div className="border-2 border-purple-200 bg-purple-50/40 rounded-xl p-5">
                 <p className="text-sm font-bold text-purple-800 mb-4 flex items-center gap-2">
                   <span className="w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                  Crédito de Inicial — La Oriental
+                  Crédito de Inicial — Jetplus
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -1006,7 +1006,7 @@ export default function NuevoCreditoPage() {
                     <p className="text-xs text-yellow-800">El total de cuotas ({formatUSD(calcInicialOriental.totalCuotas)}) no coincide con el monto financiado ({formatUSD(calcInicialOriental.montoTotal)}). Verifica si es una condición especial.</p>
                   </div>
                 )}
-                {/* Pagos previos La Oriental */}
+                {/* Pagos previos Jetplus */}
                 {calcInicialOriental.numCuotas > 0 && (() => {
                   const hist = parseFloat(orMontoHistorico) || 0
                   const mc   = calcInicialOriental.montoCuota || 0
@@ -1274,7 +1274,7 @@ export default function NuevoCreditoPage() {
                   <div className="space-y-2">
                     {resumenPersonalizado.totalOr > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-purple-300">Crédito de Inicial — La Oriental</span>
+                        <span className="text-purple-300">Crédito de Inicial — Jetplus</span>
                         <span className="text-purple-300 font-semibold">{formatUSD(resumenPersonalizado.totalOr)}</span>
                       </div>
                     )}

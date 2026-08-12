@@ -223,7 +223,7 @@ export interface ProformaPDFData {
   // Proforma PREVIA a la venta (nace de una cotización, sin entrega aún). Cambia
   // el texto legal: propuesta de condiciones, no entrega bajo compromiso.
   preVenta?: boolean
-  // Crédito de la INICIAL otorgado por La Oriental (acuerdo de gestión de cobro),
+  // Crédito de la INICIAL otorgado por Jetplus (acuerdo de gestión de cobro),
   // aparte del crédito Vehimotor. Se muestra como un compromiso de pago propio.
   acuerdoLaOriental?: {
     montoFinanciado: number
@@ -248,7 +248,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
   const gastosTotal = data.estructura ? data.estructura.gastos.reduce((sum, g) => sum + Number(g.monto || 0), 0) : 0
 
   return (
-    <Document title={`Proforma ${data.numero}`} author="La Oriental Automotors">
+    <Document title={`Proforma ${data.numero}`} author="JETPLUS">
       <Page size="A4" style={s.page}>
 
         {/* Header */}
@@ -257,11 +257,11 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             <Image src={data.logoSrc ?? LOGO} style={s.logo} />
           </View>
           <View style={s.companyBlock}>
-            <Text style={s.companyName}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
-            <Text style={s.companyRif}>RIF: J-505692143</Text>
-            <Text style={s.companyLine}>AVENIDA ALIRIO UGARTE PELAYO · CENTRO PROFESIONAL DAVIS · QTA/GALPÓN S/N</Text>
-            <Text style={s.companyLine}>SECTOR CENTRO · MATURÍN - MONAGAS · ZONA POSTAL 6201</Text>
-            <Text style={s.companyLine}>TEL: 0414-9989010 · laorientalautomotorsc@gmail.com</Text>
+            <Text style={s.companyName}>JETPLUS</Text>
+            <Text style={s.companyRif}>RIF: J-50372874-4</Text>
+            <Text style={s.companyLine}>AV. RÓMULO GALLEGOS</Text>
+            <Text style={s.companyLine}>PORLAMAR · NUEVA ESPARTA</Text>
+            <Text style={s.companyLine}>TEL: 0424-8705174 · davidcedenobrit@gmail.com</Text>
           </View>
         </View>
 
@@ -481,15 +481,15 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             </View>
           ) : null}
 
-          {/* Compromiso de pago — Financiamiento de la INICIAL por La Oriental.
+          {/* Compromiso de pago — Financiamiento de la INICIAL por Jetplus.
               Es un crédito aparte del de Vehimotor; solo se detalla en el
               documento de venta (ya registrada), no en la proforma pre-venta. */}
           {acLO && !preVenta ? (
             <View style={{ marginTop: 14 }}>
               <View style={{ border: '1pt solid #7c3aed', borderRadius: 6, overflow: 'hidden' }}>
                 <View style={{ backgroundColor: '#7c3aed', padding: '7pt 10pt' }}>
-                  <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#fff' }}>COMPROMISO DE PAGO — FINANCIAMIENTO LA ORIENTAL (INICIAL)</Text>
-                  <Text style={{ fontSize: 7.5, color: '#ede9fe', marginTop: 2 }}>Crédito otorgado por La Oriental para la inicial del vehículo</Text>
+                  <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#fff' }}>COMPROMISO DE PAGO — FINANCIAMIENTO JETPLUS (INICIAL)</Text>
+                  <Text style={{ fontSize: 7.5, color: '#ede9fe', marginTop: 2 }}>Crédito otorgado por Jetplus para la inicial del vehículo</Text>
                 </View>
                 <View style={{ flexDirection: 'row', padding: '8pt 10pt', backgroundColor: '#faf5ff' }}>
                   {[
@@ -609,9 +609,9 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             ) : (
             <Text style={s.legalText}>
               <Text style={s.legalBold}>VEHÍCULO NO HA SIDO PAGADO EN SU TOTALIDAD POR PARTE DEL CLIENTE: </Text>
-              {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, SIN EMBARGO SE PROCEDE A ENTREGAR EL VEHÍCULO MARCA: {data.marca}, MODELO: {data.modelo}{data.placa ? `, PLACA: ${data.placa}` : ''}, CON SU RESPECTIVA PÓLIZA DE SEGURO VEHICULAR, PREVIA APROBACIÓN DE LA EMPRESA: LA ORIENTAL AUTOMOTORS, C.A.; RIF: J-505692143.{'\n\n'}
+              {data.clienteNombre}, C.I./RIF: {data.clienteCiRif}, SIN EMBARGO SE PROCEDE A ENTREGAR EL VEHÍCULO MARCA: {data.marca}, MODELO: {data.modelo}{data.placa ? `, PLACA: ${data.placa}` : ''}, CON SU RESPECTIVA PÓLIZA DE SEGURO VEHICULAR, PREVIA APROBACIÓN DE LA EMPRESA: JETPLUS; RIF: J-50372874-4.{'\n\n'}
               <Text style={s.legalBold}>DE LOS PAGOS RESTANTES, EL CLIENTE: </Text>
-              {data.clienteNombre}, SE COMPROMETE A REALIZAR LOS MISMOS SEGÚN EL CRONOGRAMA DE CUOTAS DETALLADO EN ESTE DOCUMENTO. EL INCUMPLIMIENTO DE DOS (2) O MÁS CUOTAS CONSECUTIVAS FACULTA A LA ORIENTAL AUTOMOTORS, C.A. A INICIAR LAS ACCIONES LEGALES QUE CORRESPONDAN PARA LA RECUPERACIÓN DEL BIEN Y/O DEL SALDO ADEUDADO.{'\n\n'}
+              {data.clienteNombre}, SE COMPROMETE A REALIZAR LOS MISMOS SEGÚN EL CRONOGRAMA DE CUOTAS DETALLADO EN ESTE DOCUMENTO. EL INCUMPLIMIENTO DE DOS (2) O MÁS CUOTAS CONSECUTIVAS FACULTA A JETPLUS A INICIAR LAS ACCIONES LEGALES QUE CORRESPONDAN PARA LA RECUPERACIÓN DEL BIEN Y/O DEL SALDO ADEUDADO.{'\n\n'}
               <Text style={s.legalBold}>"SE ESTABLECE DOMICILIO ESPECIAL, LA CIUDAD DE MATURÍN, ESTADO MONAGAS"</Text>{'\n'}
               FIRMÓ, ACEPTÓ, ESTOY DE ACUERDO Y ASUMO EL COMPROMISO EN LO DESCRITO ANTERIORMENTE.
             </Text>
@@ -624,7 +624,7 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
             <>
               <Text style={s.condTitle}>CONDICIONES:</Text>
               <Text style={s.condText}>
-                El comprador acepta y reconoce que el vehículo objeto de esta proforma es entregado bajo un compromiso de pago con financiamiento aprobado. Los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que La Oriental Automotors, C.A. indique. Esta proforma constituye documento formal de compromiso y podrá ser presentada ante autoridades competentes en caso de incumplimiento.
+                El comprador acepta y reconoce que el vehículo objeto de esta proforma es entregado bajo un compromiso de pago con financiamiento aprobado. Los pagos deberán realizarse entre el primero (1°) y el quinto (5°) día de cada mes a la cuenta que JETPLUS, C.A. indique. Esta proforma constituye documento formal de compromiso y podrá ser presentada ante autoridades competentes en caso de incumplimiento.
               </Text>
             </>
           )}
@@ -641,14 +641,14 @@ export function ProformaPDF({ data }: { data: ProformaPDFData }) {
           <View style={s.firmaFooterBlock}>
             {data.selloSrc ? <Image src={data.selloSrc} style={s.selloImg} /> : <View style={{ height: 46 }} />}
             <View style={{ width: '100%', borderBottom: `1pt solid ${DARK}`, marginBottom: 4 }} />
-            <Text style={s.firmaFooterLabel}>REPRESENTANTE LA ORIENTAL</Text>
-            <Text style={s.firmaFooterSub}>LA ORIENTAL AUTOMOTORS, C.A.</Text>
+            <Text style={s.firmaFooterLabel}>REPRESENTANTE JETPLUS</Text>
+            <Text style={s.firmaFooterSub}>JETPLUS</Text>
           </View>
         </View>
 
         {/* Footer */}
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>La Oriental Automotors · MG &amp; MAXUS · Maturín, Venezuela</Text>
+          <Text style={s.footerText}>JETPLUS · MG &amp; MAXUS · Porlamar, Venezuela</Text>
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
         </View>
       </Page>

@@ -383,7 +383,7 @@ export function AnexoADocument({ data }: { data: AnexoAData }) {
             </View>
             <View style={s.firmaBox}>
               <View style={s.firmaLine} />
-              <Text style={s.firmaNom}>Por: {esVehimotors ? 'VEHIMOTORS, C.A.' : (data.empresaNombre || 'La Oriental Automotors, C.A.')}</Text>
+              <Text style={s.firmaNom}>Por: {esVehimotors ? 'VEHIMOTORS, C.A.' : (data.empresaNombre || 'JETPLUS')}</Text>
               <Text style={s.firmaRol}>{esVehimotors ? 'Firma' : 'Firma autorizada'}</Text>
             </View>
           </View>
@@ -410,7 +410,7 @@ export function buildAnexoMontos(opts: {
   const r2 = (n: number) => Math.round(n * 100) / 100
   const reserva = opts.reserva
   const cuotasArr = [...opts.cuotasBase]
-  // La versión Vehimotors resta los $500 a la cuota 1 (la reserva/gasto admin la retiene La Oriental).
+  // La versión Vehimotors resta los $500 a la cuota 1 (la reserva/gasto admin la retiene Jetplus).
   if (opts.variante === 'vehimotors' && cuotasArr.length > 0) {
     cuotasArr[0] = r2(cuotasArr[0] - 500)
   }

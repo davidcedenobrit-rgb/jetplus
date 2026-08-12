@@ -1,20 +1,20 @@
-# La Oriental Finanzas
+# JETPLUS
 
-Sistema web de control de ingresos, egresos, recibos y cuotas para **La Oriental Automotors** — MG & MAXUS, Maturín.
+Sistema web de control de ingresos, egresos, recibos y cuotas para **JETPLUS** — Porlamar, Nueva Esparta.
 
 ## Stack
 
 - **Frontend:** Next.js 15 + TypeScript + Tailwind CSS
 - **Backend:** Supabase (PostgreSQL + Auth + Storage)
-- **Correos:** Resend (`cotizaciones@laoriental.co`)
+- **Correos:** Resend (dominio `navigroup.co`)
 - **Deploy:** Vercel
 
 ## Setup local
 
 ```bash
 # 1. Clonar el repo
-git clone https://github.com/TU_USUARIO/la-oriental-finanzas.git
-cd la-oriental-finanzas
+git clone https://github.com/davidcedenobrit-rgb/jetplus.git
+cd jetplus
 
 # 2. Instalar dependencias
 npm install
@@ -32,9 +32,8 @@ npm run dev
 
 ## Supabase
 
-- **Project ID:** `twrskadsskiiskrqdvaj`
-- **URL:** `https://twrskadsskiiskrqdvaj.supabase.co`
-- **Región:** São Paulo (sa-east-1)
+- **Project ID:** `miqjkqdyccvdbmlxyjfw`
+- **URL:** `https://miqjkqdyccvdbmlxyjfw.supabase.co`
 
 Las migraciones ya están aplicadas en producción. Si necesitas recrear el schema:
 
@@ -55,20 +54,19 @@ supabase db push
 | `/creditos` | Planes de crédito y cuotas |
 | `/reportes` | Balance financiero y estadísticas |
 
-## Roles
-
-| Rol | Acceso |
-|-----|--------|
-| `jose` | Control total + aprobaciones |
-| `mary` | Registro de ingresos y egresos |
-| `leysdem` | Registro de ingresos y egresos |
-| `carla` | Vista ejecutiva (reportes) |
-| `admin` | Configuración del sistema |
-
 ## Numeración de documentos
 
-- Recibos: `LOA-REC-2026-000001`
-- Egresos: `LOA-EGR-2026-000001`
+- Recibos: `JPLUS-REC-2026-000001`
+- Egresos: `JPLUS-EGR-2026-000001`
+
+## Federación entre sedes
+
+Este código base es compartido con otras sedes del grupo (La Oriental, Ki Auto,
+Autosurca, Capital Motors), pero **Jetplus es un cliente independiente sin
+relación con Grupo Oriente**. El panel central y la sincronización entre
+concesionarios (`PANEL_MATRIZ`, `CONCESIONARIO_*_URL`, `CONCESIONARIO_*_SERVICE_KEY`)
+deben permanecer **sin configurar** en este despliegue para que esas funciones
+queden inertes.
 
 ---
 

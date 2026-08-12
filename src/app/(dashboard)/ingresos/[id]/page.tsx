@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const supabase = await createClient()
   const { data } = await supabase.from('ingresos').select('numero_recibo').eq('id', id).single()
-  return { title: data?.numero_recibo ?? 'Recibo — La Oriental' }
+  return { title: data?.numero_recibo ?? 'Recibo — JETPLUS' }
 }
 
 export default async function IngresoDetallePage({
@@ -276,12 +276,12 @@ export default async function IngresoDetallePage({
                 {/* Logo real */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/logo-la-oriental.jpg"
-                  alt="La Oriental Automotors"
+                  src="/logo-jetplus.jpg"
+                  alt="JETPLUS"
                   className="h-14 w-auto object-contain"
                   style={{ maxWidth: 220 }}
                 />
-                <p className="text-gray-600 text-[10px] font-semibold mt-1.5">RIF: J-50569214-3</p>
+                <p className="text-gray-600 text-[10px] font-semibold mt-1.5">RIF: J-50372874-4</p>
                 <p className="text-gray-500 text-[10px] mt-0.5 leading-relaxed">
                   Av. Ugarte Pelayo, Centro Profesional David, Qta. Galpón Nro. S/N<br />
                   Sector Centro, Maturín, Monagas. C.P. 6201
@@ -464,7 +464,7 @@ export default async function IngresoDetallePage({
                             const cuota = ci.cuotas
                             const planTipo = cuota?.creditos?.plan_tipo
                             const planNombre =
-                              planTipo === 'inicial_la_oriental' ? 'La Oriental' :
+                              planTipo === 'inicial_la_oriental' ? 'Jetplus' :
                               planTipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
                               planTipo === 'asegurate_500' ? 'Asegúrate $500' :
                               planTipo === 'credito_40_60' ? '40/60 Vehimotors' :
@@ -645,7 +645,7 @@ export default async function IngresoDetallePage({
                             const cuotasCred = cuotasVehiculo.filter((q: any) => q.credito_id === c.id)
                             const pagadasCred = cuotasCred.filter((q: any) => q.estado === 'pagada').length
                             const planLabel =
-                              c.plan_tipo === 'inicial_la_oriental' ? 'La Oriental' :
+                              c.plan_tipo === 'inicial_la_oriental' ? 'Jetplus' :
                               c.plan_tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
                               c.plan_tipo === 'asegurate_500' ? 'Asegúrate $500' :
                               c.plan_tipo === 'credito_40_60' ? '40/60 Vehimotors' :
@@ -687,8 +687,8 @@ export default async function IngresoDetallePage({
                     <div className="relative h-24 flex items-center justify-center mb-1">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="/sello-la-oriental.jpeg"
-                        alt="Sello La Oriental Automotors"
+                        src="/sello-jetplus.jpeg"
+                        alt="Sello JETPLUS Automotors"
                         className="h-24 w-auto object-contain"
                         style={{ mixBlendMode: 'multiply', opacity: 0.85 }}
                       />
@@ -714,7 +714,7 @@ export default async function IngresoDetallePage({
 
             {/* Pie del recibo */}
             <div className="print-bg-gray bg-oriental-bg border-t border-gray-200 px-6 py-3 flex items-center justify-between">
-              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. · RIF: J-50569214-3</p>
+              <p className="text-[10px] text-oriental-gray">JETPLUS · RIF: J-50372874-4</p>
               <p className="text-[10px] text-oriental-gray font-mono">{ingreso.numero_recibo}</p>
             </div>
           </div>

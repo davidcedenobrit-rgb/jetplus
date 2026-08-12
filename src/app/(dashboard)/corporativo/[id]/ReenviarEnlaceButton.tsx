@@ -15,7 +15,7 @@ export default function ReenviarEnlaceButton({ token, nombre }: { token: string 
     setTimeout(() => setCopiado(false), 2000)
   }
 
-  const waLink = `https://wa.me/?text=${encodeURIComponent(`Hola ${nombre}, por favor completa tu descripción de cargo de La Oriental en las próximas 72 horas: ${link}`)}`
+  const waLink = `https://wa.me/?text=${encodeURIComponent(`Hola ${nombre}, por favor completa tu descripción de cargo de Jetplus en las próximas 72 horas: ${link}`)}`
 
   return (
     <div className="flex gap-2 flex-wrap">

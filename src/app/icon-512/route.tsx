@@ -18,7 +18,7 @@ export async function GET() {
           overflow: 'hidden',
         }}
       >
-        {/* Líneas rojas de velocidad — estilo La Oriental */}
+        {/* Líneas rojas de velocidad — estilo Jetplus */}
         <div style={{ position: 'absolute', left: 42, top: 148, width: 96, height: 28, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 4 }} />
         <div style={{ position: 'absolute', left: 28, top: 204, width: 124, height: 40, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 4 }} />
         <div style={{ position: 'absolute', left: 42, top: 272, width: 96, height: 28, background: '#D31F2A', transform: 'skewX(-18deg)', display: 'flex', borderRadius: 4 }} />

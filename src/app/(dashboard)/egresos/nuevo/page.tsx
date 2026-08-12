@@ -666,7 +666,7 @@ export default function NuevoEgresoPage() {
               </select>
             </div>
             <div>
-              <label className="label">Banco origen (La Oriental)</label>
+              <label className="label">Banco origen (Jetplus)</label>
               <select className="select" value={bancoOrigen} onChange={e => setBancoOrigen(e.target.value)}>
                 <option value="">Seleccionar...</option>
                 {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}

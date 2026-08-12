@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await admin.from('bn_casos').insert([{
     creado_por: user.id,
-    concesionario_id: b.concesionarioId ?? 'la-oriental',
+    concesionario_id: b.concesionarioId ?? 'jetplus',
     cliente_id: clienteExistente?.id ?? null,
     expediente: expediente && expediente.length ? expediente : null,
     cliente_nombre: b.clienteNombre.trim(),

@@ -47,7 +47,7 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null, 
     const cuota = ci.cuotas
     const planTipo = cuota?.creditos?.plan_tipo
     const planNombre =
-      planTipo === 'inicial_la_oriental' ? 'La Oriental'
+      planTipo === 'inicial_la_oriental' ? 'Jetplus'
       : planTipo === 'financiamiento_vehimotors' ? 'Vehimotors'
       : planTipo === 'asegurate_500' ? 'Asegúrate $500'
       : planTipo === 'credito_40_60' ? '40/60 Vehimotors'
@@ -117,7 +117,7 @@ export async function fetchECData(ingresoId: string, vehiculoId: string | null, 
       }, 0)
       const planTipo = c.plan_tipo
       const planNombre =
-        planTipo === 'inicial_la_oriental' ? 'La Oriental'
+        planTipo === 'inicial_la_oriental' ? 'Jetplus'
         : planTipo === 'financiamiento_vehimotors' ? 'Vehimotors'
         : planTipo === 'asegurate_500' ? 'Asegúrate $500'
         : planTipo === 'credito_40_60' ? '40/60 Vehimotors'

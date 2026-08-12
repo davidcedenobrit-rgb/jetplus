@@ -108,7 +108,7 @@ export default function ClienteContactButtons({
       ...(pdfUrl ? ['', `📄 Su recibo en PDF: ${pdfUrl}`] : []),
       '',
       'Gracias por su preferencia.',
-      'La Oriental Automotors',
+      'JETPLUS',
     ]
 
     const waUrl = `https://wa.me/${formatPhoneWA(clienteTelefono)}?text=${encodeURIComponent(lines.join('\n'))}`

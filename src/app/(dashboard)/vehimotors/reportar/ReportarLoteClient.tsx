@@ -488,7 +488,7 @@ export default function ReportarLoteClient({ ingresos, rol }: Props) {
                   <div>
                     <label className="text-[10px] font-semibold text-oriental-gray uppercase block mb-1">Banco origen</label>
                     <input type="text" value={depBancoOrigen} onChange={e => setDepBancoOrigen(e.target.value)}
-                      placeholder="Cuenta La Oriental"
+                      placeholder="Cuenta Jetplus"
                       className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
                       disabled={enviandoLote || (resultadoLote?.guardados ?? 0) > 0} />
                   </div>

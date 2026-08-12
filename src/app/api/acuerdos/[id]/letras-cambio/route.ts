@@ -5,6 +5,7 @@ import React from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { LetraCambioPDF, LetraCambioData } from '@/lib/letra-cambio-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
+import { getVendedorLegal } from '@/lib/vendedor-legal'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
@@ -96,7 +97,8 @@ export async function GET(
   }
 
   const data: LetraCambioData = {
-    ciudad: cliente.ciudad || 'Maturín',
+    ciudad: cliente.ciudad || 'Porlamar',
+    estado: 'Nueva Esparta',
     fechaEmision,
     fechaCreditoInicio: undefined,
     deudorNombre: cliente.nombre,
@@ -111,13 +113,20 @@ export async function GET(
     letras,
   }
 
-  // Membrete del concesionario de turno (La Oriental por defecto).
-  const ident = await getConcesionarioIdentity(admin, (acuerdo as any).concesionario_id ?? 'la-oriental')
+  // Membrete del concesionario de turno (Jetplus por defecto).
+  const concId = (acuerdo as any).concesionario_id ?? 'jetplus'
+  const ident = await getConcesionarioIdentity(admin, concId)
   data.membrete = {
     nombre: ident.nombre, rif: ident.rif, direccion: ident.direccion,
     telefono: ident.telefono, correo: ident.correo, logoSrc: ident.logoSrc,
     colorPrimario: ident.colorPrimario, colorSecundario: ident.colorSecundario,
   }
+  const vl = getVendedorLegal(concId)
+  data.acreedorNombre = vl.nombre ?? ident.nombre
+  data.acreedorRif = vl.rif ?? ident.rif ?? undefined
+  data.acreedorIdent = (vl.registro && vl.registroFecha && vl.registroNro && vl.registroTomo)
+    ? `inscrita por ante el ${vl.registro}, en fecha ${vl.registroFecha}, bajo el Nº ${vl.registroNro}, Tomo ${vl.registroTomo}`
+    : null
 
   const pdfBuffer = await renderToBuffer(
     React.createElement(LetraCambioPDF, { data }) as any

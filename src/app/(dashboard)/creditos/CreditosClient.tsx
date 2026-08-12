@@ -11,7 +11,7 @@ type FiltroPlan = 'todos' | 'lao' | 'vehimotor' | 'cuota_especial' | 'combinado'
 
 const FILTROS_PLAN: { value: FiltroPlan; label: string; activeClass: string }[] = [
   { value: 'todos',          label: 'Todos',          activeClass: 'bg-oriental-black text-white border-oriental-black' },
-  { value: 'lao',            label: 'La Oriental',    activeClass: 'bg-purple-600 text-white border-purple-600' },
+  { value: 'lao',            label: 'Jetplus',    activeClass: 'bg-purple-600 text-white border-purple-600' },
   { value: 'vehimotor',      label: 'Vehimotors',     activeClass: 'bg-indigo-600 text-white border-indigo-600' },
   { value: 'cuota_especial', label: 'Cuota especial', activeClass: 'bg-teal-600 text-white border-teal-600' },
   { value: 'combinado',      label: 'Combinado',      activeClass: 'bg-fuchsia-600 text-white border-fuchsia-600' },
@@ -29,7 +29,7 @@ const planBadge = (tipo: string | null) =>
   'bg-gray-100 text-gray-500'
 
 const planLabel = (tipo: string | null) =>
-  tipo === 'inicial_la_oriental'       ? 'La Oriental' :
+  tipo === 'inicial_la_oriental'       ? 'Jetplus' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
   tipo === 'cuota_especial'            ? 'C. Especial' :
   tipo === 'asegurate_500'             ? 'Aseg. $500' :
@@ -150,8 +150,8 @@ export default function CreditosClient({
     }
     let gruposDisplay = Array.from(map.values())
 
-    // 3. Combinado: vehículos que tienen La Oriental Y Vehimotors. La fila
-    //    muestra TODOS los créditos del vehículo juntos (La Oriental +
+    // 3. Combinado: vehículos que tienen Jetplus Y Vehimotors. La fila
+    //    muestra TODOS los créditos del vehículo juntos (Jetplus +
     //    Vehimotors + Cuota Especial si la tiene).
     if (filtroPlan === 'combinado') {
       gruposDisplay = gruposDisplay.filter(g =>

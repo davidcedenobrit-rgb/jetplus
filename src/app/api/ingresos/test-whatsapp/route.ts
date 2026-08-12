@@ -108,7 +108,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 })
   }
 
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
   const pdfUrl = `${APP_URL}/api/recibo/${ingreso.numero_recibo}`
 
   const montoFmt = new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(Number(ingreso.monto))
@@ -137,7 +137,7 @@ export async function GET(req: Request) {
     `📄 Su recibo en PDF: ${pdfUrl}`,
     '',
     'Gracias por su preferencia.',
-    'La Oriental Automotors',
+    'JETPLUS',
   ]
 
   const waUrl = `https://wa.me/${formatPhoneWA(telefono)}?text=${encodeURIComponent(lines.join('\n'))}`

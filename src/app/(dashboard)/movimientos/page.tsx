@@ -11,7 +11,7 @@ const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 // Deriva la cuenta a la que cae el movimiento a partir de sus propios datos
 // (método, banco receptor/origen, canal). Lo que va directo a Vehimotors se
-// marca aparte y no cuenta para los saldos de La Oriental.
+// marca aparte y no cuenta para los saldos de Jetplus.
 function derivarCuenta(m: { tipo: string; metodo: string | null; banco: string | null; moneda: string; canal?: string | null }): { label: string; esVehimotors: boolean } {
   const metodo = (m.metodo ?? '').toLowerCase()
   const banco = (m.banco ?? '').trim()

@@ -42,7 +42,7 @@ function numeroEgreso() {
   const year = new Date().getFullYear()
   const buf = new Uint32Array(1)
   crypto.getRandomValues(buf)
-  return `LOA-EGR-${year}-${String(buf[0] % 1_000_000).padStart(6, '0')}`
+  return `JPLUS-EGR-${year}-${String(buf[0] % 1_000_000).padStart(6, '0')}`
 }
 
 // Compra en plaza directa (sin cotización de Vehimotors). Crea la solicitud en

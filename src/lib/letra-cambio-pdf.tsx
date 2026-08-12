@@ -70,6 +70,10 @@ const s = StyleSheet.create({
 
 export interface LetraCambioData {
   ciudad: string
+  estado?: string                // estado donde se emite (por defecto Nueva Esparta)
+  acreedorNombre?: string        // razón social del concesionario a cuya orden se libra
+  acreedorRif?: string
+  acreedorIdent?: string | null  // "inscrita por ante el Registro Mercantil…, bajo el Nº…, Tomo…"
   fechaEmision: string          // ISO date de emision (fecha_inicio o hoy)
   fechaCreditoInicio?: string   // fecha_inicio del credito (referencia)
   deudorNombre: string
@@ -108,7 +112,7 @@ export function LetraCambioPDF({ data }: { data: LetraCambioData }) {
   return (
     <Document
       title={`Letras de cambio — ${data.deudorNombre}`}
-      author="La Oriental Automotors"
+      author="JETPLUS"
     >
       {data.letras.map((letra, idx) => {
         const venc = fmtFechaLarga(letra.fechaVencimiento)
@@ -129,7 +133,7 @@ export function LetraCambioPDF({ data }: { data: LetraCambioData }) {
               <View style={s.headerRow}>
                 <View style={{ flex: 3 }}>
                   <Text style={s.emitida}>
-                    Emitida en la ciudad de {data.ciudad}, Estado Monagas, República Bolivariana de Venezuela,
+                    Emitida en la ciudad de {data.ciudad}, Estado {data.estado || 'Nueva Esparta'}, República Bolivariana de Venezuela,
                   </Text>
                   <Text style={s.fechaLine}>
                     {data.ciudad}, en fecha {emision.dia.toString().padStart(2, '0')} de {emision.mes} de {emision.anio}.
@@ -159,14 +163,16 @@ export function LetraCambioPDF({ data }: { data: LetraCambioData }) {
                 {' '}de este domicilio: {data.deudorDireccion || '____________________________________________'},
                 Teléfono {data.deudorTelefono || '_______________'}, correo: {data.deudorCorreo || '_______________'},
                 se servirá mandar a pagar <Text style={s.bold}>SIN AVISO Y SIN PROTESTO</Text>, en la ciudad de {data.ciudad},
-                Estado Monagas, República Bolivariana de Venezuela, el día{' '}
+                Estado {data.estado || 'Nueva Esparta'}, República Bolivariana de Venezuela, el día{' '}
                 <Text style={s.bold}>
                   {venc.diaLetras} ({venc.dia.toString().padStart(2, '0')}) de {venc.mes} de {venc.anio}
                 </Text>
-                , a la ORDEN de la Sociedad Mercantil, <Text style={s.bold}>LA ORIENTAL AUTOMOTORS, C.A.</Text>,
-                inscrita por ante el Registro Mercantil de la Circunscripción Judicial del Estado Monagas,
-                en fecha cuatro (04) de julio de 2.024, bajo el Nº 24, Tomo 34-A, RM MAT, con Registro Único
-                de Información Fiscal RIF Nº <Text style={s.bold}>J-505692143</Text>, la cantidad de{' '}
+                , a la ORDEN de la Sociedad Mercantil, <Text style={s.bold}>{data.acreedorNombre || 'JETPLUS'}</Text>,{' '}
+                {data.acreedorIdent?.trim()
+                  ? `${data.acreedorIdent.trim()}, `
+                  : 'inscrita por ante el Registro Mercantil de la Circunscripción Judicial del Estado ____________, en fecha ____________, bajo el Nº ____, Tomo ____, '}
+                con Registro Único
+                de Información Fiscal RIF Nº <Text style={s.bold}>{data.acreedorRif || '____________'}</Text>, la cantidad de{' '}
                 <Text style={s.bold}>{montoPalabras} (${montoStr} USD)</Text>, en efectivo en su domicilio el cual
                 declara conocer; suma esta que devengará, a partir de su vencimiento intereses moratorios a la
                 tasa del 1% mensual, así como exigibilidad inmediata.

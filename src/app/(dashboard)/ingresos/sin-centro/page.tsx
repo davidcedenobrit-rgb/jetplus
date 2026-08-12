@@ -115,7 +115,7 @@ export default async function SinCentroPage() {
             <Layers size={22} className="text-oriental-red" /> Ingresos sin centro de costo
           </h1>
           <p className="text-oriental-gray text-sm mt-0.5">
-            Asigna el centro a cada ingreso. Las cuotas de Vehimotors y las mensuales de AC500 no son de La Oriental: van al centro <b>Vehimotors</b>.
+            Asigna el centro a cada ingreso. Las cuotas de Vehimotors y las mensuales de AC500 no son de Jetplus: van al centro <b>Vehimotors</b>.
           </p>
         </div>
       </div>

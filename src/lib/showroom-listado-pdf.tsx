@@ -63,13 +63,13 @@ export interface ShowroomFila {
 
 export function ShowroomListadoPDF({ filas, titulo, fecha, membrete }: { filas: ShowroomFila[]; titulo: string; fecha: string; membrete?: MembreteData }) {
   return (
-    <Document title={`Listado showroom — ${titulo}`} author={membrete?.nombre ?? 'La Oriental Automotors'}>
+    <Document title={`Listado showroom — ${titulo}`} author={membrete?.nombre ?? 'JETPLUS'}>
       <Page size="A4" orientation="landscape" style={s.page}>
         {membrete ? <View style={{ marginBottom: 8 }} fixed><PdfMembrete data={membrete} /></View> : null}
         <View style={s.header}>
           <View>
             <Text style={s.title}>Vehículos en Showroom</Text>
-            <Text style={s.sub}>{membrete?.nombre ?? 'La Oriental Automotors'} · {titulo}</Text>
+            <Text style={s.sub}>{membrete?.nombre ?? 'JETPLUS'} · {titulo}</Text>
           </View>
           <View>
             <Text style={s.meta}>{filas.length} vehículo{filas.length !== 1 ? 's' : ''}</Text>
@@ -110,7 +110,7 @@ export function ShowroomListadoPDF({ filas, titulo, fecha, membrete }: { filas: 
         })}
 
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>La Oriental Automotors C.A. · RIF: J-50569214-3</Text>
+          <Text style={s.footerText}>JETPLUS · RIF: J-50372874-4</Text>
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
         </View>
       </Page>

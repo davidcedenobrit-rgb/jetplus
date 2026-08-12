@@ -1,6 +1,6 @@
 import type { ReportePayload } from './reporte-tipos'
 
-// Descarga el reporte como PDF con membrete de La Oriental (server-side).
+// Descarga el reporte como PDF con membrete de Jetplus (server-side).
 export async function exportReportePDF(payload: ReportePayload) {
   const r = await fetch('/api/reportes/pdf', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
@@ -15,11 +15,11 @@ export async function exportReportePDF(payload: ReportePayload) {
 const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 // Descarga el reporte como Excel (.xls tipo HTML — abre en Excel sin dependencias).
-// Mantiene la línea gráfica de La Oriental: cabecera roja con el nombre y el título.
+// Mantiene la línea gráfica de Jetplus: cabecera roja con el nombre y el título.
 export function exportReporteExcel(payload: ReportePayload) {
   const ROJO = '#C41E3A', NEGRO = '#111827'
   let body = ''
-  body += `<tr><td colspan="12" style="background:${ROJO};color:#fff;font-size:16px;font-weight:bold;padding:8px">LA ORIENTAL AUTOMOTORS, C.A.</td></tr>`
+  body += `<tr><td colspan="12" style="background:${ROJO};color:#fff;font-size:16px;font-weight:bold;padding:8px">JETPLUS</td></tr>`
   body += `<tr><td colspan="12" style="background:${NEGRO};color:#fff;font-size:13px;font-weight:bold;padding:6px">${esc(payload.titulo)}${payload.periodo ? ` — ${esc(payload.periodo)}` : ''}</td></tr>`
   body += `<tr><td colspan="12" style="height:6px"></td></tr>`
 

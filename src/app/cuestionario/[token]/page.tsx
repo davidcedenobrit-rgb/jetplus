@@ -19,7 +19,7 @@ export default async function CuestionarioPage({ params }: { params: Promise<{ t
         <div style={{ textAlign: 'center', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
           <div style={{ fontSize: 44, marginBottom: 12 }}>🔒</div>
           <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>Enlace no válido</h1>
-          <p style={{ color: '#9ca3af', fontSize: 14, margin: 0 }}>Este enlace no existe o ha sido revocado. Contacte a La Oriental.</p>
+          <p style={{ color: '#9ca3af', fontSize: 14, margin: 0 }}>Este enlace no existe o ha sido revocado. Contacte a Jetplus.</p>
         </div>
       </div>
     )
@@ -32,7 +32,7 @@ export default async function CuestionarioPage({ params }: { params: Promise<{ t
           <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>¡Cuestionario recibido!</h1>
           <p style={{ color: '#9ca3af', fontSize: 14, margin: 0 }}>
-            Gracias, {empleado.nombre.split(' ')[0]}. Su descripción de cargo ya fue enviada a La Oriental. No necesita hacer nada más.
+            Gracias, {empleado.nombre.split(' ')[0]}. Su descripción de cargo ya fue enviada a Jetplus. No necesita hacer nada más.
           </p>
         </div>
       </div>

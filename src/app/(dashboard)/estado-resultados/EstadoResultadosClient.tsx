@@ -109,7 +109,7 @@ export default function EstadoResultadosClient() {
     const resultado = totalIngresos - totalGastos
 
     // Detalle de fondos de terceros / Vehimotors (para la vista "Con Vehimotors").
-    // No forman parte del resultado de La Oriental; se muestran por separado.
+    // No forman parte del resultado de Jetplus; se muestran por separado.
     const custPorConcepto: Record<string, Linea> = {}
     for (const i of noPropios) {
       const k = i.concepto?.trim() || 'Otros'
@@ -180,7 +180,7 @@ export default function EstadoResultadosClient() {
     rows.push(['Memo — Inversiones (no afecta resultado)', data.totalInversion.toFixed(2)])
     rows.push(['Memo — Fondos de terceros en custodia', data.custodia.toFixed(2)], [])
     if (vista === 'vehimotors') {
-      rows.push(['FONDOS DE VEHIMOTORS / TERCEROS (custodia, no es ingreso de La Oriental)', data.custodia.toFixed(2)])
+      rows.push(['FONDOS DE VEHIMOTORS / TERCEROS (custodia, no es ingreso de Jetplus)', data.custodia.toFixed(2)])
       data.custodiaConceptos.forEach(l => rows.push([`  ${l.nombre}`, l.total.toFixed(2)]))
       rows.push([])
     }
@@ -220,10 +220,10 @@ export default function EstadoResultadosClient() {
         </div>
       </div>
 
-      {/* Vista: solo La Oriental vs con Vehimotors (para presentar a Carla / Carlos) */}
+      {/* Vista: solo Jetplus vs con Vehimotors (para presentar a Carla / Carlos) */}
       <div className="flex items-center gap-2 mb-4 no-print">
         <span className="text-xs font-semibold text-oriental-gray">Vista:</span>
-        <button onClick={() => setVista('oriental')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${vista === 'oriental' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>Solo La Oriental</button>
+        <button onClick={() => setVista('oriental')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${vista === 'oriental' ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>Solo Jetplus</button>
         <button onClick={() => setVista('vehimotors')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${vista === 'vehimotors' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>Con Vehimotors</button>
         <span className="w-px h-5 bg-gray-200 mx-1" />
         <span className="text-xs font-semibold text-oriental-gray">Moneda:</span>
@@ -278,7 +278,7 @@ export default function EstadoResultadosClient() {
                 </div>
               )}
               <p className="text-[11px] text-amber-800/80 mt-3">
-                Dinero cobrado por cuenta de Vehimotors (y otros terceros) que pasa por La Oriental en custodia. <span className="font-semibold">No es ingreso ni resultado de La Oriental</span>; se muestra aparte solo para presentarle a Carla y Carlos el movimiento completo.
+                Dinero cobrado por cuenta de Vehimotors (y otros terceros) que pasa por Jetplus en custodia. <span className="font-semibold">No es ingreso ni resultado de Jetplus</span>; se muestra aparte solo para presentarle a Carla y Carlos el movimiento completo.
               </p>
             </div>
           )}

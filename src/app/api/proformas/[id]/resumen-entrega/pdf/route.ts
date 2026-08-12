@@ -7,7 +7,7 @@ import { ResumenEntregaPDF, ResumenEntregaData } from '@/lib/resumen-entrega-pdf
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
-const CIUDAD_CONCES: Record<string, string> = { 'la-oriental': 'Maturín', 'kiauto': 'Puerto Ordaz', 'autosurca': 'El Tigre' }
+const CIUDAD_CONCES: Record<string, string> = { 'jetplus': 'Porlamar', 'la-oriental': 'Maturín', 'kiauto': 'Puerto Ordaz', 'autosurca': 'El Tigre' }
 
 const DOCUMENTOS = [
   'Proforma', 'Fe de entrega', 'Exoneración de responsabilidad', 'Acuerdo de pago',
@@ -47,7 +47,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const data: ResumenEntregaData = {
     fecha: hoy,
-    ciudad: CIUDAD_CONCES[concId ?? 'la-oriental'] ?? 'Maturín',
+    ciudad: CIUDAD_CONCES[concId ?? 'jetplus'] ?? 'Porlamar',
     membrete: { nombre: c.nombre, rif: c.rif, direccion: c.direccion, telefono: c.telefono, correo: c.correo, logoSrc: c.logoSrc, colorPrimario: c.colorPrimario, colorSecundario: c.colorSecundario },
     numeroProforma: (pro.numero as string) ?? '',
     cliente: { nombre: (cli.nombre as string) ?? '', ciRif: (cli.cedula_rif as string) ?? '' },

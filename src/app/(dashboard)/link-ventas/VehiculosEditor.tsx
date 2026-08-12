@@ -473,11 +473,11 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
     } catch { /* silencioso: no bloquea el guardado */ }
   }
 
-  // Empuja el catálogo de La Oriental (precios, gastos, cuotas, tasas, IGTF,
+  // Empuja el catálogo de Jetplus (precios, gastos, cuotas, tasas, IGTF,
   // specs e imágenes) a los concesionarios aliados configurados. NO toca el
   // stock de cada aliado. Empareja por marca+modelo (los id son distintos).
   async function sincronizarAliados() {
-    if (!confirm('Se copiará el catálogo de La Oriental (precios, gastos, cuotas, tasas e IGTF) a los concesionarios aliados configurados.\n\nEl stock/inventario de cada aliado NO se modifica. ¿Continuar?')) return
+    if (!confirm('Se copiará el catálogo de Jetplus (precios, gastos, cuotas, tasas e IGTF) a los concesionarios aliados configurados.\n\nEl stock/inventario de cada aliado NO se modifica. ¿Continuar?')) return
     setSyncAliados(true)
     try {
       // Empuja también el AC500 (Asegúrate $500) para que quede igual en todos.

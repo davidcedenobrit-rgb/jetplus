@@ -715,7 +715,7 @@ export default function ActionButtons({
     crypto.getRandomValues(buf)
     const seq = String(buf[0] % 1_000_000).padStart(6, '0')
     await supabase.from('egresos').insert({
-      numero_egreso: `LOA-EGR-${year}-${seq}`,
+      numero_egreso: `JPLUS-EGR-${year}-${seq}`,
       categoria: 'vehimotors',
       concepto: `Depósito a Vehimotors — ${numeroRecibo}`,
       monto,

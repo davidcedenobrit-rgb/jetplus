@@ -94,7 +94,7 @@ export default function CuestionarioForm({ modo = 'token', token, vencido = fals
           <div style={{ fontSize: 52, marginBottom: 14 }}>✅</div>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 8px' }}>¡Gracias, {f.nombre.split(' ')[0]}!</h1>
           <p style={{ color: '#9ca3af', fontSize: 15, margin: 0 }}>
-            Tu descripción de cargo fue enviada a La Oriental. No necesitas hacer nada más.
+            Tu descripción de cargo fue enviada a Jetplus. No necesitas hacer nada más.
           </p>
         </div>
       </div>
@@ -105,9 +105,9 @@ export default function CuestionarioForm({ modo = 'token', token, vencido = fals
     <div style={{ minHeight: '100vh', background: '#f3f4f6', fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Header */}
       <div style={{ background: '#C41E3A', padding: '28px 20px', textAlign: 'center' }}>
-        <img src={LOGO} alt="La Oriental" style={{ height: 40, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+        <img src={LOGO} alt="JETPLUS" style={{ height: 40, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
         <p style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: '14px 0 2px' }}>Descripción de Cargo</p>
-        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0 }}>La Oriental Automotors · MG &amp; MAXUS</p>
+        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0 }}>JETPLUS · MG &amp; MAXUS</p>
       </div>
 
       <div style={{ maxWidth: 620, margin: '0 auto', padding: '24px 16px 60px' }}>
@@ -115,7 +115,7 @@ export default function CuestionarioForm({ modo = 'token', token, vencido = fals
         {esPublico ? (
           <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
             <p style={{ margin: 0, fontSize: 13, color: '#1e40af', fontWeight: 600 }}>
-              👋 Completa tu descripción de cargo. Al enviarla, quedarás registrado en el sistema de La Oriental.
+              👋 Completa tu descripción de cargo. Al enviarla, quedarás registrado en el sistema de Jetplus.
             </p>
           </div>
         ) : (
@@ -158,7 +158,7 @@ export default function CuestionarioForm({ modo = 'token', token, vencido = fals
               </div>
               <div>
                 <label style={label}>Correo dentro de la empresa</label>
-                <input style={input} value={f.correoEmpresa} onChange={e => set('correoEmpresa', e.target.value)} placeholder="tu@laoriental.co" />
+                <input style={input} value={f.correoEmpresa} onChange={e => set('correoEmpresa', e.target.value)} placeholder="tu@navigroup.co" />
               </div>
             </div>
             <div>
@@ -241,7 +241,7 @@ export default function CuestionarioForm({ modo = 'token', token, vencido = fals
           {enviando ? 'Enviando…' : 'Enviar descripción de cargo'}
         </button>
         <p style={{ textAlign: 'center', fontSize: 11, color: '#9ca3af', marginTop: 16 }}>
-          Al enviar, tu descripción de cargo llegará al equipo de La Oriental.
+          Al enviar, tu descripción de cargo llegará al equipo de Jetplus.
         </p>
       </div>
     </div>

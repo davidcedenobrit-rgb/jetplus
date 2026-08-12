@@ -177,7 +177,7 @@ export default function NuevoPagoPortalPage() {
         <h1 className="text-xl font-black text-oriental-black mb-1">Pago reportado</h1>
         <p className="text-sm text-oriental-gray mb-1">Su comprobante: <span className="font-mono font-bold text-oriental-black">{exito.numero}</span></p>
         <p className="text-xs text-oriental-gray mb-8 max-w-xs">
-          El equipo de La Oriental ya recibió una notificación. Le confirmaremos cuando esté verificado.
+          El equipo de Jetplus ya recibió una notificación. Le confirmaremos cuando esté verificado.
         </p>
         <div className="flex flex-col gap-2 w-full max-w-xs">
           <Link href="/portal/pagos" className="px-5 py-3 bg-oriental-red text-white font-bold rounded-xl">Ver mis pagos</Link>
@@ -214,7 +214,7 @@ export default function NuevoPagoPortalPage() {
             <div>
               <p className="text-sm font-bold text-amber-800">No hay vehículos asignados a su cuenta</p>
               <p className="text-[11px] text-amber-700 mt-0.5">
-                Contacte al equipo de La Oriental para vincular su vehículo antes de reportar un pago.
+                Contacte al equipo de Jetplus para vincular su vehículo antes de reportar un pago.
               </p>
             </div>
           </div>
@@ -460,7 +460,7 @@ export default function NuevoPagoPortalPage() {
         </button>
 
         <p className="text-[11px] text-oriental-gray text-center px-4">
-          Al enviar, el equipo de La Oriental recibirá una notificación para verificar el pago.
+          Al enviar, el equipo de Jetplus recibirá una notificación para verificar el pago.
         </p>
       </div>
     </div>

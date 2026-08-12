@@ -7,9 +7,9 @@ import { registrarEnvioEmail, extraerResendId } from './email-tracking'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
-const FROM = 'La Oriental Automotors <cotizaciones@laoriental.co>'
-const ROJAS = 'rojasjgx@gmail.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
+const FROM = 'JETPLUS <cotizaciones@navigroup.co>'
+const ROJAS = 'davidcedenobrit@gmail.com'
 
 function fmt(n: number | null | undefined) {
   if (n == null) return '0,00'
@@ -17,7 +17,7 @@ function fmt(n: number | null | undefined) {
 }
 
 function logoUrl() {
-  return `${APP_URL}/logo-la-oriental-blanco.png`
+  return `${APP_URL}/logo-jetplus-blanco.png`
 }
 
 function headerHTML(empresa: string, conLogo: boolean) {
@@ -41,7 +41,7 @@ function footerHTML(empresa: string) {
   </div>`
 }
 
-function wrap(body: string, empresa = 'LA ORIENTAL AUTOMOTORS', conLogo = true) {
+function wrap(body: string, empresa = 'JETPLUS', conLogo = true) {
   return `<div style="background:#f3f4f6;padding:24px 16px">
     <div style="background:#fff;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
       ${headerHTML(empresa, conLogo)}
@@ -156,7 +156,7 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
     <div style="background:#fffbeb;border:1px solid rgba(234,179,8,0.3);border-radius:10px;padding:14px 18px;margin-bottom:20px">
       <p style="font-family:sans-serif;font-size:12px;color:#92400e;margin:0">
         💬 ¿Preguntas? Contáctanos directamente por
-        <a href="https://wa.me/584149989010" style="color:#92400e;font-weight:700">WhatsApp</a>
+        <a href="https://wa.me/584248705174" style="color:#92400e;font-weight:700">WhatsApp</a>
         o responde este correo.
       </p>
     </div>
@@ -164,9 +164,9 @@ export async function enviarCotizacionCliente(data: CotizacionPDFData, tokenResp
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;margin:0">* Precios referenciales sujetos a disponibilidad. Consulte con su asesor para confirmar.</p>
   `
 
-  const empresa = data.empresaNombre ?? 'LA ORIENTAL AUTOMOTORS'
+  const empresa = data.empresaNombre ?? 'JETPLUS'
   const esLaOriental = empresa.toUpperCase().includes('ORIENTAL')
-  const fromDinamico = `${empresa} <cotizaciones@laoriental.co>`
+  const fromDinamico = `${empresa} <cotizaciones@navigroup.co>`
   const asunto = `Cotización ${data.numero} — ${data.marca} ${data.modelo} · ${empresa}`
   const resendResult = await resend.emails.send({
     from: fromDinamico,

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Portal del Cliente · La Oriental Automotors',
+  title: 'Portal del Cliente · JETPLUS',
   description: 'Su vehículo, cuotas y servicios en un solo lugar',
 }
 

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 }
 
 function pageHTML(titulo: string, mensaje: string, ok: boolean) {
-  const logoUrl = `${APP_URL}/logo-la-oriental-blanco.png`
+  const logoUrl = `${APP_URL}/logo-jetplus-blanco.png`
   const color = ok ? '#16a34a' : '#C41E3A'
   const icon = ok
     ? `<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
@@ -69,17 +69,17 @@ function pageHTML(titulo: string, mensaje: string, ok: boolean) {
 
   return `<!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titulo} — La Oriental</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titulo} — Jetplus</title></head>
 <body style="margin:0;padding:40px 16px;background:#f9fafb;font-family:sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center">
   <div style="background:#fff;max-width:480px;width:100%;border-radius:16px;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.07)">
     <div style="background:#C41E3A;padding:24px 32px;text-align:center">
-      <img src="${logoUrl}" alt="La Oriental" style="height:44px;width:auto;display:inline-block" />
+      <img src="${logoUrl}" alt="JETPLUS" style="height:44px;width:auto;display:inline-block" />
     </div>
     <div style="padding:40px 32px;text-align:center">
       <div style="margin-bottom:20px">${icon}</div>
       <h1 style="font-size:22px;font-weight:800;color:#111;margin:0 0 12px">${titulo}</h1>
       <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 28px">${mensaje}</p>
-      <p style="font-size:12px;color:#9ca3af;margin:0">La Oriental Automotors · MG &amp; Maxus · Maturín, Venezuela</p>
+      <p style="font-size:12px;color:#9ca3af;margin:0">JETPLUS · MG &amp; Maxus · Porlamar, Venezuela</p>
     </div>
   </div>
 </body></html>`

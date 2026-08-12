@@ -102,7 +102,7 @@ const SECTIONS: NavSection[] = [
     icon: Boxes,
     links: [
       { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package, sub: [
-        { href: '/repuestos/almacen', label: 'Almacén La Oriental', icon: Warehouse },
+        { href: '/repuestos/almacen', label: 'Almacén Jetplus', icon: Warehouse },
         { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
         { href: '/repuestos/catalogo-plaza', label: 'Catálogo compra en plaza', icon: BookOpen },
         { href: '/repuestos/catalogo', label: 'Catálogo repuestos VM', icon: BookOpenCheck },
@@ -140,7 +140,6 @@ const SECTIONS: NavSection[] = [
     title: 'Sistema CDM',
     icon: Shield,
     links: [
-      { href: 'https://centrodemandokiauto.laoriental.co', label: 'Ir a Ki Auto', icon: Building2, emails: SUPER_ADMIN_EMAILS, external: true },
       { href: '/capital-motors', label: 'Capital Motors', icon: Building2, emails: SUPER_ADMIN_EMAILS },
       { href: '/contabilidad', label: 'Contabilidad', icon: BookOpenCheck, emails: SUPER_ADMIN_EMAILS },
       { href: '/importar',  label: 'Importar datos',   icon: Upload,     roles: DIR },
@@ -317,7 +316,7 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
             { href: '/tareas',     label: 'Tareas',             icon: ListChecks },
             { href: '/showroom',   label: 'Vehículo Showroom',  icon: Store },
             { href: '/repuestos',  label: 'Solicitudes a VM',   icon: Package },
-            { href: '/repuestos/almacen', label: 'Almacén La Oriental', icon: Warehouse },
+            { href: '/repuestos/almacen', label: 'Almacén Jetplus', icon: Warehouse },
             { href: '/repuestos/compra-plaza', label: 'Compra en plaza', icon: ShoppingBag },
           ]
           return tallerNav.map(({ href, label, icon: Icon }) => {

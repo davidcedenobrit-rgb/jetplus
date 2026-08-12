@@ -11,7 +11,7 @@ import { getConcesionarioIdentity } from '@/lib/concesionario'
 
 function getLogoBase64(): string {
   try {
-    const buf = readFileSync(join(process.cwd(), 'public', 'logo-la-oriental.png'))
+    const buf = readFileSync(join(process.cwd(), 'public', 'logo-jetplus.png'))
     return `data:image/png;base64,${buf.toString('base64')}`
   } catch {
     return 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
@@ -20,7 +20,7 @@ function getLogoBase64(): string {
 
 function getSelloBase64(): string | undefined {
   try {
-    const buf = readFileSync(join(process.cwd(), 'public', 'sello-la-oriental.jpeg'))
+    const buf = readFileSync(join(process.cwd(), 'public', 'sello-jetplus.jpeg'))
     return `data:image/jpeg;base64,${buf.toString('base64')}`
   } catch {
     return undefined
@@ -56,7 +56,7 @@ function buildEstructura(est: any) {
 }
 
 const planLabel: Record<string, string> = {
-  inicial_la_oriental: 'La Oriental',
+  inicial_la_oriental: 'Jetplus',
   financiamiento_vehimotors: 'Financiamiento Vehimotors',
   cuota_especial: 'Cuota Especial Vehimotors',
   asegurate_500: 'Asegúrate $500',
@@ -107,7 +107,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
   }
 
-  // Crédito de la INICIAL otorgado por La Oriental (acuerdo de gestión de cobro).
+  // Crédito de la INICIAL otorgado por Jetplus (acuerdo de gestión de cobro).
   // Es un compromiso aparte del crédito Vehimotor. Solo aplica cuando existe un
   // acuerdo aceptado ligado a la cotización de esta proforma.
   let acuerdoLaOriental: ProformaPDFData['acuerdoLaOriental'] = null
@@ -131,7 +131,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
   }
 
-  // Logo y sello: La Oriental usa los archivos locales; si la proforma nace de
+  // Logo y sello: Jetplus usa los archivos locales; si la proforma nace de
   // una cotización de otra sede, se usa el logo/sello de esa sede.
   let logoSrc: string = getLogoBase64()
   let selloSrc: string | undefined = getSelloBase64()

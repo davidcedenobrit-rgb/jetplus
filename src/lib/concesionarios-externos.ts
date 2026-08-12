@@ -8,7 +8,7 @@ export type ConcesionarioExterno = { key: string; label: string; url: string; se
 // Definición de TODOS los concesionarios del grupo. Cada uno se activa cuando su
 // URL + service key estén configuradas en el proyecto actual.
 const DEFINICIONES: { key: string; label: string; envUrl: string; envKey: string }[] = [
-  { key: 'la_oriental', label: 'La Oriental', envUrl: 'CONCESIONARIO_LAORIENTAL_URL', envKey: 'CONCESIONARIO_LAORIENTAL_SERVICE_KEY' },
+  { key: 'la_oriental', label: 'Jetplus', envUrl: 'CONCESIONARIO_LAORIENTAL_URL', envKey: 'CONCESIONARIO_LAORIENTAL_SERVICE_KEY' },
   { key: 'ki_auto', label: 'Ki Auto', envUrl: 'CONCESIONARIO_KIAUTO_URL', envKey: 'CONCESIONARIO_KIAUTO_SERVICE_KEY' },
   { key: 'autosurca', label: 'Autosurca', envUrl: 'CONCESIONARIO_AUTOSURCA_URL', envKey: 'CONCESIONARIO_AUTOSURCA_SERVICE_KEY' },
   { key: 'capital_motors', label: 'Capital Motors', envUrl: 'CONCESIONARIO_CAPITALMOTORS_URL', envKey: 'CONCESIONARIO_CAPITALMOTORS_SERVICE_KEY' },

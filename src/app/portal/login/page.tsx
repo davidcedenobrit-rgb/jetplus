@@ -40,7 +40,7 @@ export default function LoginPortalPage() {
           <span className="text-white font-black text-2xl">LO</span>
         </div>
         <h1 className="text-2xl font-black text-oriental-black tracking-tight">Portal del Cliente</h1>
-        <p className="text-sm text-oriental-gray mt-1">La Oriental Automotors</p>
+        <p className="text-sm text-oriental-gray mt-1">JETPLUS</p>
       </div>
 
       <div className="space-y-3">

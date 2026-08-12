@@ -2,23 +2,23 @@ import { Resend } from 'resend'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
-const FROM = 'La Oriental Automotors <corporativo@laoriental.co>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
+const FROM = 'JETPLUS <corporativo@navigroup.co>'
 
 // Destinatarios de la notificación cuando un empleado completa su cuestionario
-const CORREO_ROJAS = process.env.CORREO_ROJAS ?? 'rojasjgx@gmail.com'
-const CORREO_MARY = process.env.CORREO_MARY ?? 'marymarquez@gmail.com'
-const CORREO_LEYSDEM = process.env.CORREO_LEYSDEM ?? 'leysdm@gmail.com'
-const CORREO_CORPORATIVO = 'laorientalautomotorsc@gmail.com'
+const CORREO_ROJAS = process.env.CORREO_ROJAS ?? 'davidcedenobrit@gmail.com'
+const CORREO_MARY = process.env.CORREO_MARY ?? 'davidcedenobrit@gmail.com'
+const CORREO_LEYSDEM = process.env.CORREO_LEYSDEM ?? 'davidcedenobrit@gmail.com'
+const CORREO_CORPORATIVO = 'davidcedenobrit@gmail.com'
 
 function headerHTML() {
-  const logoUrl = `${APP_URL}/logo-la-oriental-blanco.png`
+  const logoUrl = `${APP_URL}/logo-jetplus-blanco.png`
   return `<div style="background:#C41E3A;padding:20px 32px;border-radius:12px 12px 0 0">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="vertical-align:middle"><img src="${logoUrl}" alt="La Oriental" style="height:44px;width:auto;display:block" /></td>
+      <td style="vertical-align:middle"><img src="${logoUrl}" alt="JETPLUS" style="height:44px;width:auto;display:block" /></td>
       <td style="padding-left:14px;vertical-align:middle">
-        <p style="margin:0;color:#fff;font-weight:800;font-size:15px;font-family:sans-serif">LA ORIENTAL AUTOMOTORS</p>
-        <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-family:sans-serif">MG &amp; MAXUS · Maturín, Venezuela</p>
+        <p style="margin:0;color:#fff;font-weight:800;font-size:15px;font-family:sans-serif">JETPLUS</p>
+        <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-family:sans-serif">MG &amp; MAXUS · Porlamar, Venezuela</p>
       </td>
     </tr></table>
   </div>`
@@ -26,7 +26,7 @@ function headerHTML() {
 
 function footerHTML() {
   return `<div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;border-radius:0 0 12px 12px;text-align:center">
-    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">La Oriental Automotors · Corporativo · Maturín, Venezuela</p>
+    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">JETPLUS · Corporativo · Porlamar, Venezuela</p>
   </div>`
 }
 

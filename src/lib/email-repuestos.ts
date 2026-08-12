@@ -3,7 +3,7 @@ import { registrarEnvioEmail, extraerResendId } from './email-tracking'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
 
 // ── Vehimotors (proveedor externo) ──────────────────────────────────
 const TO_VEHIMOTORS = [
@@ -12,17 +12,17 @@ const TO_VEHIMOTORS = [
   process.env.CORREO_VEHIMOTORS_3 ?? 'fdiaz@saicve.com',
 ]
 
-// ── La Oriental (equipo interno) ─────────────────────────────────────
-const CORREO_ROJAS   = process.env.CORREO_ROJAS   ?? 'rojasjgx@gmail.com'
-const CORREO_MARY    = process.env.CORREO_MARY    ?? 'laorientalautomotorsc@gmail.com'
-const CORREO_OPS     = process.env.CORREO_OPS     ?? 'repuestos.laoriental.mun@gmail.com'
+// ── Jetplus (equipo interno) ─────────────────────────────────────
+const CORREO_ROJAS   = process.env.CORREO_ROJAS   ?? 'davidcedenobrit@gmail.com'
+const CORREO_MARY    = process.env.CORREO_MARY    ?? 'davidcedenobrit@gmail.com'
+const CORREO_OPS     = process.env.CORREO_OPS     ?? 'davidcedenobrit@gmail.com'
 
 // Reciben cuando llega guía, confirmación de pago o recepción
 const EQUIPO_INTERNO = [CORREO_MARY, CORREO_ROJAS, CORREO_OPS]
 const EQUIPO_INTERNO_VISIBLE = [CORREO_MARY, CORREO_OPS]
 const BCC_ROJAS = [CORREO_ROJAS]
 
-const FROM = 'Repuestos La Oriental <repuestos@laoriental.co>'
+const FROM = 'Repuestos Jetplus <repuestos@navigroup.co>'
 
 // Helper: si VEHIMOTORS_TEST_OVERRIDE está seteada, redirige el correo a esa dirección
 // y agrega "[PRUEBA]" al subject. Útil para probar el flujo sin molestar a Vehimotors real.
@@ -50,19 +50,19 @@ function applyVMOverride<T extends { to: string[] | string; cc?: string[]; bcc?:
 export interface Item { descripcion: string; referencia?: string | null; cantidad: number }
 
 function headerHTML() {
-  const logoUrl = `${APP_URL}/logo-la-oriental-blanco.png`
+  const logoUrl = `${APP_URL}/logo-jetplus-blanco.png`
   return `<div style="background:#C41E3A;padding:20px 32px;border-radius:12px 12px 0 0">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="vertical-align:middle"><img src="${logoUrl}" alt="La Oriental Automotors" style="height:48px;width:auto;display:block" /></td>
+      <td style="vertical-align:middle"><img src="${logoUrl}" alt="JETPLUS" style="height:48px;width:auto;display:block" /></td>
       <td style="padding-left:14px;vertical-align:middle">
-        <p style="margin:0;color:#fff;font-weight:800;font-size:16px;font-family:sans-serif">LA ORIENTAL AUTOMOTORS</p>
-        <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px;font-family:sans-serif">MG & Maxus · Maturín, Venezuela</p>
+        <p style="margin:0;color:#fff;font-weight:800;font-size:16px;font-family:sans-serif">JETPLUS</p>
+        <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px;font-family:sans-serif">MG & Maxus · Porlamar, Venezuela</p>
       </td></tr></table></div>`
 }
 
 function footerHTML() {
   return `<div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 32px;border-radius:0 0 12px 12px;text-align:center">
-    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">La Oriental Automotors · MG & Maxus · Maturín, Venezuela</p></div>`
+    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">JETPLUS · MG & Maxus · Porlamar, Venezuela</p></div>`
 }
 
 function itemsTable(items: Item[]) {
@@ -116,7 +116,7 @@ export async function enviarSolicitudCotizacion(opts: {
   const bcc      = destinatariosOverride ? undefined : BCC_ROJAS
   const replyTo  = destinatariosOverride ?? EQUIPO_INTERNO
 
-  const overrideOpts = applyVMOverride({ to, cc, bcc, replyTo, subject: `Solicitud de cotización ${numero} — La Oriental Automotors` })
+  const overrideOpts = applyVMOverride({ to, cc, bcc, replyTo, subject: `Solicitud de cotización ${numero} — JETPLUS` })
   const result = await getResend().emails.send({ from: FROM, ...overrideOpts, html: wrap(body) })
   if ((result as any).error) {
     throw new Error(`Resend error: ${(result as any).error.message ?? (result as any).error.name ?? 'desconocido'}`)
@@ -196,7 +196,7 @@ export async function enviarAprobacionCotizacion(opts: {
 
   const asuntoAprobacion = numeroCotizacion
     ? `Cotización ${numeroCotizacion} aprobada de ${numero}`
-    : `✅ Cotización aprobada ${numero} — La Oriental Automotors`
+    : `✅ Cotización aprobada ${numero} — JETPLUS`
 
   return getResend().emails.send({ from: FROM, ...applyVMOverride({ to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asuntoAprobacion }), html: wrap(body) })
 }
@@ -243,7 +243,7 @@ export async function enviarReporteRecepcion(opts: {
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 24px">El pedido <strong>${numero}</strong> fue recibido en nuestro taller en perfectas condiciones. Sin novedades. Gracias.</p>`
 
   const asunto = tieneNovedad
-    ? `⚠️ Novedad en pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} — La Oriental Automotors`
+    ? `⚠️ Novedad en pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} — JETPLUS`
     : `✅ Pedido ${numero}${numeroCotizacion ? ` de la cotización ${numeroCotizacion}` : ''} recibido sin novedad`
 
   return getResend().emails.send({ from: FROM, ...applyVMOverride({ to: TO_VEHIMOTORS, cc: EQUIPO_INTERNO, replyTo: EQUIPO_INTERNO, subject: asunto }), html: wrap(body) })
@@ -369,7 +369,7 @@ export async function enviarCorreosPrueba(testTo: string[], soloVhm = false) {
   const numero      = 'SORE-2026-PRUEBA'
   const fakeSA      = 'SA03789'
   const fakeId      = 'test-solicitud-id'
-  const fakeFileUrl = `${APP_URL}/logo-la-oriental-blanco.png`
+  const fakeFileUrl = `${APP_URL}/logo-jetplus-blanco.png`
   const items: Item[] = [
     { descripcion: 'Filtro de aceite MG ZS 1.5T',          referencia: 'LQJ100U8250A', cantidad: 2 },
     { descripcion: 'Pastillas freno delanteras Maxus T60',  referencia: 'MCB-T60-D22',  cantidad: 1 },
@@ -388,7 +388,7 @@ export async function enviarCorreosPrueba(testTo: string[], soloVhm = false) {
   }
 
   // 1 — Solicitud a Vehimotors
-  await send(`Solicitud de cotización ${numero} — La Oriental Automotors`, wrap(`
+  await send(`Solicitud de cotización ${numero} — JETPLUS`, wrap(`
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#C41E3A;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Solicitud de Cotización</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 6px">Repuestos — ${numero}</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 24px">Por favor indíquenos disponibilidad y precios para los siguientes repuestos:</p>
@@ -502,7 +502,7 @@ export async function enviarCorreosPrueba(testTo: string[], soloVhm = false) {
     <p style="font-family:sans-serif;font-size:12px;color:#9ca3af;text-align:center;margin-top:16px"><em>[Destino real: Vehimotors × 3 + CC equipo interno]</em></p>`), true)
 
   // 9b — Recepción con novedad → Vehimotors
-  await send(`⚠️ Novedad en pedido ${numero} de la cotización ${fakeSA} — La Oriental Automotors`, wrap(`
+  await send(`⚠️ Novedad en pedido ${numero} de la cotización ${fakeSA} — JETPLUS`, wrap(`
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#d97706;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Recepción</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 16px">⚠️ Novedad en pedido — ${numero}</h1>
     <p style="font-family:sans-serif;font-size:14px;color:#374151;margin:0 0 16px">Se reporta una novedad en la recepción de <strong>${numero}</strong>.</p>

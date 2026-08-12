@@ -159,7 +159,7 @@ export default async function IngresosPage({
       {(totPropio > 0 || totCustodia > 0) && (
         <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 mb-5 max-w-xl">
           <div className="card p-4">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-green-700">Ingreso propio (La Oriental)</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-green-700">Ingreso propio (Jetplus)</p>
             <p className="text-xl font-black text-oriental-black">${fmtUsd(totPropio)}</p>
           </div>
           <div className={`card p-4 ${totCustodia > 0 ? 'border-amber-200 bg-amber-50/40' : ''}`}>

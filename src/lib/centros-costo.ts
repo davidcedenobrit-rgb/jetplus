@@ -1,4 +1,4 @@
-// Centro de costo "Vehimotors": dinero que NO es de La Oriental (cuotas de
+// Centro de costo "Vehimotors": dinero que NO es de Jetplus (cuotas de
 // crédito Vehimotors y cuotas mensuales del plan Asegúrate $500 después de la
 // reserva). Solo se reporta a Vehimotors; no cuenta como ingreso propio.
 
@@ -22,7 +22,7 @@ export function centroSugerido(
   numeroCuota: number | null | undefined,
 ): { centro: string | null; titular: TitularFondos | null; etiqueta: string } {
   if (!planTipo) return { centro: null, titular: null, etiqueta: 'Sin crédito ligado' }
-  if (planTipo === 'inicial_la_oriental') return { centro: CENTRO_VENTAS, titular: 'propio', etiqueta: 'Inicial La Oriental' }
+  if (planTipo === 'inicial_la_oriental') return { centro: CENTRO_VENTAS, titular: 'propio', etiqueta: 'Inicial Jetplus' }
   if (planTipo === 'asegurate_500') {
     return Number(numeroCuota) === 0
       ? { centro: CENTRO_VENTAS, titular: 'propio', etiqueta: 'Reserva $500 (AC500)' }
@@ -33,7 +33,7 @@ export function centroSugerido(
   return { centro: null, titular: null, etiqueta: planTipo }
 }
 
-// ¿Una cuota es "cobrable por La Oriental"? (para cuentas por cobrar / cartera)
+// ¿Una cuota es "cobrable por Jetplus"? (para cuentas por cobrar / cartera)
 // Excluye las cuotas de Vehimotors y las mensuales de AC500 (solo la reserva
 // $500 —cuota 0— es nuestra).
 export function cuotaEsPropia(planTipo: string | null | undefined, numeroCuota: number | null | undefined): boolean {

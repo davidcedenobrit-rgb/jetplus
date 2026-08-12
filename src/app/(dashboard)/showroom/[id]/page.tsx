@@ -13,7 +13,7 @@ import InspeccionesVehiculo from './InspeccionesVehiculo'
 import AsignarClienteAC500 from './AsignarClienteAC500'
 
 const PASOS = [
-  { key: 'llegada',        label: 'Recibido',         desc: 'Vehículo llegó a La Oriental' },
+  { key: 'llegada',        label: 'Recibido',         desc: 'Vehículo llegó a Jetplus' },
   { key: 'por_enviar_pdi', label: 'Por enviar a taller', desc: 'Pendiente de ir al taller' },
   { key: 'en_taller',      label: 'En taller',        desc: 'Realizando PDI' },
   { key: 'en_agencia',     label: 'En agencia',       desc: 'Disponible para venta' },
@@ -360,23 +360,13 @@ export default async function ShowroomDetailPage({ params }: { params: Promise<{
           )}
 
           {/* Info de salida (si aplica) */}
-          {v.estado === 'vendido' && ((v as any).transferido_a || (v as any).vendido_por_aliado) && (
+          {v.estado === 'vendido' && (v as any).transferido_a && (
             <div className="card p-4 border border-gray-200">
               <p className="text-[10px] font-bold text-oriental-gray uppercase tracking-wider mb-2">Salida del vehículo</p>
-              {(v as any).transferido_a && (
-                <div className="text-sm">
-                  <p className="text-xs text-oriental-gray">Transferido a</p>
-                  <p className="font-semibold text-oriental-black">{(v as any).transferido_a}</p>
-                </div>
-              )}
-              {(v as any).vendido_por_aliado && (
-                <div className="text-sm mt-2">
-                  <p className="text-xs text-oriental-gray">Vendido por</p>
-                  <p className="font-semibold text-purple-800">
-                    {(v as any).vendido_por_aliado === 'ki_auto' ? 'Ki Auto' : 'Autosurca'}
-                  </p>
-                </div>
-              )}
+              <div className="text-sm">
+                <p className="text-xs text-oriental-gray">Transferido a</p>
+                <p className="font-semibold text-oriental-black">{(v as any).transferido_a}</p>
+              </div>
             </div>
           )}
 

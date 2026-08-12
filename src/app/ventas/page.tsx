@@ -16,7 +16,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   // El branding (concesionarios) y las claves públicas de config tienen política
   // de lectura pública, así que se leen con el cliente anónimo. Esto asegura que
   // cada sede muestre SU marca/ciudad aunque el service key del deploy no esté
-  // bien configurado (antes, si fallaba, el branding caía a La Oriental).
+  // bien configurado (antes, si fallaba, el branding caía a Jetplus).
   const sp = await searchParams
   const evento = String(sp?.evento ?? '').slice(0, 80)
 
@@ -42,21 +42,21 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
     usdt: Number(cfg('tasa_usdt')) || 0,
   }
   // WhatsApp corporativo (configurable por base; cae al número por defecto).
-  const waCorp = cfg('wa_corporativo').replace(/\D/g, '') || '584149989010'
+  const waCorp = cfg('wa_corporativo').replace(/\D/g, '') || '584248705174'
   const concesionario = cfg('concesionario_id') || conc?.id || ''
 
   // Branding del link de ventas, tomado del concesionario principal de la base
-  // (Ki Auto en su base, La Oriental en la suya). Cae a los valores de La Oriental.
+  // (Ki Auto en su base, Jetplus en la suya). Cae a los valores de Jetplus.
   const personalizado = !!(conc?.nombre_comercial || conc?.ciudad)
   const brand = {
-    nombre: conc?.nombre_comercial || 'La Oriental Automotors',
+    nombre: conc?.nombre_comercial || 'JETPLUS',
     ciudad: conc?.ciudad || 'Maturín',
     estado: conc?.estado || 'Estado Monagas',
     wa: waCorp,
-    // Marca personalizada → su logo (o ninguno); marca por defecto → logo de La Oriental.
+    // Marca personalizada → su logo (o ninguno); marca por defecto → logo de Jetplus.
     logo: conc?.logo_url || (personalizado ? '' : LOGO),
     // Colores del concesionario para el membrete de la imagen compartible
-    // (rojo + negro de La Oriental por defecto; cada base puede sobreescribir).
+    // (rojo + negro de Jetplus por defecto; cada base puede sobreescribir).
     colorPrimario: conc?.color_primario || '#C41E3A',
     colorSecundario: conc?.color_secundario || '#111827',
   }

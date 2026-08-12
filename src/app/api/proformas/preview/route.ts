@@ -9,7 +9,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100
 
 // Arma el PREVIEW de los montos con que quedará la proforma (mismos números
 // que usa /desde-cotizacion) + el desglose del acuerdo de cobro (inicial que
-// paga el cliente vs. lo que financia La Oriental). Read + edit en el modal.
+// paga el cliente vs. lo que financia Jetplus). Read + edit en el modal.
 export async function GET(req: Request) {
   const auth = await createClient()
   const { data: { user } } = await auth.auth.getUser()

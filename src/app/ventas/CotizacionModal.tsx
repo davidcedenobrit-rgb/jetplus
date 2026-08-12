@@ -6,7 +6,7 @@ import { waCotizacionUrl } from '@/lib/whatsapp-cotizacion'
 type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
 
 const CONCES_CORTO: Record<string, string> = {
-  'la-oriental': 'La Oriental', 'autosurca': 'Autosurca', 'capital-motors': 'Capital Motors', 'kiauto': 'Ki Auto',
+  'la-oriental': 'Jetplus', 'autosurca': 'Autosurca', 'capital-motors': 'Capital Motors', 'kiauto': 'Ki Auto',
 }
 
 interface Vehiculo {
@@ -100,7 +100,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   // ¿La cotización se envió al cliente o solo se guardó? (para el mensaje final)
   const [fueEnviada, setFueEnviada] = useState(true)
 
-  // Concesionario — solo el código de la casa (R000) puede elegir; el resto va a La Oriental
+  // Concesionario — solo el código de la casa (R000) puede elegir; el resto va a Jetplus
   const esCasa = pin.trim().toUpperCase() === 'R000'
   const [concesionarios, setConcesionarios] = useState<{ id: string; nombre: string; es_principal: boolean }[]>([])
   const [concesionarioId, setConcesionarioId] = useState('la-oriental')

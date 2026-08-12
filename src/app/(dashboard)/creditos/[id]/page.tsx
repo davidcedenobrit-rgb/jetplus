@@ -14,7 +14,7 @@ import LetrasCambioButton from '@/components/LetrasCambioButton'
 const ROL_DIRECTOR = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 const planLabel = (tipo: string | null) =>
-  tipo === 'inicial_la_oriental' ? 'La Oriental' :
+  tipo === 'inicial_la_oriental' ? 'Jetplus' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
   tipo === 'cuota_especial' ? 'Cuota Especial Vehimotors' :
   tipo === 'asegurate_500' ? 'Asegúrate $500' :
@@ -87,7 +87,7 @@ export default async function CreditoDetallePage({
     .from('creditos')
     .select('*')
     .eq('vehiculo_id', credito.vehiculo_id)
-    .order('plan_tipo') // La Oriental primero, luego Vehimotors
+    .order('plan_tipo') // Jetplus primero, luego Vehimotors
 
   const creditos = todosCreditos ?? [credito]
 
@@ -400,7 +400,7 @@ export default async function CreditoDetallePage({
             </div>
           )}
 
-          {/* Documentos del crédito — Letras de cambio del crédito Inicial La Oriental */}
+          {/* Documentos del crédito — Letras de cambio del crédito Inicial Jetplus */}
           {(() => {
             const creditoOriental = creditos.find((c: any) => c.plan_tipo === 'inicial_la_oriental')
             if (!creditoOriental) return null
@@ -408,7 +408,7 @@ export default async function CreditoDetallePage({
               <div className="card p-6 border-2 border-purple-100 bg-purple-50/30">
                 <h2 className="font-bold text-oriental-black mb-1 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-purple-500" />
-                  Documentos del crédito · Inicial La Oriental
+                  Documentos del crédito · Inicial Jetplus
                 </h2>
                 <p className="text-xs text-oriental-gray mb-3">
                   Genera el aval legal firmado por el cliente con una letra por cada cuota del crédito.
@@ -837,11 +837,11 @@ export default async function CreditoDetallePage({
         {/* ── Encabezado empresa ── */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '3px solid #E8001D', paddingBottom: '14px', marginBottom: '18px' }}>
           <div>
-            <img src="/logo-la-oriental.jpg" alt="La Oriental Automotors" style={{ height: '56px', objectFit: 'contain', display: 'block' }} />
+            <img src="/logo-jetplus.jpg" alt="JETPLUS" style={{ height: '56px', objectFit: 'contain', display: 'block' }} />
             <p style={{ fontSize: '10px', color: '#666', marginTop: '6px', lineHeight: '1.6' }}>
               Av. Ugarte Pelayo c/c Av. Bicentenario, Edif. El Parque, Local Nro. 1<br />
               Maturín, Estado Monagas — Venezuela<br />
-              RIF: J-505692143
+              RIF: J-50372874-4
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -1011,14 +1011,14 @@ export default async function CreditoDetallePage({
           <div style={{ flex: 1 }}>
             <div style={{ borderTop: '1px solid #111', width: '220px', paddingTop: '6px', marginTop: '40px' }}>
               <p style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>Firma Autorizada</p>
-              <p style={{ fontSize: '9px', color: '#888' }}>La Oriental Automotors S.C.A.</p>
+              <p style={{ fontSize: '9px', color: '#888' }}>JETPLUS</p>
             </div>
           </div>
           {/* Sello */}
           <div style={{ position: 'relative', width: '110px', height: '110px', flexShrink: 0 }}>
             <img
-              src="/sello-la-oriental.jpeg"
-              alt="Sello La Oriental"
+              src="/sello-jetplus.jpeg"
+              alt="Sello JETPLUS"
               style={{ width: '110px', height: '110px', objectFit: 'contain', mixBlendMode: 'multiply', opacity: 0.85 }}
             />
           </div>
@@ -1027,7 +1027,7 @@ export default async function CreditoDetallePage({
         {/* ── Footer ── */}
         <div style={{ marginTop: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '10px', textAlign: 'center' }}>
           <p style={{ fontSize: '9px', color: '#aaa' }}>
-            La Oriental Automotors S.C.A. · RIF: J-505692143 · Maturín, Venezuela · Documento generado el {fechaImpresion}
+            JETPLUS · RIF: J-50372874-4 · Porlamar, Venezuela · Documento generado el {fechaImpresion}
           </p>
         </div>
 

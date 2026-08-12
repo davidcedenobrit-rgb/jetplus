@@ -32,7 +32,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     : (cot?.vendedora_nombre ?? '')
 
   // Membrete dinámico: usa la identidad (nombre, RIF, logo, sello) de la agencia
-  // de donde proviene la cotización. Si no hay, cae en La Oriental.
+  // de donde proviene la cotización. Si no hay, cae en Jetplus.
   const conces = await getConcesionarioIdentity(admin, cot?.concesionario_id ?? null)
 
   const data: AcuerdoCobroData = {

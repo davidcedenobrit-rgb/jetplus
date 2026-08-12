@@ -6,7 +6,7 @@ const MESES = ['', 'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO
 // Arma los datos del comprobante de retención de IVA a partir de un egreso.
 // `admin` es un cliente de Supabase con service role.
 export async function buildComprobanteData(admin: any, egreso: any): Promise<ComprobanteRetencionData> {
-  const { data: conc } = await admin.from('concesionarios').select('nombre, rif, direccion').eq('id', 'la-oriental').maybeSingle()
+  const { data: conc } = await admin.from('concesionarios').select('nombre, rif, direccion').eq('id', 'jetplus').maybeSingle()
 
   let sujetoNombre = egreso.beneficiario ?? '—'
   let sujetoRif = egreso.cedula_rif_benef ?? '—'
@@ -30,7 +30,7 @@ export async function buildComprobanteData(admin: any, egreso: any): Promise<Com
     fechaEmision: egreso.ret_iva_fecha_emision ?? egreso.fecha_egreso,
     periodoAnio: periodo.slice(0, 4),
     periodoMes: `${String(mesNum || 0).padStart(2, '0')} - ${MESES[mesNum] ?? ''}`,
-    agenteNombre: conc?.nombre ?? 'LA ORIENTAL AUTOMOTORS, C.A.',
+    agenteNombre: conc?.nombre ?? 'JETPLUS',
     agenteRif: conc?.rif ?? '',
     agenteDireccion: (conc?.direccion ?? '').replace(/\n/g, ' '),
     sujetoNombre,

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { listaConcesionariosExternos } from '@/lib/concesionarios-externos'
 
-// Empuja los planes "Asegúrate con $500" (ac500_vehiculos) de La Oriental a los
+// Empuja los planes "Asegúrate con $500" (ac500_vehiculos) de Jetplus a los
 // concesionarios aliados. Igual que /api/catalogo/sincronizar pero para AC500.
 // Se dispara automáticamente cuando Rojas edita un plan (con { id }) y también
 // desde el botón "Sincronizar a aliados" (sin id = todo el AC500).
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   if (soloId) origenQuery = origenDb.from('ac500_vehiculos').select('*').eq('id', soloId)
   const { data: origen, error: origenErr } = await origenQuery
   if (origenErr || !origen) {
-    return NextResponse.json({ error: `No se pudo leer el AC500 de La Oriental: ${origenErr?.message ?? 'desconocido'}` }, { status: 500 })
+    return NextResponse.json({ error: `No se pudo leer el AC500 de Jetplus: ${origenErr?.message ?? 'desconocido'}` }, { status: 500 })
   }
 
   const resultados: Array<{ aliado: string; actualizados: number; insertados: number; error?: string }> = []

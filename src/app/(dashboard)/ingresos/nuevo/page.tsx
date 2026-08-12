@@ -34,7 +34,7 @@ const CONCEPTOS = [
 ]
 
 const planLabel = (tipo: string | null) =>
-  tipo === 'inicial_la_oriental' ? 'La Oriental' :
+  tipo === 'inicial_la_oriental' ? 'Jetplus' :
   tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
   tipo === 'cuota_especial' ? 'Cuota Especial' : 'Crédito'
 
@@ -46,7 +46,7 @@ const planBadgeClass = (tipo: string | null) =>
   tipo === 'financiamiento_vehimotors' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' :
   'text-gray-600 bg-gray-50 border-gray-200'
 
-// La Oriental primero (0), Vehimotors segundo (1), resto al final (2)
+// Jetplus primero (0), Vehimotors segundo (1), resto al final (2)
 const planPriority = (tipo: string | null) =>
   tipo === 'inicial_la_oriental' ? 0 :
   tipo === 'financiamiento_vehimotors' ? 1 : 2
@@ -287,7 +287,7 @@ function NuevoIngresoPageInner() {
     const grupos: GrupoVehiculo[] = vehiculosConCredito
       .map((vehiculo: any) => {
         const creditosVeh = (creditosPorVehiculo.get(vehiculo.id) ?? [])
-          // La Oriental primero, Vehimotors después
+          // Jetplus primero, Vehimotors después
           .sort((a: any, b: any) => planPriority(a.plan_tipo) - planPriority(b.plan_tipo))
         return {
           vehiculo,
@@ -347,7 +347,7 @@ function NuevoIngresoPageInner() {
         setCuotasSeleccionadas(seleccionadas)
       } else {
         // Cliente al día → pre-seleccionar la próxima cuota de CADA crédito
-        // Orden: La Oriental primero (planPriority 0), Vehimotors (1), luego por fecha
+        // Orden: Jetplus primero (planPriority 0), Vehimotors (1), luego por fecha
         const proximas = new Set<string>()
         const pendientesPorCredito = new Map<string, any>()
         const ordenadas = [...cuotasEnriquecidas].sort((a: any, b: any) => {
@@ -441,7 +441,7 @@ function NuevoIngresoPageInner() {
     }
   }, [totalCuotasSeleccionadas])
 
-  // ── Aviso informativo: vencidas y próximas (una por crédito, La Oriental primero) ──
+  // ── Aviso informativo: vencidas y próximas (una por crédito, Jetplus primero) ──
   const cuotasVencidasInfo = useMemo(() => {
     const hoyStr = new Date().toISOString().split('T')[0]
     return todasLasCuotas
@@ -456,7 +456,7 @@ function NuevoIngresoPageInner() {
     const futuras = todasLasCuotas
       .filter(c => c.fecha_vencimiento >= hoyStr)
       .sort((a, b) => {
-        // La Oriental primero, luego por fecha
+        // Jetplus primero, luego por fecha
         const pA = planPriority(a._credito?.plan_tipo)
         const pB = planPriority(b._credito?.plan_tipo)
         if (pA !== pB) return pA - pB
@@ -1148,7 +1148,7 @@ function NuevoIngresoPageInner() {
               <label className="label">¿De quién es este dinero?</label>
               <div className="flex flex-wrap gap-2">
                 {([
-                  { v: 'propio', label: 'Propio (La Oriental)' },
+                  { v: 'propio', label: 'Propio (Jetplus)' },
                   { v: 'vehimotors', label: 'Vehimotors (custodia)' },
                   { v: 'tercero', label: 'Otro tercero' },
                 ] as const).map(o => (

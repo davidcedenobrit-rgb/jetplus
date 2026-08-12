@@ -4,14 +4,14 @@ import { Resend } from 'resend'
 
 const TEST_SECRET = process.env.TEST_EMAIL_SECRET ?? 'prueba-sore-2026'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
 
-const CORREO_ROJAS = process.env.CORREO_ROJAS ?? 'rojasjgx@gmail.com'
-const CORREO_MARY  = process.env.CORREO_MARY  ?? 'laorientalautomotorsc@gmail.com'
-const CORREO_OPS   = process.env.CORREO_OPS   ?? 'repuestos.laoriental.mun@gmail.com'
+const CORREO_ROJAS = process.env.CORREO_ROJAS ?? 'davidcedenobrit@gmail.com'
+const CORREO_MARY  = process.env.CORREO_MARY  ?? 'davidcedenobrit@gmail.com'
+const CORREO_OPS   = process.env.CORREO_OPS   ?? 'davidcedenobrit@gmail.com'
 
 const EQUIPO_INTERNO = [CORREO_MARY, CORREO_ROJAS, CORREO_OPS]
-const FROM = 'Repuestos La Oriental <repuestos@laoriental.co>'
+const FROM = 'Repuestos Jetplus <repuestos@navigroup.co>'
 
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get('s')
@@ -27,15 +27,15 @@ export async function GET(req: NextRequest) {
   const resend = new Resend(process.env.RESEND_API_KEY!)
   const numero = `SORE-PRUEBA-${Date.now().toString().slice(-4)}`
 
-  const logoUrl = `${APP_URL}/logo-la-oriental-blanco.png`
+  const logoUrl = `${APP_URL}/logo-jetplus-blanco.png`
 
   const html = `<div style="background:#fff;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;font-family:sans-serif">
     <div style="background:#C41E3A;padding:20px 32px">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td style="vertical-align:middle"><img src="${logoUrl}" alt="La Oriental Automotors" style="height:48px;width:auto;display:block" /></td>
+        <td style="vertical-align:middle"><img src="${logoUrl}" alt="JETPLUS" style="height:48px;width:auto;display:block" /></td>
         <td style="padding-left:14px;vertical-align:middle">
-          <p style="margin:0;color:#fff;font-weight:800;font-size:16px">LA ORIENTAL AUTOMOTORS</p>
-          <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px">MG &amp; Maxus · Maturín, Venezuela</p>
+          <p style="margin:0;color:#fff;font-weight:800;font-size:16px">JETPLUS</p>
+          <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px">MG &amp; Maxus · Porlamar, Venezuela</p>
         </td></tr></table>
     </div>
     <div style="padding:32px">
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-bottom:18px">
         <p style="font-size:13px;font-weight:700;color:#991b1b;margin:0 0 6px">❌ Lo incorrecto (lo que estaba pasando antes):</p>
-        <p style="font-size:14px;color:#7f1d1d;margin:0">Si la respuesta va a <code>repuestos@laoriental.co</code> (centro de mando), el Reply-To no se aplicó correctamente.</p>
+        <p style="font-size:14px;color:#7f1d1d;margin:0">Si la respuesta va a <code>repuestos@navigroup.co</code> (centro de mando), el Reply-To no se aplicó correctamente.</p>
       </div>
 
       <p style="font-size:13px;color:#6b7280;margin:18px 0 0">
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
       </p>
     </div>
     <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 32px;text-align:center">
-      <p style="margin:0;color:#9ca3af;font-size:11px">La Oriental Automotors · Correo de prueba — ${new Date().toLocaleString('es-VE')}</p>
+      <p style="margin:0;color:#9ca3af;font-size:11px">JETPLUS · Correo de prueba — ${new Date().toLocaleString('es-VE')}</p>
     </div>
   </div>`
 
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       from: FROM,
       to,
       replyTo: EQUIPO_INTERNO,
-      subject: `🧪 Prueba Reply-To — Solicitud ${numero} — La Oriental Automotors`,
+      subject: `🧪 Prueba Reply-To — Solicitud ${numero} — JETPLUS`,
       html,
     })
 
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       destinatario: to,
       from: FROM,
       replyTo: EQUIPO_INTERNO,
-      instrucciones: 'Abre el correo en tu Gmail/Outlook y dale "Responder". El campo "Para:" debe llenarse con los correos del equipo interno, NO con repuestos@laoriental.co.',
+      instrucciones: 'Abre el correo en tu Gmail/Outlook y dale "Responder". El campo "Para:" debe llenarse con los correos del equipo interno, NO con repuestos@navigroup.co.',
       resend_id: (result as any)?.data?.id ?? null,
     })
   } catch (e: any) {

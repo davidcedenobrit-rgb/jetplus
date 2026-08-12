@@ -90,7 +90,7 @@ export default function CuentasPage() {
     const d = (new Date(c.fecha_limite + 'T00:00:00').getTime() - new Date(hoy + 'T00:00:00').getTime()) / 86400000
     return d <= 7
   }).length
-  // Cada cuota se clasifica en "propia" (cobrable por La Oriental) o de
+  // Cada cuota se clasifica en "propia" (cobrable por Jetplus) o de
   // Vehimotors (fondos de terceros: financiamiento Vehimotors y mensuales AC500).
   const cxc = cuotas.map(c => {
     const saldo = Math.max(0, c.monto - (c.monto_pagado ?? 0))
@@ -148,14 +148,14 @@ export default function CuentasPage() {
           </p>
         </div>
         <div className="card p-5">
-          <div className="flex items-center gap-2 text-green-700 mb-1"><TrendingUp size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por cobrar La Oriental</p></div>
+          <div className="flex items-center gap-2 text-green-700 mb-1"><TrendingUp size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por cobrar Jetplus</p></div>
           <p className="text-2xl font-bold text-oriental-black">${fmt(porCobrarOriental)}</p>
           <p className="text-[11px] text-oriental-gray mt-1">{orientalCuotas.length} cuotas propias</p>
         </div>
         <div className="card p-5 bg-amber-50 border-amber-200">
           <div className="flex items-center gap-2 text-amber-700 mb-1"><TrendingUp size={16} /><p className="text-xs uppercase tracking-wider font-semibold">Por cobrar Vehimotors</p></div>
           <p className="text-2xl font-bold text-amber-800">${fmt(porCobrarVehimotors)}</p>
-          <p className="text-[11px] text-oriental-gray mt-1">{vehimotorsCuotas.length} cuotas de terceros (no es de La Oriental)</p>
+          <p className="text-[11px] text-oriental-gray mt-1">{vehimotorsCuotas.length} cuotas de terceros (no es de Jetplus)</p>
         </div>
       </div>
 
@@ -175,10 +175,10 @@ export default function CuentasPage() {
         <CuentasPorPagarTab items={cxp} reload={cargar} />
       ) : (
         <>
-        {/* Selector de titular: cuentas por cobrar de La Oriental vs de Vehimotors */}
+        {/* Selector de titular: cuentas por cobrar de Jetplus vs de Vehimotors */}
         <div className="flex items-center gap-2 mb-4">
           <button onClick={() => setTitular('oriental')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${titular === 'oriental' ? 'bg-green-700 text-white border-green-700' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
-            La Oriental · ${fmt(porCobrarOriental)}
+            Jetplus · ${fmt(porCobrarOriental)}
           </button>
           <button onClick={() => setTitular('vehimotors')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${titular === 'vehimotors' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-oriental-gray border-gray-200 hover:border-gray-400'}`}>
             Vehimotors · ${fmt(porCobrarVehimotors)}
@@ -189,7 +189,7 @@ export default function CuentasPage() {
           <div className="px-4 py-3 bg-oriental-bg border-b border-gray-200 flex items-center gap-2">
             <User size={15} className="text-oriental-gray" />
             <h2 className="text-xs font-bold uppercase tracking-wider text-oriental-black">
-              Por cliente — {titular === 'oriental' ? 'La Oriental' : 'Vehimotors (fondos de terceros)'}
+              Por cliente — {titular === 'oriental' ? 'Jetplus' : 'Vehimotors (fondos de terceros)'}
             </h2>
           </div>
           {clientesOrden.length === 0 ? (
@@ -234,8 +234,8 @@ export default function CuentasPage() {
       <p className="text-[11px] text-oriental-gray mt-4">
         Por pagar: obligaciones a proveedores que se cargan a mano y salen de la lista al marcarlas como pagadas
         (al pagar se registra el egreso automáticamente). Por cobrar: cuotas de crédito pendientes, vencidas o con abono parcial. Montos en USD.
-        Las cuotas se separan por titular: <span className="font-semibold">La Oriental</span> (inicial, reserva $500, cuota especial) vs
-        <span className="font-semibold"> Vehimotors</span> (financiamiento Vehimotors y cuotas mensuales del plan Asegúrate $500), que son fondos de terceros y no son cuentas por cobrar de La Oriental.
+        Las cuotas se separan por titular: <span className="font-semibold">Jetplus</span> (inicial, reserva $500, cuota especial) vs
+        <span className="font-semibold"> Vehimotors</span> (financiamiento Vehimotors y cuotas mensuales del plan Asegúrate $500), que son fondos de terceros y no son cuentas por cobrar de Jetplus.
       </p>
     </div>
   )

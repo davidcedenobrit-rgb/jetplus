@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Error enviando correo', detail: String(e?.message ?? e) }, { status: 500 })
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
 
   return NextResponse.json({
     ok: true,

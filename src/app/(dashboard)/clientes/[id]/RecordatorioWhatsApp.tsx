@@ -50,7 +50,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
   const lineas: string[] = []
   lineas.push(`Hola ${nombre} 👋`)
   lineas.push('')
-  lineas.push(`Te saludamos de *La Oriental Automotors*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
+  lineas.push(`Te saludamos de *JETPLUS*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
   lineas.push('')
 
   if (cuotasVencidas.length > 0) {
@@ -71,7 +71,7 @@ export default function RecordatorioWhatsApp({ clienteNombre, whatsapp, cuotasVe
 
   lineas.push(`Por favor coordina tu pago a la brevedad posible. Estamos a tu disposición para cualquier consulta. 🙏`)
   lineas.push('')
-  lineas.push(`_La Oriental Automotors · MG & Maxus · Maturín_`)
+  lineas.push(`_JETPLUS · MG & Maxus · Porlamar_`)
 
   const mensaje = lineas.join('\n')
   const numero  = limpiarNumero(whatsapp)

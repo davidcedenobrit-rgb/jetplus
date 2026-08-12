@@ -56,7 +56,7 @@ export default function EtiquetaExpedienteButton(p: Props) {
   @media print { body { padding:0; } }
 </style></head><body>
 <div class="label">
-  <div class="head"><div class="lo">LA ORIENTAL <span>AUTOMOTORS</span></div><div class="t">Expediente</div></div>
+  <div class="head"><div class="lo">JETPLUS <span>AUTOMOTORS</span></div><div class="t">Expediente</div></div>
   <table><tbody>${rows}</tbody></table>
 </div>
 <script>window.onload=()=>window.print()</script>

@@ -70,7 +70,7 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
     return Object.values(m).sort((a, b) => a.label.localeCompare(b.label) || a.moneda.localeCompare(b.moneda))
   }, [movimientos])
 
-  // Vehimotors CCS (informativo, no suma a La Oriental)
+  // Vehimotors CCS (informativo, no suma a Jetplus)
   const vehimotorsPorMoneda = useMemo(() => {
     const m: Record<string, number> = {}
     for (const mv of movimientos) {
@@ -168,7 +168,7 @@ export default function MovimientosClient({ movimientos, cuentas }: Props) {
         })}
       </div>
 
-      {/* Vehimotors CCS — informativo, no cuenta para La Oriental */}
+      {/* Vehimotors CCS — informativo, no cuenta para Jetplus */}
       {Object.keys(vehimotorsPorMoneda).length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-6">
           <span className="text-[11px] font-semibold text-oriental-gray">Directo a Vehimotors CCS (no suma a saldos):</span>

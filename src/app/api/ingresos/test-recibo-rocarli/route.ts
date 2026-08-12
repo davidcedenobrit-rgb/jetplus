@@ -146,7 +146,7 @@ export async function GET(req: NextRequest) {
     await supabase.from('creditos').update({ saldo }).eq('id', credId)
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
   const recibiUrl = `${baseUrl}/ingresos/${ingreso.id}`
 
   return NextResponse.json({

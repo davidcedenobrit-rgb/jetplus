@@ -214,14 +214,14 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
 
   // Si el llamador manda empresaNombre, es consciente del concesionario y se
   // respetan SUS valores tal cual (incluidos los nulos: p. ej. Autosurca sin
-  // RIF no debe mostrar el RIF de La Oriental). Solo si NO viene nombre se usa
-  // el fallback completo de La Oriental (compatibilidad con llamadas antiguas).
+  // RIF no debe mostrar el RIF de Jetplus). Solo si NO viene nombre se usa
+  // el fallback completo de Jetplus (compatibilidad con llamadas antiguas).
   const conoceEmpresa = data.empresaNombre != null
-  const empNombre = conoceEmpresa ? data.empresaNombre! : 'LA ORIENTAL AUTOMOTORS, C.A.'
-  const empRif = conoceEmpresa ? (data.empresaRif ?? null) : 'J-505692143'
-  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AVENIDA ALIRIO UGARTE PELAYO, CENTRO PROFESIONAL DAVIS, QTA/GALPÓN NRO S/N, SECTOR CENTRO\nMATURÍN - MONAGAS - ZONA POSTAL 6201'
-  const empTelefono = conoceEmpresa ? (data.empresaTelefono ?? null) : '0414-9989010'
-  const empCorreo = conoceEmpresa ? (data.empresaCorreo ?? null) : 'laorientalautomotorsc@gmail.com'
+  const empNombre = conoceEmpresa ? data.empresaNombre! : 'JETPLUS'
+  const empRif = conoceEmpresa ? (data.empresaRif ?? null) : 'J-50372874-4'
+  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AV. RÓMULO GALLEGOS, PORLAMAR - NUEVA ESPARTA'
+  const empTelefono = conoceEmpresa ? (data.empresaTelefono ?? null) : '0424-8705174'
+  const empCorreo = conoceEmpresa ? (data.empresaCorreo ?? null) : 'davidcedenobrit@gmail.com'
   const empDireccionLineas = empDireccion ? String(empDireccion).split('\n').filter(Boolean) : []
   const empContacto = [empTelefono, empCorreo].filter(Boolean).join(' · ')
   const modalidadLabel = esAC500
@@ -235,7 +235,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
       : esBancaNacional ? 'BANCA NACIONAL' : 'CONTADO'
 
   return (
-    <Document title={`Cotización ${data.numero}`} author="La Oriental Automotors">
+    <Document title={`Cotización ${data.numero}`} author="JETPLUS">
 
       {/* ── Página 1 ── */}
       <Page size="A4" style={s.page}>
@@ -596,7 +596,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
               <Text style={s.sigSub}>{data.clienteNombre}</Text>
             </View>
 
-            {/* La Oriental */}
+            {/* Jetplus */}
             <View style={s.sigBlock}>
               {data.selloSrc ? (
                 <Image src={data.selloSrc} style={s.selloImg} />

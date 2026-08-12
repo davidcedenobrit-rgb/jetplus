@@ -27,7 +27,7 @@ interface Vehiculo {
   tasa_banco_pct?: number | null
 }
 
-const WA = '584149989010'
+const WA = '584248705174'
 
 function fm(n: number | null | undefined) {
   if (!n) return '0'

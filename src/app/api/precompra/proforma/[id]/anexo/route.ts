@@ -26,7 +26,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!resuelta) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
   const { db: supabase, proforma: pf } = resuelta
 
-  const conces = await getConcesionarioIdentity(supabase, pf.concesionario_id ?? 'la-oriental')
+  const conces = await getConcesionarioIdentity(supabase, pf.concesionario_id ?? 'jetplus')
   const data = buildAnexoData(pf, conces, variante)
 
   const buffer = await renderToBuffer(

@@ -24,7 +24,7 @@ export default function PortalHeader() {
           <span className="text-white font-black text-xs">LO</span>
         </div>
         <div>
-          <p className="text-xs font-black text-oriental-black leading-tight">LA ORIENTAL</p>
+          <p className="text-xs font-black text-oriental-black leading-tight">JETPLUS</p>
           <p className="text-[9px] text-oriental-gray leading-tight">MG & MAXUS</p>
         </div>
       </div>

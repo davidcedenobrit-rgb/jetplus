@@ -7,30 +7,30 @@ import { createAdminClient } from './supabase/server'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
-const FROM = 'La Oriental Automotors <repuestos@laoriental.co>'
-const FROM_ADMIN = 'La Oriental Automotors <administracion@laoriental.co>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
+const FROM = 'JETPLUS <repuestos@navigroup.co>'
+const FROM_ADMIN = 'JETPLUS <administracion@navigroup.co>'
 
 // Destinatarios de prueba (en producción se cambiarán a vehimotors)
 const TO_VEHIMOTORS = [
-  process.env.CORREO_VEHIMOTORS_INGRESOS_1 ?? 'rojasjgx@gmail.com',
+  process.env.CORREO_VEHIMOTORS_INGRESOS_1 ?? 'davidcedenobrit@gmail.com',
   process.env.CORREO_VEHIMOTORS_INGRESOS_2 ?? 'davidcedenobrit@gmail.com',
 ]
 
 function headerHTML() {
-  const logoUrl = `${APP_URL}/logo-la-oriental-blanco.png`
+  const logoUrl = `${APP_URL}/logo-jetplus-blanco.png`
   return `<div style="background:#C41E3A;padding:20px 32px;border-radius:12px 12px 0 0">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="vertical-align:middle"><img src="${logoUrl}" alt="La Oriental Automotors" style="height:48px;width:auto;display:block" /></td>
+      <td style="vertical-align:middle"><img src="${logoUrl}" alt="JETPLUS" style="height:48px;width:auto;display:block" /></td>
       <td style="padding-left:14px;vertical-align:middle">
-        <p style="margin:0;color:#fff;font-weight:800;font-size:16px;font-family:sans-serif">LA ORIENTAL AUTOMOTORS</p>
-        <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px;font-family:sans-serif">MG &amp; Maxus · Maturín, Venezuela</p>
+        <p style="margin:0;color:#fff;font-weight:800;font-size:16px;font-family:sans-serif">JETPLUS</p>
+        <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px;font-family:sans-serif">MG &amp; Maxus · Porlamar, Venezuela</p>
       </td></tr></table></div>`
 }
 
 function footerHTML() {
   return `<div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 32px;border-radius:0 0 12px 12px;text-align:center">
-    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">La Oriental Automotors · MG &amp; Maxus · Maturín, Venezuela</p></div>`
+    <p style="margin:0;color:#9ca3af;font-size:11px;font-family:sans-serif">JETPLUS · MG &amp; Maxus · Porlamar, Venezuela</p></div>`
 }
 
 function wrap(body: string) {
@@ -89,7 +89,7 @@ export async function enviarReporteVehimotors(opts: ReportarVehimotorsOpts) {
   const body = `
     <p style="font-family:sans-serif;font-size:13px;font-weight:700;color:#C41E3A;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px">Reporte de Pago</p>
     <h1 style="font-family:sans-serif;font-size:22px;font-weight:800;color:#111;margin:0 0 6px">Recibo ${numeroRecibo}</h1>
-    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 28px">La Oriental Automotors reporta el siguiente pago recibido.</p>
+    <p style="font-family:sans-serif;font-size:14px;color:#6b7280;margin:0 0 28px">JETPLUS reporta el siguiente pago recibido.</p>
 
     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px 24px;margin-bottom:24px">
       <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 14px">Datos del cliente</p>
@@ -145,7 +145,7 @@ export interface ReporteLoteItem {
   clienteNombre: string                 // nombre del CLIENTE REPORTADO (no necesariamente quien pagó)
   cedulaRif: string | null
   concepto: string
-  consesionario: string                 // 'LA ORIENTAL' usualmente
+  consesionario: string                 // 'JETPLUS' usualmente
   montoUSD: number                      // ya convertido a USD
   bancoVehimotors: string | null        // banco/método (ZELLE, BANCAMIGA, USDT…)
   referencia: string | null
@@ -267,7 +267,7 @@ export async function enviarReporteLoteVehimotors(opts: {
       ${observacionesBlock}
 
       <p style="font-family:sans-serif;font-size:12px;color:#6b7280;margin:24px 0 0;line-height:1.5">
-        Reporte generado automáticamente por el Centro de Mando de La Oriental Automotors.<br>
+        Reporte generado automáticamente por el Centro de Mando de JETPLUS.<br>
         Para cualquier consulta o discrepancia, responder a este correo.
       </p>
     </div>
@@ -427,14 +427,14 @@ export async function enviarReciboCliente(opts: EnviarReciboClienteOpts) {
 
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px 24px;text-align:center">
       <p style="font-family:sans-serif;font-size:15px;color:#166534;margin:0 0 6px;font-weight:700">✓ Pago recibido correctamente</p>
-      <p style="font-family:sans-serif;font-size:13px;color:#6b7280;margin:0">Gracias por su preferencia. La Oriental Automotors siempre a su servicio.</p>
+      <p style="font-family:sans-serif;font-size:13px;color:#6b7280;margin:0">Gracias por su preferencia. JETPLUS siempre a su servicio.</p>
     </div>
   `
 
   const { data, error } = await resend.emails.send({
     from: FROM_ADMIN,
     to: [clienteCorreo],
-    subject: `Recibo ${numeroRecibo} — Confirmación de pago · La Oriental Automotors`,
+    subject: `Recibo ${numeroRecibo} — Confirmación de pago · JETPLUS`,
     html: wrap(body),
     attachments: [{
       filename: `${numeroRecibo}.pdf`,

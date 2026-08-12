@@ -7,7 +7,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { enviarInvitacionPortal } from '@/lib/email-portal'
 
 const ROLES_PERMITIDOS = ['jose', 'admin', 'mary', 'leysdem']
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
 
 export async function POST(req: Request) {
   const auth = await createClient()
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
 
   // Link/mensaje WhatsApp
   const whatsappMsg = encodeURIComponent(
-    `Hola ${cliente.nombre}, aquí está su acceso al Portal del Cliente de La Oriental Automotors:\n\n${linkPortal}\n\nEste enlace expira en 30 días.`
+    `Hola ${cliente.nombre}, aquí está su acceso al Portal del Cliente de JETPLUS:\n\n${linkPortal}\n\nEste enlace expira en 30 días.`
   )
   const whatsappUrl = `https://wa.me/${(destinatarioFinal || '').replace(/\D/g, '')}?text=${whatsappMsg}`
 

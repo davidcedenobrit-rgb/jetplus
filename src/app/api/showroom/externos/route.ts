@@ -5,8 +5,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { listaConcesionariosExternos } from '@/lib/concesionarios-externos'
 
 // Inventario de showroom de los concesionarios aliados con base propia (Ki Auto).
-// Sirve para vender desde La Oriental un carro que físicamente está en el aliado:
-// se lista aquí y al registrar la venta se transfiere a La Oriental.
+// Sirve para vender desde Jetplus un carro que físicamente está en el aliado:
+// se lista aquí y al registrar la venta se transfiere a Jetplus.
 // Devuelve [] si no hay ningún aliado configurado (no rompe la venta normal).
 export async function GET() {
   const supabase = await createClient()

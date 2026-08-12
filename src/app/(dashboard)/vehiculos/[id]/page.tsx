@@ -128,7 +128,7 @@ export default async function VehiculoDetallePage({
   const primerCreditoId = creditos?.[0]?.id ?? null
 
   const planLabel = (tipo: string | null) =>
-    tipo === 'inicial_la_oriental' ? 'La Oriental' :
+    tipo === 'inicial_la_oriental' ? 'Jetplus' :
     tipo === 'financiamiento_vehimotors' ? 'Vehimotors' :
     tipo === 'cuota_especial' ? 'Cuota Especial' :
     tipo === 'asegurate_500' ? 'Asegúrate $500' :

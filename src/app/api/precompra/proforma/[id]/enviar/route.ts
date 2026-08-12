@@ -32,7 +32,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!resuelta) return NextResponse.json({ error: 'Proforma no encontrada' }, { status: 404 })
   const { db: supabase, proforma: pf } = resuelta
 
-  const conces = await getConcesionarioIdentity(supabase, pf.concesionario_id ?? 'la-oriental')
+  const conces = await getConcesionarioIdentity(supabase, pf.concesionario_id ?? 'jetplus')
   const data = buildAnexoData(pf, conces, 'vehimotors')
 
   // PDF del Anexo A (Vehimotors)
@@ -77,7 +77,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const resend = new Resend(process.env.RESEND_API_KEY!)
     const { error } = await resend.emails.send({
-      from: `${conces.nombre} <cotizaciones@laoriental.co>`,
+      from: `${conces.nombre} <cotizaciones@navigroup.co>`,
       to: destinatarios,
       cc: cc.length ? cc : undefined,
       subject: asunto,

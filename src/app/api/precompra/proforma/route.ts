@@ -138,7 +138,7 @@ export async function POST(req: Request) {
   const row = {
     cotizacion_id: cotizacionId,
     cliente_id: clienteId,
-    concesionario_id: cot?.concesionario_id ?? 'la-oriental',
+    concesionario_id: cot?.concesionario_id ?? 'jetplus',
     tipo_persona: tipoPersona,
     cliente_nombre: nombre,
     cliente_cedula: cedula || null,

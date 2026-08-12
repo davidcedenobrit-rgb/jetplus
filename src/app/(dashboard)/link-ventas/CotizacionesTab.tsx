@@ -854,10 +854,10 @@ type Filtro = 'todas' | Estado | 'descuento'
 
 // Nombre corto por concesionario (los legales son largos para la tabla)
 const CONCES_CORTO: Record<string, string> = {
-  'la-oriental': 'La Oriental', 'autosurca': 'Autosurca', 'capital-motors': 'Capital Motors', 'kiauto': 'Ki Auto',
+  'la-oriental': 'Jetplus', 'autosurca': 'Autosurca', 'capital-motors': 'Capital Motors', 'kiauto': 'Ki Auto',
 }
 function concesLabel(id: string | null | undefined, mapa: Record<string, string>) {
-  if (!id) return 'La Oriental'
+  if (!id) return 'Jetplus'
   return CONCES_CORTO[id] ?? mapa[id] ?? id
 }
 
@@ -900,7 +900,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
 
   const visiblePorConces = filtroConces === 'todos'
     ? visiblePorEstado
-    : visiblePorEstado.filter(c => (c.concesionario_id ?? 'la-oriental') === filtroConces)
+    : visiblePorEstado.filter(c => (c.concesionario_id ?? 'jetplus') === filtroConces)
 
   // Buscador por N° de cotización (código), cliente, cédula o vehículo.
   const nq = busq.trim().toLowerCase()
@@ -913,7 +913,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
   // Concesionarios presentes en las cotizaciones (para el filtro)
   const concesCount = new Map<string, number>()
   for (const c of cotizaciones) {
-    const id = c.concesionario_id ?? 'la-oriental'
+    const id = c.concesionario_id ?? 'jetplus'
     concesCount.set(id, (concesCount.get(id) ?? 0) + 1)
   }
   const concesFiltros = Array.from(concesCount.entries()).sort((a, b) => b[1] - a[1])

@@ -13,17 +13,17 @@ export interface ConcesionarioIdentity {
   colorSecundario: string
 }
 
-// Colores TOP por defecto (La Oriental): rojo + negro.
+// Colores TOP por defecto (Jetplus): rojo + negro.
 export const PDF_COLOR_PRIMARIO = '#C41E3A'
 export const PDF_COLOR_SECUNDARIO = '#111827'
 
-const LA_ORIENTAL_FALLBACK = {
-  id: 'la-oriental',
-  nombre: 'LA ORIENTAL AUTOMOTORS, C.A.',
-  rif: 'J-505692143',
-  direccion: 'AVENIDA ALIRIO UGARTE PELAYO, CENTRO PROFESIONAL DAVIS, QTA/GALPÓN NRO S/N, SECTOR CENTRO\nMATURÍN - MONAGAS - ZONA POSTAL 6201',
-  telefono: '0414-9989010',
-  correo: 'laorientalautomotorsc@gmail.com',
+const JETPLUS_FALLBACK = {
+  id: 'jetplus',
+  nombre: 'JETPLUS',
+  rif: 'J-50372874-4',
+  direccion: 'AV. RÓMULO GALLEGOS, PORLAMAR - NUEVA ESPARTA',
+  telefono: '0424-8705174',
+  correo: 'davidcedenobrit@gmail.com',
   logo_url: null as string | null,
 }
 
@@ -42,24 +42,24 @@ async function fetchLogoBase64(url: string): Promise<string | undefined> {
 /**
  * Carga la identidad de un concesionario (nombre legal, RIF, dirección, etc.)
  * y su logo listo para incrustar en el PDF de la cotización. Si no se encuentra,
- * cae en La Oriental (comportamiento actual).
+ * cae en Jetplus (comportamiento actual).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export async function getConcesionarioIdentity(supabase: any, id: string | null): Promise<ConcesionarioIdentity> {
-  const cid = id || 'la-oriental'
+  const cid = id || 'jetplus'
   const { data } = await supabase
     .from('concesionarios')
     .select('id, nombre, rif, direccion, telefono, correo, logo_url, sello_url, color_primario, color_secundario')
     .eq('id', cid)
     .maybeSingle()
 
-  const row = data ?? LA_ORIENTAL_FALLBACK
+  const row = data ?? JETPLUS_FALLBACK
 
   let logoSrc: string | undefined
   let selloSrc: string | undefined
-  if (row.id === 'la-oriental') {
+  if (row.id === 'jetplus') {
     logoSrc = getLogoBase64()
-    // La Oriental usa su sello local; si cargaron uno en BD, tiene prioridad.
+    // Jetplus usa su sello local; si cargaron uno en BD, tiene prioridad.
     selloSrc = (row as any).sello_url ? await fetchLogoBase64((row as any).sello_url) : getSelloBase64()
   } else {
     if (row.logo_url) logoSrc = await fetchLogoBase64(row.logo_url)

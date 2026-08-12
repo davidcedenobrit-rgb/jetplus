@@ -9,7 +9,7 @@ import { getVendedorLegal } from '@/lib/vendedor-legal'
 import { montoBsEnLetras } from '@/lib/numero-a-letras'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
-const CIUDAD_CONCES: Record<string, string> = { 'la-oriental': 'Maturín', 'kiauto': 'Puerto Ordaz', 'autosurca': 'El Tigre' }
+const CIUDAD_CONCES: Record<string, string> = { 'jetplus': 'Porlamar', 'la-oriental': 'Maturín', 'kiauto': 'Puerto Ordaz', 'autosurca': 'El Tigre' }
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
 function fechaLarga(iso?: string | null): string {
@@ -85,7 +85,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     : '________________'
 
   const primeraCuota = fechaLarga(cuotasCron[0]?.fecha_vencimiento) || fechaLarga(pro.primera_cuota_fecha)
-  const ciudad = CIUDAD_CONCES[concId ?? 'la-oriental'] ?? 'Maturín'
+  const ciudad = CIUDAD_CONCES[concId ?? 'jetplus'] ?? 'Porlamar'
   const hoy = new Date()
 
   const data: ContratoCreditoData = {

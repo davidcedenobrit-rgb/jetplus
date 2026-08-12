@@ -88,7 +88,7 @@ export default async function ReportarPagosVMPage({ searchParams }: { searchPara
     totalReportadoMap[r.ingreso_id] = (totalReportadoMap[r.ingreso_id] ?? 0) + Number(r.monto_reportado)
   }
 
-  // Los pagos de Inicial La Oriental NO se reportan a Vehimotors.
+  // Los pagos de Inicial Jetplus NO se reportan a Vehimotors.
   // Calcular por ingreso cuanto se aplico a cuotas del credito inicial_la_oriental
   // para descontarlo del monto reportable (un ingreso puede pagar cuotas mixtas).
   const montoOrientalMap: Record<string, number> = {}
@@ -106,8 +106,8 @@ export default async function ReportarPagosVMPage({ searchParams }: { searchPara
 
   // Filtrar ingresos con saldo por reportar > 0.
   // Excluidos del reporte a VM:
-  //  - Pagos de acuerdos de pago (acuerdo_inicial_id) -> dinero de La Oriental
-  //  - La porcion aplicada a cuotas del credito Inicial La Oriental
+  //  - Pagos de acuerdos de pago (acuerdo_inicial_id) -> dinero de Jetplus
+  //  - La porcion aplicada a cuotas del credito Inicial Jetplus
   const ingresosPendientes = (ingresosAprobados ?? [])
     .filter(i => !(i as any).acuerdo_inicial_id)
     .map(i => {

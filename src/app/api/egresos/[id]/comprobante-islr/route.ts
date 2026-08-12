@@ -11,11 +11,11 @@ import { buildComprobanteIslrData } from '@/lib/comprobante-islr-data'
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 
 function getLogoBase64(): string | undefined {
-  try { return `data:image/png;base64,${readFileSync(join(process.cwd(), 'public', 'logo-la-oriental.png')).toString('base64')}` }
+  try { return `data:image/png;base64,${readFileSync(join(process.cwd(), 'public', 'logo-jetplus.png')).toString('base64')}` }
   catch { return undefined }
 }
 function getSelloBase64(): string | undefined {
-  try { return `data:image/jpeg;base64,${readFileSync(join(process.cwd(), 'public', 'sello-la-oriental.jpeg')).toString('base64')}` }
+  try { return `data:image/jpeg;base64,${readFileSync(join(process.cwd(), 'public', 'sello-jetplus.jpeg')).toString('base64')}` }
   catch { return undefined }
 }
 

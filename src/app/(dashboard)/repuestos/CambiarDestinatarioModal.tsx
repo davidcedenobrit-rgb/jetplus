@@ -211,7 +211,7 @@ export default function CambiarDestinatarioModal({
                 <Building2 size={16} className="text-blue-700" />
               </div>
               <div>
-                <p className="text-sm font-bold text-oriental-black">La Oriental Automotors</p>
+                <p className="text-sm font-bold text-oriental-black">JETPLUS</p>
                 <p className="text-[11px] text-oriental-gray">Solicitud interna, no vinculada a un cliente.</p>
               </div>
             </div>

@@ -57,7 +57,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   // Bitácora (no cambia el estado)
   if (solicitudActual?.estado) {
     const notaDestino =
-      destino === 'oriental' ? 'Destinatario actualizado: La Oriental' :
+      destino === 'oriental' ? 'Destinatario actualizado: Jetplus' :
       destino === 'externo' ? `Destinatario actualizado a cliente externo: ${clienteExterno.trim()}` :
       `Destinatario actualizado a cliente ${clienteId}`
     await supabase.from('repuestos_historial').insert({

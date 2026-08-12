@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
   const TIPOS_VENTA = ['contado', 'credito_vehimotors', 'credito_banca_nacional', 'credito_financiadora_interno']
   const tipoVenta = TIPOS_VENTA.includes(b.tipoVenta) ? b.tipoVenta : null
-  const montoBase = precioVenta - comisionMonto                       // monto base de La Oriental
+  const montoBase = precioVenta - comisionMonto                       // monto base de Jetplus
   const comisionVendedoresPct = num(b.comisionVendedoresPct)
   const comisionVendedoresMonto = r2(montoBase * comisionVendedoresPct / 100)
   const comisionDirectivaPct = num(b.comisionDirectivaPct)

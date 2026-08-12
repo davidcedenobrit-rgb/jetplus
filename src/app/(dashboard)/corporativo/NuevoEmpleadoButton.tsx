@@ -51,7 +51,7 @@ export default function NuevoEmpleadoButton() {
   }
 
   const waLink = creado
-    ? `https://wa.me/?text=${encodeURIComponent(`Hola ${creado.nombre}, por favor completa tu descripción de cargo de La Oriental en las próximas 72 horas: ${creado.link}`)}`
+    ? `https://wa.me/?text=${encodeURIComponent(`Hola ${creado.nombre}, por favor completa tu descripción de cargo de Jetplus en las próximas 72 horas: ${creado.link}`)}`
     : '#'
 
   return (

@@ -215,7 +215,7 @@ export default function ReporteEgresosPage() {
 <body>
 <div class="header">
   <div>
-    <div class="logo">LA ORIENTAL <span>AUTOMOTORS</span></div>
+    <div class="logo">JETPLUS <span>AUTOMOTORS</span></div>
     <div style="font-size:9px;color:#666;margin-top:2px">MG &amp; MAXUS — Oriente de Venezuela</div>
   </div>
   <div style="text-align:right">
@@ -269,7 +269,7 @@ export default function ReporteEgresosPage() {
 </table>
 
 <div class="footer">
-  <span>La Oriental Automotors — Documento de uso interno</span>
+  <span>JETPLUS — Documento de uso interno</span>
   <span>Director: José Rojas</span>
 </div>
 <script>window.onload = () => window.print()</script>

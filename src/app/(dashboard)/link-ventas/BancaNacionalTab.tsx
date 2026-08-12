@@ -255,7 +255,7 @@ function EnviarVMModal({ caso, onClose, onDone }: { caso: Caso; onClose: () => v
           <button onClick={() => !saving && onClose()} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X size={16} /></button>
         </div>
         <div className="p-5 space-y-3">
-          <p className="text-xs text-gray-500">Se enviará un correo con el encabezado de <b>{caso.concesionario_id === 'la-oriental' || !caso.concesionario_id ? 'La Oriental' : caso.concesionario_id}</b>, los datos del cliente y los documentos del expediente adjuntos.</p>
+          <p className="text-xs text-gray-500">Se enviará un correo con el encabezado de <b>{caso.concesionario_id === 'la-oriental' || !caso.concesionario_id ? 'Jetplus' : caso.concesionario_id}</b>, los datos del cliente y los documentos del expediente adjuntos.</p>
 
           <div>
             <label className="block text-[11px] font-semibold text-gray-500 mb-1">Expediente ({docs.length} documento{docs.length !== 1 ? 's' : ''}) — puedes agregar más</label>
@@ -364,7 +364,7 @@ function ProcesarModal({ caso, catalogo, onClose, onDone }: { caso: Caso; catalo
           clienteDireccion: caso.cliente_direccion, clienteCiudadEstado: caso.cliente_ciudad_estado,
           clienteCodigoPostal: caso.cliente_codigo_postal, agenteRetencion: false,
           modalidad: 'contado', plan: 'banca_nacional', cantidad: 1,
-          concesionarioId: caso.concesionario_id ?? 'la-oriental',
+          concesionarioId: caso.concesionario_id ?? 'jetplus',
           precioBaseOverride: caso.precio_base,
           gastosOverride: calc.gastos,
           condicionesPersonalizadas: cond || null,

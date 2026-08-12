@@ -15,12 +15,12 @@ const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 // Modalidad del crédito → grupo de cobro.
 const MODALIDAD: { key: string; label: string; planes: string[] }[] = [
   { key: 'todas', label: 'Todas', planes: [] },
-  { key: 'la_oriental', label: 'Crédito La Oriental', planes: ['inicial_la_oriental', 'cuota_especial'] },
+  { key: 'la_oriental', label: 'Crédito Jetplus', planes: ['inicial_la_oriental', 'cuota_especial'] },
   { key: 'motor', label: 'Vehimotors', planes: ['financiamiento_vehimotors'] },
   { key: 'ac500', label: 'Asegúrate 500', planes: ['asegurate_500'] },
 ]
 const PLAN_LABEL: Record<string, string> = {
-  inicial_la_oriental: 'La Oriental', cuota_especial: 'Cuota especial',
+  inicial_la_oriental: 'Jetplus', cuota_especial: 'Cuota especial',
   financiamiento_vehimotors: 'Vehimotors', asegurate_500: 'Asegúrate 500',
 }
 
@@ -126,7 +126,7 @@ export default function ReporteCobrosClient() {
   const buildPayload = (): ReportePayload => {
     const q = porModQuincena
     const modRows: (string | number)[][] = [
-      ['La Oriental', `$${fmt(q.q1.la_oriental)}`, `$${fmt(q.q2.la_oriental)}`, `$${fmt(q.q1.la_oriental + q.q2.la_oriental)}`],
+      ['Jetplus', `$${fmt(q.q1.la_oriental)}`, `$${fmt(q.q2.la_oriental)}`, `$${fmt(q.q1.la_oriental + q.q2.la_oriental)}`],
       ['Vehimotors', `$${fmt(q.q1.motor)}`, `$${fmt(q.q2.motor)}`, `$${fmt(q.q1.motor + q.q2.motor)}`],
       ['Asegúrate 500', `$${fmt(q.q1.ac500)}`, `$${fmt(q.q2.ac500)}`, `$${fmt(q.q1.ac500 + q.q2.ac500)}`],
       ['Cuotas especiales', `$${fmt(q.q1.especial)}`, `$${fmt(q.q2.especial)}`, `$${fmt(q.q1.especial + q.q2.especial)}`],
@@ -271,7 +271,7 @@ export default function ReporteCobrosClient() {
           {/* Por cobrar por modalidad (por quincena) */}
           {([['1ª quincena (1–15)', porModQuincena.q1], [`2ª quincena (16–${diasMes})`, porModQuincena.q2]] as const).map(([titulo, q]) => {
             const items = [
-              { label: 'La Oriental', v: q.la_oriental, cls: 'text-oriental-red' },
+              { label: 'Jetplus', v: q.la_oriental, cls: 'text-oriental-red' },
               { label: 'Vehimotors', v: q.motor, cls: 'text-indigo-700' },
               { label: 'Asegúrate 500', v: q.ac500, cls: 'text-blue-700' },
               { label: 'Cuotas especiales', v: q.especial, cls: 'text-amber-700' },
@@ -327,7 +327,7 @@ export default function ReporteCobrosClient() {
           </div>
 
           <p className="text-[11px] text-oriental-gray mt-4">
-            Montos por fecha de vencimiento de las cuotas (cobro programado del mes). Filtra por modalidad para ver, por ejemplo, solo los créditos de La Oriental o del motor.
+            Montos por fecha de vencimiento de las cuotas (cobro programado del mes). Filtra por modalidad para ver, por ejemplo, solo los créditos de Jetplus o del motor.
             Los montos se asumen en USD (moneda de los créditos).
           </p>
         </>

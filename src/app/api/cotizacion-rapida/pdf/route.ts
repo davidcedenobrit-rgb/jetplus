@@ -18,7 +18,7 @@ function parseComun(b: Record<string, unknown>): CotizacionRapidaData {
     .toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const ac = b.ac500 as Record<string, unknown> | null | undefined
   return {
-    brandNombre: String(b.brandNombre ?? 'La Oriental Automotors').slice(0, 80),
+    brandNombre: String(b.brandNombre ?? 'JETPLUS').slice(0, 80),
     brandLogo: typeof b.brandLogo === 'string' && b.brandLogo.startsWith('data:') ? b.brandLogo : undefined,
     colorPrimario: String(b.colorPrimario ?? '#C41E3A'),
     colorSecundario: String(b.colorSecundario ?? '#111827'),

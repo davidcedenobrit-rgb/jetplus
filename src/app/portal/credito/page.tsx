@@ -22,7 +22,7 @@ const ESTADO_CFG: Record<string, { label: string; bg: string; color: string }> =
 }
 
 const PLAN_LABEL: Record<string, string> = {
-  inicial_la_oriental: 'La Oriental',
+  inicial_la_oriental: 'Jetplus',
   financiamiento_vehimotors: 'Vehimotors',
   cuota_especial: 'Cuota Especial',
   asegurate_500: 'Asegúrate $500',

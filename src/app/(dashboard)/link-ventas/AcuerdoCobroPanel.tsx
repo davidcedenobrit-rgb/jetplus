@@ -5,7 +5,7 @@ import { FileSignature, X, Loader2, ExternalLink, CheckCircle2, Trash2, Clock } 
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Acuerdo de Responsabilidad de Gestión de Cobro. Aplica cuando La Oriental
+// Acuerdo de Responsabilidad de Gestión de Cobro. Aplica cuando Jetplus
 // financia parte de la inicial (doble financiamiento). Va ligado a la
 // cotización; la vendedora asume el cobro y su comisión se paga cuando el
 // cliente termina de pagar. Cuando existe y está aceptado, junto con la
@@ -84,7 +84,7 @@ export default function AcuerdoCobroPanel({
   // Texto en formato local (es-VE) solo para la sugerencia del plan de cuotas.
   const fmtLocal = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-  // Financiado por La Oriental = Inicial total − Pagado de contado.
+  // Financiado por Jetplus = Inicial total − Pagado de contado.
   useEffect(() => {
     if (finManual) return
     const it = num(inicialTotal)
@@ -112,7 +112,7 @@ export default function AcuerdoCobroPanel({
   }, [numCuotas, cuotaMonto, planManual]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function guardar() {
-    if (!num(montoFinanciado) || num(montoFinanciado)! <= 0) { setError('Indica el monto financiado por La Oriental.'); return }
+    if (!num(montoFinanciado) || num(montoFinanciado)! <= 0) { setError('Indica el monto financiado por Jetplus.'); return }
     setSaving(true); setError('')
     try {
       const r = await fetch('/api/acuerdos-cobro', {
@@ -184,7 +184,7 @@ export default function AcuerdoCobroPanel({
         )}
       </div>
       <p className="text-[11px] text-purple-700/80 mb-2">
-        Úsalo cuando La Oriental financia parte de la inicial. La vendedora asume el cobro y su comisión se paga al terminar. Sin aceptar, no se puede crear la proforma.
+        Úsalo cuando Jetplus financia parte de la inicial. La vendedora asume el cobro y su comisión se paga al terminar. Sin aceptar, no se puede crear la proforma.
       </p>
 
       {!acuerdo ? (
@@ -242,7 +242,7 @@ export default function AcuerdoCobroPanel({
                 <Field label="Inicial total ($)" value={inicialTotal} onChange={setInicialTotal} />
                 <Field label="Pagado de contado ($)" value={montoContado} onChange={setMontoContado} />
               </div>
-              <Field label="Financiado por La Oriental ($) *" value={montoFinanciado}
+              <Field label="Financiado por Jetplus ($) *" value={montoFinanciado}
                 onChange={v => { setFinManual(true); setMontoFinanciado(v) }}
                 hint={finManual ? 'Editado manualmente' : 'Automático: inicial − contado'}
                 auto={!finManual} onReset={() => setFinManual(false)} />

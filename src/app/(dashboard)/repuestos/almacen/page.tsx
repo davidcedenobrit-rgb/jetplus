@@ -68,7 +68,7 @@ export default async function AlmacenPage() {
           <Warehouse size={20} className="text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-oriental-black">Almacén La Oriental</h1>
+          <h1 className="text-2xl font-bold text-oriental-black">Almacén Jetplus</h1>
           <p className="text-sm text-oriental-gray">Inventario de repuestos en stock · entradas, transferencias a taller y bitácora.</p>
         </div>
       </div>

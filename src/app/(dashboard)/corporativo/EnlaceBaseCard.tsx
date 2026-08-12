@@ -5,7 +5,7 @@ import { Link2, Copy, Check, MessageCircle } from 'lucide-react'
 
 export default function EnlaceBaseCard() {
   const [copiado, setCopiado] = useState(false)
-  const base = typeof window !== 'undefined' ? window.location.origin : 'https://centrodemando.laoriental.co'
+  const base = typeof window !== 'undefined' ? window.location.origin : 'https://jetplus.vercel.app'
   const link = `${base}/cuestionario`
 
   function copiar() {
@@ -14,7 +14,7 @@ export default function EnlaceBaseCard() {
     setTimeout(() => setCopiado(false), 2000)
   }
 
-  const waText = `📋 *La Oriental Automotors — Descripción de cargo*\n\nHola equipo, por favor completa tu descripción de cargo en el siguiente enlace. Es rápido y queda registrado automáticamente:\n\n${link}`
+  const waText = `📋 *JETPLUS — Descripción de cargo*\n\nHola equipo, por favor completa tu descripción de cargo en el siguiente enlace. Es rápido y queda registrado automáticamente:\n\n${link}`
   const waLink = `https://wa.me/?text=${encodeURIComponent(waText)}`
 
   return (

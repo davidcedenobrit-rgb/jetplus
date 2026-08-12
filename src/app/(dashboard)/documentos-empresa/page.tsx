@@ -21,7 +21,7 @@ export default async function DocumentosEmpresaPage() {
           </div>
           <h1 className="text-2xl font-bold text-oriental-black">Documentación de Empresa</h1>
         </div>
-        <p className="text-oriental-gray text-sm ml-13">La Oriental Automotors C.A. — documentos corporativos</p>
+        <p className="text-oriental-gray text-sm ml-13">JETPLUS — documentos corporativos</p>
       </div>
 
       <DocumentosEmpresaClient documentosIniciales={documentos ?? []} />

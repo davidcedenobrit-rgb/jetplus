@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 
 // Membrete TOP compartido por TODOS los PDF del centro de mando.
 // Muestra el logo, datos legales y colores del concesionario de turno.
-// Colores por defecto: rojo #C41E3A + negro #111827 (La Oriental).
+// Colores por defecto: rojo #C41E3A + negro #111827 (Jetplus).
 
 export const LOGO_LA_ORIENTAL = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
 

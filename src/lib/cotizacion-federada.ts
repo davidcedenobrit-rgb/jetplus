@@ -6,10 +6,10 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
 import { listaConcesionariosExternos, type ConcesionarioExterno } from '@/lib/concesionarios-externos'
 
-// CANDADO DE VISIBILIDAD: solo el deployment MATRIZ (La Oriental / dirección)
+// CANDADO DE VISIBILIDAD: solo el deployment MATRIZ (Jetplus / dirección)
 // puede ver/gestionar las cotizaciones y proformas de las OTRAS sedes. En los
 // deployments de las sedes (Autosurca, Ki Auto) esta bandera NO existe, así que
-// solo ven lo suyo — nunca La Oriental ni entre ellas.
+// solo ven lo suyo — nunca Jetplus ni entre ellas.
 // (La cartera de clientes compartida es aparte y NO usa este candado.)
 export function esPanelMatriz(): boolean {
   const v = String(process.env.PANEL_MATRIZ ?? '').trim().toLowerCase()

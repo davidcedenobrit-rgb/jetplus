@@ -19,7 +19,7 @@ export default async function EventosPage() {
         <Link href="/dashboard" className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50"><ArrowLeft size={18} className="text-oriental-gray" /></Link>
         <div>
           <h1 className="text-2xl font-bold text-oriental-black flex items-center gap-2"><CalendarDays size={22} className="text-oriental-red" /> Eventos</h1>
-          <p className="text-oriental-gray text-sm mt-0.5">Cronograma de eventos de La Oriental</p>
+          <p className="text-oriental-gray text-sm mt-0.5">Cronograma de eventos de Jetplus</p>
         </div>
       </div>
       <EventosClient />

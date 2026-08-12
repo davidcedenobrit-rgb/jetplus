@@ -2,24 +2,24 @@ import { Resend } from 'resend'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
-const FROM = 'La Oriental Automotors <cobranzas@laoriental.co>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
+const FROM = 'JETPLUS <cobranzas@navigroup.co>'
 
 function fmt(n: number) {
   return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 }
 
 function logoUrl() {
-  return `${APP_URL}/logo-la-oriental-blanco.png`
+  return `${APP_URL}/logo-jetplus-blanco.png`
 }
 
 function header() {
   return `<div style="background:#C41E3A;padding:20px 32px;border-radius:12px 12px 0 0">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="vertical-align:middle"><img src="${logoUrl()}" alt="La Oriental" style="height:44px;width:auto;display:block" /></td>
+      <td style="vertical-align:middle"><img src="${logoUrl()}" alt="JETPLUS" style="height:44px;width:auto;display:block" /></td>
       <td style="padding-left:14px;vertical-align:middle">
-        <p style="margin:0;color:#fff;font-weight:800;font-size:15px;font-family:sans-serif">LA ORIENTAL AUTOMOTORS</p>
-        <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-family:sans-serif">MG &amp; MAXUS · Maturín, Venezuela</p>
+        <p style="margin:0;color:#fff;font-weight:800;font-size:15px;font-family:sans-serif">JETPLUS</p>
+        <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-family:sans-serif">MG &amp; MAXUS · Porlamar, Venezuela</p>
       </td>
     </tr></table>
   </div>`
@@ -79,7 +79,7 @@ export async function enviarAvisoCobro({
 
   <p style="margin:0 0 20px;font-size:13px;color:#374151;line-height:1.6">
     Le solicitamos regularizar su situación a la brevedad. Puede comunicarse con nosotros
-    al <strong>0414-9989010</strong> o visitar nuestras oficinas en
+    al <strong>0424-8705174</strong> o visitar nuestras oficinas en
     Av. Ugarte Alirio Pelyo, Centro Profesional David, Maturín.
   </p>
 
@@ -88,7 +88,7 @@ export async function enviarAvisoCobro({
   </div>` : ''}
 
   <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;border-top:1px solid #f3f4f6;padding-top:16px">
-    LA ORIENTAL AUTOMOTORS, C.A. · RIF J-505692143<br>
+    JETPLUS · RIF J-50372874-4<br>
     Este es un mensaje automático, por favor no responder directamente a este correo.
   </p>
 </td></tr>

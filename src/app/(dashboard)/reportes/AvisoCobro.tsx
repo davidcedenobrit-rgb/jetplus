@@ -24,7 +24,7 @@ function fmt(n: number) {
 }
 
 function buildWhatsAppMsg(nombre: string, cuotasVencidas: number, montoVencido: number, diasMaxVencido: number, placa: string) {
-  return `Estimado/a ${nombre},\n\nLe informamos que tiene *${cuotasVencidas} cuota${cuotasVencidas !== 1 ? 's' : ''} vencida${cuotasVencidas !== 1 ? 's' : ''}* con un monto total de *$${fmt(montoVencido)}* correspondiente al vehículo placa *${placa}* (${diasMaxVencido} días vencido).\n\nLe pedimos regularizar su situación a la brevedad posible.\n\n_LA ORIENTAL AUTOMOTORS, C.A._\nTel: 0414-9989010`
+  return `Estimado/a ${nombre},\n\nLe informamos que tiene *${cuotasVencidas} cuota${cuotasVencidas !== 1 ? 's' : ''} vencida${cuotasVencidas !== 1 ? 's' : ''}* con un monto total de *$${fmt(montoVencido)}* correspondiente al vehículo placa *${placa}* (${diasMaxVencido} días vencido).\n\nLe pedimos regularizar su situación a la brevedad posible.\n\n_JETPLUS_\nTel: 0424-8705174`
 }
 
 export default function AvisoCobro({ clienteId, nombre, cedula, telefono, whatsapp, correo, cuotasVencidas, montoVencido, diasMaxVencido, placa, onClose, onSent }: Props) {

@@ -46,7 +46,7 @@ export default async function CorporativoPage() {
             <Building2 size={20} className="text-oriental-red" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-oriental-black">Corporativo La Oriental</h1>
+            <h1 className="text-2xl font-bold text-oriental-black">Corporativo Jetplus</h1>
             <p className="text-oriental-gray text-sm">Nómina de empleados y descripciones de cargo</p>
           </div>
         </div>

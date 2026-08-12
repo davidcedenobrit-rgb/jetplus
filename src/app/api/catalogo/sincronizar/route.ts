@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No hay concesionarios aliados configurados (faltan sus llaves de conexión).' }, { status: 400 })
   }
 
-  // Catálogo fuente = La Oriental (service role directo, sin cookies).
+  // Catálogo fuente = Jetplus (service role directo, sin cookies).
   const origenDb = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   if (soloId) origenQuery = origenDb.from('catalogo_ventas').select('*').eq('id', soloId)
   const { data: origen, error: origenErr } = await origenQuery
   if (origenErr || !origen) {
-    return NextResponse.json({ error: `No se pudo leer el catálogo de La Oriental: ${origenErr?.message ?? 'desconocido'}` }, { status: 500 })
+    return NextResponse.json({ error: `No se pudo leer el catálogo de Jetplus: ${origenErr?.message ?? 'desconocido'}` }, { status: 500 })
   }
 
   const resultados: Array<{ aliado: string; actualizados: number; insertados: number; extras: string[]; error?: string }> = []
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         }
       }
 
-      // Carros que el aliado tiene y La Oriental no (no se borran; se reportan).
+      // Carros que el aliado tiene y Jetplus no (no se borran; se reportan).
       // Solo aplica en la sincronización completa (no en la de un solo id).
       const idsOrigen = new Set<string>(origen.map((v: { id: string }) => v.id))
       const extras = soloId ? [] : (destino ?? [])

@@ -8,7 +8,7 @@ import { BRANDING } from '@/lib/branding'
 
 const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem', 'carla']
 
-// Colores del concesionario: rojo + negro (Ki Auto / La Oriental).
+// Colores del concesionario: rojo + negro (Ki Auto / Jetplus).
 const ROJO = 'FFC41E3A'
 const NEGRO = 'FF111827'
 const GRIS_CLARO = 'FFF6F7F9'

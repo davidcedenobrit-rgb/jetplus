@@ -195,7 +195,7 @@ export default async function RepuestosPage({
         <div className="flex items-center gap-2">
           <Link href="/repuestos/almacen"
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-teal-200 text-teal-700 hover:bg-teal-50 text-sm font-semibold">
-            <Warehouse size={16} /> Almacén La Oriental
+            <Warehouse size={16} /> Almacén Jetplus
           </Link>
           <Link href="/repuestos/nuevo" className="btn-primary flex items-center gap-2">
             <Plus size={16} /> Nueva solicitud

@@ -67,7 +67,7 @@ export default function RecordatorioWhatsApp({
   const lineas: string[] = []
   lineas.push(`Hola ${nombre} 👋`)
   lineas.push('')
-  lineas.push(`Te escribe el *Departamento de Cobranza y Jurídico* de *La Oriental Automotors*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
+  lineas.push(`Te escribe el *Departamento de Cobranza y Jurídico* de *JETPLUS*. Queremos recordarte que tienes cuotas pendientes con nosotros:`)
   lineas.push('')
 
   const monedaTotal = cuotasVencidas[0]?.moneda ?? cuotasProximas[0]?.moneda ?? 'USD'
@@ -97,7 +97,7 @@ export default function RecordatorioWhatsApp({
   lineas.push('')
   lineas.push(`Por favor coordina tu pago a la brevedad posible. Estamos a tu disposición para cualquier consulta. 🙏`)
   lineas.push('')
-  lineas.push(`_Departamento de Cobranza y Jurídico · La Oriental Automotors · MG & Maxus · Maturín_`)
+  lineas.push(`_Departamento de Cobranza y Jurídico · JETPLUS · MG & Maxus · Porlamar_`)
 
   const mensaje = lineas.join('\n')
   const numero  = limpiarNumero(whatsapp)
@@ -149,7 +149,7 @@ export default function RecordatorioWhatsApp({
                 <MessageCircle size={18} className="text-green-600" />
                 <div>
                   <p className="font-bold text-oriental-black">Aviso de cobro</p>
-                  <p className="text-[11px] text-oriental-gray">Dpto. Cobranza y Jurídico · La Oriental</p>
+                  <p className="text-[11px] text-oriental-gray">Dpto. Cobranza y Jurídico · Jetplus</p>
                 </div>
               </div>
               <button onClick={() => setOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">

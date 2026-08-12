@@ -15,7 +15,7 @@ export default function VerCotizacionPage({ params }: { params: Promise<{ id: st
   async function compartir() {
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'Cotización — La Oriental Automotors', url: pdfAbs })
+        await navigator.share({ title: 'Cotización — JETPLUS', url: pdfAbs })
         return
       }
     } catch { /* el usuario canceló o no soporta */ }

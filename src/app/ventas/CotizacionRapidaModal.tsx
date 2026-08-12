@@ -23,7 +23,7 @@ export interface AC500RapidaData {
   total: number | null
 }
 
-export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario = '', financiamiento = true, planNota = '', brandNombre = 'La Oriental Automotors', brandLogo = '', colorPrimario = '#C41E3A', colorSecundario = '#111827', ac500 = null }: {
+export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario = '', financiamiento = true, planNota = '', brandNombre = 'JETPLUS', brandLogo = '', colorPrimario = '#C41E3A', colorSecundario = '#111827', ac500 = null }: {
   vehiculo: Vehiculo
   onClose: () => void
   evento?: string

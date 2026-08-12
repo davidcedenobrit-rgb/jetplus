@@ -5,7 +5,7 @@ import { FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
 import { exportReporteExcel, exportReportePDF } from '@/lib/export-reporte'
 import type { ReportePayload } from '@/lib/reporte-tipos'
 
-// Barra de exportación estándar (Excel + PDF con membrete La Oriental).
+// Barra de exportación estándar (Excel + PDF con membrete Jetplus).
 export default function ExportBar({ build }: { build: () => ReportePayload }) {
   const [pdfLoading, setPdfLoading] = useState(false)
   return (

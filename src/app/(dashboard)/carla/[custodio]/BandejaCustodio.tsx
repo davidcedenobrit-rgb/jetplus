@@ -363,7 +363,7 @@ function ModalEnviarDeposito({
             <label className="block text-xs font-semibold text-oriental-gray uppercase tracking-wider mb-1.5">Destino *</label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { key: 'oriental',   label: 'Cta. La Oriental' },
+                { key: 'oriental',   label: 'Cta. Jetplus' },
                 { key: 'vehimotors', label: 'Cta. Vehimotors' },
               ].map(d => (
                 <button

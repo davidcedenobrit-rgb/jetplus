@@ -10,6 +10,7 @@ const ROLES = ['jose', 'admin', 'director', 'mary', 'leysdem']
 // La exoneración se firma en la sede del CONCESIONARIO que entrega, no en la
 // ciudad del cliente. Ciudad por concesionario de turno.
 const CIUDAD_CONCES: Record<string, string> = {
+  'jetplus': 'Porlamar',
   'la-oriental': 'Maturín',
   'kiauto': 'Puerto Ordaz',
   'autosurca': 'El Tigre',
@@ -49,7 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const data: ExoneracionData = {
     fecha: hoy,
-    ciudad: CIUDAD_CONCES[concId ?? 'la-oriental'] ?? 'Maturín',
+    ciudad: CIUDAD_CONCES[concId ?? 'jetplus'] ?? 'Porlamar',
     membrete: { nombre: c.nombre, rif: c.rif, direccion: c.direccion, telefono: c.telefono, correo: c.correo, logoSrc: c.logoSrc, colorPrimario: c.colorPrimario, colorSecundario: c.colorSecundario },
     selloSrc: c.selloSrc,
     numeroProforma: (pro.numero as string) ?? '',

@@ -238,7 +238,7 @@ export default async function InicioPortalPage() {
       <div className="mx-5 mb-5 bg-gray-50 rounded-2xl p-4 text-center">
         <p className="text-xs text-oriental-gray mb-2">¿Necesita ayuda?</p>
         <a
-          href="https://wa.me/584149989010?text=Hola%2C%20soy%20cliente%20de%20La%20Oriental%20Automotors"
+          href="https://wa.me/584248705174?text=Hola%2C%20soy%20cliente%20de%20Jetplus"
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700"

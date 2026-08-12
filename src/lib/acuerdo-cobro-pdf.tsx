@@ -136,13 +136,13 @@ const fmtFecha = (d: string) => {
 }
 
 export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
-  // El membrete respeta los datos de la agencia; si no vienen, cae en La Oriental.
+  // El membrete respeta los datos de la agencia; si no vienen, cae en Jetplus.
   const conoceEmpresa = data.empresaNombre != null
-  const empNombre = conoceEmpresa ? data.empresaNombre! : 'LA ORIENTAL AUTOMOTORS, C.A.'
-  const empRif = conoceEmpresa ? (data.empresaRif ?? null) : 'J-505692143'
-  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AVENIDA ALIRIO UGARTE PELAYO, CENTRO PROFESIONAL DAVIS, QTA/GALPÓN NRO S/N, SECTOR CENTRO\nMATURÍN - MONAGAS - ZONA POSTAL 6201'
-  const empTelefono = conoceEmpresa ? (data.empresaTelefono ?? null) : '0414-9989010'
-  const empCorreo = conoceEmpresa ? (data.empresaCorreo ?? null) : 'laorientalautomotorsc@gmail.com'
+  const empNombre = conoceEmpresa ? data.empresaNombre! : 'JETPLUS'
+  const empRif = conoceEmpresa ? (data.empresaRif ?? null) : 'J-50372874-4'
+  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AV. RÓMULO GALLEGOS, PORLAMAR - NUEVA ESPARTA'
+  const empTelefono = conoceEmpresa ? (data.empresaTelefono ?? null) : '0424-8705174'
+  const empCorreo = conoceEmpresa ? (data.empresaCorreo ?? null) : 'davidcedenobrit@gmail.com'
   const empDireccionLineas = empDireccion ? String(empDireccion).split('\n').filter(Boolean) : []
   const empContacto = [empTelefono, empCorreo].filter(Boolean).join(' · ')
   // Nombre corto de la agencia para los textos del cuerpo (sin "C.A." ni RIF).
@@ -205,7 +205,7 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
         <View style={s.body}>
 
           <View style={s.titleBand}>
-            <Text style={s.titleEyebrow}>Documento interno · La Oriental</Text>
+            <Text style={s.titleEyebrow}>Documento interno · Jetplus</Text>
             <Text style={s.documentTitle}>ACUERDO DE RESPONSABILIDAD DE GESTIÓN DE COBRO</Text>
             <Text style={s.documentSubtitle}>Y CONDICIÓN DE PAGO DE COMISIÓN</Text>
             <View style={s.titleRule} />
@@ -313,7 +313,7 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
         </View>
 
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>{agencia} · MG &amp; MAXUS · Maturín, Venezuela</Text>
+          <Text style={s.footerText}>{agencia} · MG &amp; MAXUS · Porlamar, Venezuela</Text>
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
         </View>
       </Page>

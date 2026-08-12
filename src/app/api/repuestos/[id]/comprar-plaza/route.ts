@@ -10,7 +10,7 @@ function generarNumeroEgreso() {
   const buf = new Uint8Array(3)
   crypto.getRandomValues(buf)
   const seq = String((buf[0] << 16 | buf[1] << 8 | buf[2]) % 1_000_000).padStart(6, '0')
-  return `LOA-EGR-${year}-${seq}`
+  return `JPLUS-EGR-${year}-${seq}`
 }
 
 export async function POST(

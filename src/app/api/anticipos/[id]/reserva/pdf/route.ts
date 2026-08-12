@@ -6,7 +6,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ReservaVehiculoPDF, ReservaData } from '@/lib/reserva-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 
-const CIUDAD_CONCES: Record<string, string> = { 'la-oriental': 'Maturín', 'kiauto': 'Puerto Ordaz', 'autosurca': 'El Tigre' }
+const CIUDAD_CONCES: Record<string, string> = { 'jetplus': 'Porlamar', 'la-oriental': 'Maturín', 'kiauto': 'Puerto Ordaz', 'autosurca': 'El Tigre' }
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 const fmt = (n: number) => Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -40,7 +40,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const data: ReservaData = {
     fecha: ahora.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-    ciudad: CIUDAD_CONCES[concId ?? 'la-oriental'] ?? 'Maturín',
+    ciudad: CIUDAD_CONCES[concId ?? 'jetplus'] ?? 'Porlamar',
     diaTexto: dia,
     mesTexto: mes,
     anioTexto: String(anio).replace(/^(\d)(\d{3})$/, '$1.$2'),

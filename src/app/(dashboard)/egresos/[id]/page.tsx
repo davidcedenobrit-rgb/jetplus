@@ -95,7 +95,7 @@ export default async function EgresoDetallePage({
                   <Building2 size={16} className="text-white" />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm tracking-tight">LA ORIENTAL AUTOMOTORS</p>
+                  <p className="text-white font-bold text-sm tracking-tight">JETPLUS</p>
                   <p className="text-gray-400 text-[11px]">Comprobante de egreso</p>
                 </div>
               </div>
@@ -249,7 +249,7 @@ export default async function EgresoDetallePage({
             </div>
 
             <div className="bg-oriental-bg border-t border-gray-100 px-6 py-3 flex items-center justify-between">
-              <p className="text-[10px] text-oriental-gray">La Oriental Automotors C.A. — RIF: J-XXXXXXXXX-X</p>
+              <p className="text-[10px] text-oriental-gray">JETPLUS — RIF: J-XXXXXXXXX-X</p>
               <p className="text-[10px] text-oriental-gray">Documento generado digitalmente</p>
             </div>
           </div>

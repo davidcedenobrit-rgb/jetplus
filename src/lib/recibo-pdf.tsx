@@ -3,7 +3,7 @@ import {
   Document, Page, View, Text, Image, StyleSheet,
 } from '@react-pdf/renderer'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://centrodemando.laoriental.co'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jetplus.vercel.app'
 
 const RED = '#C41E3A'
 const BLACK = '#111111'
@@ -148,20 +148,20 @@ function fmtMonto(m: number, moneda: string) {
 }
 
 export function ReciboPDF({ data }: { data: ReciboPDFData }) {
-  const logoUrl = `${APP_URL}/logo-la-oriental.jpg`
-  const selloUrl = `${APP_URL}/sello-la-oriental.jpeg`
+  const logoUrl = `${APP_URL}/logo-jetplus.jpg`
+  const selloUrl = `${APP_URL}/sello-jetplus.jpeg`
 
   return (
-    <Document title={`Recibo ${data.numeroRecibo}`} author="La Oriental Automotors">
+    <Document title={`Recibo ${data.numeroRecibo}`} author="JETPLUS">
       <Page size="A4" style={s.page}>
 
         {/* ── Header ── */}
         <View style={s.header}>
           <View>
             <Image style={s.logo} src={logoUrl} />
-            <Text style={s.companySmall}>RIF: J-50569214-3</Text>
-            <Text style={s.companySmall}>Av. Ugarte Pelayo, Centro Profesional David</Text>
-            <Text style={s.companySmall}>Sector Centro, Maturín, Monagas</Text>
+            <Text style={s.companySmall}>RIF: J-50372874-4</Text>
+            <Text style={s.companySmall}>Av. Rómulo Gallegos</Text>
+            <Text style={s.companySmall}>Porlamar, Nueva Esparta</Text>
             <Text style={s.companySmall}>Concesionario Oficial MG & MAXUS</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
@@ -400,7 +400,7 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
                 <Text style={[s.sectionLabel, { marginBottom: 8 }]}>Desglose por financiamiento</Text>
                 <View style={{ gap: 6 }}>
                   {data.creditosDesglose.map((c, idx) => {
-                    const isLaOriental = c.planNombre === 'La Oriental'
+                    const isLaOriental = c.planNombre === 'Jetplus'
                     const bg = isLaOriental ? '#faf5ff' : '#eef2ff'
                     const textColor = isLaOriental ? '#7e22ce' : '#4338ca'
                     const bColor = isLaOriental ? '#e9d5ff' : '#c7d2fe'
@@ -445,7 +445,7 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
 
         {/* ── Footer ── */}
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>La Oriental Automotors C.A. · RIF: J-50569214-3</Text>
+          <Text style={s.footerText}>JETPLUS · RIF: J-50372874-4</Text>
           <Text style={s.footerText}>{data.numeroRecibo}</Text>
         </View>
 

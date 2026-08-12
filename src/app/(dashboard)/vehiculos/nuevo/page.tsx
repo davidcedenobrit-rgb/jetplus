@@ -147,7 +147,7 @@ export default function NuevoVehiculoPage() {
   const [showroomSeleccionado, setShowroomSeleccionado] = useState<VehiculoShowroom | null>(null)
   const [loadingShowroom, setLoadingShowroom] = useState(true)
   // Inventario de aliados (Ki Auto) que se puede vender desde aquí; al guardar,
-  // el carro se transfiere a La Oriental automáticamente.
+  // el carro se transfiere a Jetplus automáticamente.
   const [externos, setExternos] = useState<any[]>([])
   const [externoSel, setExternoSel] = useState<{ origen: string; externoId: string } | null>(null)
 
@@ -194,7 +194,7 @@ export default function NuevoVehiculoPage() {
   const [frecuencia, setFrecuencia] = useState('mensual')
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
 
-  // Sub-plan La Oriental (Crédito Inicial)
+  // Sub-plan Jetplus (Crédito Inicial)
   const [orMonto, setOrMonto] = useState('')
   const [orCuotas, setOrCuotas] = useState('12')
   const [orMontoCuota, setOrMontoCuota] = useState('')
@@ -381,7 +381,7 @@ export default function NuevoVehiculoPage() {
   }
 
   // Seleccionar un carro que está en un aliado (Ki Auto). Se prellenar igual,
-  // pero se marca el origen para transferirlo a La Oriental al guardar.
+  // pero se marca el origen para transferirlo a Jetplus al guardar.
   function seleccionarExterno(v: any) {
     seleccionarShowroom(v as VehiculoShowroom)
     setExternoSel({ origen: v.origen, externoId: v.id })
@@ -497,7 +497,7 @@ export default function NuevoVehiculoPage() {
     return { monto, cuotas, montoCuota, totalMensual, nTrim, montoTrim, totalTrim, grandTotal, showWarning }
   }, [vhMonto, vhCuotas, vhMontoCuota, ceActivo, ceCuotas, ceMontoCuota])
 
-  // Auto-calcular monto por cuota — La Oriental (plan personalizado)
+  // Auto-calcular monto por cuota — Jetplus (plan personalizado)
   useEffect(() => {
     const monto = parseFloat(orMonto)
     const cuotas = parseInt(orCuotas)
@@ -612,7 +612,7 @@ export default function NuevoVehiculoPage() {
   const resumenFinanciero = useMemo(() => {
     const precioBase = parseFloat(precioTotalVehiculo) || 0
 
-    // La Oriental: usar monto directo (el total que cobra La Oriental, independiente de cuántas cuotas)
+    // Jetplus: usar monto directo (el total que cobra Jetplus, independiente de cuántas cuotas)
     const totalOr = calcInicialOriental.monto
 
     // Vehimotors: total de cuotas (incluye interés si hay); si no hay montoCuota, usar monto base
@@ -656,7 +656,7 @@ export default function NuevoVehiculoPage() {
     return { base, iva, ivaPct, pctInicial, gastosContado, gastosCredito, contadoTotal, inicialBase, totalInicialLaOriental, financiamientoVh, cuotaVh, n, tasaAnual }
   }, [calcBase, calcIvaPct, calcGastosContado, calcGastosCredito, calcPctInicial, calcTasaAnual, calcNumCuotasVh])
 
-  // ── Restante de inicial → Crédito La Oriental (plan personalizado) ──────────
+  // ── Restante de inicial → Crédito Jetplus (plan personalizado) ──────────
   const totalPagadoInicial = pagosIniciales.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0)
   useEffect(() => {
     if (plan !== 'personalizado' || !calculadora) return
@@ -939,7 +939,7 @@ export default function NuevoVehiculoPage() {
     setLoading(true)
     setError('')
 
-    // Si el carro venía de un aliado (Ki Auto), traerlo a La Oriental primero.
+    // Si el carro venía de un aliado (Ki Auto), traerlo a Jetplus primero.
     // Se resuelve el id del showroom LOCAL para vincular la venta a esa unidad.
     let showroomLocalId: string | null = externoSel ? null : (showroomSeleccionado?.id ?? null)
     if (externoSel) {
@@ -1121,11 +1121,11 @@ export default function NuevoVehiculoPage() {
             num_cuotas: calcInicialOriental.cuotas,
             frecuencia_pago: orFrecuencia, fecha_inicio: orFecha,
             moneda: 'USD', estado: 'activo', plan_tipo: 'inicial_la_oriental',
-            observaciones: orObs || 'Crédito de Inicial — La Oriental',
+            observaciones: orObs || 'Crédito de Inicial — Jetplus',
           }).select().single()
-          if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito La Oriental'); setLoading(false); return }
+          if (errOr || !creditoOr) { setError(errOr?.message ?? 'Error creando crédito Jetplus'); setLoading(false); return }
           if (calcInicialOriental.cuotas > 0) {
-            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — La Oriental', orHistorico))
+            await supabase.from('cuotas').insert(buildCuotas(creditoOr.id, calcInicialOriental.cuotas, calcInicialOriental.montoCuota, orFrecuencia, orFecha, 'Crédito de Inicial — Jetplus', orHistorico))
           } else {
             // Pago único — crear 1 cuota por el monto completo para que aparezca en el selector de pagos
             await supabase.from('cuotas').insert([{
@@ -1134,7 +1134,7 @@ export default function NuevoVehiculoPage() {
               fecha_vencimiento: orFecha,
               monto: orTotalMonto,
               mora: 0,
-              concepto: 'Crédito de Inicial — La Oriental',
+              concepto: 'Crédito de Inicial — Jetplus',
               estado: 'pendiente',
               monto_pagado: 0,
             }])
@@ -1596,7 +1596,7 @@ export default function NuevoVehiculoPage() {
                 </button>
               ))}
 
-              {/* Inventario de aliados (Ki Auto): se transfiere a La Oriental al guardar */}
+              {/* Inventario de aliados (Ki Auto): se transfiere a Jetplus al guardar */}
               {externos.length > 0 && (
                 <>
                   <div className="col-span-full mt-1 mb-0.5 flex items-center gap-2">
@@ -1725,7 +1725,7 @@ export default function NuevoVehiculoPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
               {[
                 { value: 'asegurate_500', title: 'Asegúrate con $500', desc: '$500 reserva + cuotas según modelo' },
-                { value: 'personalizado', title: 'Personalizado "La Oriental"', desc: 'Define el plan libremente' },
+                { value: 'personalizado', title: 'Personalizado "Jetplus"', desc: 'Define el plan libremente' },
               ].map(p => (
                 <button key={p.value} type="button"
                   onClick={() => { setPlan(p.value as Plan); setPlanAC500Sel(null) }}
@@ -1907,7 +1907,7 @@ export default function NuevoVehiculoPage() {
                           placeholder="16" value={calcIvaPct} onChange={e => setCalcIvaPct(e.target.value)} />
                       </div>
                       <div>
-                        <label className="label">% Inicial (La Oriental)</label>
+                        <label className="label">% Inicial (Jetplus)</label>
                         <input type="number" step="1" min="1" max="99" className="input"
                           placeholder="40" value={calcPctInicial} onChange={e => setCalcPctInicial(e.target.value)} />
                       </div>
@@ -1985,7 +1985,7 @@ export default function NuevoVehiculoPage() {
                               <span className="font-semibold text-oriental-black">{formatUSD(calculadora.gastosCredito)}</span>
                             </div>
                             <div className="flex justify-between border-t border-amber-200 pt-2">
-                              <span className="font-bold text-purple-800 text-xs uppercase tracking-wide">Total Inicial (La Oriental)</span>
+                              <span className="font-bold text-purple-800 text-xs uppercase tracking-wide">Total Inicial (Jetplus)</span>
                               <span className="font-extrabold text-purple-700 text-base">{formatUSD(calculadora.totalInicialLaOriental)}</span>
                             </div>
                             <div className="flex justify-between bg-indigo-50 rounded-lg px-3 py-2 mt-1">
@@ -2048,7 +2048,7 @@ export default function NuevoVehiculoPage() {
                             <input type="number" step="0.01" min="0" className="input pl-7 font-semibold text-lg"
                               placeholder="0.00" value={acuerdoMonto} onChange={e => setAcuerdoMonto(e.target.value)} />
                           </div>
-                          <p className="text-[10px] text-oriental-gray mt-1">Lo que el cliente se compromete a pagar en efectivo (el restante va a Crédito La Oriental)</p>
+                          <p className="text-[10px] text-oriental-gray mt-1">Lo que el cliente se compromete a pagar en efectivo (el restante va a Crédito Jetplus)</p>
                         </div>
                         <div>
                           <label className="label">Fecha límite de pago</label>
@@ -2063,7 +2063,7 @@ export default function NuevoVehiculoPage() {
                       </div>
                       {calculadora && parseFloat(acuerdoMonto) > 0 && (
                         <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 flex items-center justify-between text-sm">
-                          <span className="text-purple-800 text-xs font-semibold">→ Restante → Crédito La Oriental:</span>
+                          <span className="text-purple-800 text-xs font-semibold">→ Restante → Crédito Jetplus:</span>
                           <span className="font-extrabold text-purple-700 text-base">
                             {formatUSD(Math.max(0, calculadora.totalInicialLaOriental - (parseFloat(acuerdoMonto) || 0)))}
                           </span>
@@ -2093,7 +2093,7 @@ export default function NuevoVehiculoPage() {
                     <p className="text-xs text-oriental-gray px-5 pb-4">
                       {acuerdoActivo
                         ? 'Activa si el cliente realizó su primer pago hoy. Los siguientes pagos se registran desde el detalle del crédito.'
-                        : 'Activa para registrar cuánto pagó el cliente de inicial. El restante se carga automáticamente al Crédito La Oriental.'}
+                        : 'Activa para registrar cuánto pagó el cliente de inicial. El restante se carga automáticamente al Crédito Jetplus.'}
                     </p>
                   )}
                   {registrarIngresoInicial && (
@@ -2141,7 +2141,7 @@ export default function NuevoVehiculoPage() {
                             ? 'bg-red-50 border-red-200'
                             : 'bg-purple-50 border-purple-200'
                         }`}>
-                          <span className="text-purple-800 text-xs font-semibold">→ Restante → Crédito La Oriental:</span>
+                          <span className="text-purple-800 text-xs font-semibold">→ Restante → Crédito Jetplus:</span>
                           <span className="font-extrabold text-purple-700 text-base">
                             {formatUSD(Math.max(0, calculadora.totalInicialLaOriental - totalPagadoInicial))}
                           </span>
@@ -2175,11 +2175,11 @@ export default function NuevoVehiculoPage() {
                   </div>
                 </div>
 
-                {/* Sub-plan La Oriental */}
+                {/* Sub-plan Jetplus */}
                 <div className="border-2 border-purple-200 rounded-xl p-5 bg-purple-50/40">
                   <p className="font-bold text-purple-800 text-sm mb-4 flex items-center gap-2">
                     <span className="w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">1</span>
-                    Crédito de Inicial — La Oriental
+                    Crédito de Inicial — Jetplus
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                     <div>
@@ -2197,7 +2197,7 @@ export default function NuevoVehiculoPage() {
                         <div className="h-full flex flex-col justify-end">
                           <div className="bg-purple-100 border-2 border-purple-300 border-dashed rounded-xl px-4 py-3 text-center">
                             <p className="text-purple-800 font-bold text-sm">Pago único</p>
-                            <p className="text-purple-600 text-[11px] mt-0.5">La Oriental cobra el monto completo sin cuotas</p>
+                            <p className="text-purple-600 text-[11px] mt-0.5">Jetplus cobra el monto completo sin cuotas</p>
                           </div>
                         </div>
                       ) : (
@@ -2237,7 +2237,7 @@ export default function NuevoVehiculoPage() {
                     <textarea className="textarea" rows={2} placeholder="Condiciones especiales de este crédito..."
                       value={orObs} onChange={e => setOrObs(e.target.value)} />
                   </div>
-                  {/* Monto histórico La Oriental */}
+                  {/* Monto histórico Jetplus */}
                   {calcInicialOriental.cuotas > 0 && (() => {
                     const hist = parseFloat(orMontoHistorico) || 0
                     const mc   = calcInicialOriental.montoCuota || 0
@@ -2273,7 +2273,7 @@ export default function NuevoVehiculoPage() {
                   {calcInicialOriental.cuotas === 0 && calcInicialOriental.monto > 0 && (
                     <div className="mt-3 bg-purple-700 rounded-lg p-4 flex items-center justify-between">
                       <div>
-                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Pago único — La Oriental</p>
+                        <p className="text-purple-200 text-[10px] uppercase tracking-wider">Pago único — Jetplus</p>
                         <p className="text-purple-300 text-[11px] mt-0.5">Sin cuotas — cobro total al inicio</p>
                       </div>
                       <p className="text-white font-extrabold text-xl">{formatUSD(calcInicialOriental.monto)}</p>
@@ -2581,7 +2581,7 @@ export default function NuevoVehiculoPage() {
                       )}
                       {resumenFinanciero.totalOr > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-purple-300">Inicial — La Oriental (incl. IVA + gastos)</span>
+                          <span className="text-purple-300">Inicial — Jetplus (incl. IVA + gastos)</span>
                           <span className="text-purple-300 font-semibold">{formatUSD(resumenFinanciero.totalOr)}</span>
                         </div>
                       )}
