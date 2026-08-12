@@ -176,8 +176,8 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
       {/* ── VEHÍCULOS ─────────────────────────────────────────────────────── */}
       <section id="vehiculos" style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 20px 56px' }}>
         <div style={{ marginBottom: 22 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 4 }}>Sede {brand.ciudad} · Atención personalizada</p>
-          <h2 style={{ fontSize: 24, fontWeight: 900, color: '#111827' }}>Vehículos MG &amp; MAXUS</h2>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.55)', marginBottom: 4 }}>Sede {brand.ciudad} · Atención personalizada</p>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: '#fff' }}>Vehículos MG &amp; MAXUS</h2>
         </div>
         <VehiculosFiltro vehiculos={lista} tasas={tasas} evento={evento} waCorp={waCorp} concesionario={concesionario} brand={brandImg} />
       </section>
@@ -187,10 +187,10 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
         <section id="ac500" style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 20px' }}>
           <div style={{ textAlign: 'center', marginBottom: 40 }}>
             <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>🛡️ Plan exclusivo</span>
-            <h2 style={{ fontSize: 'clamp(26px, 4.5vw, 42px)', fontWeight: 900, color: '#111827', marginBottom: 14, lineHeight: 1.1 }}>
+            <h2 style={{ fontSize: 'clamp(26px, 4.5vw, 42px)', fontWeight: 900, color: '#fff', marginBottom: 14, lineHeight: 1.1 }}>
               Asegúrate con <span style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>$500</span>
             </h2>
-            <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 560, margin: '0 auto 28px', lineHeight: 1.6 }}>
+            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 15, maxWidth: 560, margin: '0 auto 28px', lineHeight: 1.6 }}>
               Reserva tu vehículo MG o MAXUS con solo $500 y accede a un precio preferencial hasta 30% por debajo del mercado. Completa el resto con un cronograma de cuotas y recíbelo en el mes 6.
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -208,11 +208,11 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
         <section id="promociones" style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 48px' }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>🏷️ Oferta especial</span>
-            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 900, color: '#111827', marginBottom: 10, lineHeight: 1.2 }}>
+            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 900, color: '#fff', marginBottom: 10, lineHeight: 1.2 }}>
               {promoData?.titulo ?? 'Promociones Especiales'}
             </h2>
             {promoData?.subtitulo && (
-              <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 520, margin: '0 auto', lineHeight: 1.6 }}>{promoData.subtitulo}</p>
+              <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 15, maxWidth: 520, margin: '0 auto', lineHeight: 1.6 }}>{promoData.subtitulo}</p>
             )}
           </div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
