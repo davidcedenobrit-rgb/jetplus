@@ -22,7 +22,8 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url)
-  const email = (url.searchParams.get('email') || 'davidcedenobrit@gmail.com').trim()
+  // Destino fijo: evita que el endpoint interno pueda enviar pruebas a terceros.
+  const email = 'davidcedenobrit@gmail.com'
   const modalidad = url.searchParams.get('modalidad') || 'credito_24'
   const plan = url.searchParams.get('plan') || 'vehimotors'
   let vehiculoId = url.searchParams.get('vehiculoId')
@@ -50,7 +51,7 @@ export async function GET(req: Request) {
     clienteCorreo: email,
     clienteTelefono: null,
     clienteDireccion: null,
-    clienteCiudadEstado: 'Maturín - Monagas',
+    clienteCiudadEstado: 'Porlamar - Nueva Esparta',
     clienteCodigoPostal: null,
     agenteRetencion: false,
     modalidad,
