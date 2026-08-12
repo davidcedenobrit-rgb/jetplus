@@ -117,13 +117,13 @@ export async function POST(req: Request) {
     // Validaciones básicas (el correo del cliente es opcional).
     // AC500 puede cotizarse directo (sin carro del catálogo) usando el plan.
     const ac500Directo = plan === 'ac500' && ac500PlanId && !vehiculoId
-    if (!codigo || (!vehiculoId && !promoVehiculoId && !ac500Directo) || !clienteNombre?.trim() || !clienteCiRif?.trim() || !modalidad) {
+    const esPresupuesto = plan === 'presupuesto'
+    if (!codigo || (!vehiculoId && !promoVehiculoId && !ac500Directo) || !clienteNombre?.trim() || !clienteCiRif?.trim() || (!esPresupuesto && !modalidad)) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
     const correoCliente = clienteCorreo?.trim().toLowerCase() || ''
     // Si enviarAlCliente === false → se guarda sin mandarle el correo al cliente.
     const debeEnviarCliente = enviarAlCliente !== false
-    const esPresupuesto = plan === 'presupuesto'
     // El presupuesto Jetplus no usa "modalidad" (contado/crédito lo define el
     // % de inicial), así que no exige el campo.
     if (!esPresupuesto && !['contado', 'credito_24'].includes(modalidad)) {
