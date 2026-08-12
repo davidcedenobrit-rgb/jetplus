@@ -10,7 +10,7 @@ import { CotizacionPDF } from '@/lib/cotizacion-pdf'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 import { permitido } from '@/lib/rate-limit'
-import { calcularTotalesCotizacion } from '@/lib/cotizacion-calc'
+import { calcularTotalesCotizacion, calcularPresupuestoJetplus } from '@/lib/cotizacion-calc'
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -85,6 +85,13 @@ export async function POST(req: Request) {
       // códigos de la tabla `vendedoras`. En el link público no se envía: la
       // vendedora ya viene identificada por su propio código.
       vendedorasCodigos,
+      // Modelo real de Jetplus (plan === 'presupuesto'): descuento discrecional,
+      // % de inicial (100 = contado), financiadora elegida y cargos seleccionables.
+      descuentoPct,
+      inicialPct: inicialPctBody,
+      financiadoraId,
+      cargoGastosAdmin,
+      cargoPlaca,
     } = body
 
     const condPersonalizadas = String(condicionesPersonalizadas ?? '').trim() || null
@@ -116,11 +123,23 @@ export async function POST(req: Request) {
     const correoCliente = clienteCorreo?.trim().toLowerCase() || ''
     // Si enviarAlCliente === false → se guarda sin mandarle el correo al cliente.
     const debeEnviarCliente = enviarAlCliente !== false
-    if (!['contado', 'credito_24'].includes(modalidad)) {
+    const esPresupuesto = plan === 'presupuesto'
+    // El presupuesto Jetplus no usa "modalidad" (contado/crédito lo define el
+    // % de inicial), así que no exige el campo.
+    if (!esPresupuesto && !['contado', 'credito_24'].includes(modalidad)) {
       return NextResponse.json({ error: 'Modalidad inválida' }, { status: 400 })
     }
-    if (!['vehimotors', 'banco_100', 'ac500', 'personalizado', 'banca_nacional'].includes(plan)) {
+    if (!['vehimotors', 'banco_100', 'ac500', 'personalizado', 'banca_nacional', 'presupuesto'].includes(plan)) {
       return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
+    }
+    if (esPresupuesto) {
+      const ip = Number(inicialPctBody)
+      if (!(ip >= 1 && ip <= 100)) {
+        return NextResponse.json({ error: 'Inicial % inválido' }, { status: 400 })
+      }
+      if (ip < 100 && !financiadoraId) {
+        return NextResponse.json({ error: 'Selecciona la financiadora' }, { status: 400 })
+      }
     }
     if (plan === 'ac500' && (!ac500PlanId || !ac500MesesBody)) {
       return NextResponse.json({ error: 'Plan AC500 incompleto' }, { status: 400 })
@@ -283,94 +302,140 @@ export async function POST(req: Request) {
       }
     }
 
-    // Diferencial cambiario. El % sale de las tasas globales (BCV y USDT):
-    //   % = (USDT - BCV) / BCV
-    // Disponible en las 3 modalidades; se activa por vehículo (Rojas decide).
-    //   · Banco: sobre el monto financiado (70%) — comportamiento histórico.
-    //   · Contado / Crédito Vehimotors: sobre el precio base del vehículo.
     let diferencial = 0
     let totalVehiculoBanco = 0
-
-    const difBancoOn   = plan === 'banco_100' && modalidad === 'credito_24' && vehiculo.diferencial_banco_activo !== false
-    const difContadoOn = plan === 'vehimotors' && modalidad === 'contado' && vehiculo.diferencial_c_activo === true
-    const difCreditoOn = plan === 'vehimotors' && modalidad === 'credito_24' && vehiculo.diferencial_cr_activo === true
-    // Personalizado: el diferencial es un interruptor por cotización (lo prende Rojas).
-    const difPersonalizadoOn = plan === 'personalizado' && persDiferencial
-
-    if (difBancoOn || difContadoOn || difCreditoOn || difPersonalizadoOn) {
-      const { data: cfgTasas } = await supabase
-        .from('config_cotizaciones')
-        .select('clave, valor')
-        .in('clave', ['tasa_bcv', 'tasa_usdt'])
-      const tasaBcv  = Number(cfgTasas?.find(c => c.clave === 'tasa_bcv')?.valor) || 0
-      const tasaUsdt = Number(cfgTasas?.find(c => c.clave === 'tasa_usdt')?.valor) || 0
-      const difPct = (tasaBcv > 0 && tasaUsdt > tasaBcv) ? (tasaUsdt - tasaBcv) / tasaBcv : 0
-
-      if (difBancoOn) {
-        const placaMonto = Number(vehiculo.placa_monto) || 400
-        totalVehiculoBanco = precioBase + iva + placaMonto
-        const financiamientoBanco = totalVehiculoBanco * 0.70
-        diferencial = financiamientoBanco * difPct
-      } else if (difPersonalizadoOn) {
-        // Sobre el monto financiado del plan personalizado.
-        diferencial = precioBase * (1 - persIniPct / 100) * difPct
-      } else {
-        diferencial = precioBase * difPct
-      }
-    }
-
-    // El plan banco necesita totalVehiculoBanco aunque el diferencial esté apagado.
-    if (plan === 'banco_100' && modalidad === 'credito_24' && totalVehiculoBanco === 0) {
-      const placaMonto = Number(vehiculo.placa_monto) || 400
-      totalVehiculoBanco = precioBase + iva + placaMonto
-    }
-
-    let gastosBase: number
-    if (plan === 'banco_100' && modalidad === 'credito_24') {
-      gastosBase =
-        (Number(vehiculo.poliza_vehiculo_banco) || 0) +
-        (Number(vehiculo.poliza_vida_banco) || 0) +
-        (Number(vehiculo.honorarios_banco) || 0) +
-        (Number(vehiculo.gastos_internos_banco) || 0) +
-        (Number(vehiculo.alfombras_banco) || 0) +
-        (Number(vehiculo.transporte_banco) || 0) +
-        (Number(vehiculo.accesorios_banco) || 0) +
-        (Number(vehiculo.igtf_banco) || 0)
-    } else if (plan === 'ac500') {
-      gastosBase = 0
-    } else if (modalidad === 'contado') {
-      gastosBase = Number(vehiculo.gc) || 0
-    } else {
-      gastosBase = Number(vehiculo.gcr) || 0
-    }
-    // Gastos: normalmente base por modalidad + diferencial; Rojas Personalizada
-    // envía el total ya editado (que puede incluir su propio diferencial).
-    const gastos = (gastosOverrideNum != null && gastosOverrideNum >= 0) ? gastosOverrideNum : (gastosBase + diferencial)
-
-    // Meses del plan 100% Banco (editable por vehículo; por defecto 24)
+    let gastos = 0
+    let totalInicial = 0
+    let financiamientoMonto: number | null = null
+    let cuotaMensual: number | null = null
+    let costoTotal = 0
     const mesesBanco = Math.max(1, Math.round(Number((vehiculo as { cuotas_banco?: number | null }).cuotas_banco) || 24))
 
-    // Motor de cálculo único (mismo que usan editar y reactivar)
-    const totales = calcularTotalesCotizacion({
-      precioBase,
-      modalidad,
-      plan,
-      gastos,
-      placaMonto: Number(vehiculo.placa_monto) || 400,
-      tasaBancoPct: Number(vehiculo.tasa_banco_pct) || 16,
-      mesesBanco,
-      cuotaVehimotors: Number(vehiculo.tasa_credito) || 0,
-      ac500: (plan === 'ac500' && ac500Schedule)
-        ? { reserva: ac500Schedule.reserva, total: ac500Schedule.total }
-        : null,
-      personalizadoInicialPct: persIniPct / 100,
-      personalizadoMeses: persMeses,
-      personalizadoTasaPct: persTasaPct,
-    })
-    let totalInicial = totales.totalInicial
-    let financiamientoMonto = totales.financiamientoMonto
-    let cuotaMensual = totales.cuotaMensual
-    let costoTotal = totales.costoTotal
+    // Presupuesto de descuento_pct/igtf_monto/financiadora/comisión/cargos,
+    // guardados aparte para el PDF y el panel.
+    let presupuestoInicialPct = 100
+    let presupuestoDescuentoPct = 0
+    let presupuestoIgtf = 0
+    let presupuestoComision = 0
+    let presupuestoFinanciadoraNombre: string | null = null
+    let presupuestoCargoGastosAdmin = false
+    let presupuestoCargoPlaca = false
+
+    if (esPresupuesto) {
+      // Modelo real de Jetplus Margarita (confirmado contra proformas reales):
+      // descuento discrecional + IGTF 3% + inicial % (100 = contado) + comisión
+      // de la financiadora sobre la inicial + cargos seleccionables.
+      presupuestoInicialPct = Math.min(100, Math.max(1, Number(inicialPctBody)))
+      presupuestoDescuentoPct = Math.min(100, Math.max(0, Number(descuentoPct) || 0))
+      presupuestoCargoGastosAdmin = !!cargoGastosAdmin
+      presupuestoCargoPlaca = !!cargoPlaca
+      let financiadoraTasaPct = 0
+      if (presupuestoInicialPct < 100 && financiadoraId) {
+        const { data: fin } = await supabase.from('financiadoras').select('nombre, tasa_comision_pct').eq('id', financiadoraId).maybeSingle()
+        financiadoraTasaPct = Number(fin?.tasa_comision_pct) || 0
+        presupuestoFinanciadoraNombre = fin?.nombre ?? null
+      }
+      const pres = calcularPresupuestoJetplus({
+        precioLista: precioBase,
+        descuentoPct: presupuestoDescuentoPct,
+        inicialPct: presupuestoInicialPct,
+        financiadoraTasaPct,
+        cargoGastosAdmin: presupuestoCargoGastosAdmin,
+        cargoPlaca: presupuestoCargoPlaca,
+        gastosAdminMonto: Number(vehiculo.gc) || 500,
+        placaMonto: Number(vehiculo.placa_monto) || 390,
+      })
+      presupuestoIgtf = pres.igtf
+      presupuestoComision = pres.comisionFlat
+      gastos = pres.cargos
+      totalInicial = pres.totalInicialAPagar
+      financiamientoMonto = pres.esContado ? null : pres.saldoFinanciar
+      cuotaMensual = null
+      costoTotal = pres.totalInicialAPagar
+    } else {
+      // Diferencial cambiario. El % sale de las tasas globales (BCV y USDT):
+      //   % = (USDT - BCV) / BCV
+      // Disponible en las 3 modalidades; se activa por vehículo (Rojas decide).
+      //   · Banco: sobre el monto financiado (70%) — comportamiento histórico.
+      //   · Contado / Crédito Vehimotors: sobre el precio base del vehículo.
+      const difBancoOn   = plan === 'banco_100' && modalidad === 'credito_24' && vehiculo.diferencial_banco_activo !== false
+      const difContadoOn = plan === 'vehimotors' && modalidad === 'contado' && vehiculo.diferencial_c_activo === true
+      const difCreditoOn = plan === 'vehimotors' && modalidad === 'credito_24' && vehiculo.diferencial_cr_activo === true
+      // Personalizado: el diferencial es un interruptor por cotización (lo prende Rojas).
+      const difPersonalizadoOn = plan === 'personalizado' && persDiferencial
+
+      if (difBancoOn || difContadoOn || difCreditoOn || difPersonalizadoOn) {
+        const { data: cfgTasas } = await supabase
+          .from('config_cotizaciones')
+          .select('clave, valor')
+          .in('clave', ['tasa_bcv', 'tasa_usdt'])
+        const tasaBcv  = Number(cfgTasas?.find(c => c.clave === 'tasa_bcv')?.valor) || 0
+        const tasaUsdt = Number(cfgTasas?.find(c => c.clave === 'tasa_usdt')?.valor) || 0
+        const difPct = (tasaBcv > 0 && tasaUsdt > tasaBcv) ? (tasaUsdt - tasaBcv) / tasaBcv : 0
+
+        if (difBancoOn) {
+          const placaMonto = Number(vehiculo.placa_monto) || 400
+          totalVehiculoBanco = precioBase + iva + placaMonto
+          const financiamientoBanco = totalVehiculoBanco * 0.70
+          diferencial = financiamientoBanco * difPct
+        } else if (difPersonalizadoOn) {
+          // Sobre el monto financiado del plan personalizado.
+          diferencial = precioBase * (1 - persIniPct / 100) * difPct
+        } else {
+          diferencial = precioBase * difPct
+        }
+      }
+
+      // El plan banco necesita totalVehiculoBanco aunque el diferencial esté apagado.
+      if (plan === 'banco_100' && modalidad === 'credito_24' && totalVehiculoBanco === 0) {
+        const placaMonto = Number(vehiculo.placa_monto) || 400
+        totalVehiculoBanco = precioBase + iva + placaMonto
+      }
+
+      let gastosBase: number
+      if (plan === 'banco_100' && modalidad === 'credito_24') {
+        gastosBase =
+          (Number(vehiculo.poliza_vehiculo_banco) || 0) +
+          (Number(vehiculo.poliza_vida_banco) || 0) +
+          (Number(vehiculo.honorarios_banco) || 0) +
+          (Number(vehiculo.gastos_internos_banco) || 0) +
+          (Number(vehiculo.alfombras_banco) || 0) +
+          (Number(vehiculo.transporte_banco) || 0) +
+          (Number(vehiculo.accesorios_banco) || 0) +
+          (Number(vehiculo.igtf_banco) || 0)
+      } else if (plan === 'ac500') {
+        gastosBase = 0
+      } else if (modalidad === 'contado') {
+        gastosBase = Number(vehiculo.gc) || 0
+      } else {
+        gastosBase = Number(vehiculo.gcr) || 0
+      }
+      // Gastos: normalmente base por modalidad + diferencial; Rojas Personalizada
+      // envía el total ya editado (que puede incluir su propio diferencial).
+      gastos = (gastosOverrideNum != null && gastosOverrideNum >= 0) ? gastosOverrideNum : (gastosBase + diferencial)
+
+      // Motor de cálculo único (mismo que usan editar y reactivar)
+      const totales = calcularTotalesCotizacion({
+        precioBase,
+        modalidad,
+        plan,
+        gastos,
+        placaMonto: Number(vehiculo.placa_monto) || 400,
+        tasaBancoPct: Number(vehiculo.tasa_banco_pct) || 16,
+        mesesBanco,
+        cuotaVehimotors: Number(vehiculo.tasa_credito) || 0,
+        ac500: (plan === 'ac500' && ac500Schedule)
+          ? { reserva: ac500Schedule.reserva, total: ac500Schedule.total }
+          : null,
+        personalizadoInicialPct: persIniPct / 100,
+        personalizadoMeses: persMeses,
+        personalizadoTasaPct: persTasaPct,
+      })
+      totalInicial = totales.totalInicial
+      financiamientoMonto = totales.financiamientoMonto
+      cuotaMensual = totales.cuotaMensual
+      costoTotal = totales.costoTotal
+    }
 
     // Banca Nacional — Vehimotors: el banco aprueba un % del total (base+IVA+placa),
     // pagado en Bs a BCV; con la merma del día se obtiene el valor real en dólares, y
@@ -399,6 +464,13 @@ export async function POST(req: Request) {
         financ_cuota: Number(bnVehimotors.financCuota) || 0,
       }
     }
+
+    // El presupuesto Jetplus no usa "modalidad" en el formulario (lo define el
+    // % de inicial); se guarda un valor equivalente por compatibilidad con las
+    // columnas/reportes existentes.
+    const modalidadFinal: 'contado' | 'credito_24' = esPresupuesto
+      ? (presupuestoInicialPct >= 100 ? 'contado' : 'credito_24')
+      : modalidad
 
     const hoy = new Date()
     const venc = new Date(hoy)
@@ -433,7 +505,7 @@ export async function POST(req: Request) {
         color: (typeof color === 'string' && color.trim()) ? color.trim() : undefined,
         cantidad: cantidadNum,
         precioBase,
-        modalidad,
+        modalidad: modalidadFinal,
         plan,
         ivaMonto: iva,
         gastosMonto: gastos,
@@ -448,6 +520,12 @@ export async function POST(req: Request) {
         mesesCredito: plan === 'personalizado' ? persMeses : undefined,
         condicionesPersonalizadas: condPersonalizadas,
         bnVehimotors: bnVehimotorsData,
+        presupuesto: esPresupuesto ? {
+          descuentoPct: presupuestoDescuentoPct, igtf: presupuestoIgtf,
+          inicialPct: presupuestoInicialPct, comisionFlat: presupuestoComision,
+          financiadoraNombre: presupuestoFinanciadoraNombre,
+          cargoGastosAdmin: presupuestoCargoGastosAdmin, cargoPlaca: presupuestoCargoPlaca,
+        } : undefined,
       }
       const previewBuf = await renderToBuffer(
         React.createElement(CotizacionPDF, { data: previewData }) as React.ReactElement<any>
@@ -517,7 +595,7 @@ export async function POST(req: Request) {
         modelo: vehiculo.model,
         cantidad: cantidadNum,
         precio_base: precioBase,
-        modalidad,
+        modalidad: modalidadFinal,
         plan,
         iva_monto: iva,
         gastos_monto: gastos,
@@ -528,6 +606,13 @@ export async function POST(req: Request) {
         financiamiento_monto: financiamientoMonto,
         cuota_mensual: cuotaMensual,
         costo_total: costoTotal,
+        descuento_pct: esPresupuesto ? presupuestoDescuentoPct : null,
+        igtf_monto: esPresupuesto ? presupuestoIgtf : null,
+        financiadora_id: esPresupuesto && presupuestoInicialPct < 100 ? financiadoraId : null,
+        comision_flat_monto: esPresupuesto ? presupuestoComision : null,
+        inicial_pct: esPresupuesto ? presupuestoInicialPct : null,
+        cargo_gastos_admin: esPresupuesto ? presupuestoCargoGastosAdmin : false,
+        cargo_placa: esPresupuesto ? presupuestoCargoPlaca : false,
         ac500_meses: plan === 'ac500' ? ac500Meses : null,
         ac500_cuotas: plan === 'ac500' && ac500Schedule ? ac500Schedule.cuotas.map(c => c.monto) : null,
         cuotas_banco: plan === 'banco_100' ? mesesBanco : null,
@@ -573,7 +658,7 @@ export async function POST(req: Request) {
       color: (typeof color === 'string' && color.trim()) ? color.trim() : undefined,
       cantidad: cantidadNum,
       precioBase,
-      modalidad,
+      modalidad: modalidadFinal,
       plan,
       ivaMonto: iva,
       gastosMonto: gastos,
@@ -588,6 +673,12 @@ export async function POST(req: Request) {
       mesesCredito: plan === 'personalizado' ? persMeses : undefined,
       condicionesPersonalizadas: condPersonalizadas,
       bnVehimotors: bnVehimotorsData,
+      presupuesto: esPresupuesto ? {
+        descuentoPct: presupuestoDescuentoPct, igtf: presupuestoIgtf,
+        inicialPct: presupuestoInicialPct, comisionFlat: presupuestoComision,
+        financiadoraNombre: presupuestoFinanciadoraNombre,
+        cargoGastosAdmin: presupuestoCargoGastosAdmin, cargoPlaca: presupuestoCargoPlaca,
+      } : undefined,
     }
 
     // Enviar emails (ambos en paralelo, errores no bloqueantes).
@@ -602,7 +693,7 @@ export async function POST(req: Request) {
         clienteCiRif: clienteCiRif.trim(),
         marca: vehiculo.brand,
         modelo: vehiculo.model,
-        modalidad,
+        modalidad: modalidadFinal,
         plan,
         totalInicial,
         cuotaMensual,

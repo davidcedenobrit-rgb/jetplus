@@ -102,7 +102,7 @@ export function ComprobanteRetencionPDF({ data }: { data: ComprobanteRetencionDa
           <View style={s.companyBlock}>
             <Text style={s.companyName}>{data.agenteNombre || 'JETPLUS'}</Text>
             <Text style={s.companyRif}>RIF: {data.agenteRif || 'J-50372874-4'}</Text>
-            <Text style={s.companyLine}>{data.agenteDireccion || 'AV. RÓMULO GALLEGOS, PORLAMAR - NUEVA ESPARTA'}</Text>
+            <Text style={s.companyLine}>{data.agenteDireccion || 'AV. RÓMULO BETANCOURT C/ CALLE AEROPUERTO, SECTOR SABANA MAR, PORLAMAR - NUEVA ESPARTA'}</Text>
             <Text style={s.companyLine}>TEL: 0424-8705174 · davidcedenobrit@gmail.com</Text>
           </View>
         </View>

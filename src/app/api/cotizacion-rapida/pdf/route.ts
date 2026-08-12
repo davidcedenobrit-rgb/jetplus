@@ -29,6 +29,7 @@ function parseComun(b: Record<string, unknown>): CotizacionRapidaData {
     precio: Number(b.precio) || 0,
     gastosContado: Number(b.gastosContado) || 0,
     gastosCredito: Number(b.gastosCredito) || 0,
+    placaMonto: Number(b.placaMonto) || 0,
     cuota: Number(b.cuota) || 0,
     ac500: ac && typeof ac === 'object' ? {
       meses: String(ac.meses ?? ''),

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { waCotizacionUrl } from '@/lib/whatsapp-cotizacion'
+import { calcularPresupuestoJetplus } from '@/lib/cotizacion-calc'
 
 type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
 
@@ -15,68 +16,20 @@ interface Vehiculo {
   model: string
   cash: number | null
   gc: number | null
-  gcr: number | null
-  tasa_credito: number | null
   placa_monto?: number | null
-  poliza_vehiculo_banco?: number | null
-  poliza_vida_banco?: number | null
-  honorarios_banco?: number | null
-  gastos_internos_banco?: number | null
-  alfombras_banco?: number | null
-  transporte_banco?: number | null
-  accesorios_banco?: number | null
-  igtf_banco?: number | null
-  diferencial_pct?: number | null
-  tasa_banco_pct?: number | null
-  diferencial_c_activo?: boolean | null
-  diferencial_cr_activo?: boolean | null
-  diferencial_banco_activo?: boolean | null
+}
+
+interface Financiadora {
+  id: string
+  nombre: string
+  tasa_comision_pct: number
 }
 
 type Step = 'pin' | 'form' | 'sending' | 'success' | 'error'
-type Modalidad = 'contado' | 'credito_24'
-type Plan = 'vehimotors' | 'banco_100'
 
 function fmt(n: number | null | undefined) {
   if (!n) return '0,00'
   return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
-}
-
-function calcular(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: { bcv: number; usdt: number }) {
-  const precio = v.cash ?? 0
-  // Jetplus opera bajo el régimen de Puerto Libre de Margarita: la venta del
-  // vehículo está exonerada de IVA (no aplica el 16% que sí llevaba La Oriental).
-  const iva = 0
-  // Diferencial cambiario = (USDT - BCV) / BCV. Se activa por vehículo (Rojas decide).
-  const difPct = (tasas.bcv > 0 && tasas.usdt > tasas.bcv) ? (tasas.usdt - tasas.bcv) / tasas.bcv : 0
-  if (modalidad === 'contado') {
-    // gc ya incluye los ítems manuales (transporte, accesorios, IGTF, etc.).
-    const diferencial = v.diferencial_c_activo ? precio * difPct : 0
-    const gastos = (v.gc ?? 0) + diferencial
-    return { iva, gastos, totalVehiculo: null, inicialBanco: null, totalInicial: precio + iva + gastos, financiamiento: null, cuota: null, costoTotal: precio + iva + gastos }
-  }
-  if (plan === 'banco_100') {
-    const placaMonto = v.placa_monto ?? 400
-    const totalVehiculo = precio + iva + placaMonto
-    const financiamientoBanco = totalVehiculo * 0.70
-    const diferencial = (v.diferencial_banco_activo !== false) ? financiamientoBanco * difPct : 0
-    const gastosBanco = (v.poliza_vehiculo_banco ?? 0) + (v.poliza_vida_banco ?? 0) + (v.honorarios_banco ?? 0) + (v.gastos_internos_banco ?? 0) + (v.alfombras_banco ?? 0) + (v.transporte_banco ?? 0) + (v.accesorios_banco ?? 0) + (v.igtf_banco ?? 0)
-    const gastos = gastosBanco + diferencial
-    const inicialBanco = totalVehiculo * 0.30
-    const totalInicial = inicialBanco + gastos
-    const financiamiento = totalVehiculo * 0.70
-    const tasaBanco = v.tasa_banco_pct ?? 16
-    const r = tasaBanco / 100 / 12
-    const cuota = financiamiento * r * Math.pow(1 + r, 24) / (Math.pow(1 + r, 24) - 1)
-    return { iva, gastos, totalVehiculo, inicialBanco, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
-  }
-  // Crédito Vehimotors — gcr ya incluye los ítems manuales.
-  const diferencial = v.diferencial_cr_activo ? precio * difPct : 0
-  const gastos = (v.gcr ?? 0) + diferencial
-  const totalInicial = precio * 0.4 + iva + gastos
-  const financiamiento = precio * 0.6
-  const cuota = v.tasa_credito ?? 0
-  return { iva, gastos, totalVehiculo: null, inicialBanco: null, totalInicial, financiamiento, cuota, costoTotal: totalInicial + cuota * 24 }
 }
 
 export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = false, promoId }: { vehiculo: Vehiculo; tasas: { bcv: number; usdt: number }; onClose: () => void; esPromo?: boolean; promoId?: string }) {
@@ -85,9 +38,23 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   const [pinError, setPinError] = useState('')
   const [pinLoading, setPinLoading] = useState(false)
   const [vendedoraNombre, setVendedoraNombre] = useState('')
-  const [modalidad, setModalidad] = useState<Modalidad>('contado')
-  // Plan fijo Vehimotors: el crédito 100% Banco se retiró del cotizador de vendedores.
-  const [plan] = useState<Plan>('vehimotors')
+
+  // Modelo real de Jetplus: descuento (Gabriel), inicial % (100 = contado),
+  // financiadora (solo si hay financiamiento) y cargos seleccionables.
+  const [descuentoPct, setDescuentoPct] = useState(0)
+  const [esContado, setEsContado] = useState(true)
+  const [inicialPct, setInicialPct] = useState(40)
+  const [financiadoras, setFinanciadoras] = useState<Financiadora[]>([])
+  const [financiadoraId, setFinanciadoraId] = useState('')
+  const [cargoGastosAdmin, setCargoGastosAdmin] = useState(true)
+  const [cargoPlaca, setCargoPlaca] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/financiadoras').then(r => r.json()).then((d: Financiadora[]) => {
+      if (Array.isArray(d) && d.length) { setFinanciadoras(d); setFinanciadoraId(d[0].id) }
+    }).catch(() => {})
+  }, [])
+
   const [form, setForm] = useState({
     clienteNombre: '', clienteCiRif: '', clienteCorreo: '',
     clienteTelefono: '', clienteDireccion: '',
@@ -141,7 +108,17 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
     setCliQuery(''); setCliResultados([]); setCliOpen(false); setErrorMsg('')
   }
 
-  const calc = calcular(vehiculo, modalidad, plan, tasas)
+  const financiadoraSel = financiadoras.find(f => f.id === financiadoraId)
+  const calc = calcularPresupuestoJetplus({
+    precioLista: vehiculo.cash ?? 0,
+    descuentoPct,
+    inicialPct: esContado ? 100 : inicialPct,
+    financiadoraTasaPct: esContado ? 0 : (financiadoraSel?.tasa_comision_pct ?? 0),
+    cargoGastosAdmin,
+    cargoPlaca,
+    gastosAdminMonto: vehiculo.gc,
+    placaMonto: vehiculo.placa_monto,
+  })
 
   async function verificarPin() {
     if (!/^[A-Za-z]\d{3}$/.test(pin.trim())) { setPinError('El código debe ser una letra seguida de 3 dígitos (ej: D198)'); return }
@@ -213,9 +190,13 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
           clienteCiudadEstado: form.clienteCiudadEstado || null,
           clienteCodigoPostal: form.clienteCodigoPostal || null,
           agenteRetencion: form.agenteRetencion,
-          modalidad,
-          plan: modalidad === 'credito_24' ? plan : 'vehimotors',
-          concesionarioId: esCasa ? concesionarioId : 'la-oriental',
+          plan: 'presupuesto',
+          descuentoPct,
+          inicialPct: esContado ? 100 : inicialPct,
+          financiadoraId: esContado ? null : financiadoraId,
+          cargoGastosAdmin,
+          cargoPlaca,
+          concesionarioId: esCasa ? concesionarioId : 'jetplus',
         }),
       })
       const json = await r.json()
@@ -263,9 +244,13 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
           clienteCiudadEstado: form.clienteCiudadEstado || null,
           clienteCodigoPostal: form.clienteCodigoPostal || null,
           agenteRetencion: form.agenteRetencion,
-          modalidad,
-          plan: modalidad === 'credito_24' ? plan : 'vehimotors',
-          concesionarioId: esCasa ? concesionarioId : 'la-oriental',
+          plan: 'presupuesto',
+          descuentoPct,
+          inicialPct: esContado ? 100 : inicialPct,
+          financiadoraId: esContado ? null : financiadoraId,
+          cargoGastosAdmin,
+          cargoPlaca,
+          concesionarioId: esCasa ? concesionarioId : 'jetplus',
         }),
       })
       if (!r.ok) {
@@ -408,15 +393,15 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                 </div>
               )}
 
-              {/* Modalidad */}
-              <div style={{ marginBottom: 18 }}>
+              {/* Modalidad: Contado o Financiado */}
+              <div style={{ marginBottom: 14 }}>
                 <label style={label}>Modalidad de venta</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {([['contado', 'Contado'], ['credito_24', 'Crédito 24 meses']] as [Modalidad, string][]).map(([val, lbl]) => (
+                  {([[true, 'Contado'], [false, 'Financiado']] as [boolean, string][]).map(([val, lbl]) => (
                     <button
-                      key={val}
-                      onClick={() => setModalidad(val)}
-                      style={{ flex: 1, padding: '10px 8px', border: `2px solid ${modalidad === val ? '#111' : '#e5e7eb'}`, borderRadius: 10, background: modalidad === val ? '#111' : '#fff', color: modalidad === val ? '#fff' : '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
+                      key={String(val)}
+                      onClick={() => setEsContado(val)}
+                      style={{ flex: 1, padding: '10px 8px', border: `2px solid ${esContado === val ? '#111' : '#e5e7eb'}`, borderRadius: 10, background: esContado === val ? '#111' : '#fff', color: esContado === val ? '#fff' : '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
                     >
                       {lbl}
                     </button>
@@ -424,41 +409,73 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                 </div>
               </div>
 
+              {/* Descuento (a discreción del dueño) */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>Descuento %</label>
+                <input type="number" min={0} max={100} step={0.5} value={descuentoPct}
+                  onChange={e => setDescuentoPct(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties} />
+              </div>
+
+              {/* Financiadora + % inicial (solo si es financiado) */}
+              {!esContado && (
+                <>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={label}>Financiadora</label>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {financiadoras.map(f => (
+                        <button key={f.id} onClick={() => setFinanciadoraId(f.id)}
+                          style={{ flex: '1 1 auto', padding: '10px 8px', border: `2px solid ${financiadoraId === f.id ? '#111' : '#e5e7eb'}`, borderRadius: 10, background: financiadoraId === f.id ? '#111' : '#fff', color: financiadoraId === f.id ? '#fff' : '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                          {f.nombre}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={label}>Inicial %</label>
+                    <input type="number" min={1} max={99} step={1} value={inicialPct}
+                      onChange={e => setInicialPct(Math.min(99, Math.max(1, Number(e.target.value) || 0)))}
+                      style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties} />
+                  </div>
+                </>
+              )}
+
+              {/* Cargos */}
+              <div style={{ marginBottom: 18, display: 'flex', gap: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: '#374151', fontWeight: 600 }}>
+                  <input type="checkbox" checked={cargoGastosAdmin} onChange={e => setCargoGastosAdmin(e.target.checked)} style={{ width: 15, height: 15 }} />
+                  Gastos Adm. (${fmt(vehiculo.gc ?? 500)})
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: '#374151', fontWeight: 600 }}>
+                  <input type="checkbox" checked={cargoPlaca} onChange={e => setCargoPlaca(e.target.checked)} style={{ width: 15, height: 15 }} />
+                  Placa (${fmt(vehiculo.placa_monto ?? 390)})
+                </label>
+              </div>
+
               {/* Preview de montos */}
               <div style={{ background: '#fffbeb', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
                 <p style={{ fontSize: 10, fontWeight: 800, color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-                  {modalidad === 'contado' ? 'Resumen contado' : plan === 'banco_100' ? 'Resumen crédito 100% Banco' : 'Resumen crédito 24 meses'}
+                  {esContado ? 'Resumen contado' : `Resumen financiado · ${financiadoraSel?.nombre ?? ''}`}
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 0' }}>
-                  {modalidad === 'contado' ? (
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>Precio de lista</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.precioLista)}</span>
+                  {calc.descuentoMonto > 0 && (<><span style={{ fontSize: 11, color: '#6b7280' }}>Descuento {calc.descuentoPct}%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textAlign: 'right' }}>-${fmt(calc.descuentoMonto)}</span></>)}
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>Precio vehículo</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.precioVehiculo)}</span>
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>IGTF 3%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.igtf)}</span>
+                  {!esContado && (
                     <>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>Precio base</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(vehiculo.cash)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>IVA (exonerado — Puerto Libre)</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.iva)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>TOTAL</span>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
-                    </>
-                  ) : plan === 'banco_100' ? (
-                    <>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>Total Precio Vehículo</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.totalVehiculo)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>Inicial 30%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.inicialBanco)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>TOTAL INICIAL</span>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Financiamiento 70%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right', marginTop: 6 }}>${fmt(calc.financiamiento)}</span>
-                      {(calc.cuota ?? 0) > 0 && (<><span style={{ fontSize: 11, color: '#6b7280' }}>Cuota mensual × 24</span><span style={{ fontSize: 11, fontWeight: 700, color: '#a16207', textAlign: 'right' }}>${fmt(calc.cuota)}</span></>)}
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>40% Precio base</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt((vehiculo.cash ?? 0) * 0.4)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>IVA (exonerado — Puerto Libre)</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.iva)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>Gastos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.gastos)}</span>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>INICIAL</span>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicial)}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Cuota mensual × 24</span><span style={{ fontSize: 11, fontWeight: 700, color: '#a16207', textAlign: 'right', marginTop: 6 }}>${fmt(calc.cuota)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Inicial {calc.inicialPct}%</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.inicialVehiculo)}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>Comisión financiadora</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.comisionFlat)}</span>
                     </>
                   )}
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>Cargos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.cargos)}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>{esContado ? 'TOTAL A PAGAR' : 'TOTAL INICIAL A PAGAR'}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicialAPagar)}</span>
+                  {!esContado && (
+                    <><span style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Saldo a financiar</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right', marginTop: 6 }}>${fmt(calc.saldoFinanciar)}</span></>
+                  )}
                 </div>
+                {!esContado && <p style={{ fontSize: 10, color: '#a16207', marginTop: 8, marginBottom: 0 }}>La cuota mensual y el plazo los fija {financiadoraSel?.nombre || 'la financiadora'} al aprobar el crédito.</p>}
               </div>
 
               {/* Datos del cliente */}

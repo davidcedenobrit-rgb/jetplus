@@ -160,8 +160,8 @@ export function ReciboPDF({ data }: { data: ReciboPDFData }) {
           <View>
             <Image style={s.logo} src={logoUrl} />
             <Text style={s.companySmall}>RIF: J-50372874-4</Text>
-            <Text style={s.companySmall}>Av. Rómulo Gallegos</Text>
-            <Text style={s.companySmall}>Porlamar, Nueva Esparta</Text>
+            <Text style={s.companySmall}>Av. Rómulo Betancourt c/ Calle Aeropuerto</Text>
+            <Text style={s.companySmall}>Sector Sabana Mar, Porlamar, Nueva Esparta</Text>
             <Text style={s.companySmall}>Concesionario Oficial MG & MAXUS</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>

@@ -166,7 +166,7 @@ export interface CotizacionPDFData {
   cantidad?: number
   precioBase: number
   modalidad: 'contado' | 'credito_24'
-  plan?: 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado' | 'banca_nacional'
+  plan?: 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado' | 'banca_nacional' | 'presupuesto'
   ivaMonto: number
   gastosMonto: number
   totalVehiculo?: number
@@ -189,6 +189,16 @@ export interface CotizacionPDFData {
     banco?: string | null
     financ_meses?: number; financ_tasa?: number; financ_cuota?: number
   } | null
+  // Presupuesto Jetplus (modelo real: descuento + IGTF 3% + inicial % + financiadora)
+  presupuesto?: {
+    descuentoPct: number
+    igtf: number
+    inicialPct: number
+    comisionFlat: number
+    financiadoraNombre: string | null
+    cargoGastosAdmin: boolean
+    cargoPlaca: boolean
+  }
 }
 
 export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
@@ -198,6 +208,8 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const esBanco = data.plan === 'banco_100'
   const esPersonalizado = data.plan === 'personalizado'
   const esBancaNacional = data.plan === 'banca_nacional'
+  const esPresupuesto = data.plan === 'presupuesto'
+  const pres = data.presupuesto
   const cantidad = Math.max(1, Math.floor(data.cantidad ?? 1))
   const mesesBanco = Math.max(1, Math.round(data.mesesBanco ?? 24))
   // Plan Personalizado: inicial, meses y % financiado dinámicos
@@ -219,20 +231,22 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const conoceEmpresa = data.empresaNombre != null
   const empNombre = conoceEmpresa ? data.empresaNombre! : 'JETPLUS'
   const empRif = conoceEmpresa ? (data.empresaRif ?? null) : 'J-50372874-4'
-  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AV. RÓMULO GALLEGOS, PORLAMAR - NUEVA ESPARTA'
+  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AV. RÓMULO BETANCOURT C/ CALLE AEROPUERTO, SECTOR SABANA MAR, PORLAMAR - NUEVA ESPARTA'
   const empTelefono = conoceEmpresa ? (data.empresaTelefono ?? null) : '0424-8705174'
   const empCorreo = conoceEmpresa ? (data.empresaCorreo ?? null) : 'davidcedenobrit@gmail.com'
   const empDireccionLineas = empDireccion ? String(empDireccion).split('\n').filter(Boolean) : []
   const empContacto = [empTelefono, empCorreo].filter(Boolean).join(' · ')
   const modalidadLabel = esAC500
     ? `ASEGÚRATE CON $500 — ${data.ac500Schedule?.meses ?? ''} MESES`
-    : es24
-      ? (esBanco
-          ? `CRÉDITO BANCARIO ${mesesBanco} MESES (30% INICIAL)`
-          : esPersonalizado
-            ? `CRÉDITO ${persMeses} MESES (${persIniPctLabel}% INICIAL)`
-            : 'CRÉDITO 24 MESES (40% INICIAL)')
-      : esBancaNacional ? 'BANCA NACIONAL' : 'CONTADO'
+    : esPresupuesto
+      ? (pres && pres.inicialPct < 100 ? `FINANCIADO — ${pres.financiadoraNombre ?? 'FINANCIADORA'} (${pres.inicialPct}% INICIAL)` : 'CONTADO')
+      : es24
+        ? (esBanco
+            ? `CRÉDITO BANCARIO ${mesesBanco} MESES (30% INICIAL)`
+            : esPersonalizado
+              ? `CRÉDITO ${persMeses} MESES (${persIniPctLabel}% INICIAL)`
+              : 'CRÉDITO 24 MESES (40% INICIAL)')
+        : esBancaNacional ? 'BANCA NACIONAL' : 'CONTADO'
 
   return (
     <Document title={`Cotización ${data.numero}`} author="JETPLUS">
@@ -362,7 +376,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                     <Text style={s.calcVal}>{fmt(bn.precio_base)}</Text>
                   </View>
                   <View style={s.calcRow}>
-                    <Text style={s.calcLabel}>I.V.A. 16%</Text>
+                    <Text style={s.calcLabel}>I.V.A. (exonerado)</Text>
                     <Text style={s.calcVal}>{fmt(bn.iva)}</Text>
                   </View>
                   <View style={s.calcRow}>
@@ -414,7 +428,44 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={s.calcHeaderVal}>{modalidadLabel}</Text>
                 </View>
 
-                {es24 && esBanco ? (
+                {esPresupuesto && pres ? (
+                  <>
+                    {pres.descuentoPct > 0 && (
+                      <View style={s.calcRow}>
+                        <Text style={s.calcLabel}>Descuento {pres.descuentoPct}%</Text>
+                        <Text style={s.calcVal}>-{fmt(data.precioBase * pres.descuentoPct / 100 / (1 - pres.descuentoPct / 100))}</Text>
+                      </View>
+                    )}
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>{pres.inicialPct < 100 ? `Precio Vehículo · Inicial ${pres.inicialPct}%` : '100% Precio Vehículo'}</Text>
+                      <Text style={s.calcVal}>{fmt(pres.inicialPct < 100 ? data.precioBase * pres.inicialPct / 100 : data.precioBase)}</Text>
+                    </View>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>I.V.A. (exonerado)</Text>
+                      <Text style={s.calcVal}>$0</Text>
+                    </View>
+                    <View style={s.calcRow}>
+                      <Text style={s.calcLabel}>IGTF 3%</Text>
+                      <Text style={s.calcVal}>{fmt(pres.igtf)}</Text>
+                    </View>
+                    {pres.inicialPct < 100 && (
+                      <View style={s.calcRow}>
+                        <Text style={s.calcLabel}>Comisión {pres.financiadoraNombre ?? 'financiadora'}</Text>
+                        <Text style={s.calcVal}>{fmt(pres.comisionFlat)}</Text>
+                      </View>
+                    )}
+                    {(pres.cargoGastosAdmin || pres.cargoPlaca) && (
+                      <View style={s.calcRow}>
+                        <Text style={s.calcLabel}>{[pres.cargoGastosAdmin ? 'Gastos Administrativos' : null, pres.cargoPlaca ? 'Placa' : null].filter(Boolean).join(' + ')}</Text>
+                        <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
+                      </View>
+                    )}
+                    <View style={s.calcTotalRow}>
+                      <Text style={s.calcTotalLabel}>{pres.inicialPct < 100 ? 'TOTAL INICIAL A PAGAR:' : 'TOTAL A PAGAR:'}</Text>
+                      <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
+                    </View>
+                  </>
+                ) : es24 && esBanco ? (
                   <>
                     <View style={s.calcRow}>
                       <Text style={s.calcLabel}>Total Precio Vehículo</Text>
@@ -440,7 +491,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                       <Text style={s.calcVal}>{fmt(data.precioBase * (esPersonalizado ? persIniFrac : 0.4))}</Text>
                     </View>
                     <View style={s.calcRow}>
-                      <Text style={s.calcLabel}>I.V.A. 16%</Text>
+                      <Text style={s.calcLabel}>I.V.A. (exonerado)</Text>
                       <Text style={s.calcVal}>{fmt(data.ivaMonto)}</Text>
                     </View>
                     <View style={s.calcRow}>
@@ -459,7 +510,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                       <Text style={s.calcVal}>{fmt(data.precioBase)}</Text>
                     </View>
                     <View style={s.calcRow}>
-                      <Text style={s.calcLabel}>I.V.A. 16%</Text>
+                      <Text style={s.calcLabel}>I.V.A. (exonerado)</Text>
                       <Text style={s.calcVal}>{fmt(data.ivaMonto)}</Text>
                     </View>
                     <View style={s.calcRow}>
@@ -484,7 +535,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={s.finHeaderText}>RETENCIÓN DE IVA — AGENTE DE RETENCIÓN</Text>
                 </View>
                 <View style={s.finRow}>
-                  <Text style={s.finLabel}>I.V.A. 16%</Text>
+                  <Text style={s.finLabel}>I.V.A. (exonerado)</Text>
                   <Text style={s.finVal}>${fmt(data.ivaMonto)}</Text>
                 </View>
                 <View style={s.finRow}>
@@ -500,7 +551,28 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           )}
 
           {/* Plan de financiamiento (solo crédito estándar) */}
-          {es24 && !esAC500 && data.financiamientoMonto != null && (
+          {esPresupuesto && pres && pres.inicialPct < 100 && data.financiamientoMonto != null && (
+            <View style={{ alignItems: 'flex-end', marginTop: 6 }}>
+              <View style={[s.finBox, { width: 240 }]}>
+                <View style={s.finHeader}>
+                  <Text style={s.finHeaderText}>PLAN DE FINANCIAMIENTO</Text>
+                </View>
+                <View style={s.finRow}>
+                  <Text style={s.finLabel}>Saldo a financiar ({100 - pres.inicialPct}%)</Text>
+                  <Text style={s.finVal}>${fmt(data.financiamientoMonto)}</Text>
+                </View>
+                <View style={s.finRow}>
+                  <Text style={s.finLabel}>Financiadora</Text>
+                  <Text style={s.finVal}>{pres.financiadoraNombre ?? '—'}</Text>
+                </View>
+                <View style={s.finRow}>
+                  <Text style={[s.finLabel, { fontSize: 8 }]}>El plazo y la cuota mensual los fija la financiadora al aprobar el crédito.</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {es24 && !esAC500 && !esPresupuesto && data.financiamientoMonto != null && (
             <View style={{ alignItems: 'flex-end', marginTop: 6 }}>
               <View style={[s.finBox, { width: 240 }]}>
                 <View style={s.finHeader}>

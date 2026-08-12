@@ -146,3 +146,67 @@ export function calcularTotalesCotizacion(inp: TotalesInput): TotalesResult {
     mesesBanco: null,
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Modelo real de Jetplus Margarita (confirmado contra 3 presupuestos reales,
+// agosto 2026): descuento discrecional + IGTF 3% (Puerto Libre no exonera el
+// IGTF, solo el IVA) + inicial % (100% = contado puro) + comisión de la
+// financiadora sobre la inicial (0 si es contado) + cargos seleccionables.
+//   Total Inicial a Pagar = inicial_vehiculo + IGTF + comisión_flat + cargos
+// El IGTF se calcula SIEMPRE sobre el precio del vehículo ya con descuento,
+// sin importar el % de inicial (así sale en las 3 proformas reales).
+// La cuota mensual (si hay financiamiento) la fija la financiadora externa;
+// aquí no se recalcula por amortización.
+
+export const IGTF_TASA = 3
+
+export interface PresupuestoInput {
+  precioLista: number
+  descuentoPct?: number | null       // 0-100, a discreción del dueño
+  inicialPct: number                  // 0-100; 100 = contado puro
+  financiadoraTasaPct?: number | null // % de comisión de la financiadora sobre la inicial (0 si contado)
+  cargoGastosAdmin: boolean
+  cargoPlaca: boolean
+  gastosAdminMonto?: number | null    // default 500
+  placaMonto?: number | null          // default 390
+}
+
+export interface PresupuestoResult {
+  precioLista: number
+  descuentoPct: number
+  descuentoMonto: number
+  precioVehiculo: number    // precio de lista − descuento
+  igtf: number               // 3% de precioVehiculo
+  inicialPct: number
+  inicialVehiculo: number
+  saldoFinanciar: number
+  esContado: boolean
+  comisionFlat: number
+  cargos: number
+  totalInicialAPagar: number
+}
+
+function round2(n: number): number {
+  return Math.round((Number(n) || 0) * 100) / 100
+}
+
+export function calcularPresupuestoJetplus(inp: PresupuestoInput): PresupuestoResult {
+  const precioLista = Number(inp.precioLista) || 0
+  const descuentoPct = Math.min(100, Math.max(0, Number(inp.descuentoPct) || 0))
+  const descuentoMonto = round2(precioLista * descuentoPct / 100)
+  const precioVehiculo = round2(precioLista - descuentoMonto)
+  const igtf = round2(precioVehiculo * IGTF_TASA / 100)
+  const inicialPct = Math.min(100, Math.max(0, Number(inp.inicialPct)))
+  const esContado = inicialPct >= 100
+  const inicialVehiculo = round2(precioVehiculo * inicialPct / 100)
+  const saldoFinanciar = round2(precioVehiculo - inicialVehiculo)
+  const comisionFlat = esContado ? 0 : round2(inicialVehiculo * (Number(inp.financiadoraTasaPct) || 0) / 100)
+  const gastosAdminMonto = Number(inp.gastosAdminMonto) || 500
+  const placaMonto = Number(inp.placaMonto) || 390
+  const cargos = (inp.cargoGastosAdmin ? gastosAdminMonto : 0) + (inp.cargoPlaca ? placaMonto : 0)
+  const totalInicialAPagar = round2(inicialVehiculo + igtf + comisionFlat + cargos)
+  return {
+    precioLista, descuentoPct, descuentoMonto, precioVehiculo, igtf,
+    inicialPct, inicialVehiculo, saldoFinanciar, esContado, comisionFlat, cargos, totalInicialAPagar,
+  }
+}

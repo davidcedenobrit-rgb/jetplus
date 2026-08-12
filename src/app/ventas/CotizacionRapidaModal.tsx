@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { calcularPresupuestoJetplus } from '@/lib/cotizacion-calc'
 
 interface Vehiculo {
   brand: string
@@ -9,6 +10,7 @@ interface Vehiculo {
   gc: number | null
   gcr: number | null
   tasa_credito: number | null
+  placa_monto?: number | null
 }
 
 function fmt(n: number | null | undefined) {
@@ -39,15 +41,18 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
   ac500?: AC500RapidaData | null  // cronograma del plan $500
 }) {
   const precio    = vehiculo.cash ?? 0
-  // Jetplus opera bajo el régimen de Puerto Libre de Margarita: exonerado de IVA.
-  const iva       = 0
-  const gc        = vehiculo.gc ?? 0
-  const gcr       = vehiculo.gcr ?? 0
   const cuota     = vehiculo.tasa_credito ?? 0
-  const total     = precio + iva + gc
-  const ini40     = precio * 0.4
-  const totalIni  = ini40 + iva + gcr
-  const fin60     = precio * 0.6
+  // Jetplus: IVA exonerado (Puerto Libre), IGTF 3% sobre el precio del vehículo,
+  // cargos fijos de Gastos Administrativos ($500) y Placa ($390). Sin financiadora
+  // aquí (eso es parte del presupuesto formal, no de la cotización rápida).
+  const contado  = calcularPresupuestoJetplus({
+    precioLista: precio, inicialPct: 100, cargoGastosAdmin: true, cargoPlaca: true,
+    gastosAdminMonto: vehiculo.gc, placaMonto: vehiculo.placa_monto,
+  })
+  const credito  = calcularPresupuestoJetplus({
+    precioLista: precio, inicialPct: 40, cargoGastosAdmin: true, cargoPlaca: true,
+    gastosAdminMonto: vehiculo.gcr, placaMonto: vehiculo.placa_monto,
+  })
 
   const [compartiendo, setCompartiendo] = useState(false)
   const [error, setError] = useState('')
@@ -56,7 +61,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
   function payloadBase() {
     return {
       marca: vehiculo.brand, modelo: vehiculo.model, planNota, financiamiento,
-      precio, gastosContado: gc, gastosCredito: gcr, cuota,
+      precio, gastosContado: vehiculo.gc ?? 500, gastosCredito: vehiculo.gcr ?? 500, placaMonto: vehiculo.placa_monto ?? 390, cuota,
       brandNombre, brandLogo, colorPrimario, colorSecundario, conc: concesionario,
       ac500: ac500 ? { meses: ac500.meses, color: ac500.color, total: ac500.total, rows: ac500.rows } : null,
     }
@@ -164,31 +169,29 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
 
         {financiamiento && <>
         <div style={hdr('#7c2d12', '#fde68a')}>Modalidad de Contado</div>
-        <div style={row}><span style={lbl}>100% Precio Base:</span><span style={val}>${fmt(precio)}</span></div>
-        <div style={row}><span style={lbl}>I.V.A. (exonerado):</span><span style={val}>${fmt(iva)}</span></div>
-        <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
-          <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza auto, Póliza de Vida, Traslado, INTT, Gastos Notaría, IGTF</span>
-          <span style={{ ...val, flexShrink: 0 }}>${fmt(gc)}</span>
-        </div>
+        <div style={row}><span style={lbl}>100% Precio Base:</span><span style={val}>${fmt(contado.precioVehiculo)}</span></div>
+        <div style={row}><span style={lbl}>I.V.A. (exonerado):</span><span style={val}>$0</span></div>
+        <div style={row}><span style={lbl}>IGTF 3%:</span><span style={val}>${fmt(contado.igtf)}</span></div>
+        <div style={row}><span style={lbl}>Gastos Administrativos:</span><span style={val}>${fmt(vehiculo.gc ?? 500)}</span></div>
+        <div style={row}><span style={lbl}>Placa:</span><span style={val}>${fmt(vehiculo.placa_monto ?? 390)}</span></div>
         <div style={{ ...row, background: '#fef9c3', border: 'none' }}>
           <span style={{ fontSize: 14, fontWeight: 800, color: '#92400e' }}>TOTAL A PAGAR:</span>
-          <span style={{ fontSize: 17, fontWeight: 900, color: '#92400e', fontFamily: 'monospace' }}>${fmt(total)}</span>
+          <span style={{ fontSize: 17, fontWeight: 900, color: '#92400e', fontFamily: 'monospace' }}>${fmt(contado.totalInicialAPagar)}</span>
         </div>
 
         <div style={{ ...hdr('#064e3b', '#6ee7b7'), marginTop: 6 }}>Modalidad Crédito 24 Meses (40% Inicial)</div>
-        <div style={row}><span style={lbl}>40% Precio Base:</span><span style={val}>${fmt(ini40)}</span></div>
-        <div style={row}><span style={lbl}>I.V.A. (exonerado):</span><span style={val}>${fmt(iva)}</span></div>
-        <div style={{ ...row, alignItems: 'flex-start', gap: 12 }}>
-          <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.45, flex: 1 }}>Póliza auto, Póliza de Vida, Traslado, INTT, Gastos Notaría, IGTF</span>
-          <span style={{ ...val, flexShrink: 0 }}>${fmt(gcr)}</span>
-        </div>
+        <div style={row}><span style={lbl}>40% Precio Base:</span><span style={val}>${fmt(credito.inicialVehiculo)}</span></div>
+        <div style={row}><span style={lbl}>I.V.A. (exonerado):</span><span style={val}>$0</span></div>
+        <div style={row}><span style={lbl}>IGTF 3% (sobre precio base):</span><span style={val}>${fmt(credito.igtf)}</span></div>
+        <div style={row}><span style={lbl}>Gastos Administrativos:</span><span style={val}>${fmt(vehiculo.gcr ?? 500)}</span></div>
+        <div style={row}><span style={lbl}>Placa:</span><span style={val}>${fmt(vehiculo.placa_monto ?? 390)}</span></div>
         <div style={{ ...row, background: '#dcfce7', border: 'none' }}>
           <span style={{ fontSize: 14, fontWeight: 800, color: '#065f46' }}>TOTAL INICIAL A PAGAR:</span>
-          <span style={{ fontSize: 17, fontWeight: 900, color: '#065f46', fontFamily: 'monospace' }}>${fmt(totalIni)}</span>
+          <span style={{ fontSize: 17, fontWeight: 900, color: '#065f46', fontFamily: 'monospace' }}>${fmt(credito.totalInicialAPagar)}</span>
         </div>
         <div style={{ ...row, background: '#f0fdf4' }}>
           <span style={{ fontSize: 12, color: '#6b7280' }}>Financiamiento 60% —</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: 'monospace' }}>${fmt(fin60)}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: 'monospace' }}>${fmt(credito.saldoFinanciar)}</span>
         </div>
         {cuota > 0 && (
           <div style={{ ...row, background: '#fff1f2', border: 'none' }}>

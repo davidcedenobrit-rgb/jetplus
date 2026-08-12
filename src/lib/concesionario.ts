@@ -21,7 +21,7 @@ const JETPLUS_FALLBACK = {
   id: 'jetplus',
   nombre: 'JETPLUS',
   rif: 'J-50372874-4',
-  direccion: 'AV. RÓMULO GALLEGOS, PORLAMAR - NUEVA ESPARTA',
+  direccion: 'AV. RÓMULO BETANCOURT C/ CALLE AEROPUERTO, LOCAL S/N, SECTOR SABANA MAR, PORLAMAR, NUEVA ESPARTA, ZONA POSTAL 6301',
   telefono: '0424-8705174',
   correo: 'davidcedenobrit@gmail.com',
   logo_url: null as string | null,

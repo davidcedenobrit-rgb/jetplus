@@ -20,7 +20,7 @@ Prioridad máxima en:
 - Mantener consistencia con lo que ya está implementado
 
 ## Contexto de negocio
-- JETPLUS — RIF J-50372874-4, Av. Rómulo Gallegos, Porlamar, Nueva Esparta
+- JETPLUS — RIF J-50372874-4, Av. Rómulo Betancourt c/ Calle Aeropuerto, Local S/N, Sector Sabana Mar, Porlamar, Nueva Esparta, Zona Postal 6301
 - Vende principalmente vehículos MG y MAXUS
 - Moneda principal: USD y VES
 

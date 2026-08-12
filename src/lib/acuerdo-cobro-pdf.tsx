@@ -140,7 +140,7 @@ export function AcuerdoCobroPDF({ data }: { data: AcuerdoCobroData }) {
   const conoceEmpresa = data.empresaNombre != null
   const empNombre = conoceEmpresa ? data.empresaNombre! : 'JETPLUS'
   const empRif = conoceEmpresa ? (data.empresaRif ?? null) : 'J-50372874-4'
-  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AV. RÓMULO GALLEGOS, PORLAMAR - NUEVA ESPARTA'
+  const empDireccion = conoceEmpresa ? (data.empresaDireccion ?? null) : 'AV. RÓMULO BETANCOURT C/ CALLE AEROPUERTO, SECTOR SABANA MAR, PORLAMAR - NUEVA ESPARTA'
   const empTelefono = conoceEmpresa ? (data.empresaTelefono ?? null) : '0424-8705174'
   const empCorreo = conoceEmpresa ? (data.empresaCorreo ?? null) : 'davidcedenobrit@gmail.com'
   const empDireccionLineas = empDireccion ? String(empDireccion).split('\n').filter(Boolean) : []

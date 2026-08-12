@@ -203,7 +203,7 @@ export async function enviarNotificacionRojas(opts: {
   marca: string
   modelo: string
   modalidad: 'contado' | 'credito_24'
-  plan?: 'vehimotors' | 'banco_100' | 'ac500'
+  plan?: 'vehimotors' | 'banco_100' | 'ac500' | 'personalizado' | 'banca_nacional' | 'presupuesto'
   totalInicial: number
   cuotaMensual: number | null
   costoTotal: number
