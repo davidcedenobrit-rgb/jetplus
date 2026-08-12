@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import CotizacionModal from './CotizacionModal'
 import CotizacionRapidaModal from './CotizacionRapidaModal'
+import { imagenVehiculo } from '@/lib/vehiculo-image'
 
 interface Vehiculo {
   id: string
@@ -73,12 +74,13 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
         {lista.map(v => {
           const init = v.cash ? v.cash * 0.4 : 0
+          const imagen = imagenVehiculo(v.model, v.img_url)
           return (
             <div key={v.id} id={`car-${v.id}`} className="lo-card">
               {/* Imagen */}
               <div className="lo-card-imgwrap">
-                {v.img_url
-                  ? <img src={v.img_url} alt={v.model} className="lo-card-img" loading="lazy" />
+                {imagen
+                  ? <img src={imagen} alt={v.model} className="lo-card-img" loading="lazy" />
                   : <span style={{ fontSize: 52, opacity: .12 }}>🚗</span>}
               </div>
 

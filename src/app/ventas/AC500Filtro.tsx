@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { imagenVehiculo } from '@/lib/vehiculo-image'
 import CotizacionRapidaModal from './CotizacionRapidaModal'
 import CotizacionAC500Modal from './CotizacionAC500Modal'
 import type { BrandImg } from './VehiculosFiltro'
@@ -124,11 +125,13 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
   const entregaMes = mode === '6' ? 6 : mode === '9' ? 9 : 12
   const rows = schedule(v, mode)
 
+  const imagen = imagenVehiculo(v.model, v.img_url)
+
   return (
     <article id={`car-${v.id}`} className="lo-card">
       <div className="lo-card-imgwrap" style={{ height: 185 }}>
-        {v.img_url
-          ? <img src={v.img_url} alt={v.model} className="lo-card-img" loading="lazy" />
+        {imagen
+          ? <img src={imagen} alt={v.model} className="lo-card-img" loading="lazy" />
           : <span style={{ fontSize: 48, opacity: .12 }}>🚗</span>}
         <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(255,255,255,.92)', border: '1px solid rgba(0,0,0,.08)', borderRadius: 6, padding: '3px 9px', fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase' }}>{v.brand}</div>
         <div style={{ position: 'absolute', top: 12, right: 12, background: '#ca8a04', color: '#fff', borderRadius: 6, padding: '3px 9px', fontSize: 9.5, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Asegúrate $500</div>
