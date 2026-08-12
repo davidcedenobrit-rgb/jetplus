@@ -89,7 +89,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   const promoVehiculosList = promoVehiculos ?? []
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F2F2F2', fontFamily: "'Inter', system-ui, sans-serif", paddingBottom: 64 }}>
+    <div style={{ minHeight: '100vh', background: 'transparent', fontFamily: "'Inter', system-ui, sans-serif", paddingBottom: 64 }}>
 
       {/* ── HEADER ────────────────────────────────────────────────────────── */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb' }}>

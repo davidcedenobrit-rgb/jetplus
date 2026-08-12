@@ -112,7 +112,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
                         <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Inicial (40%)</p>
                         <p style={{ fontSize: 17, fontWeight: 800, color: '#111' }}>${fm(init)}</p>
                       </div>
-                      {v.tasa_credito && v.tasa_credito > 0 && (
+                      {v.tasa_credito != null && v.tasa_credito > 0 && (
                         <>
                           <div style={{ width: 1, height: 36, background: '#fde68a' }} />
                           <div>
