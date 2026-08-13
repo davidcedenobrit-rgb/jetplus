@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 // Navegación inferior del link de vendedores: accesos rápidos a las secciones.
 export default function StickyNav({ hasAC500, hasPromos }: { hasAC500: boolean; hasPromos?: boolean }) {
   function scrollTo(id: string) {
@@ -38,6 +40,10 @@ export default function StickyNav({ hasAC500, hasPromos }: { hasAC500: boolean; 
           🏷️ Promos
         </button>
       )}
+      <Link href="/ventas/panel" style={{ ...btnBase, background: '#4338ca', textDecoration: 'none' }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+        👩‍💼 Mi panel
+      </Link>
     </div>
   )
 }

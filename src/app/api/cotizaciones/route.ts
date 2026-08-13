@@ -540,15 +540,57 @@ export async function POST(req: Request) {
       })
     }
 
-    // Vincular cliente_id si ya existe un cliente con esta CI/RIF
+    // Vincular cliente por CI/RIF; si no existe, se crea automáticamente para
+    // que entre al sistema (antes se quedaba solo en la cotización y nunca
+    // aparecía en Clientes). Best-effort: si algo falla acá la cotización
+    // igual se guarda, no se pierde la venta.
     const ciNorm = clienteCiRif.trim().toUpperCase()
-    const { data: clienteExistente } = await supabase
-      .from('clientes')
-      .select('id')
-      .ilike('cedula_rif', ciNorm)
-      .limit(1)
-      .maybeSingle()
-    const clienteIdVinculado = clienteExistente?.id ?? null
+    let clienteIdVinculado: string | null = null
+    try {
+      const { data: clienteExistente } = await supabase
+        .from('clientes')
+        .select('id, vendedor_codigo')
+        .ilike('cedula_rif', ciNorm)
+        .limit(1)
+        .maybeSingle()
+
+      if (clienteExistente) {
+        clienteIdVinculado = clienteExistente.id
+        // No se pisa si el cliente ya tenía vendedora asignada.
+        if (!clienteExistente.vendedor_codigo) {
+          await supabase.from('clientes').update({ vendedor_codigo: vendedorasList[0].codigo }).eq('id', clienteExistente.id)
+        }
+      } else {
+        const prefijo = ciNorm.charAt(0)
+        const rifJuridico = typeof clienteRif === 'string' && clienteRif.trim() ? clienteRif.trim() : null
+        const tipoCliente: 'natural' | 'juridico' = (prefijo === 'J' || prefijo === 'G' || rifJuridico) ? 'juridico' : 'natural'
+        const { data: nuevoCliente, error: errCliente } = await supabase
+          .from('clientes')
+          .insert({
+            nombre: clienteNombre.trim(),
+            cedula_rif: ciNorm,
+            tipo: tipoCliente,
+            identificacion_juridica: tipoCliente === 'juridico' ? (rifJuridico ?? ciNorm) : null,
+            telefono: clienteTelefono?.trim() || null,
+            whatsapp: clienteTelefono?.trim() || null,
+            correo: correoCliente || null,
+            direccion: clienteDireccion?.trim() || null,
+            ciudad: clienteCiudadEstado?.trim() || null,
+            activo: true,
+            observaciones: 'Registrado automáticamente desde una cotización',
+            vendedor_codigo: vendedorasList[0].codigo,
+          })
+          .select('id')
+          .single()
+        if (errCliente) {
+          console.error('[cotizaciones] no se pudo crear el cliente automáticamente:', errCliente)
+        } else {
+          clienteIdVinculado = nuevoCliente?.id ?? null
+        }
+      }
+    } catch (e) {
+      console.error('[cotizaciones] error vinculando/creando cliente:', e)
+    }
 
     // Insertar cotización (trigger auto-genera numero y numero_seq)
     // Estructura de costos por línea (Rojas Personalizada): se guarda con la misma

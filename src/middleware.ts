@@ -30,6 +30,10 @@ export async function middleware(request: NextRequest) {
     // Sin esto el POST se redirige al login (307) y el navegador recibe HTML
     // en vez de JSON → "Error de conexión" al ingresar el código.
     '/api/vendedoras/verificar',
+    // Panel propio de la vendedora (/ventas/panel): se autoriza por su código
+    // dentro del handler, igual que /api/vendedoras/verificar. OJO: NO liberar
+    // '/api/vendedoras' a secas — esa es el listado administrativo.
+    '/api/vendedoras/panel',
     // PDF del "rapidito" (resumen de cotización) compartible desde el link.
     '/api/cotizacion-rapida/pdf',
     // Búsqueda de clientes desde el link de vendedores (validada por código de
