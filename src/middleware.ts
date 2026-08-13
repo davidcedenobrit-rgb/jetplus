@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { RUTA_POST_LOGIN } from '@/lib/menu-config'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -97,14 +98,14 @@ export async function middleware(request: NextRequest) {
 
   const esCliente = user?.app_metadata?.rol === 'cliente'
 
-  // Si ya está autenticado y va al login, redirige al dashboard
+  // Si ya está autenticado y va al login, redirige a su landing normal
   if (pathname === '/login' && user) {
-    return NextResponse.redirect(new URL(esCliente ? '/portal/inicio' : '/ingresos', request.url))
+    return NextResponse.redirect(new URL(esCliente ? '/portal/inicio' : RUTA_POST_LOGIN, request.url))
   }
 
-  // Usuario staff intentando entrar al portal del cliente -> redirigir a ingresos
+  // Usuario staff intentando entrar al portal del cliente -> redirigir a su landing normal
   if (pathname.startsWith('/portal') && user && !esCliente && !pathname.startsWith('/portal/registro')) {
-    return NextResponse.redirect(new URL('/ingresos', request.url))
+    return NextResponse.redirect(new URL(RUTA_POST_LOGIN, request.url))
   }
 
   // Cliente intentando entrar al Centro de Mando -> redirigir a portal

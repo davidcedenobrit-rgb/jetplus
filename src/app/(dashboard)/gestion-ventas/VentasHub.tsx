@@ -224,16 +224,20 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
+        {/* Pestañas "Banca Nacional", "Tasas" y "División contable" ocultas a
+            pedido de David (2026-08-13): Jetplus arranca solo con lo básico de
+            ventas hasta que Gustavo pida activarlas. Para reactivar, descomentar
+            las 3 líneas de abajo (el resto del código de esas vistas sigue igual). */}
         {([
           ['generar', 'Generar cotización', FilePlus2],
           ['cotizaciones', 'Cotizaciones', ClipboardList],
           ['proformas', 'Proformas', FileText],
           ['registrar', 'Registrar venta', ShoppingCart],
           ['registradas', 'Ventas registradas', ListChecks],
-          ['banca', 'Banca Nacional', Landmark],
-          ['tasas', 'Tasas', Percent],
+          // ['banca', 'Banca Nacional', Landmark],
+          // ['tasas', 'Tasas', Percent],
           ['historial', 'Historial de clientes', Users],
-          ['division', 'División contable', Calculator],
+          // ['division', 'División contable', Calculator],
         ] as const).map(([k, label, Icon]) => (
           <button key={k} onClick={() => setVista(k)}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap ${

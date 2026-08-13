@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Car } from 'lucide-react'
 import { LoginSchema } from '@/lib/validations'
 import { BRANDING } from '@/lib/branding'
+import { RUTA_POST_LOGIN } from '@/lib/menu-config'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -39,7 +40,7 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
+    router.push(RUTA_POST_LOGIN)
     router.refresh()
   }
 
