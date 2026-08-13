@@ -25,7 +25,7 @@ export async function GET() {
         {/* Texto principal */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginLeft: 80 }}>
           <span style={{ color: 'white', fontSize: 192, fontWeight: 900, fontFamily: 'sans-serif', lineHeight: 1, letterSpacing: '-8px', display: 'flex' }}>
-            LO
+            JP
           </span>
           <span style={{ color: '#D31F2A', fontSize: 56, fontWeight: 700, fontFamily: 'sans-serif', letterSpacing: '12px', marginTop: 4, display: 'flex' }}>
             CDM

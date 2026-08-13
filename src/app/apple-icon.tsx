@@ -26,7 +26,7 @@ export default function AppleIcon() {
         {/* Texto principal */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginLeft: 28 }}>
           <span style={{ color: 'white', fontSize: 68, fontWeight: 900, fontFamily: 'sans-serif', lineHeight: 1, letterSpacing: '-3px', display: 'flex' }}>
-            LO
+            JP
           </span>
           <span style={{ color: '#D31F2A', fontSize: 20, fontWeight: 700, fontFamily: 'sans-serif', letterSpacing: '4px', marginTop: 2, display: 'flex' }}>
             CDM
