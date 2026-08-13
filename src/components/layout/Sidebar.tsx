@@ -12,7 +12,7 @@ import {
   Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, BookOpen, FileBarChart2, Link2, Database, ListChecks, Warehouse
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
-import { MOSTRAR_TODO_EL_MENU, SECCIONES_VISIBLES, LINKS_VENTAS_VISIBLES, MOSTRAR_DASHBOARD_Y_TAREAS } from '@/lib/menu-config'
+import { MOSTRAR_TODO_EL_MENU, SECCIONES_VISIBLES, LINKS_VISIBLES_POR_SECCION, MOSTRAR_DASHBOARD_Y_TAREAS } from '@/lib/menu-config'
 
 // ── Roles auxiliares ────────────────────────────────────────────────
 const DIR = ['jose', 'admin', 'director', 'mary', 'leysdem']
@@ -48,7 +48,7 @@ interface NavSection {
 const SECTIONS: NavSection[] = [
   {
     id: 'ventas',
-    title: 'Ventas y Clientes',
+    title: 'Panel de Ventas',
     icon: Users,
     links: [
       { href: '/gestion-ventas', label: 'Ventas',        icon: ShoppingBag,   roles: DIR },
@@ -344,9 +344,10 @@ export default function Sidebar({ userEmail, rol = 'editor', aprobacionesPendien
 
           {/* Secciones colapsables */}
           {SECTIONS.filter(s => MOSTRAR_TODO_EL_MENU || SECCIONES_VISIBLES.has(s.id)).map(section => {
+            const linksVisibles = LINKS_VISIBLES_POR_SECCION[section.id]
             const links = section.links
               .filter(l => canSee(l, rol, userEmail))
-              .filter(l => MOSTRAR_TODO_EL_MENU || section.id !== 'ventas' || LINKS_VENTAS_VISIBLES.has(l.href))
+              .filter(l => MOSTRAR_TODO_EL_MENU || !linksVisibles || linksVisibles.has(l.href))
             if (links.length === 0) return null
 
             const isOpen = open[section.id] ?? false
