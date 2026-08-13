@@ -50,8 +50,8 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   const personalizado = !!(conc?.nombre_comercial || conc?.ciudad)
   const brand = {
     nombre: conc?.nombre_comercial || 'JETPLUS',
-    ciudad: conc?.ciudad || 'Maturín',
-    estado: conc?.estado || 'Estado Monagas',
+    ciudad: conc?.ciudad || 'Porlamar',
+    estado: conc?.estado || 'Estado Nueva Esparta',
     wa: waCorp,
     // Marca personalizada → su logo (o ninguno); marca por defecto → logo de Jetplus.
     logo: conc?.logo_url || (personalizado ? '' : LOGO),
@@ -157,7 +157,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               ))}
             </div>
 
-            {/* Sede Maturín */}
+            {/* Sede (ciudad dinámica) */}
             <div style={{ background: '#fffbeb', border: '1px solid rgba(234,179,8,.3)', borderRadius: 14, padding: '16px 20px' }}>
               <p style={{ fontSize: 11, fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>📍 Sede {brand.ciudad}</p>
               <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, margin: 0 }}>

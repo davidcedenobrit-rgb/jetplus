@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { waCotizacionUrl } from '@/lib/whatsapp-cotizacion'
 import { calcularPresupuestoJetplus } from '@/lib/cotizacion-calc'
+import { imprimirPdfDesdeUrl } from '@/lib/pdf-print'
 
 type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
 
@@ -41,7 +42,9 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
 
   // Modelo real de Jetplus: descuento (Gabriel), inicial % (100 = contado),
   // financiadora (solo si hay financiamiento) y cargos seleccionables.
+  const [descuentoTipo, setDescuentoTipo] = useState<'pct' | 'monto'>('pct')
   const [descuentoPct, setDescuentoPct] = useState(0)
+  const [descuentoMonto, setDescuentoMonto] = useState(0)
   const [esContado, setEsContado] = useState(true)
   const [inicialPct, setInicialPct] = useState(40)
   const [financiadoras, setFinanciadoras] = useState<Financiadora[]>([])
@@ -111,7 +114,8 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   const financiadoraSel = financiadoras.find(f => f.id === financiadoraId)
   const calc = calcularPresupuestoJetplus({
     precioLista: vehiculo.cash ?? 0,
-    descuentoPct,
+    descuentoPct: descuentoTipo === 'pct' ? descuentoPct : 0,
+    descuentoMonto: descuentoTipo === 'monto' ? descuentoMonto : 0,
     inicialPct: esContado ? 100 : inicialPct,
     financiadoraTasaPct: esContado ? 0 : (financiadoraSel?.tasa_comision_pct ?? 0),
     cargoGastosAdmin,
@@ -192,7 +196,8 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
           agenteRetencion: form.agenteRetencion,
           modalidad: esContado ? 'contado' : 'credito_24',
           plan: 'presupuesto',
-          descuentoPct,
+          descuentoPct: descuentoTipo === 'pct' ? descuentoPct : 0,
+          descuentoMonto: descuentoTipo === 'monto' ? descuentoMonto : 0,
           inicialPct: esContado ? 100 : inicialPct,
           financiadoraId: esContado ? null : financiadoraId,
           cargoGastosAdmin,
@@ -247,7 +252,8 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
           agenteRetencion: form.agenteRetencion,
           modalidad: esContado ? 'contado' : 'credito_24',
           plan: 'presupuesto',
-          descuentoPct,
+          descuentoPct: descuentoTipo === 'pct' ? descuentoPct : 0,
+          descuentoMonto: descuentoTipo === 'monto' ? descuentoMonto : 0,
           inicialPct: esContado ? 100 : inicialPct,
           financiadoraId: esContado ? null : financiadoraId,
           cargoGastosAdmin,
@@ -411,12 +417,29 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                 </div>
               </div>
 
-              {/* Descuento (a discreción del dueño) */}
+              {/* Descuento (a discreción del dueño): por % o por monto fijo */}
               <div style={{ marginBottom: 14 }}>
-                <label style={label}>Descuento %</label>
-                <input type="number" min={0} max={100} step={0.5} value={descuentoPct}
-                  onChange={e => setDescuentoPct(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label style={{ ...label, marginBottom: 0 }}>Descuento</label>
+                  <div style={{ display: 'flex', border: '1px solid #d1d5db', borderRadius: 8, overflow: 'hidden' }}>
+                    {([['pct', '%'], ['monto', '$']] as ['pct' | 'monto', string][]).map(([val, lbl]) => (
+                      <button key={val} type="button" onClick={() => setDescuentoTipo(val)}
+                        style={{ padding: '3px 10px', border: 'none', background: descuentoTipo === val ? '#111' : '#fff', color: descuentoTipo === val ? '#fff' : '#6b7280', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {descuentoTipo === 'pct' ? (
+                  <input type="number" min={0} max={100} step={0.5} value={descuentoPct}
+                    onChange={e => setDescuentoPct(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties} />
+                ) : (
+                  <input type="number" min={0} max={vehiculo.cash ?? undefined} step={1} value={descuentoMonto}
+                    onChange={e => setDescuentoMonto(Math.max(0, Number(e.target.value) || 0))}
+                    placeholder="0"
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties} />
+                )}
               </div>
 
               {/* Financiadora + % inicial (solo si es financiado) */}
@@ -541,7 +564,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                   <div>
                     <label style={label}>Ciudad / Estado</label>
                     <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties}
-                      value={form.clienteCiudadEstado} onChange={e => setForm(p => ({ ...p, clienteCiudadEstado: e.target.value }))} placeholder="Maturín - Monagas" />
+                      value={form.clienteCiudadEstado} onChange={e => setForm(p => ({ ...p, clienteCiudadEstado: e.target.value }))} placeholder="Porlamar / Nueva Esparta" />
                   </div>
                   <div>
                     <label style={label}>Código Postal</label>
@@ -625,6 +648,20 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                   >
                     👁 Ver PDF
                   </a>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                    <button
+                      onClick={() => imprimirPdfDesdeUrl(pdfUrl)}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: '#fff', color: '#111', border: '1.5px solid #d1d5db', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                    >
+                      🖨 Imprimir
+                    </button>
+                    <a
+                      href={`${pdfUrl}?download=1`}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: '#fff', color: '#111', border: '1.5px solid #d1d5db', borderRadius: 12, fontSize: 13, fontWeight: 700, textDecoration: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                    >
+                      ⬇ Descargar
+                    </a>
+                  </div>
                   <button
                     onClick={compartirPorWhatsApp}
                     disabled={compartiendo}

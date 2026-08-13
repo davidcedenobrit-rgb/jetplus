@@ -333,7 +333,7 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
                   <div>
                     <label style={label}>Ciudad / Estado</label>
-                    <input style={inp} value={form.clienteCiudadEstado} onChange={e => setForm(p => ({ ...p, clienteCiudadEstado: e.target.value }))} placeholder="Maturín - Monagas" />
+                    <input style={inp} value={form.clienteCiudadEstado} onChange={e => setForm(p => ({ ...p, clienteCiudadEstado: e.target.value }))} placeholder="Porlamar / Nueva Esparta" />
                   </div>
                   <div>
                     <label style={label}>Código Postal</label>

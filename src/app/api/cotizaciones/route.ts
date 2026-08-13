@@ -85,9 +85,11 @@ export async function POST(req: Request) {
       // códigos de la tabla `vendedoras`. En el link público no se envía: la
       // vendedora ya viene identificada por su propio código.
       vendedorasCodigos,
-      // Modelo real de Jetplus (plan === 'presupuesto'): descuento discrecional,
-      // % de inicial (100 = contado), financiadora elegida y cargos seleccionables.
+      // Modelo real de Jetplus (plan === 'presupuesto'): descuento discrecional
+      // (por % o por monto fijo — descuentoMonto manda si viene > 0), % de
+      // inicial (100 = contado), financiadora elegida y cargos seleccionables.
       descuentoPct,
+      descuentoMonto,
       inicialPct: inicialPctBody,
       financiadoraId,
       cargoGastosAdmin,
@@ -326,7 +328,6 @@ export async function POST(req: Request) {
       // descuento discrecional + IGTF 3% + inicial % (100 = contado) + comisión
       // de la financiadora sobre la inicial + cargos seleccionables.
       presupuestoInicialPct = Math.min(100, Math.max(1, Number(inicialPctBody)))
-      presupuestoDescuentoPct = Math.min(100, Math.max(0, Number(descuentoPct) || 0))
       presupuestoCargoGastosAdmin = !!cargoGastosAdmin
       presupuestoCargoPlaca = !!cargoPlaca
       let financiadoraTasaPct = 0
@@ -337,7 +338,8 @@ export async function POST(req: Request) {
       }
       const pres = calcularPresupuestoJetplus({
         precioLista: precioBase,
-        descuentoPct: presupuestoDescuentoPct,
+        descuentoPct: Math.min(100, Math.max(0, Number(descuentoPct) || 0)),
+        descuentoMonto: Math.max(0, Number(descuentoMonto) || 0),
         inicialPct: presupuestoInicialPct,
         financiadoraTasaPct,
         cargoGastosAdmin: presupuestoCargoGastosAdmin,
@@ -345,6 +347,9 @@ export async function POST(req: Request) {
         gastosAdminMonto: Number(vehiculo.gc) || 500,
         placaMonto: Number(vehiculo.placa_monto) || 390,
       })
+      // Se guarda el % EFECTIVO (aunque la vendedora haya elegido monto fijo),
+      // para que el PDF y los reportes siempre muestren un descuento_pct coherente.
+      presupuestoDescuentoPct = pres.descuentoPct
       presupuestoIgtf = pres.igtf
       presupuestoComision = pres.comisionFlat
       gastos = pres.cargos

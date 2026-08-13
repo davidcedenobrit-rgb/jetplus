@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { calcularPresupuestoJetplus } from '@/lib/cotizacion-calc'
+import { imprimirPdfBlob, descargarBlob } from '@/lib/pdf-print'
 
 interface Vehiculo {
   brand: string
@@ -55,6 +56,8 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
   })
 
   const [compartiendo, setCompartiendo] = useState(false)
+  const [imprimiendo, setImprimiendo] = useState(false)
+  const [descargando, setDescargando] = useState(false)
   const [error, setError] = useState('')
 
   // Payload del PDF que se comparte.
@@ -98,6 +101,45 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
       setError('No se pudo generar el PDF. Intenta de nuevo.')
     } finally {
       setCompartiendo(false)
+    }
+  }
+
+  // Genera el mismo PDF que "Compartir" pero lo imprime o lo descarga directo,
+  // en vez de abrir el diálogo de compartir nativo.
+  async function generarPdfRapido(): Promise<Blob | null> {
+    const res = await fetch('/api/cotizacion-rapida/pdf', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadBase()),
+    })
+    if (!res.ok) return null
+    return res.blob()
+  }
+
+  async function imprimirRapido() {
+    if (imprimiendo) return
+    setImprimiendo(true); setError('')
+    try {
+      const blob = await generarPdfRapido()
+      if (!blob) throw new Error('pdf')
+      imprimirPdfBlob(blob)
+    } catch {
+      setError('No se pudo generar el PDF. Intenta de nuevo.')
+    } finally {
+      setImprimiendo(false)
+    }
+  }
+
+  async function descargarRapido() {
+    if (descargando) return
+    setDescargando(true); setError('')
+    try {
+      const blob = await generarPdfRapido()
+      if (!blob) throw new Error('pdf')
+      const fileName = `Cotizacion_${vehiculo.brand}_${vehiculo.model}`.replace(/[^\w-]+/g, '_') + '.pdf'
+      descargarBlob(blob, fileName)
+    } catch {
+      setError('No se pudo generar el PDF. Intenta de nuevo.')
+    } finally {
+      setDescargando(false)
     }
   }
 
@@ -214,6 +256,16 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
             style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: colorPrimario, color: '#fff', fontSize: 14, fontWeight: 800, cursor: compartiendo ? 'default' : 'pointer', opacity: compartiendo ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             {compartiendo ? 'Generando PDF…' : '📄 Compartir como PDF'}
           </button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button onClick={imprimirRapido} disabled={imprimiendo}
+              style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1.5px solid #d1d5db', background: '#fff', color: '#111', fontSize: 13, fontWeight: 700, cursor: imprimiendo ? 'default' : 'pointer', opacity: imprimiendo ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              🖨 {imprimiendo ? 'Generando…' : 'Imprimir'}
+            </button>
+            <button onClick={descargarRapido} disabled={descargando}
+              style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1.5px solid #d1d5db', background: '#fff', color: '#111', fontSize: 13, fontWeight: 700, cursor: descargando ? 'default' : 'pointer', opacity: descargando ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              ⬇ {descargando ? 'Generando…' : 'Descargar'}
+            </button>
+          </div>
           {error && <p style={{ fontSize: 12, color: '#C41E3A', textAlign: 'center', margin: '8px 0 0' }}>{error}</p>}
         </div>
 

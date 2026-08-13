@@ -39,6 +39,12 @@ export async function middleware(request: NextRequest) {
     // Búsqueda de clientes desde el link de vendedores (validada por código de
     // vendedor(a) dentro del handler; no expone la base sin código válido).
     '/api/cotizaciones/clientes-buscar',
+    // Lista de financiadoras (PIVCA/Vehimotors) para armar el presupuesto
+    // desde el link público. El GET es publico por diseño (sin datos
+    // sensibles); el PATCH (editar tasa) valida sesion+rol dentro del propio
+    // handler. Sin esto, el middleware redirigia el fetch a /login (HTML en
+    // vez de JSON) y la vendedora nunca podia elegir financiadora.
+    '/api/financiadoras',
   ]
 
   // PDF de la cotización: público (se comparte al cliente por WhatsApp/correo).

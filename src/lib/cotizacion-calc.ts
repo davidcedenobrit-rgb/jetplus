@@ -163,6 +163,7 @@ export const IGTF_TASA = 3
 export interface PresupuestoInput {
   precioLista: number
   descuentoPct?: number | null       // 0-100, a discreción del dueño
+  descuentoMonto?: number | null     // alternativa en USD; si se manda (>0) tiene prioridad sobre descuentoPct
   inicialPct: number                  // 0-100; 100 = contado puro
   financiadoraTasaPct?: number | null // % de comisión de la financiadora sobre la inicial (0 si contado)
   cargoGastosAdmin: boolean
@@ -192,8 +193,16 @@ function round2(n: number): number {
 
 export function calcularPresupuestoJetplus(inp: PresupuestoInput): PresupuestoResult {
   const precioLista = Number(inp.precioLista) || 0
-  const descuentoPct = Math.min(100, Math.max(0, Number(inp.descuentoPct) || 0))
-  const descuentoMonto = round2(precioLista * descuentoPct / 100)
+  const descuentoMontoInput = Math.max(0, Number(inp.descuentoMonto) || 0)
+  let descuentoPct: number
+  let descuentoMonto: number
+  if (descuentoMontoInput > 0) {
+    descuentoMonto = round2(Math.min(descuentoMontoInput, precioLista))
+    descuentoPct = precioLista > 0 ? round2(descuentoMonto / precioLista * 100) : 0
+  } else {
+    descuentoPct = Math.min(100, Math.max(0, Number(inp.descuentoPct) || 0))
+    descuentoMonto = round2(precioLista * descuentoPct / 100)
+  }
   const precioVehiculo = round2(precioLista - descuentoMonto)
   const igtf = round2(precioVehiculo * IGTF_TASA / 100)
   const inicialPct = Math.min(100, Math.max(0, Number(inp.inicialPct)))

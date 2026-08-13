@@ -19,6 +19,9 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://*.supabase.co https://assets.cdn.filesafe.space https://storage.googleapis.com https://lh3.googleusercontent.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
       "font-src 'self' data:",
+      // Iframe oculto para imprimir el PDF de la cotización (blob: generado
+      // client-side desde el propio origen; no abre la puerta a framing externo).
+      "frame-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
