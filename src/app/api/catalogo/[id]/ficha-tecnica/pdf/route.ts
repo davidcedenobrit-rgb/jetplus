@@ -37,7 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   const buffer = await renderToBuffer(
-    React.createElement(FichaTecnicaPDF, { src: v.ficha_tecnica_url }) as React.ReactElement
+    React.createElement(FichaTecnicaPDF, { src: v.ficha_tecnica_url }) as React.ReactElement<any>
   )
   const nombre = `Ficha_${v.model}`.replace(/[^\w-]+/g, '_')
 
