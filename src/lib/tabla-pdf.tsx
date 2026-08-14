@@ -30,11 +30,11 @@ export function TablaPDF({ data }: { data: TablaPDFData }) {
     td: { fontSize: 7.4 },
   })
 
-  const colStyle = (c: TablaColumna): React.CSSProperties | Record<string, unknown> => ({
+  const colStyle = (c: TablaColumna) => ({
     flex: c.width ? undefined : (c.flex ?? 1),
     width: c.width,
     textAlign: c.align ?? 'left',
-  })
+  } as const)
 
   return (
     <Document title={data.titulo} author={data.membrete.nombre}>
