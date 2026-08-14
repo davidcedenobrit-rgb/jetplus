@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import CotizacionModal from './CotizacionModal'
 import CotizacionRapidaModal from './CotizacionRapidaModal'
+import FichaTecnicaModal from './FichaTecnicaModal'
 import { imagenVehiculo } from '@/lib/vehiculo-image'
 
 interface Vehiculo {
@@ -18,6 +19,7 @@ interface Vehiculo {
   colores: string | null
   transmision: string | null
   ano: number | null
+  ficha_tecnica_url?: string | null
   placa_monto?: number | null
   poliza_vehiculo_banco?: number | null
   poliza_vida_banco?: number | null
@@ -43,6 +45,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const [modalVehiculo, setModalVehiculo] = useState<Vehiculo | null>(null)
   const [rapidaVehiculo, setRapidaVehiculo] = useState<Vehiculo | null>(null)
+  const [fichaVehiculo, setFichaVehiculo] = useState<Vehiculo | null>(null)
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
   function trackEvento(evento: string, brand: string, model: string) {
@@ -59,6 +62,14 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
           evento={evento} waCorp={waCorp} concesionario={concesionario}
           brandNombre={brand?.nombre} brandLogo={brand?.logo}
           colorPrimario={brand?.colorPrimario} colorSecundario={brand?.colorSecundario} />
+      )}
+      {fichaVehiculo && (
+        <FichaTecnicaModal
+          titulo={`${fichaVehiculo.brand} ${fichaVehiculo.model}`}
+          imagenUrl={fichaVehiculo.ficha_tecnica_url!}
+          pdfUrl={`/api/catalogo/${fichaVehiculo.id}/ficha-tecnica/pdf`}
+          onClose={() => setFichaVehiculo(null)}
+        />
       )}
 
       {/* Filtros */}
@@ -139,6 +150,11 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
                     Cotización
                   </button>
                 </div>
+                {v.ficha_tecnica_url && (
+                  <button onClick={() => { trackEvento('ficha_tecnica_click', v.brand, v.model); setFichaVehiculo(v) }} className="lo-cbtn-out" style={{ marginTop: 10, width: '100%' }}>
+                    📋 Ficha técnica
+                  </button>
+                )}
               </div>
             </div>
           )

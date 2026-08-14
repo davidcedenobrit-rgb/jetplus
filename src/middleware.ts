@@ -52,13 +52,17 @@ export async function middleware(request: NextRequest) {
   // La URL lleva un UUID no adivinable, mismo modelo que el token del correo.
   const esPdfCotizacionPublico = /^\/api\/cotizaciones\/[^/]+\/pdf$/.test(pathname)
 
+  // PDF de la ficha técnica de un vehículo del catálogo: público, se muestra
+  // y comparte desde el link de ventas (/ventas) sin sesión.
+  const esPdfFichaTecnicaPublico = /^\/api\/catalogo\/[^/]+\/ficha-tecnica\/pdf$/.test(pathname)
+
   // Crear cotización desde el link público /ventas (POST exacto a /api/cotizaciones).
   // El propio handler valida el código de vendedor(a); el GET (listado) sigue
   // exigiendo sesión dentro del handler. Solo se libera la ruta EXACTA, no las
   // subrutas administrativas (/api/cotizaciones/[id], reactivar, etc.).
   const esCrearCotizacionPublica = pathname === '/api/cotizaciones'
 
-  if (esPdfCotizacionPublico || esCrearCotizacionPublica || publicApiPaths.some(path => pathname.startsWith(path))) {
+  if (esPdfCotizacionPublico || esPdfFichaTecnicaPublico || esCrearCotizacionPublica || publicApiPaths.some(path => pathname.startsWith(path))) {
     return supabaseResponse
   }
 
