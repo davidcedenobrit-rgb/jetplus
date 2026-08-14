@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Search, ShoppingCart, ListChecks, ExternalLink, Calculator, X, Loader2, FileText, ClipboardList, FilePlus2, Percent, Users, Landmark } from 'lucide-react'
+import { Search, ShoppingCart, ListChecks, ExternalLink, Calculator, X, Loader2, FileText, ClipboardList, FilePlus2, Percent, Users, Landmark, Handshake } from 'lucide-react'
 import ProformasTab from '../link-ventas/ProformasTab'
 import CotizacionesTab from '../link-ventas/CotizacionesTab'
 import CotizacionCDMTab from '../link-ventas/CotizacionCDMTab'
 import TasasEditor from '../link-ventas/TasasEditor'
 import ClientesHistorialTab from '../link-ventas/ClientesHistorialTab'
 import BancaNacionalTab from '../link-ventas/BancaNacionalTab'
+import AliadosTab from './AliadosTab'
 
 type Venta = {
   id: string
@@ -115,8 +116,8 @@ const fmtFecha = (s: string | null) => {
 
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
-type Vista = 'registradas' | 'registrar' | 'cotizaciones' | 'proformas' | 'generar' | 'banca' | 'tasas' | 'historial' | 'division'
-const VISTAS_VALIDAS: Vista[] = ['registradas', 'registrar', 'cotizaciones', 'proformas', 'generar', 'banca', 'tasas', 'historial', 'division']
+type Vista = 'registradas' | 'registrar' | 'cotizaciones' | 'proformas' | 'generar' | 'banca' | 'tasas' | 'historial' | 'division' | 'aliados'
+const VISTAS_VALIDAS: Vista[] = ['registradas', 'registrar', 'cotizaciones', 'proformas', 'generar', 'banca', 'tasas', 'historial', 'division', 'aliados']
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac500 = [], showroomStock = [], tasas = { bcv: 0, usdt: 0 }, puedeEditar = false, esRojas = false }: {
@@ -237,6 +238,7 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
           // ['banca', 'Banca Nacional', Landmark],
           // ['tasas', 'Tasas', Percent],
           ['historial', 'Historial de clientes', Users],
+          ['aliados', 'Aliados', Handshake],
           // ['division', 'División contable', Calculator],
         ] as const).map(([k, label, Icon]) => (
           <button key={k} onClick={() => setVista(k)}
@@ -357,6 +359,8 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
         <TasasEditor />
       ) : vista === 'historial' ? (
         <ClientesHistorialTab />
+      ) : vista === 'aliados' ? (
+        <AliadosTab />
       ) : (
         /* División contable */
         <div>

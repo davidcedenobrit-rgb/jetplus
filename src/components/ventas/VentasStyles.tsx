@@ -93,6 +93,11 @@ export default function VentasStyles() {
         /* Botones del hero a ancho completo para que no se corten */
         .lo-btn-gold, .lo-btn-glass, .lo-btn-wa{ flex:1 1 100%; }
       }
+
+      /* ── Tabs internos (aliados) ── */
+      .lo-tab { padding:10px 18px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:rgba(255,255,255,.75); transition:all .2s; font-family:inherit; white-space:nowrap; }
+      .lo-tab:hover { background:rgba(255,255,255,.12); }
+      .lo-tab.on { background:#ca8a04; border-color:#ca8a04; color:#fff; }
     `}</style>
   )
 }

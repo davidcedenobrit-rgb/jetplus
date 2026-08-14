@@ -46,6 +46,12 @@ export async function middleware(request: NextRequest) {
     // handler. Sin esto, el middleware redirigia el fetch a /login (HTML en
     // vez de JSON) y la vendedora nunca podia elegir financiadora.
     '/api/financiadoras',
+    // Link público de aliados (/aliados, /aliados/panel): verificación de
+    // código, registro de leads referidos y su propio panel — mismo modelo
+    // sin sesión que /api/vendedoras/*.
+    '/api/aliados/verificar',
+    '/api/aliados/lead',
+    '/api/aliados/panel',
   ]
 
   // PDF de la cotización: público (se comparte al cliente por WhatsApp/correo).

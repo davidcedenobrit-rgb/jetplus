@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { imagenVehiculo } from '@/lib/vehiculo-image'
 import CotizacionRapidaModal from './CotizacionRapidaModal'
 import CotizacionAC500Modal from './CotizacionAC500Modal'
+import EnviarConcesionarioModal from './EnviarConcesionarioModal'
 import type { BrandImg } from './VehiculosFiltro'
 
 export interface AC500Vehiculo {
@@ -112,11 +113,12 @@ export function schedule(v: AC500Vehiculo, mode: Mode) {
   ]
 }
 
-function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: { v: AC500Vehiculo; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg }) {
+function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand, modo = 'vendedor', aliadoCodigo, aliadoNombre, origen }: { v: AC500Vehiculo; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg; modo?: 'vendedor' | 'aliado' | 'publico'; aliadoCodigo?: string; aliadoNombre?: string; origen?: string }) {
   const colors = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
   const [mode, setMode] = useState<Mode>(defaultMode(v))
   const [rapida, setRapida] = useState(false)
   const [cotizar, setCotizar] = useState(false)
+  const [enviar, setEnviar] = useState(false)
   const [color, setColor] = useState(colors[0] || '')
 
   const modes = activeModes(v)
@@ -205,16 +207,30 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
           ✱ La última cuota puede cancelarse en Bs.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 'auto' }}>
-          <button className="lo-cbtn-out" onClick={() => {
-            fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_interesado', marca: v.brand, modelo: v.model }) }).catch(() => {})
-            setRapida(true)
-          }}>⚡ Cotización rápida</button>
-          <button className="lo-cbtn-red" onClick={() => {
-            fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_cotizacion_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
-            setCotizar(true)
-          }}>📄 Cotización</button>
-        </div>
+        {modo === 'publico' ? (
+          <button className="lo-cbtn-red" style={{ marginTop: 'auto' }} onClick={() => {
+            fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_concesionario_virtual_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
+            setEnviar(true)
+          }}>Ir a concesionario virtual</button>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 'auto' }}>
+            <button className="lo-cbtn-out" onClick={() => {
+              fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_interesado', marca: v.brand, modelo: v.model }) }).catch(() => {})
+              setRapida(true)
+            }}>⚡ Cotización rápida</button>
+            {modo === 'aliado' ? (
+              <button className="lo-cbtn-red" onClick={() => {
+                fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_enviar_concesionario_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
+                setEnviar(true)
+              }}>Enviar</button>
+            ) : (
+              <button className="lo-cbtn-red" onClick={() => {
+                fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_cotizacion_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
+                setCotizar(true)
+              }}>📄 Cotización</button>
+            )}
+          </div>
+        )}
       </div>
 
       {rapida && (
@@ -238,11 +254,25 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand }: {
           onClose={() => setCotizar(false)}
         />
       )}
+
+      {enviar && (
+        <EnviarConcesionarioModal
+          variante={modo === 'aliado' ? 'aliado' : 'publico'}
+          vehiculoLabel={`AC500 · ${v.brand} ${v.model}${color ? ` (${cap(color)})` : ''}`}
+          marca={v.brand}
+          modelo={v.model}
+          onClose={() => setEnviar(false)}
+          aliadoCodigo={aliadoCodigo}
+          aliadoNombre={aliadoNombre}
+          origen={origen}
+          concesionario={concesionario}
+        />
+      )}
     </article>
   )
 }
 
-export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', concesionario = '', brand }: { vehiculos: AC500Vehiculo[]; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg }) {
+export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', concesionario = '', brand, modo = 'vendedor', aliadoCodigo, aliadoNombre, origen }: { vehiculos: AC500Vehiculo[]; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg; modo?: 'vendedor' | 'aliado' | 'publico'; aliadoCodigo?: string; aliadoNombre?: string; origen?: string }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
@@ -257,7 +287,7 @@ export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', conce
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
-        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brand} />)}
+        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brand} modo={modo} aliadoCodigo={aliadoCodigo} aliadoNombre={aliadoNombre} origen={origen} />)}
       </div>
 
       {lista.length === 0 && (

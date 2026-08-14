@@ -4,9 +4,10 @@ import { useState } from 'react'
 import CotizacionModal from './CotizacionModal'
 import CotizacionRapidaModal from './CotizacionRapidaModal'
 import FichaTecnicaModal from './FichaTecnicaModal'
+import EnviarConcesionarioModal from './EnviarConcesionarioModal'
 import { imagenVehiculo } from '@/lib/vehiculo-image'
 
-interface Vehiculo {
+export interface Vehiculo {
   id: string
   brand: 'MG' | 'MAXUS'
   model: string
@@ -41,11 +42,12 @@ type Filtro = 'ALL' | 'MG' | 'MAXUS'
 
 export interface BrandImg { nombre: string; logo: string; colorPrimario: string; colorSecundario: string }
 
-export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp = WA, concesionario = '', brand }: { vehiculos: Vehiculo[]; tasas: { bcv: number; usdt: number }; evento?: string; waCorp?: string; concesionario?: string; brand?: BrandImg }) {
+export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp = WA, concesionario = '', brand, modo = 'vendedor', aliadoCodigo, aliadoNombre, origen }: { vehiculos: Vehiculo[]; tasas: { bcv: number; usdt: number }; evento?: string; waCorp?: string; concesionario?: string; brand?: BrandImg; modo?: 'vendedor' | 'aliado' | 'publico'; aliadoCodigo?: string; aliadoNombre?: string; origen?: string }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const [modalVehiculo, setModalVehiculo] = useState<Vehiculo | null>(null)
   const [rapidaVehiculo, setRapidaVehiculo] = useState<Vehiculo | null>(null)
   const [fichaVehiculo, setFichaVehiculo] = useState<Vehiculo | null>(null)
+  const [enviarVehiculo, setEnviarVehiculo] = useState<Vehiculo | null>(null)
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
   function trackEvento(evento: string, brand: string, model: string) {
@@ -69,6 +71,19 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
           imagenUrl={fichaVehiculo.ficha_tecnica_url!}
           pdfUrl={`/api/catalogo/${fichaVehiculo.id}/ficha-tecnica/pdf`}
           onClose={() => setFichaVehiculo(null)}
+        />
+      )}
+      {enviarVehiculo && (
+        <EnviarConcesionarioModal
+          variante={modo === 'aliado' ? 'aliado' : 'publico'}
+          vehiculoLabel={`${enviarVehiculo.brand} ${enviarVehiculo.model}`}
+          marca={enviarVehiculo.brand}
+          modelo={enviarVehiculo.model}
+          onClose={() => setEnviarVehiculo(null)}
+          aliadoCodigo={aliadoCodigo}
+          aliadoNombre={aliadoNombre}
+          origen={origen}
+          concesionario={concesionario}
         />
       )}
 
@@ -140,17 +155,30 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
 
                 <div style={{ flex: 1 }} />
 
-                {/* Botones del vendedor: cotización rápida (imagen) + cotización formal */}
-                <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <button onClick={() => { trackEvento('cotizacion_rapida', v.brand, v.model); setRapidaVehiculo(v) }} className="lo-cbtn-out">
-                    ⚡ Cotización rápida
+                {modo === 'publico' ? (
+                  <button onClick={() => { trackEvento('concesionario_virtual_click', v.brand, v.model); setEnviarVehiculo(v) }} className="lo-cbtn-red" style={{ marginTop: 20 }}>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M3 12h18M13 6l6 6-6 6" /></svg>
+                    Ir a concesionario virtual
                   </button>
-                  <button onClick={() => { trackEvento('cotizacion_formal_click', v.brand, v.model); setModalVehiculo(v) }} className="lo-cbtn-red">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
-                    Cotización
-                  </button>
-                </div>
-                {v.ficha_tecnica_url && (
+                ) : (
+                  <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <button onClick={() => { trackEvento('cotizacion_rapida', v.brand, v.model); setRapidaVehiculo(v) }} className="lo-cbtn-out">
+                      ⚡ Cotización rápida
+                    </button>
+                    {modo === 'aliado' ? (
+                      <button onClick={() => { trackEvento('enviar_concesionario_click', v.brand, v.model); setEnviarVehiculo(v) }} className="lo-cbtn-red">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M3 12h18M13 6l6 6-6 6" /></svg>
+                        Enviar
+                      </button>
+                    ) : (
+                      <button onClick={() => { trackEvento('cotizacion_formal_click', v.brand, v.model); setModalVehiculo(v) }} className="lo-cbtn-red">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
+                        Cotización
+                      </button>
+                    )}
+                  </div>
+                )}
+                {modo === 'vendedor' && v.ficha_tecnica_url && (
                   <button onClick={() => { trackEvento('ficha_tecnica_click', v.brand, v.model); setFichaVehiculo(v) }} className="lo-cbtn-out" style={{ marginTop: 10, width: '100%' }}>
                     📋 Ficha técnica
                   </button>
