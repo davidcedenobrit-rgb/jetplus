@@ -84,7 +84,9 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   }
 
   const lista = catalogo ?? []
-  const acLista = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo || v.p12_activo)
+  const acActivos = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo || v.p12_activo)
+  const acListaPL = acActivos.filter(v => v.regimen === 'puerto_libre')
+  const acListaNac = acActivos.filter(v => v.regimen === 'nacional')
   const promoActiva = promoData?.activa === true
   const promoVehiculosList = promoVehiculos ?? []
 
@@ -131,7 +133,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="#registro" className="lo-btn-gold">👤 Registrar cliente →</a>
-              {acLista.length > 0 && <a href="#ac500" className="lo-btn-glass">🛡️ Plan $500 ↓</a>}
+              {(acListaPL.length > 0 || acListaNac.length > 0) && <a href="#ac500" className="lo-btn-glass">🛡️ Plan $500 ↓</a>}
               {promoActiva && promoVehiculosList.length > 0 && <a href="#promociones" className="lo-btn-glass">🏷️ Promociones ↓</a>}
               <a href="#vehiculos" className="lo-btn-glass">Ver vehículos ↓</a>
             </div>
@@ -182,13 +184,13 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
         <VehiculosFiltro vehiculos={lista} tasas={tasas} evento={evento} waCorp={waCorp} concesionario={concesionario} brand={brandImg} />
       </section>
 
-      {/* ── AC500 ─────────────────────────────────────────────────────────── */}
-      {acLista.length > 0 && (
+      {/* ── AC500 · PUERTO LIBRE ─────────────────────────────────────────── */}
+      {acListaPL.length > 0 && (
         <section id="ac500" style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 20px' }}>
           <div style={{ textAlign: 'center', marginBottom: 40 }}>
             <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>🛡️ Plan exclusivo</span>
             <h2 style={{ fontSize: 'clamp(26px, 4.5vw, 42px)', fontWeight: 900, color: '#fff', marginBottom: 14, lineHeight: 1.1 }}>
-              Asegúrate con <span style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>$500</span>
+              AC500 <span style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Puerto Libre</span>
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 15, maxWidth: 560, margin: '0 auto 28px', lineHeight: 1.6 }}>
               Reserva tu vehículo MG o MAXUS con solo $500 y accede a un precio preferencial hasta 30% por debajo del mercado. Completa el resto con un cronograma de cuotas y recíbelo en el mes 6.
@@ -199,7 +201,28 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               ))}
             </div>
           </div>
-          <AC500Filtro vehiculos={acLista} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brandImg} />
+          <AC500Filtro vehiculos={acListaPL} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brandImg} />
+        </section>
+      )}
+
+      {/* ── AC500 · NACIONALES ───────────────────────────────────────────── */}
+      {acListaNac.length > 0 && (
+        <section id="ac500-nacionales" style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 20px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <span style={{ display: 'inline-block', background: '#fef9c3', border: '1px solid rgba(234,179,8,.4)', color: '#92400e', padding: '5px 16px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '.5px', marginBottom: 18, textTransform: 'uppercase' }}>🛡️ Plan exclusivo</span>
+            <h2 style={{ fontSize: 'clamp(26px, 4.5vw, 42px)', fontWeight: 900, color: '#fff', marginBottom: 14, lineHeight: 1.1 }}>
+              AC500 <span style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Nacionales</span>
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 15, maxWidth: 560, margin: '0 auto 28px', lineHeight: 1.6 }}>
+              Reserva tu vehículo MG o MAXUS con solo $500 y accede a un precio preferencial hasta 30% por debajo del mercado. Completa el resto con un cronograma de cuotas y recíbelo en el mes 6.
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {['🛡️ Precio congelado', '📉 Hasta 30% menos', '📅 Cuotas programadas', '🚗 Entrega mes 6', '✅ Sin letra chica'].map(p => (
+                <span key={p} className="lo-perk">{p}</span>
+              ))}
+            </div>
+          </div>
+          <AC500Filtro vehiculos={acListaNac} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brandImg} />
         </section>
       )}
 
@@ -288,7 +311,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
       </footer>
 
       {/* ── STICKY BOTTOM NAV ─────────────────────────────────────────────── */}
-      <StickyNav hasAC500={acLista.length > 0} hasPromos={promoActiva && promoVehiculosList.length > 0} />
+      <StickyNav hasAC500={acListaPL.length > 0 || acListaNac.length > 0} hasPromos={promoActiva && promoVehiculosList.length > 0} />
     </div>
   )
 }
