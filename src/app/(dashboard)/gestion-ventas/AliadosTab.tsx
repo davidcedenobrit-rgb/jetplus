@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { Plus, X, Check, Eye, EyeOff, Handshake } from 'lucide-react'
-import BitacoraRedesTab from './BitacoraRedesTab'
+import { Plus, X, Check, Eye, EyeOff, Handshake, Download } from 'lucide-react'
 
 interface Aliado {
   id: string
@@ -41,12 +39,10 @@ function fmtFecha(iso: string) {
   catch { return iso }
 }
 
-type Subvista = 'gestionar' | 'bitacora_aliados' | 'bitacora_redes'
+type Subvista = 'gestionar' | 'bitacora_aliados'
 
 export default function AliadosTab() {
-  const searchParams = useSearchParams()
-  const subInicial: Subvista = searchParams.get('sub') === 'redes' ? 'bitacora_redes' : 'gestionar'
-  const [subvista, setSubvista] = useState<Subvista>(subInicial)
+  const [subvista, setSubvista] = useState<Subvista>('gestionar')
   const [aliados, setAliados] = useState<Aliado[]>([])
   const [leads, setLeads] = useState<AliadoLead[]>([])
   const [loading, setLoading] = useState(true)
@@ -135,19 +131,28 @@ export default function AliadosTab() {
     <div>
       {toast && <Toast msg={toast.msg} ok={toast.ok} />}
 
-      <div className="flex items-center gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
-        {([
-          ['gestionar', 'Aliados', Handshake],
-          ['bitacora_aliados', `Bitácora de aliados${leads.length ? ` (${leads.length})` : ''}`, null],
-          ['bitacora_redes', 'Bitácora de redes', null],
-        ] as const).map(([k, label, Icon]) => (
-          <button key={k} onClick={() => setSubvista(k)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-              subvista === k ? 'border-oriental-red text-oriental-red' : 'border-transparent text-gray-500 hover:text-oriental-black'
-            }`}>
-            {Icon && <Icon size={15} />} {label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between mb-6 border-b border-gray-200">
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {([
+            ['gestionar', 'Aliados', Handshake],
+            ['bitacora_aliados', `Bitácora de aliados${leads.length ? ` (${leads.length})` : ''}`, null],
+          ] as const).map(([k, label, Icon]) => (
+            <button key={k} onClick={() => setSubvista(k)}
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+                subvista === k ? 'border-oriental-red text-oriental-red' : 'border-transparent text-gray-500 hover:text-oriental-black'
+              }`}>
+              {Icon && <Icon size={15} />} {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 pb-2 shrink-0">
+          <a href="/api/aliados/export" className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-oriental-gray hover:bg-gray-50 transition-colors">
+            <Download size={13} /> Excel
+          </a>
+          <a href="/api/aliados/export/pdf" className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-oriental-gray hover:bg-gray-50 transition-colors">
+            <Download size={13} /> PDF
+          </a>
+        </div>
       </div>
 
       {subvista === 'gestionar' && (<>
@@ -253,8 +258,6 @@ export default function AliadosTab() {
         </div>
       )}
       </>)}
-
-      {subvista === 'bitacora_redes' && <BitacoraRedesTab />}
 
       {/* Modal agregar aliado */}
       {showModal && (

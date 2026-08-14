@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAllRows } from '@/lib/supabase/fetch-all'
 
@@ -81,13 +82,21 @@ export default function BitacoraRedesTab() {
           <h2 className="text-base font-bold text-oriental-black">Bitácora de redes</h2>
           <p className="text-xs text-oriental-gray mt-0.5">Qué eligen los clientes en el link de redes sociales y los datos que se enviaron a WhatsApp.</p>
         </div>
-        <div className="flex items-center gap-1.5">
-          {[7, 30, 90].map(d => (
-            <button key={d} onClick={() => setDias(d)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${dias === d ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-              {d === 7 ? '7 días' : d === 30 ? '30 días' : '3 meses'}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {[7, 30, 90].map(d => (
+              <button key={d} onClick={() => setDias(d)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${dias === d ? 'border-oriental-black bg-oriental-black text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                {d === 7 ? '7 días' : d === 30 ? '30 días' : '3 meses'}
+              </button>
+            ))}
+          </div>
+          <a href="/api/redes/export" className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-oriental-gray hover:bg-gray-50 transition-colors">
+            <Download size={13} /> Excel
+          </a>
+          <a href="/api/redes/export/pdf" className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-oriental-gray hover:bg-gray-50 transition-colors">
+            <Download size={13} /> PDF
+          </a>
         </div>
       </div>
 

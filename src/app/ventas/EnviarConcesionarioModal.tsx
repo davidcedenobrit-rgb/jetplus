@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 const WA_JETPLUS = '584248705174'
+const ORIGEN_OPCIONES = ['Instagram', 'TikTok', 'Facebook', 'WhatsApp', 'Otro']
 
 interface Props {
   variante: 'aliado' | 'publico'
@@ -23,11 +24,19 @@ export default function EnviarConcesionarioModal({ variante, vehiculoLabel, marc
   const [telefono, setTelefono] = useState('')
   const [tieneInicial, setTieneInicial] = useState(false)
   const [inicialMonto, setInicialMonto] = useState('')
+  const [origenSel, setOrigenSel] = useState(() => {
+    const norm = (origen || '').trim()
+    return ORIGEN_OPCIONES.includes(norm) ? norm : ''
+  })
+  const [origenOtro, setOrigenOtro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
 
+  const origenFinal = origenSel === 'Otro' ? (origenOtro.trim() || 'Otro') : origenSel
+
   async function enviar() {
     if (!nombre.trim() || !telefono.trim()) { setError('Nombre y teléfono son obligatorios.'); return }
+    if (variante === 'publico' && !origenSel) { setError('Selecciona desde dónde nos escribes.'); return }
     setEnviando(true); setError('')
 
     // Best-effort: si falla el guardado en el panel, igual se deja mandar el
@@ -50,7 +59,7 @@ export default function EnviarConcesionarioModal({ variante, vehiculoLabel, marc
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             nombre: nombre.trim(), telefono: telefono.trim(), marca, modelo,
-            origen: origen || 'redes_sociales', concesionario,
+            origen: origenFinal || 'redes_sociales', concesionario,
           }),
         })
       }
@@ -76,7 +85,7 @@ export default function EnviarConcesionarioModal({ variante, vehiculoLabel, marc
           '',
           `👤 Nombre: ${nombre.trim()}`,
           `📱 Tel: ${telefono.trim()}`,
-          ...(origen ? [`📲 Vengo de: ${origen}`] : []),
+          ...(origenFinal ? [`📲 Vengo de: ${origenFinal}`] : []),
           `📅 Fecha: ${fecha} · 🕐 Hora: ${hora}`,
         ].join('\n')
 
@@ -126,6 +135,28 @@ export default function EnviarConcesionarioModal({ variante, vehiculoLabel, marc
                 </label>
                 {tieneInicial && (
                   <input style={inp} type="number" min={0} value={inicialMonto} onChange={e => setInicialMonto(e.target.value)} placeholder="Monto aprox. en $ (opcional)" />
+                )}
+              </div>
+            )}
+
+            {variante === 'publico' && (
+              <div>
+                <label style={label}>¿Desde dónde nos escribes? *</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {ORIGEN_OPCIONES.map(o => (
+                    <button key={o} type="button" onClick={() => setOrigenSel(o)}
+                      style={{
+                        padding: '8px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        border: origenSel === o ? '1.5px solid #16a34a' : '1.5px solid #d1d5db',
+                        background: origenSel === o ? '#f0fdf4' : '#fff',
+                        color: origenSel === o ? '#15803d' : '#374151',
+                      }}>
+                      {o}
+                    </button>
+                  ))}
+                </div>
+                {origenSel === 'Otro' && (
+                  <input style={{ ...inp, marginTop: 8 }} value={origenOtro} onChange={e => setOrigenOtro(e.target.value)} placeholder="¿Cuál?" />
                 )}
               </div>
             )}
