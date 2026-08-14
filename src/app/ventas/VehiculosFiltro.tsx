@@ -51,7 +51,11 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
   function trackEvento(evento: string, brand: string, model: string) {
-    fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento, marca: brand, modelo: model }) }).catch(() => {})
+    const fuente = modo === 'publico' ? 'redes' : modo === 'aliado' ? 'aliados' : 'ventas'
+    const metadata = modo === 'publico' && origen ? { origen_social: origen }
+      : modo === 'aliado' && aliadoCodigo ? { aliado_codigo: aliadoCodigo, aliado_nombre: aliadoNombre }
+      : undefined
+    fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento, marca: brand, modelo: model, origen: fuente, metadata }) }).catch(() => {})
   }
 
   return (
@@ -76,7 +80,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
       {enviarVehiculo && (
         <EnviarConcesionarioModal
           variante={modo === 'aliado' ? 'aliado' : 'publico'}
-          vehiculoLabel={`${enviarVehiculo.brand} ${enviarVehiculo.model}`}
+          vehiculoLabel={`Contado/Crédito · ${enviarVehiculo.brand} ${enviarVehiculo.model}`}
           marca={enviarVehiculo.brand}
           modelo={enviarVehiculo.model}
           onClose={() => setEnviarVehiculo(null)}
@@ -131,26 +135,39 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
                   <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>*IVA exonerado (Puerto Libre) · No incluye placa, seguro, gastos</p>
                 </div>
 
-                {/* Plan 40% */}
-                {(init > 0 || (v.tasa_credito && v.tasa_credito > 0)) && (
-                  <div className="lo-credit-box" style={{ marginTop: 14 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: '#a16207', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 8 }}>Plan 40% inicial + cuotas</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <div>
-                        <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Inicial (40%)</p>
-                        <p style={{ fontSize: 17, fontWeight: 800, color: '#111' }}>${fm(init)}</p>
-                      </div>
-                      {v.tasa_credito != null && v.tasa_credito > 0 && (
-                        <>
-                          <div style={{ width: 1, height: 36, background: '#fde68a' }} />
-                          <div>
-                            <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Cuota mensual (24m)</p>
-                            <p style={{ fontSize: 17, fontWeight: 800, color: '#a16207' }}>${fm(v.tasa_credito)}</p>
-                          </div>
-                        </>
-                      )}
+                {/* Plan 40%: en redes/aliados públicos se destaca la cuota mensual
+                    (lo que le interesa a alguien navegando desde redes sociales),
+                    no el monto de inicial */}
+                {modo === 'publico' ? (
+                  v.tasa_credito != null && v.tasa_credito > 0 && (
+                    <div className="lo-credit-box" style={{ marginTop: 14 }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#a16207', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 6 }}>Así te quedarían las cuotas</p>
+                      <p style={{ fontSize: 22, fontWeight: 800, color: '#a16207' }}>
+                        ${fm(v.tasa_credito)}<span style={{ fontSize: 13, fontWeight: 600, color: '#6b7280' }}> /mes × 24 meses</span>
+                      </p>
                     </div>
-                  </div>
+                  )
+                ) : (
+                  (init > 0 || (v.tasa_credito && v.tasa_credito > 0)) && (
+                    <div className="lo-credit-box" style={{ marginTop: 14 }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#a16207', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 8 }}>Plan 40% inicial + cuotas</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <div>
+                          <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Inicial (40%)</p>
+                          <p style={{ fontSize: 17, fontWeight: 800, color: '#111' }}>${fm(init)}</p>
+                        </div>
+                        {v.tasa_credito != null && v.tasa_credito > 0 && (
+                          <>
+                            <div style={{ width: 1, height: 36, background: '#fde68a' }} />
+                            <div>
+                              <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Cuota mensual (24m)</p>
+                              <p style={{ fontSize: 17, fontWeight: 800, color: '#a16207' }}>${fm(v.tasa_credito)}</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
                 )}
 
                 <div style={{ flex: 1 }} />

@@ -190,14 +190,14 @@ function AliadoContenido({ vehiculos, ac500PL, ac500Nac, tasas, waCorp, concesio
               <div style={{ marginBottom: 48 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 900, color: '#fff', marginBottom: 18 }}>AC500 · Puerto Libre</h2>
                 <AC500Filtro vehiculos={ac500PL} waCorp={waCorp} concesionario={concesionario} brand={brandImg}
-                  modo="aliado" aliadoCodigo={aliadoCodigo} aliadoNombre={aliadoNombre} />
+                  modo="aliado" aliadoCodigo={aliadoCodigo} aliadoNombre={aliadoNombre} seccion="AC500 Puerto Libre" />
               </div>
             )}
             {ac500Nac.length > 0 && (
               <div>
                 <h2 style={{ fontSize: 20, fontWeight: 900, color: '#fff', marginBottom: 18 }}>AC500 · Nacionales</h2>
                 <AC500Filtro vehiculos={ac500Nac} waCorp={waCorp} concesionario={concesionario} brand={brandImg}
-                  modo="aliado" aliadoCodigo={aliadoCodigo} aliadoNombre={aliadoNombre} />
+                  modo="aliado" aliadoCodigo={aliadoCodigo} aliadoNombre={aliadoNombre} seccion="AC500 Nacionales" />
               </div>
             )}
           </section>

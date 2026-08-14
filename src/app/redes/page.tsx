@@ -120,7 +120,7 @@ export default async function RedesPage({ searchParams }: { searchParams: Promis
             </div>
           </div>
           <AC500Filtro vehiculos={acListaPL} waCorp={waCorp} concesionario={concesionario} brand={brandImg}
-            modo="publico" origen={origen} />
+            modo="publico" origen={origen} seccion="AC500 Puerto Libre" />
         </section>
       )}
 
@@ -142,7 +142,7 @@ export default async function RedesPage({ searchParams }: { searchParams: Promis
             </div>
           </div>
           <AC500Filtro vehiculos={acListaNac} waCorp={waCorp} concesionario={concesionario} brand={brandImg}
-            modo="publico" origen={origen} />
+            modo="publico" origen={origen} seccion="AC500 Nacionales" />
         </section>
       )}
 

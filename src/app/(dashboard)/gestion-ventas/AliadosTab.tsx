@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Plus, X, Check, Eye, EyeOff, Handshake } from 'lucide-react'
+import BitacoraRedesTab from './BitacoraRedesTab'
 
 interface Aliado {
   id: string
@@ -39,7 +40,10 @@ function fmtFecha(iso: string) {
   catch { return iso }
 }
 
+type Subvista = 'gestionar' | 'bitacora_aliados' | 'bitacora_redes'
+
 export default function AliadosTab() {
+  const [subvista, setSubvista] = useState<Subvista>('gestionar')
   const [aliados, setAliados] = useState<Aliado[]>([])
   const [leads, setLeads] = useState<AliadoLead[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,6 +119,22 @@ export default function AliadosTab() {
     <div>
       {toast && <Toast msg={toast.msg} ok={toast.ok} />}
 
+      <div className="flex items-center gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
+        {([
+          ['gestionar', 'Aliados', Handshake],
+          ['bitacora_aliados', `Bitácora de aliados${leads.length ? ` (${leads.length})` : ''}`, null],
+          ['bitacora_redes', 'Bitácora de redes', null],
+        ] as const).map(([k, label, Icon]) => (
+          <button key={k} onClick={() => setSubvista(k)}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+              subvista === k ? 'border-oriental-red text-oriental-red' : 'border-transparent text-gray-500 hover:text-oriental-black'
+            }`}>
+            {Icon && <Icon size={15} />} {label}
+          </button>
+        ))}
+      </div>
+
+      {subvista === 'gestionar' && (<>
       {/* ── Gestión de aliados ── */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -156,11 +176,13 @@ export default function AliadosTab() {
           ))}
         </div>
       )}
+      </>)}
 
+      {subvista === 'bitacora_aliados' && (<>
       {/* ── Actividad de aliados (clientes referidos) ── */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-base font-bold text-oriental-black">Actividad de aliados</h2>
+          <h2 className="text-base font-bold text-oriental-black">Bitácora de aliados</h2>
           <p className="text-xs text-oriental-gray mt-0.5">Clientes que los aliados han enviado al concesionario.</p>
         </div>
         {aliados.length > 0 && (
@@ -197,6 +219,9 @@ export default function AliadosTab() {
           ))}
         </div>
       )}
+      </>)}
+
+      {subvista === 'bitacora_redes' && <BitacoraRedesTab />}
 
       {/* Modal agregar aliado */}
       {showModal && (

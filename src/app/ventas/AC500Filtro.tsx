@@ -113,7 +113,7 @@ export function schedule(v: AC500Vehiculo, mode: Mode) {
   ]
 }
 
-function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand, modo = 'vendedor', aliadoCodigo, aliadoNombre, origen }: { v: AC500Vehiculo; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg; modo?: 'vendedor' | 'aliado' | 'publico'; aliadoCodigo?: string; aliadoNombre?: string; origen?: string }) {
+function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand, modo = 'vendedor', aliadoCodigo, aliadoNombre, origen, seccion = 'AC500' }: { v: AC500Vehiculo; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg; modo?: 'vendedor' | 'aliado' | 'publico'; aliadoCodigo?: string; aliadoNombre?: string; origen?: string; seccion?: string }) {
   const colors = (v.colores || '').split(',').map(c => c.trim()).filter(Boolean)
   const [mode, setMode] = useState<Mode>(defaultMode(v))
   const [rapida, setRapida] = useState(false)
@@ -126,6 +126,14 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand, mod
   const total = mode === '6' ? v.p6_total : mode === '9' ? v.p9_total : v.p12_total
   const entregaMes = mode === '6' ? 6 : mode === '9' ? 9 : 12
   const rows = schedule(v, mode)
+
+  function trackEvento(nombreEvento: string) {
+    const fuente = modo === 'publico' ? 'redes' : modo === 'aliado' ? 'aliados' : 'ventas'
+    const metadata = modo === 'publico' && origen ? { origen_social: origen }
+      : modo === 'aliado' && aliadoCodigo ? { aliado_codigo: aliadoCodigo, aliado_nombre: aliadoNombre }
+      : undefined
+    fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: nombreEvento, marca: v.brand, modelo: v.model, origen: fuente, metadata }) }).catch(() => {})
+  }
 
   const imagen = imagenVehiculo(v.model, v.img_url)
 
@@ -209,23 +217,23 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand, mod
 
         {modo === 'publico' ? (
           <button className="lo-cbtn-red" style={{ marginTop: 'auto' }} onClick={() => {
-            fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_concesionario_virtual_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
+            trackEvento('ac500_concesionario_virtual_click')
             setEnviar(true)
           }}>Ir a concesionario virtual</button>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 'auto' }}>
             <button className="lo-cbtn-out" onClick={() => {
-              fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_interesado', marca: v.brand, modelo: v.model }) }).catch(() => {})
+              trackEvento('ac500_interesado')
               setRapida(true)
             }}>⚡ Cotización rápida</button>
             {modo === 'aliado' ? (
               <button className="lo-cbtn-red" onClick={() => {
-                fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_enviar_concesionario_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
+                trackEvento('ac500_enviar_concesionario_click')
                 setEnviar(true)
               }}>Enviar</button>
             ) : (
               <button className="lo-cbtn-red" onClick={() => {
-                fetch('/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evento: 'ac500_cotizacion_click', marca: v.brand, modelo: v.model }) }).catch(() => {})
+                trackEvento('ac500_cotizacion_click')
                 setCotizar(true)
               }}>📄 Cotización</button>
             )}
@@ -258,7 +266,7 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand, mod
       {enviar && (
         <EnviarConcesionarioModal
           variante={modo === 'aliado' ? 'aliado' : 'publico'}
-          vehiculoLabel={`AC500 · ${v.brand} ${v.model}${color ? ` (${cap(color)})` : ''}`}
+          vehiculoLabel={`${seccion} · ${v.brand} ${v.model}${color ? ` (${cap(color)})` : ''}`}
           marca={v.brand}
           modelo={v.model}
           onClose={() => setEnviar(false)}
@@ -272,7 +280,7 @@ function AC500Card({ v, waCorp = WA, evento = '', concesionario = '', brand, mod
   )
 }
 
-export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', concesionario = '', brand, modo = 'vendedor', aliadoCodigo, aliadoNombre, origen }: { vehiculos: AC500Vehiculo[]; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg; modo?: 'vendedor' | 'aliado' | 'publico'; aliadoCodigo?: string; aliadoNombre?: string; origen?: string }) {
+export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', concesionario = '', brand, modo = 'vendedor', aliadoCodigo, aliadoNombre, origen, seccion }: { vehiculos: AC500Vehiculo[]; waCorp?: string; evento?: string; concesionario?: string; brand?: BrandImg; modo?: 'vendedor' | 'aliado' | 'publico'; aliadoCodigo?: string; aliadoNombre?: string; origen?: string; seccion?: string }) {
   const [filtro, setFiltro] = useState<Filtro>('ALL')
   const lista = filtro === 'ALL' ? vehiculos : vehiculos.filter(v => v.brand === filtro)
 
@@ -287,7 +295,7 @@ export default function AC500Filtro({ vehiculos, waCorp = WA, evento = '', conce
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
-        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brand} modo={modo} aliadoCodigo={aliadoCodigo} aliadoNombre={aliadoNombre} origen={origen} />)}
+        {lista.map(v => <AC500Card key={v.id} v={v} waCorp={waCorp} evento={evento} concesionario={concesionario} brand={brand} modo={modo} aliadoCodigo={aliadoCodigo} aliadoNombre={aliadoNombre} origen={origen} seccion={seccion} />)}
       </div>
 
       {lista.length === 0 && (
