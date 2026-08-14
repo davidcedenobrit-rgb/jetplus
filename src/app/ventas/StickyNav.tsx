@@ -2,8 +2,15 @@
 
 import Link from 'next/link'
 
-// Navegación inferior del link de vendedores: accesos rápidos a las secciones.
-export default function StickyNav({ hasAC500, hasPromos }: { hasAC500: boolean; hasPromos?: boolean }) {
+// Navegación inferior de los links públicos de venta (vendedores, redes):
+// accesos rápidos a las secciones. `showRegistro`/`panel` permiten
+// reutilizarla en /redes, que no tiene registro de lead propio ni panel.
+export default function StickyNav({ hasAC500, hasPromos, showRegistro = true, panel = { href: '/ventas/panel', label: '👩‍💼 Mi panel' } }: {
+  hasAC500: boolean
+  hasPromos?: boolean
+  showRegistro?: boolean
+  panel?: { href: string; label: string } | null
+}) {
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -20,10 +27,12 @@ export default function StickyNav({ hasAC500, hasPromos }: { hasAC500: boolean; 
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
       display: 'flex', boxShadow: '0 -2px 20px rgba(0,0,0,.18)',
     }}>
-      <button onClick={() => scrollTo('registro')} style={{ ...btnBase, background: '#0f766e' }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
-        👤 Registrar
-      </button>
+      {showRegistro && (
+        <button onClick={() => scrollTo('registro')} style={{ ...btnBase, background: '#0f766e' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+          👤 Registrar
+        </button>
+      )}
       <button onClick={() => scrollTo('vehiculos')} style={{ ...btnBase, background: '#111827' }}
         onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
         🚗 Vehículos
@@ -40,10 +49,12 @@ export default function StickyNav({ hasAC500, hasPromos }: { hasAC500: boolean; 
           🏷️ Promos
         </button>
       )}
-      <Link href="/ventas/panel" style={{ ...btnBase, background: '#4338ca', textDecoration: 'none' }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
-        👩‍💼 Mi panel
-      </Link>
+      {panel && (
+        <Link href={panel.href} style={{ ...btnBase, background: '#4338ca', textDecoration: 'none' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+          {panel.label}
+        </Link>
+      )}
     </div>
   )
 }

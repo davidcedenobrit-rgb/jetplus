@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import VehiculosFiltro from '../ventas/VehiculosFiltro'
 import AC500Filtro from '../ventas/AC500Filtro'
+import StickyNav from '../ventas/StickyNav'
 
 const LOGO    = 'https://assets.cdn.filesafe.space/XZDJ4aSOAL1crWRCXyY6/media/698367bc1dfc0253b24abd7a.png'
 const MG_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e64a9efded9c776ffb5.png'
@@ -152,6 +153,9 @@ export default async function RedesPage({ searchParams }: { searchParams: Promis
         <p style={{ color: 'rgba(255,255,255,.3)', fontSize: 12, marginBottom: 4 }}>{brand.nombre} · Representantes oficiales MG &amp; MAXUS · Sede {brand.ciudad}</p>
         <p style={{ color: 'rgba(255,255,255,.18)', fontSize: 11 }}>* Precios referenciales. Consulta disponibilidad con tu asesor.</p>
       </footer>
+
+      {/* ── STICKY BOTTOM NAV ─────────────────────────────────────────────── */}
+      <StickyNav hasAC500={acListaPL.length > 0 || acListaNac.length > 0} showRegistro={false} panel={null} />
     </div>
   )
 }

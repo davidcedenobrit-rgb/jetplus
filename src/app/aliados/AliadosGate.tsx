@@ -207,6 +207,45 @@ function AliadoContenido({ vehiculos, ac500PL, ac500Nac, tasas, waCorp, concesio
         {tab === 'objeciones' && <ManejoObjeciones />}
         {tab === 'manual' && <ManualUsuario />}
       </div>
+
+      {/* ── STICKY BOTTOM NAV ─────────────────────────────────────────────── */}
+      <AliadoStickyNav tab={tab} setTab={setTab} tieneAC500={tieneAC500} />
+    </div>
+  )
+}
+
+function AliadoStickyNav({ tab, setTab, tieneAC500 }: { tab: Tab; setTab: (t: Tab) => void; tieneAC500: boolean }) {
+  function ir(t: Tab) {
+    setTab(t)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  const btnBase: React.CSSProperties = {
+    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: 'none',
+    padding: '14px 6px', transition: 'opacity .15s', letterSpacing: '.2px', color: '#fff',
+  }
+  const activo = (t: Tab) => (tab === t ? { boxShadow: 'inset 0 -3px 0 rgba(255,255,255,.6)' } : {})
+  return (
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, display: 'flex', boxShadow: '0 -2px 20px rgba(0,0,0,.18)' }}>
+      <button onClick={() => ir('catalogo')} style={{ ...btnBase, background: '#111827', ...activo('catalogo') }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+        🚗 Catálogo
+      </button>
+      {tieneAC500 && (
+        <button onClick={() => ir('ac500')} style={{ ...btnBase, background: '#C41E3A', ...activo('ac500') }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+          🛡️ Plan $500
+        </button>
+      )}
+      <button onClick={() => ir('objeciones')} style={{ ...btnBase, background: '#a16207', ...activo('objeciones') }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+        💬 Objeciones
+      </button>
+      <a href="/aliados/panel" style={{ ...btnBase, background: '#4338ca', textDecoration: 'none' }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+        👤 Mi panel
+      </a>
     </div>
   )
 }
