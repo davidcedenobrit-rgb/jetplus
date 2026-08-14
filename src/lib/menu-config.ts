@@ -13,7 +13,7 @@
 export const MOSTRAR_TODO_EL_MENU = false
 export const SECCIONES_VISIBLES = new Set(['ventas', 'admin'])
 export const LINKS_VISIBLES_POR_SECCION: Record<string, Set<string>> = {
-  ventas: new Set(['/gestion-ventas', '/gestion-ventas/aliados', '/gestion-ventas/redes', '/clientes', '/link-ventas', '/historial']),
+  ventas: new Set(['/gestion-ventas', '/gestion-ventas/aliados', '/gestion-ventas/redes', '/gestion-ventas/citas', '/clientes', '/link-ventas', '/historial']),
   admin: new Set(['/logs']),
 }
 export const MOSTRAR_DASHBOARD_Y_TAREAS = false

@@ -52,6 +52,11 @@ export async function middleware(request: NextRequest) {
     '/api/aliados/verificar',
     '/api/aliados/lead',
     '/api/aliados/panel',
+    // Link público de citas de taller (/citas): agendar (POST) y consultar
+    // disponibilidad de horarios (GET) sin sesión. El GET de listado interno
+    // en la misma ruta bare valida rol de staff dentro del propio handler,
+    // igual que /api/leads.
+    '/api/citas',
   ]
 
   // PDF de la cotización: público (se comparte al cliente por WhatsApp/correo).

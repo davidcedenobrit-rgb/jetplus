@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard, Users, Car, TrendingUp, TrendingDown,
   CreditCard, BarChart2, LogOut, ArrowLeftRight, FolderOpen, ShieldCheck, PackageCheck, Upload, Store, Package,
-  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, BookOpen, FileBarChart2, Link2, Database, ListChecks, Warehouse, Share2
+  Shield, ScrollText, Building2, Ban, Globe, Handshake, Zap, ClipboardList, Inbox, Briefcase, Scale, Repeat, Coins, ShoppingBag, Boxes, Gift, CalendarDays, CalendarClock, Truck, ChevronDown, Wallet, ExternalLink, BookOpenCheck, BookOpen, FileBarChart2, Link2, Database, ListChecks, Warehouse, Share2
 } from 'lucide-react'
 import { BRANDING } from '@/lib/branding'
 import { MOSTRAR_TODO_EL_MENU, SECCIONES_VISIBLES, LINKS_VISIBLES_POR_SECCION, MOSTRAR_DASHBOARD_Y_TAREAS } from '@/lib/menu-config'
@@ -63,6 +63,7 @@ const SECTIONS: NavSection[] = [
       { href: '/link-ventas', label: 'Link de Ventas',  icon: Globe,         roles: ['jose', 'admin', 'director'] },
       { href: '/gestion-ventas/aliados', label: 'Aliados', icon: Handshake, roles: DIR },
       { href: '/gestion-ventas/redes', label: 'Redes', icon: Share2, roles: DIR },
+      { href: '/gestion-ventas/citas', label: 'Citas taller', icon: CalendarClock, roles: DIR },
       { href: '/creditos',  label: 'Créditos',          icon: CreditCard,    hideFor: ['arianna', 'almacen'] },
       { href: '/reportes/creditos', label: 'Reporte de créditos', icon: BarChart2, roles: DIR },
       { href: '/acuerdos',  label: 'Acuerdos de Pago',  icon: Handshake,     hideFor: ['arianna', 'almacen'] },
