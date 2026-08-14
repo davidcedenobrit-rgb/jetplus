@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Calendario from './Calendario'
 
 const WA_JETPLUS = '584248705174'
 const SLOTS = ['07:00', '08:30', '10:00', '11:30', '13:00', '14:30']
@@ -15,9 +16,6 @@ function sumarMin(hhmm: string, min: number) {
   const [h, m] = hhmm.split(':').map(Number)
   const total = h * 60 + m + min
   return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
-}
-function minFechaISO() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' })
 }
 function esFinDeSemana(f: string) {
   if (!f) return false
@@ -125,8 +123,7 @@ export default function CitasForm() {
       <div style={{ display: 'grid', gap: 14 }}>
         <div>
           <label style={label}>Fecha *</label>
-          <input type="date" style={inp} min={minFechaISO()} value={fecha} onChange={e => setFecha(e.target.value)} />
-          {finDeSemana && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 5, fontWeight: 600 }}>El taller no atiende sábados ni domingos — elige otro día.</p>}
+          <Calendario value={fecha} onChange={setFecha} />
         </div>
 
         {fecha && !finDeSemana && (
@@ -135,25 +132,34 @@ export default function CitasForm() {
             {cargandoSlots ? (
               <p style={{ fontSize: 13, color: '#9ca3af' }}>Consultando disponibilidad…</p>
             ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {SLOTS.map(s => {
-                  const ocupado = ocupadas.includes(s)
-                  const activo = horaInicio === s
-                  return (
-                    <button key={s} type="button" disabled={ocupado} onClick={() => setHoraInicio(s)}
-                      style={{
-                        padding: '9px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
-                        cursor: ocupado ? 'not-allowed' : 'pointer',
-                        border: activo ? '1.5px solid #C41E3A' : '1.5px solid #d1d5db',
-                        background: ocupado ? '#f3f4f6' : activo ? '#fef2f2' : '#fff',
-                        color: ocupado ? '#9ca3af' : activo ? '#C41E3A' : '#374151',
-                        textDecoration: ocupado ? 'line-through' : 'none',
-                      }}>
-                      {fmtHora12(s)}
-                    </button>
-                  )
-                })}
-              </div>
+              <>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {SLOTS.map(s => {
+                    const ocupado = ocupadas.includes(s)
+                    const activo = horaInicio === s
+                    return (
+                      <button key={s} type="button" disabled={ocupado} onClick={() => setHoraInicio(s)}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+                          padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                          cursor: ocupado ? 'not-allowed' : 'pointer',
+                          border: activo ? '1.5px solid #C41E3A' : '1.5px solid #d1d5db',
+                          background: ocupado ? '#f3f4f6' : activo ? '#fef2f2' : '#fff',
+                          color: ocupado ? '#9ca3af' : activo ? '#C41E3A' : '#374151',
+                          textDecoration: ocupado ? 'line-through' : 'none',
+                        }}>
+                        {fmtHora12(s)}
+                        {ocupado && <span style={{ fontSize: 9, fontWeight: 800, textDecoration: 'none', letterSpacing: '.3px' }}>OCUPADO</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+                {ocupadas.length > 0 && (
+                  <p style={{ fontSize: 11.5, color: '#9ca3af', marginTop: 8 }}>
+                    {ocupadas.length} de {SLOTS.length} horarios ya están reservados por otros clientes ese día.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
