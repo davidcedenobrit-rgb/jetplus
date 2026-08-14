@@ -149,6 +149,7 @@ const SECTIONS: NavSection[] = [
       { href: '/importar',  label: 'Importar datos',   icon: Upload,     roles: DIR },
       { href: '/auditoria', label: 'Auditoría',        icon: Shield,     roles: DIR_CORE },
       { href: '/logs',      label: 'Logs del sistema', icon: ScrollText, roles: DIR_CORE },
+      { href: '/manual',    label: 'Manual de usuario', icon: BookOpen,  roles: DIR },
     ],
   },
 ]

@@ -10,6 +10,7 @@ import CotizacionCDMTab from '../link-ventas/CotizacionCDMTab'
 import TasasEditor from '../link-ventas/TasasEditor'
 import ClientesHistorialTab from '../link-ventas/ClientesHistorialTab'
 import BancaNacionalTab from '../link-ventas/BancaNacionalTab'
+import RegistroRapidoModal from './RegistroRapidoModal'
 
 type Venta = {
   id: string
@@ -137,6 +138,7 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
   const [etapa, setEtapa] = useState<string>('todas')
   const [tipoVenta, setTipoVenta] = useState<'todas' | 'nuevas' | 'antiguas'>('todas')
   const [editar, setEditar] = useState<Venta | null>(null)
+  const [registroRapido, setRegistroRapido] = useState(false)
 
   // "Nueva" = venta cargada/registrada en el sistema (tiene proforma, división
   // definida o es AC500). "Antigua" = venta importada del pasado, sin eso.
@@ -213,6 +215,10 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
           <p className="text-oriental-gray text-sm mt-1">Todo lo vendido y en qué parte del proceso va cada venta</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => setRegistroRapido(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-oriental-red text-oriental-red hover:bg-red-50 text-sm font-bold transition-colors">
+            ⚡ Registro rápido
+          </button>
           <button onClick={() => router.push('/vehiculos/nuevo?plan=ac500')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-800 hover:bg-blue-900 text-white text-sm font-bold transition-colors">
             🛡 Registrar venta AC500
@@ -422,6 +428,12 @@ export default function VentasHub({ ventas: ventasIniciales, catalogo = [], ac50
       )}
 
       {editar && <DivisionModal venta={editar} esRojas={esRojas} onClose={() => setEditar(null)} onSaved={onSaved} />}
+      {registroRapido && (
+        <RegistroRapidoModal
+          onClose={() => setRegistroRapido(false)}
+          onSaved={() => { setRegistroRapido(false); router.refresh() }}
+        />
+      )}
     </div>
   )
 }
