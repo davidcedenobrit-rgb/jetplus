@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import AliadosGate from './AliadosGate'
 
@@ -35,14 +36,16 @@ export default async function AliadosPage() {
   const acActivos = (ac500 ?? []).filter(v => v.p6_activo || v.p9_activo || v.p12_activo)
 
   return (
-    <AliadosGate
-      vehiculos={catalogo ?? []}
-      ac500PL={acActivos.filter(v => v.regimen === 'puerto_libre')}
-      ac500Nac={acActivos.filter(v => v.regimen === 'nacional')}
-      tasas={tasas}
-      waCorp={waCorp}
-      concesionario={concesionario}
-      brand={brand}
-    />
+    <Suspense>
+      <AliadosGate
+        vehiculos={catalogo ?? []}
+        ac500PL={acActivos.filter(v => v.regimen === 'puerto_libre')}
+        ac500Nac={acActivos.filter(v => v.regimen === 'nacional')}
+        tasas={tasas}
+        waCorp={waCorp}
+        concesionario={concesionario}
+        brand={brand}
+      />
+    </Suspense>
   )
 }

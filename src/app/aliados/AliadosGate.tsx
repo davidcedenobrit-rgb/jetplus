@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import VehiculosFiltro, { type Vehiculo, type BrandImg } from '../ventas/VehiculosFiltro'
 import AC500Filtro, { type AC500Vehiculo } from '../ventas/AC500Filtro'
 
@@ -20,6 +21,7 @@ export default function AliadosGate({ vehiculos, ac500PL, ac500Nac, tasas, waCor
   concesionario: string
   brand: Brand
 }) {
+  const searchParams = useSearchParams()
   const [codigo, setCodigo] = useState<string | null>(null)
   const [nombre, setNombre] = useState<string>('')
   const [inputCodigo, setInputCodigo] = useState('')
@@ -27,9 +29,12 @@ export default function AliadosGate({ vehiculos, ac500PL, ac500Nac, tasas, waCor
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const enUrl = (searchParams.get('codigo') ?? '').trim().toUpperCase()
+    if (/^[A-Z]\d{3}$/.test(enUrl)) { verificar(enUrl); return }
     const savedCod = typeof window !== 'undefined' ? localStorage.getItem(LS_KEY) : null
     const savedNom = typeof window !== 'undefined' ? localStorage.getItem(LS_NOMBRE) : null
     if (savedCod && savedNom) { setCodigo(savedCod); setNombre(savedNom) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function verificar(cod: string) {
