@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Plus, X, Check, Eye, EyeOff, Handshake } from 'lucide-react'
 import BitacoraRedesTab from './BitacoraRedesTab'
 
@@ -43,7 +44,9 @@ function fmtFecha(iso: string) {
 type Subvista = 'gestionar' | 'bitacora_aliados' | 'bitacora_redes'
 
 export default function AliadosTab() {
-  const [subvista, setSubvista] = useState<Subvista>('gestionar')
+  const searchParams = useSearchParams()
+  const subInicial: Subvista = searchParams.get('sub') === 'redes' ? 'bitacora_redes' : 'gestionar'
+  const [subvista, setSubvista] = useState<Subvista>(subInicial)
   const [aliados, setAliados] = useState<Aliado[]>([])
   const [leads, setLeads] = useState<AliadoLead[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,6 +115,19 @@ export default function AliadosTab() {
   }
 
   const leadsFiltrados = filtroAliado === 'todos' ? leads : leads.filter(l => l.aliado_codigo === filtroAliado)
+
+  // "Mapa de calor" de la bitácora de aliados: qué vehículos generan más
+  // interés entre los clientes que refieren los aliados.
+  const heatmapAliados = useMemo(() => {
+    const m: Record<string, number> = {}
+    leadsFiltrados.forEach(l => {
+      const k = l.vehiculo_interes?.trim() || 'Sin especificar'
+      m[k] = (m[k] ?? 0) + 1
+    })
+    const arr = Object.entries(m).sort((a, b) => b[1] - a[1])
+    const max = arr[0]?.[1] ?? 0
+    return arr.map(([modelo, clientes]) => ({ modelo, clientes, pct: max ? Math.round((clientes / max) * 100) : 0 }))
+  }, [leadsFiltrados])
 
   if (loading) return <div className="card p-8 text-center text-oriental-gray text-sm">Cargando...</div>
 
@@ -193,6 +209,23 @@ export default function AliadosTab() {
           </select>
         )}
       </div>
+
+      {heatmapAliados.length > 0 && (
+        <>
+          <h3 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3">Mapa de calor — vehículos con más interés</h3>
+          <div className="card p-4 mb-6 space-y-2.5">
+            {heatmapAliados.map(h => (
+              <div key={h.modelo} className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-oriental-black w-40 shrink-0 truncate">{h.modelo}</span>
+                <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(h.pct, 6)}%`, background: 'linear-gradient(90deg, #fbbf24, #dc2626)' }} />
+                </div>
+                <span className="text-xs font-bold text-oriental-black w-8 text-right shrink-0">{h.clientes}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {leadsFiltrados.length === 0 ? (
         <p className="text-center text-sm text-gray-400 py-10">Ningún aliado ha enviado clientes todavía.</p>
