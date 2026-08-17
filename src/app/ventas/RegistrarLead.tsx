@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
+const CAPTACION_OPCIONES = ['Concesionario', 'Sambil', 'Fuera de concesionario', 'Otro']
+
 // Registro rápido de cliente / lead para el link de vendedores.
 export default function RegistrarLead({ evento = '', concesionario = '' }: { evento?: string; concesionario?: string }) {
   const [nombre, setNombre] = useState('')
@@ -9,6 +11,8 @@ export default function RegistrarLead({ evento = '', concesionario = '' }: { eve
   const [correo, setCorreo] = useState('')
   const [interes, setInteres] = useState('')
   const [presupuesto, setPresupuesto] = useState('')
+  const [captacionSel, setCaptacionSel] = useState('')
+  const [captacionOtro, setCaptacionOtro] = useState('')
   const [vendedor, setVendedor] = useState('')
   const [vendedores, setVendedores] = useState<string[]>([])
   const [enviando, setEnviando] = useState(false)
@@ -19,8 +23,11 @@ export default function RegistrarLead({ evento = '', concesionario = '' }: { eve
     fetch('/api/ventas/vendedores').then(r => r.ok ? r.json() : []).then(d => setVendedores(Array.isArray(d) ? d : [])).catch(() => {})
   }, [])
 
+  const captacionFinal = captacionSel === 'Otro' ? (captacionOtro.trim() || 'Otro') : captacionSel
+
   async function enviar() {
     if (nombre.trim().length < 2 || telefono.trim().length < 6) { setError('Escribe al menos nombre y teléfono.'); return }
+    if (!captacionSel) { setError('Indica dónde captaste al cliente.'); return }
     setEnviando(true); setError('')
     try {
       const r = await fetch('/api/leads', {
@@ -28,11 +35,12 @@ export default function RegistrarLead({ evento = '', concesionario = '' }: { eve
         body: JSON.stringify({
           nombre, telefono, correo, presupuesto, modelo: interes,
           vendedor, evento, concesionario, origen: 'vendedor_lead',
+          origenCaptacion: captacionFinal,
         }),
       })
       if (!r.ok) { setError((await r.json().catch(() => ({}))).error ?? 'No se pudo registrar'); setEnviando(false); return }
       setOk(true); setEnviando(false)
-      setNombre(''); setTelefono(''); setCorreo(''); setInteres(''); setPresupuesto('')
+      setNombre(''); setTelefono(''); setCorreo(''); setInteres(''); setPresupuesto(''); setCaptacionSel(''); setCaptacionOtro('')
       setTimeout(() => setOk(false), 4000)
     } catch { setError('Error de conexión'); setEnviando(false) }
   }
@@ -58,6 +66,26 @@ export default function RegistrarLead({ evento = '', concesionario = '' }: { eve
           </select>
         ) : (
           <input style={inp} placeholder="Vendedor" value={vendedor} onChange={e => setVendedor(e.target.value)} />
+        )}
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 6 }}>¿Dónde captaste al cliente? *</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {CAPTACION_OPCIONES.map(o => (
+            <button key={o} type="button" onClick={() => setCaptacionSel(o)}
+              style={{
+                padding: '8px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                border: captacionSel === o ? '1.5px solid #111827' : '1.5px solid #d1d5db',
+                background: captacionSel === o ? '#111827' : '#fff',
+                color: captacionSel === o ? '#fff' : '#374151',
+              }}>
+              {o}
+            </button>
+          ))}
+        </div>
+        {captacionSel === 'Otro' && (
+          <input style={{ ...inp, marginTop: 8 }} value={captacionOtro} onChange={e => setCaptacionOtro(e.target.value)} placeholder="¿Dónde?" />
         )}
       </div>
 

@@ -66,7 +66,7 @@ export async function GET(req: Request) {
   const supabase = await createAdminClient()
   let query = supabase
     .from('leads_captacion')
-    .select('nombre, telefono, marca, modelo, presupuesto, vendedor, evento, atendido, created_at')
+    .select('nombre, telefono, marca, modelo, presupuesto, vendedor, origen_captacion, evento, atendido, created_at')
     .order('created_at', { ascending: false })
     .limit(2000)
   if (eventoFiltro) query = query.eq('evento', eventoFiltro)
@@ -83,7 +83,7 @@ export async function GET(req: Request) {
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   })
 
-  // Columnas (10: A..J)
+  // Columnas (11: A..K)
   ws.columns = [
     { width: 17 }, // A Fecha
     { width: 24 }, // B Cliente
@@ -91,12 +91,13 @@ export async function GET(req: Request) {
     { width: 28 }, // D Interés
     { width: 14 }, // E Presupuesto
     { width: 16 }, // F Vendedor
-    { width: 14 }, // G Evento
-    { width: 10 }, // H Atendido
-    { width: 30 }, // I Resultado de la llamada
-    { width: 24 }, // J Próximo paso
+    { width: 18 }, // G Captación
+    { width: 14 }, // H Evento
+    { width: 10 }, // I Atendido
+    { width: 30 }, // J Resultado de la llamada
+    { width: 24 }, // K Próximo paso
   ]
-  const LAST = 'J'
+  const LAST = 'K'
 
   const bandFill = (color: string) => ({ type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: color } })
 
@@ -128,7 +129,7 @@ export async function GET(req: Request) {
   ws.getRow(4).height = 6 // espaciador
 
   // ── Encabezado de tabla (fila 5) ───────────────────────────────────
-  const headers = ['Fecha', 'Cliente', 'Teléfono', 'Interés', 'Presupuesto', 'Vendedor', 'Evento', 'Atendido', 'Resultado de la llamada', 'Próximo paso']
+  const headers = ['Fecha', 'Cliente', 'Teléfono', 'Interés', 'Presupuesto', 'Vendedor', 'Captación', 'Evento', 'Atendido', 'Resultado de la llamada', 'Próximo paso']
   const headRow = ws.getRow(5)
   headers.forEach((t, i) => {
     const c = headRow.getCell(i + 1)
@@ -150,6 +151,7 @@ export async function GET(req: Request) {
       interes,
       l.presupuesto || '—',
       l.vendedor || '—',
+      l.origen_captacion || '—',
       l.evento || '—',
       l.atendido ? 'Sí' : 'No',
       '', // Resultado de la llamada (a completar por el vendedor)
@@ -157,7 +159,7 @@ export async function GET(req: Request) {
     ])
     r.eachCell({ includeEmpty: true }, (cell, col) => {
       cell.font = { name: 'Calibri', size: 10, color: { argb: NEGRO } }
-      cell.alignment = { vertical: 'middle', horizontal: col === 2 ? 'left' : 'left', indent: 1, wrapText: col >= 9 }
+      cell.alignment = { vertical: 'middle', horizontal: col === 2 ? 'left' : 'left', indent: 1, wrapText: col >= 10 }
       cell.border = { bottom: { style: 'hair', color: { argb: GRIS_LINEA } } }
       if (idx % 2 === 1) cell.fill = bandFill(GRIS_CLARO)
     })

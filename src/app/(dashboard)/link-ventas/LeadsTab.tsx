@@ -11,18 +11,27 @@ export default function LeadsTab() {
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
   const [evento, setEvento] = useState('')
+  const [captacion, setCaptacion] = useState('')
 
   useEffect(() => {
     fetch('/api/leads').then(r => r.ok ? r.json() : []).then(d => setLeads(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   const eventos = useMemo(() => Array.from(new Set(leads.map(l => l.evento).filter(Boolean))), [leads])
+  // Reporte interno: cuántos clientes se captaron en cada lugar (concesionario,
+  // Sambil, fuera de concesionario, u otro).
+  const captaciones = useMemo(() => {
+    const m: Record<string, number> = {}
+    leads.forEach(l => { const k = l.origen_captacion?.trim() || 'Sin especificar'; m[k] = (m[k] ?? 0) + 1 })
+    return Object.entries(m).sort((a, b) => b[1] - a[1])
+  }, [leads])
   const filtrados = useMemo(() => leads.filter(l => {
     if (evento && l.evento !== evento) return false
+    if (captacion && (l.origen_captacion?.trim() || 'Sin especificar') !== captacion) return false
     if (!q.trim()) return true
     const t = `${l.nombre} ${l.telefono} ${l.marca} ${l.modelo} ${l.vendedor} ${l.evento}`.toLowerCase()
     return t.includes(q.toLowerCase())
-  }), [leads, q, evento])
+  }), [leads, q, evento, captacion])
 
   if (loading) return <div className="py-16 text-center text-gray-400"><Loader2 className="animate-spin inline" size={20} /></div>
 
@@ -43,6 +52,12 @@ export default function LeadsTab() {
           <select value={evento} onChange={e => setEvento(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
             <option value="">Todos los eventos</option>
             {eventos.map(ev => <option key={ev} value={ev}>{ev}</option>)}
+          </select>
+        )}
+        {captaciones.length > 1 && (
+          <select value={captacion} onChange={e => setCaptacion(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+            <option value="">Toda captación</option>
+            {captaciones.map(([k, count]) => <option key={k} value={k}>{k} ({count})</option>)}
           </select>
         )}
         <a
@@ -67,6 +82,7 @@ export default function LeadsTab() {
                 <th className="text-left font-bold px-3 py-2">Interés</th>
                 <th className="text-left font-bold px-3 py-2">Presupuesto</th>
                 <th className="text-left font-bold px-3 py-2">Vendedor</th>
+                <th className="text-left font-bold px-3 py-2">Captación</th>
                 <th className="text-left font-bold px-3 py-2">Evento</th>
               </tr>
             </thead>
@@ -84,6 +100,7 @@ export default function LeadsTab() {
                   <td className="px-3 py-2 text-gray-600">{[l.marca, l.modelo].filter(Boolean).join(' ') || '—'}</td>
                   <td className="px-3 py-2 text-gray-600">{l.presupuesto || '—'}</td>
                   <td className="px-3 py-2 text-gray-600">{l.vendedor || '—'}</td>
+                  <td className="px-3 py-2">{l.origen_captacion ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold">{l.origen_captacion}</span> : '—'}</td>
                   <td className="px-3 py-2">{l.evento ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">{l.evento}</span> : '—'}</td>
                 </tr>
               ))}
