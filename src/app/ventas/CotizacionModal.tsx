@@ -240,6 +240,10 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
       setErrorMsg('Nombre y C.I./RIF son obligatorios para la vista previa.')
       return
     }
+    if (!captacionSel) {
+      setErrorMsg('Indica dónde captaste al cliente.')
+      return
+    }
     setErrorMsg('')
     setPreviewLoading(true)
     // Abrir la pestaña dentro del gesto del usuario (evita bloqueo de pop-ups en móvil).

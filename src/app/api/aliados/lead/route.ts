@@ -22,6 +22,10 @@ export async function POST(req: Request) {
     if (clienteNombre.length < 2 || clienteTelefono.length < 6) {
       return NextResponse.json({ error: 'Nombre y teléfono son obligatorios' }, { status: 400 })
     }
+    const origenCaptacion = clip(b.origenCaptacion, 60)
+    if (!origenCaptacion) {
+      return NextResponse.json({ error: 'Indica dónde captaste al cliente' }, { status: 400 })
+    }
 
     const supabase = await createAdminClient()
     const { data: aliado } = await supabase
@@ -46,7 +50,7 @@ export async function POST(req: Request) {
       vehiculo_interes: clip(b.vehiculoInteres, 120) || null,
       tiene_inicial: tieneInicial,
       inicial_monto: inicialMonto,
-      origen_captacion: clip(b.origenCaptacion, 60) || null,
+      origen_captacion: origenCaptacion,
     })
     if (error) return NextResponse.json({ error: 'No se pudo registrar' }, { status: 500 })
     return NextResponse.json({ ok: true })

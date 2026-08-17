@@ -13,6 +13,14 @@ export async function POST(req: Request) {
   if (nombre.length < 2 || telefono.length < 6) {
     return NextResponse.json({ error: 'Nombre y teléfono son obligatorios' }, { status: 400 })
   }
+  const origen = clip(b.origen, 40) || 'ventas_web'
+  const origenCaptacion = clip(b.origenCaptacion, 60) || null
+  // El vendedor debe indicar dónde captó al cliente (concesionario, Sambil,
+  // fuera de concesionario u otro). No aplica al lead público de redes
+  // sociales (ahí el propio cliente deja sus datos).
+  if (origen === 'vendedor_lead' && !origenCaptacion) {
+    return NextResponse.json({ error: 'Indica dónde captaste al cliente' }, { status: 400 })
+  }
 
   const supabase = await createAdminClient()
   const { error } = await supabase.from('leads_captacion').insert({
@@ -26,8 +34,8 @@ export async function POST(req: Request) {
     vendedor: clip(b.vendedor, 80) || null,
     evento: clip(b.evento, 80) || null,
     concesionario_id: clip(b.concesionario, 60) || null,
-    origen: clip(b.origen, 40) || 'ventas_web',
-    origen_captacion: clip(b.origenCaptacion, 60) || null,
+    origen,
+    origen_captacion: origenCaptacion,
   })
   if (error) return NextResponse.json({ error: 'No se pudo registrar' }, { status: 500 })
   return NextResponse.json({ ok: true })

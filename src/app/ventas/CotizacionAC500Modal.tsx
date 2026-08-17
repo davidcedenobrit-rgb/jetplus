@@ -119,6 +119,9 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
     if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) {
       setErrorMsg('Nombre y C.I./RIF son obligatorios para la vista previa.'); return
     }
+    if (!captacionSel) {
+      setErrorMsg('Indica dónde captaste al cliente.'); return
+    }
     setErrorMsg(''); setPreviewLoading(true)
     const win = typeof window !== 'undefined' ? window.open('', '_blank') : null
     try {
