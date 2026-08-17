@@ -46,6 +46,7 @@ export async function POST(req: Request) {
       vehiculo_interes: clip(b.vehiculoInteres, 120) || null,
       tiene_inicial: tieneInicial,
       inicial_monto: inicialMonto,
+      origen_captacion: clip(b.origenCaptacion, 60) || null,
     })
     if (error) return NextResponse.json({ error: 'No se pudo registrar' }, { status: 500 })
     return NextResponse.json({ ok: true })
@@ -66,7 +67,7 @@ export async function GET() {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
     .from('aliados_leads')
-    .select('id, aliado_codigo, aliado_nombre, cliente_nombre, cliente_telefono, vehiculo_interes, tiene_inicial, inicial_monto, created_at')
+    .select('id, aliado_codigo, aliado_nombre, cliente_nombre, cliente_telefono, vehiculo_interes, tiene_inicial, inicial_monto, origen_captacion, created_at')
     .order('created_at', { ascending: false })
     .limit(500)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

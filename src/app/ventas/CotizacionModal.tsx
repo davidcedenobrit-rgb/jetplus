@@ -28,6 +28,8 @@ interface Financiadora {
 
 type Step = 'pin' | 'form' | 'sending' | 'success' | 'error'
 
+const CAPTACION_OPCIONES = ['Concesionario', 'Sambil', 'Fuera de concesionario', 'Otro']
+
 function fmt(n: number | null | undefined) {
   if (!n) return '0,00'
   return n.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
@@ -64,6 +66,9 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
     clienteCiudadEstado: '', clienteCodigoPostal: '',
     agenteRetencion: false,
   })
+  const [captacionSel, setCaptacionSel] = useState('')
+  const [captacionOtro, setCaptacionOtro] = useState('')
+  const captacionFinal = captacionSel === 'Otro' ? (captacionOtro.trim() || 'Otro') : captacionSel
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
   const [cotId, setCotId] = useState('')
@@ -168,6 +173,10 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
       setErrorMsg('Nombre y C.I./RIF son obligatorios.')
       return
     }
+    if (!captacionSel) {
+      setErrorMsg('Indica dónde captaste al cliente.')
+      return
+    }
     if (conEnvio && !form.clienteCorreo.trim()) {
       setErrorMsg('El correo es obligatorio para enviar la cotización al cliente.')
       return
@@ -203,6 +212,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
           cargoGastosAdmin,
           cargoPlaca,
           concesionarioId: esCasa ? concesionarioId : 'jetplus',
+          origenCaptacion: captacionFinal,
         }),
       })
       const json = await r.json()
@@ -576,6 +586,27 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                   <input type="checkbox" checked={form.agenteRetencion} onChange={e => setForm(p => ({ ...p, agenteRetencion: e.target.checked }))} style={{ width: 16, height: 16 }} />
                   Agente de Retención
                 </label>
+
+                <div>
+                  <label style={label}>¿Dónde captaste al cliente? *</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {CAPTACION_OPCIONES.map(o => (
+                      <button key={o} type="button" onClick={() => setCaptacionSel(o)}
+                        style={{
+                          padding: '8px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          border: captacionSel === o ? '1.5px solid #111' : '1.5px solid #d1d5db',
+                          background: captacionSel === o ? '#111' : '#fff',
+                          color: captacionSel === o ? '#fff' : '#374151',
+                        }}>
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                  {captacionSel === 'Otro' && (
+                    <input style={{ ...Object.fromEntries(inp.split(';').filter(Boolean).map(p => { const [k, v] = p.split(':'); return [k.trim().replace(/-([a-z])/g, (_,c) => c.toUpperCase()), v?.trim()] })), marginTop: 8 } as React.CSSProperties}
+                      value={captacionOtro} onChange={e => setCaptacionOtro(e.target.value)} placeholder="¿Dónde?" />
+                  )}
+                </div>
               </div>
 
               {errorMsg && (

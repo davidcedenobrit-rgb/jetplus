@@ -43,6 +43,7 @@ interface Cotizacion {
   descuento_solicitado: boolean
   motivo_descuento: string | null
   condiciones_personalizadas: string | null
+  origen_captacion: string | null
   created_at: string
 }
 
@@ -748,6 +749,7 @@ function DetailPanel({ cot: cotInicial, onClose, onEstadoChange, onMontosChange,
           </div>
 
           <InfoRow label="Concesionario" value={concesLabel(cot.concesionario_id, {})} />
+          <InfoRow label="Dónde se captó" value={cot.origen_captacion} />
           <VendedoraEditor cotId={cot.id} nombre={cot.vendedora_nombre} />
 
           {cot.estado === 'rechazada' && cot.motivo_rechazo && (
@@ -867,6 +869,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<Filtro>('todas')
   const [filtroConces, setFiltroConces] = useState<string>('todos')
+  const [filtroCaptacion, setFiltroCaptacion] = useState<string>('todos')
   const [concesMap, setConcesMap] = useState<Record<string, string>>({})
   const [selected, setSelected] = useState<Cotizacion | null>(null)
   const [busq, setBusq] = useState('')
@@ -902,9 +905,13 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
     ? visiblePorEstado
     : visiblePorEstado.filter(c => (c.concesionario_id ?? 'jetplus') === filtroConces)
 
+  const visiblePorCaptacion = filtroCaptacion === 'todos'
+    ? visiblePorConces
+    : visiblePorConces.filter(c => (c.origen_captacion ?? 'Sin especificar') === filtroCaptacion)
+
   // Buscador por N° de cotización (código), cliente, cédula o vehículo.
   const nq = busq.trim().toLowerCase()
-  const visible = !nq ? visiblePorConces : visiblePorConces.filter(c =>
+  const visible = !nq ? visiblePorCaptacion : visiblePorCaptacion.filter(c =>
     (c.numero ?? '').toLowerCase().includes(nq) ||
     (c.cliente_nombre ?? '').toLowerCase().includes(nq) ||
     (c.cliente_ci_rif ?? '').toLowerCase().includes(nq) ||
@@ -917,6 +924,15 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
     concesCount.set(id, (concesCount.get(id) ?? 0) + 1)
   }
   const concesFiltros = Array.from(concesCount.entries()).sort((a, b) => b[1] - a[1])
+
+  // Reporte interno: dónde se captó cada cliente (concesionario, Sambil,
+  // fuera de concesionario, u otro) — llenado por la vendedora al cotizar.
+  const captacionCount = new Map<string, number>()
+  for (const c of cotizaciones) {
+    const k = c.origen_captacion ?? 'Sin especificar'
+    captacionCount.set(k, (captacionCount.get(k) ?? 0) + 1)
+  }
+  const captacionFiltros = Array.from(captacionCount.entries()).sort((a, b) => b[1] - a[1])
 
   const counts = {
     todas: cotizaciones.length,
@@ -1014,6 +1030,24 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
         </div>
       )}
 
+      {/* Reporte interno: dónde se captó al cliente */}
+      {captacionFiltros.length > 1 && (
+        <div className="flex gap-2 mb-5 flex-wrap items-center">
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1">Captación:</span>
+          <button onClick={() => setFiltroCaptacion('todos')}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filtroCaptacion === 'todos' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+            Todos
+          </button>
+          {captacionFiltros.map(([origen, count]) => (
+            <button key={origen} onClick={() => setFiltroCaptacion(origen)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${filtroCaptacion === origen ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+              {origen}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${filtroCaptacion === origen ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {visible.length === 0 ? (
         <div className="card p-10 text-center text-oriental-gray text-sm">
           No hay cotizaciones con este estado.
@@ -1025,7 +1059,7 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['N° Cotización', 'Concesionario', 'Fecha', 'Cliente', 'Vehículo', 'Modalidad', 'Vendedora', 'Total inicial', 'Estado', ''].map(h => (
+                  {['N° Cotización', 'Concesionario', 'Fecha', 'Cliente', 'Vehículo', 'Modalidad', 'Vendedora', 'Captación', 'Total inicial', 'Estado', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-bold text-oriental-gray uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -1058,6 +1092,11 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                       <ModalidadBadge modalidad={c.modalidad} plan={c.plan} />
                     </td>
                     <td className="px-4 py-3 text-xs font-semibold text-oriental-black">{c.vendedora_nombre}</td>
+                    <td className="px-4 py-3">
+                      {c.origen_captacion
+                        ? <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 whitespace-nowrap">{c.origen_captacion}</span>
+                        : <span className="text-[11px] text-gray-300">—</span>}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <p className="font-bold text-sm text-oriental-black">${fmt(c.total_inicial)}</p>
                       {c.cuota_mensual != null && (
@@ -1126,6 +1165,9 @@ export default function CotizacionesTab({ puedeEditar = false }: { puedeEditar?:
                   <ModalidadBadge modalidad={c.modalidad} plan={c.plan} />
                   <p className="text-sm font-bold text-oriental-black">${fmt(c.total_inicial)}</p>
                 </div>
+                {c.origen_captacion && (
+                  <span className="inline-flex mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700">{c.origen_captacion}</span>
+                )}
                 <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap items-center gap-1.5" onClick={e => e.stopPropagation()}>
                   <ProformaPanel cotId={c.id} numero={c.numero} correoCliente={c.cliente_correo} plan={c.plan} total={c.total_inicial} estado={c.estado} compact onDone={() => router.refresh()} />
                 </div>

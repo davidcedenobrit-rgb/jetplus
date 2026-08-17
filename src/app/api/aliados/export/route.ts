@@ -69,7 +69,7 @@ export async function GET() {
   const supabase = await createAdminClient()
   const [{ data: aliados }, { data: leads }] = await Promise.all([
     supabase.from('aliados').select('nombre, codigo, sector, activo, created_at').order('created_at'),
-    supabase.from('aliados_leads').select('aliado_nombre, aliado_codigo, cliente_nombre, cliente_telefono, vehiculo_interes, tiene_inicial, inicial_monto, created_at').order('created_at', { ascending: false }),
+    supabase.from('aliados_leads').select('aliado_nombre, aliado_codigo, cliente_nombre, cliente_telefono, vehiculo_interes, tiene_inicial, inicial_monto, origen_captacion, created_at').order('created_at', { ascending: false }),
   ])
 
   const wb = new ExcelJS.Workbook()
@@ -94,9 +94,9 @@ export async function GET() {
 
   // ── Hoja 2: Bitácora (clientes referidos) ─────────────────────────
   const wsB = wb.addWorksheet('Bitácora', { views: [{ state: 'frozen', ySplit: 5 }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } })
-  wsB.columns = [{ width: 22 }, { width: 24 }, { width: 16 }, { width: 24 }, { width: 14 }, { width: 18 }]
-  encabezado(wsB, 'F', 'BITÁCORA DE ALIADOS', `Generado el ${hoy}  ·  ${(leads ?? []).length} cliente${(leads ?? []).length === 1 ? '' : 's'} referido${(leads ?? []).length === 1 ? '' : 's'}`)
-  filaEncabezadoTabla(wsB, ['Aliado', 'Cliente', 'Teléfono', 'Vehículo de interés', 'Inicial', 'Fecha'])
+  wsB.columns = [{ width: 22 }, { width: 24 }, { width: 16 }, { width: 24 }, { width: 14 }, { width: 20 }, { width: 18 }]
+  encabezado(wsB, 'G', 'BITÁCORA DE ALIADOS', `Generado el ${hoy}  ·  ${(leads ?? []).length} cliente${(leads ?? []).length === 1 ? '' : 's'} referido${(leads ?? []).length === 1 ? '' : 's'}`)
+  filaEncabezadoTabla(wsB, ['Aliado', 'Cliente', 'Teléfono', 'Vehículo de interés', 'Inicial', 'Dónde se captó', 'Fecha'])
   ;(leads ?? []).forEach((l, idx) => {
     const r = wsB.addRow([
       `${l.aliado_nombre} (${l.aliado_codigo})`,
@@ -104,6 +104,7 @@ export async function GET() {
       l.cliente_telefono,
       l.vehiculo_interes || '—',
       l.tiene_inicial ? (l.inicial_monto ? `$${l.inicial_monto}` : 'Sí') : 'No',
+      l.origen_captacion || '—',
       fmtFecha(l.created_at),
     ])
     r.eachCell({ includeEmpty: true }, cell => {

@@ -21,6 +21,7 @@ interface AliadoLead {
   vehiculo_interes: string | null
   tiene_inicial: boolean
   inicial_monto: number | null
+  origen_captacion: string | null
   created_at: string
 }
 
@@ -123,6 +124,16 @@ export default function AliadosTab() {
     const arr = Object.entries(m).sort((a, b) => b[1] - a[1])
     const max = arr[0]?.[1] ?? 0
     return arr.map(([modelo, clientes]) => ({ modelo, clientes, pct: max ? Math.round((clientes / max) * 100) : 0 }))
+  }, [leadsFiltrados])
+
+  // Reporte interno: dónde el aliado captó a cada cliente referido.
+  const captacionCount = useMemo(() => {
+    const m: Record<string, number> = {}
+    leadsFiltrados.forEach(l => {
+      const k = l.origen_captacion?.trim() || 'Sin especificar'
+      m[k] = (m[k] ?? 0) + 1
+    })
+    return Object.entries(m).sort((a, b) => b[1] - a[1])
   }, [leadsFiltrados])
 
   if (loading) return <div className="card p-8 text-center text-oriental-gray text-sm">Cargando...</div>
@@ -232,6 +243,20 @@ export default function AliadosTab() {
         </>
       )}
 
+      {captacionCount.length > 0 && (
+        <>
+          <h3 className="text-sm font-bold text-oriental-black uppercase tracking-wider mb-3">Dónde se captó al cliente</h3>
+          <div className="card p-4 mb-6 flex flex-wrap gap-2">
+            {captacionCount.map(([origen, count]) => (
+              <span key={origen} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
+                {origen}
+                <span className="px-1.5 py-0.5 rounded-full bg-white/70 text-[10px]">{count}</span>
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+
       {leadsFiltrados.length === 0 ? (
         <p className="text-center text-sm text-gray-400 py-10">Ningún aliado ha enviado clientes todavía.</p>
       ) : (
@@ -246,6 +271,9 @@ export default function AliadosTab() {
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700">
                       {l.inicial_monto ? `Inicial $${l.inicial_monto}` : 'Con inicial'}
                     </span>
+                  )}
+                  {l.origen_captacion && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700">{l.origen_captacion}</span>
                   )}
                 </div>
                 <p className="text-gray-500 text-xs truncate">

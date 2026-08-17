@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 const WA_JETPLUS = '584248705174'
 const ORIGEN_OPCIONES = ['Instagram', 'TikTok', 'Facebook', 'WhatsApp', 'Otro']
+const CAPTACION_OPCIONES = ['Concesionario', 'Sambil', 'Fuera de concesionario', 'Otro']
 
 interface Props {
   variante: 'aliado' | 'publico'
@@ -29,14 +30,18 @@ export default function EnviarConcesionarioModal({ variante, vehiculoLabel, marc
     return ORIGEN_OPCIONES.includes(norm) ? norm : ''
   })
   const [origenOtro, setOrigenOtro] = useState('')
+  const [captacionSel, setCaptacionSel] = useState('')
+  const [captacionOtro, setCaptacionOtro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
 
   const origenFinal = origenSel === 'Otro' ? (origenOtro.trim() || 'Otro') : origenSel
+  const captacionFinal = captacionSel === 'Otro' ? (captacionOtro.trim() || 'Otro') : captacionSel
 
   async function enviar() {
     if (!nombre.trim() || !telefono.trim()) { setError('Nombre y teléfono son obligatorios.'); return }
     if (variante === 'publico' && !origenSel) { setError('Selecciona desde dónde nos escribes.'); return }
+    if (variante === 'aliado' && !captacionSel) { setError('Indica dónde captaste al cliente.'); return }
     setEnviando(true); setError('')
 
     // Best-effort: si falla el guardado en el panel, igual se deja mandar el
@@ -52,6 +57,7 @@ export default function EnviarConcesionarioModal({ variante, vehiculoLabel, marc
             vehiculoInteres: vehiculoLabel,
             tieneInicial,
             inicialMonto: tieneInicial && inicialMonto.trim() ? Number(inicialMonto) : null,
+            origenCaptacion: captacionFinal,
           }),
         })
       } else {
@@ -136,6 +142,26 @@ export default function EnviarConcesionarioModal({ variante, vehiculoLabel, marc
                 {tieneInicial && (
                   <input style={inp} type="number" min={0} value={inicialMonto} onChange={e => setInicialMonto(e.target.value)} placeholder="Monto aprox. en $ (opcional)" />
                 )}
+
+                <div style={{ marginTop: 12 }}>
+                  <label style={label}>¿Dónde captaste al cliente? *</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {CAPTACION_OPCIONES.map(o => (
+                      <button key={o} type="button" onClick={() => setCaptacionSel(o)}
+                        style={{
+                          padding: '8px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          border: captacionSel === o ? '1.5px solid #16a34a' : '1.5px solid #d1d5db',
+                          background: captacionSel === o ? '#f0fdf4' : '#fff',
+                          color: captacionSel === o ? '#15803d' : '#374151',
+                        }}>
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                  {captacionSel === 'Otro' && (
+                    <input style={{ ...inp, marginTop: 8 }} value={captacionOtro} onChange={e => setCaptacionOtro(e.target.value)} placeholder="¿Cuál?" />
+                  )}
+                </div>
               </div>
             )}
 

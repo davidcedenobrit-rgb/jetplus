@@ -94,9 +94,14 @@ export async function POST(req: Request) {
       financiadoraId,
       cargoGastosAdmin,
       cargoPlaca,
+      // Dónde el vendedor/aliado captó al cliente (link de vendedores y de
+      // aliados). Opcional: las cotizaciones generadas desde el panel interno
+      // (Rojas) no la mandan.
+      origenCaptacion,
     } = body
 
     const condPersonalizadas = String(condicionesPersonalizadas ?? '').trim() || null
+    const origenCaptacionSan = (typeof origenCaptacion === 'string' && origenCaptacion.trim()) ? origenCaptacion.trim().slice(0, 60) : null
     const bancoCot = (typeof banco === 'string' && banco.trim())
       ? banco.trim()
       : (typeof bnVehimotors?.banco === 'string' && bnVehimotors.banco.trim() ? bnVehimotors.banco.trim() : null)
@@ -671,6 +676,7 @@ export async function POST(req: Request) {
         bn_vehimotors: bnVehimotorsData,
         banco: bancoCot,
         estructura_costos: estructuraCostos,
+        origen_captacion: origenCaptacionSan,
       }])
       .select()
       .single()
@@ -761,7 +767,7 @@ export async function POST(req: Request) {
   }
 }
 
-const COT_COLS = 'id, numero, fecha, vencimiento, vendedora_nombre, concesionario_id, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, retencion_pct, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, descuento_solicitado, motivo_descuento, condiciones_personalizadas, created_at, resend_email_id, email_ultimo_estado, email_ultimo_evento_at'
+const COT_COLS = 'id, numero, fecha, vencimiento, vendedora_nombre, concesionario_id, cliente_nombre, cliente_ci_rif, cliente_correo, cliente_telefono, cliente_direccion, cliente_ciudad_estado, cliente_codigo_postal, agente_retencion, retencion_pct, marca, modelo, modalidad, plan, precio_base, iva_monto, gastos_monto, financiamiento_monto, cuota_mensual, total_inicial, costo_total, estado, motivo_rechazo, descuento_solicitado, motivo_descuento, condiciones_personalizadas, created_at, resend_email_id, email_ultimo_estado, email_ultimo_evento_at, origen_captacion'
 
 // Tope de tiempo por base externa para no colgar el panel si una sede tarda.
 function conTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {

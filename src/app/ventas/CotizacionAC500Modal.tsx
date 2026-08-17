@@ -13,6 +13,8 @@ function fmt(n: number | null | undefined) {
 }
 function cap(s: string) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s }
 
+const CAPTACION_OPCIONES = ['Concesionario', 'Sambil', 'Fuera de concesionario', 'Otro']
+
 export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor = '', onClose }: {
   plan: AC500Vehiculo
   defaultMode: Mode
@@ -33,6 +35,9 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
     clienteTelefono: '', clienteDireccion: '',
     clienteCiudadEstado: '', clienteCodigoPostal: '',
   })
+  const [captacionSel, setCaptacionSel] = useState('')
+  const [captacionOtro, setCaptacionOtro] = useState('')
+  const captacionFinal = captacionSel === 'Otro' ? (captacionOtro.trim() || 'Otro') : captacionSel
   const [errorMsg, setErrorMsg] = useState('')
   const [numeroCot, setNumeroCot] = useState('')
   const [cotId, setCotId] = useState('')
@@ -106,6 +111,7 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
       clienteDireccion: form.clienteDireccion || null,
       clienteCiudadEstado: form.clienteCiudadEstado || null,
       clienteCodigoPostal: form.clienteCodigoPostal || null,
+      origenCaptacion: captacionFinal,
     }
   }
 
@@ -141,6 +147,9 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
   async function enviar() {
     if (!form.clienteNombre.trim() || !form.clienteCiRif.trim()) {
       setErrorMsg('Nombre y C.I./RIF son obligatorios.'); return
+    }
+    if (!captacionSel) {
+      setErrorMsg('Indica dónde captaste al cliente.'); return
     }
     if (form.clienteCorreo.trim() && !/\S+@\S+\.\S+/.test(form.clienteCorreo.trim())) {
       setErrorMsg('El correo no es válido.'); return
@@ -339,6 +348,25 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
                     <label style={label}>Código Postal</label>
                     <input style={inp} value={form.clienteCodigoPostal} onChange={e => setForm(p => ({ ...p, clienteCodigoPostal: e.target.value }))} placeholder="6201" />
                   </div>
+                </div>
+                <div>
+                  <label style={label}>¿Dónde captaste al cliente? *</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {CAPTACION_OPCIONES.map(o => (
+                      <button key={o} type="button" onClick={() => setCaptacionSel(o)}
+                        style={{
+                          padding: '8px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          border: captacionSel === o ? '1.5px solid #111' : '1.5px solid #d1d5db',
+                          background: captacionSel === o ? '#111' : '#fff',
+                          color: captacionSel === o ? '#fff' : '#374151',
+                        }}>
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                  {captacionSel === 'Otro' && (
+                    <input style={{ ...inp, marginTop: 8 }} value={captacionOtro} onChange={e => setCaptacionOtro(e.target.value)} placeholder="¿Dónde?" />
+                  )}
                 </div>
               </div>
 
