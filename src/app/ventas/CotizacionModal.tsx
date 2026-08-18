@@ -472,8 +472,14 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                   </div>
                   <div style={{ marginBottom: 14 }}>
                     <label style={label}>Inicial %</label>
-                    <input type="number" min={1} max={99} step={1} value={inicialPct}
-                      onChange={e => setInicialPct(Math.min(99, Math.max(1, Number(e.target.value) || 0)))}
+                    <input type="number" inputMode="numeric" min={1} max={99} step={1} value={inicialPct === 0 ? '' : inicialPct}
+                      onChange={e => {
+                        const raw = e.target.value
+                        if (raw === '') { setInicialPct(0); return }
+                        const n = Number(raw)
+                        if (!Number.isNaN(n)) setInicialPct(Math.min(99, Math.max(0, n)))
+                      }}
+                      onBlur={() => setInicialPct(p => Math.min(99, Math.max(1, p || 1)))}
                       style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties} />
                   </div>
                 </>
