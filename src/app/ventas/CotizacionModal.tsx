@@ -49,6 +49,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   const [descuentoMonto, setDescuentoMonto] = useState(0)
   const [esContado, setEsContado] = useState(true)
   const [inicialPct, setInicialPct] = useState(40)
+  const [cantidad, setCantidad] = useState(1)
   const [financiadoras, setFinanciadoras] = useState<Financiadora[]>([])
   const [financiadoraId, setFinanciadoraId] = useState('')
   const [cargoGastosAdmin, setCargoGastosAdmin] = useState(true)
@@ -205,6 +206,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
           agenteRetencion: form.agenteRetencion,
           modalidad: esContado ? 'contado' : 'credito_24',
           plan: 'presupuesto',
+          cantidad,
           descuentoPct: descuentoTipo === 'pct' ? descuentoPct : 0,
           descuentoMonto: descuentoTipo === 'monto' ? descuentoMonto : 0,
           inicialPct: esContado ? 100 : inicialPct,
@@ -266,6 +268,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
           agenteRetencion: form.agenteRetencion,
           modalidad: esContado ? 'contado' : 'credito_24',
           plan: 'presupuesto',
+          cantidad,
           descuentoPct: descuentoTipo === 'pct' ? descuentoPct : 0,
           descuentoMonto: descuentoTipo === 'monto' ? descuentoMonto : 0,
           inicialPct: esContado ? 100 : inicialPct,
@@ -431,6 +434,20 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                 </div>
               </div>
 
+              {/* Cantidad de unidades (flota / venta múltiple) */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={label}>Cantidad de unidades</label>
+                <input type="number" inputMode="numeric" min={1} max={200} step={1} value={cantidad === 0 ? '' : cantidad}
+                  onChange={e => {
+                    const raw = e.target.value
+                    if (raw === '') { setCantidad(0); return }
+                    const n = Number(raw)
+                    if (!Number.isNaN(n)) setCantidad(Math.min(200, Math.max(0, Math.floor(n))))
+                  }}
+                  onBlur={() => setCantidad(c => Math.min(200, Math.max(1, c || 1)))}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties} />
+              </div>
+
               {/* Descuento (a discreción del dueño): por % o por monto fijo */}
               <div style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -514,7 +531,7 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                     </>
                   )}
                   <span style={{ fontSize: 11, color: '#6b7280' }}>Cargos</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right' }}>${fmt(calc.cargos)}</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>{esContado ? 'TOTAL A PAGAR' : 'TOTAL INICIAL A PAGAR'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: '#111', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>{esContado ? 'TOTAL A PAGAR' : 'TOTAL INICIAL A PAGAR'}{cantidad > 1 ? ' (POR UNIDAD)' : ''}</span>
                   <span style={{ fontSize: 13, fontWeight: 800, color: '#92400e', textAlign: 'right', borderTop: '1px solid #fde68a', marginTop: 4, paddingTop: 4 }}>${fmt(calc.totalInicialAPagar)}</span>
                   {!esContado && (
                     <><span style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Saldo a financiar</span><span style={{ fontSize: 11, fontWeight: 700, color: '#111', textAlign: 'right', marginTop: 6 }}>${fmt(calc.saldoFinanciar)}</span></>
@@ -522,6 +539,25 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
                 </div>
                 {!esContado && <p style={{ fontSize: 10, color: '#a16207', marginTop: 8, marginBottom: 0 }}>La cuota mensual y el plazo los fija {financiadoraSel?.nombre || 'la financiadora'} al aprobar el crédito.</p>}
               </div>
+
+              {/* Total por N unidades — la MISMA cifra que mostrará el PDF */}
+              {cantidad > 1 && (
+                <div style={{ background: '#111', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
+                  <p style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
+                    Total por {cantidad} unidades
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 0' }}>
+                    <span style={{ fontSize: 11, color: '#d1d5db' }}>{esContado ? 'Total a pagar' : 'Inicial total'} (x{cantidad})</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', textAlign: 'right' }}>${fmt(calc.totalInicialAPagar * cantidad)}</span>
+                    {!esContado && (
+                      <>
+                        <span style={{ fontSize: 11, color: '#d1d5db' }}>Financiamiento (x{cantidad})</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', textAlign: 'right' }}>${fmt(calc.saldoFinanciar * cantidad)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Datos del cliente */}
               <p style={{ fontSize: 12, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>Datos del cliente</p>

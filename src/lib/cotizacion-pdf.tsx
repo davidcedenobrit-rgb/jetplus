@@ -211,6 +211,11 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const esPresupuesto = data.plan === 'presupuesto'
   const pres = data.presupuesto
   const cantidad = Math.max(1, Math.floor(data.cantidad ?? 1))
+  // Cuando se cotiza más de una unidad, el total base es POR UNIDAD — el total
+  // real (x cantidad) va aparte en el bloque "TOTAL POR N UNIDADES". Sin esta
+  // aclaración, "TOTAL A PAGAR: $36.000" en una cotización de 10 unidades se
+  // lee como si fuera el total de la operación completa.
+  const porUnidadSuffix = cantidad > 1 ? ' (POR UNIDAD)' : ''
   const mesesBanco = Math.max(1, Math.round(data.mesesBanco ?? 24))
   // Plan Personalizado: inicial, meses y % financiado dinámicos
   const persIniFrac = data.inicialPct != null ? data.inicialPct : 0.4
@@ -349,7 +354,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   </View>
                 ))}
                 <View style={s.ac500TotalRow}>
-                  <Text style={s.ac500TotalLabel}>TOTAL A PAGAR:</Text>
+                  <Text style={s.ac500TotalLabel}>TOTAL A PAGAR{porUnidadSuffix}:</Text>
                   <Text style={s.ac500TotalVal}>${fmt(data.ac500Schedule.total)}</Text>
                 </View>
               </View>
@@ -461,7 +466,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                       </View>
                     )}
                     <View style={s.calcTotalRow}>
-                      <Text style={s.calcTotalLabel}>{pres.inicialPct < 100 ? 'TOTAL INICIAL A PAGAR:' : 'TOTAL A PAGAR:'}</Text>
+                      <Text style={s.calcTotalLabel}>{pres.inicialPct < 100 ? `TOTAL INICIAL A PAGAR${porUnidadSuffix}:` : `TOTAL A PAGAR${porUnidadSuffix}:`}</Text>
                       <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
                     </View>
                   </>
@@ -480,7 +485,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                       <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
                     </View>
                     <View style={s.calcTotalRow}>
-                      <Text style={s.calcTotalLabel}>TOTAL INICIAL A PAGAR:</Text>
+                      <Text style={s.calcTotalLabel}>TOTAL INICIAL A PAGAR{porUnidadSuffix}:</Text>
                       <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
                     </View>
                   </>
@@ -499,7 +504,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                       <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
                     </View>
                     <View style={s.calcTotalRow}>
-                      <Text style={s.calcTotalLabel}>INICIAL TOTAL A PAGAR:</Text>
+                      <Text style={s.calcTotalLabel}>INICIAL TOTAL A PAGAR{porUnidadSuffix}:</Text>
                       <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
                     </View>
                   </>
@@ -518,7 +523,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                       <Text style={s.calcVal}>{fmt(data.gastosMonto)}</Text>
                     </View>
                     <View style={s.calcTotalRow}>
-                      <Text style={s.calcTotalLabel}>TOTAL A PAGAR:</Text>
+                      <Text style={s.calcTotalLabel}>TOTAL A PAGAR{porUnidadSuffix}:</Text>
                       <Text style={s.calcTotalVal}>${fmt(data.totalInicial)}</Text>
                     </View>
                   </>

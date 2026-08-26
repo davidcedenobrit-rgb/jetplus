@@ -118,8 +118,10 @@ export async function POST(req: Request) {
     let plan = planBody ?? 'vehimotors'
     if (promoVehiculoId) plan = 'vehimotors'
 
-    // Cantidad de vehículos (entero >= 1), independiente del stock de showroom
-    const cantidadNum = Math.max(1, Math.floor(Number(cantidad) || 1))
+    // Cantidad de vehículos (entero 1-200), independiente del stock de showroom.
+    // El tope evita que un cero de más ("2000" en vez de "200") emita una
+    // cotización por millones que nadie revisó antes de mandarla.
+    const cantidadNum = Math.min(200, Math.max(1, Math.floor(Number(cantidad) || 1)))
 
     // Validaciones básicas (el correo del cliente es opcional).
     // AC500 puede cotizarse directo (sin carro del catálogo) usando el plan.
