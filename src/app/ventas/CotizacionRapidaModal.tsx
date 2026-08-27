@@ -1,8 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { calcularPresupuestoJetplus } from '@/lib/cotizacion-calc'
 import { imprimirPdfBlob, descargarBlob } from '@/lib/pdf-print'
+
+// Misma llave que usa /ventas/panel: si el vendedor ya entró ahí, el rapidito
+// no le vuelve a preguntar el código.
+const LS_KEY = 'jetplus_vendedora_codigo'
 
 interface Vehiculo {
   brand: string
@@ -60,6 +64,65 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
   const [descargando, setDescargando] = useState(false)
   const [error, setError] = useState('')
 
+  // Código de vendedora: se pide AL GENERAR (no al abrir la herramienta) para
+  // que el rapidito deje rastro de quién lo produjo. Mirar precios sigue
+  // libre; solo se identifica a quien va a producir un documento.
+  const [pidiendoCodigo, setPidiendoCodigo] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState('')
+  const [pinVerificando, setPinVerificando] = useState(false)
+  const accionPendienteRef = useRef<null | ((codigo: string) => void)>(null)
+
+  async function verificarCodigo(codigo: string): Promise<boolean> {
+    try {
+      const r = await fetch('/api/vendedoras/verificar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }),
+      })
+      const j = await r.json().catch(() => ({}))
+      return !!j.valida
+    } catch { return false }
+  }
+
+  // Deja rastro del rapidito. Fire-and-forget: si falla, el vendedor igual se
+  // lleva su PDF — anotar nunca debe bloquear la entrega.
+  function registrarRapidito(codigo: string) {
+    fetch('/api/cotizaciones-rapidas', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        codigo, marca: vehiculo.brand, modelo: vehiculo.model,
+        precioBase: precio, cuotaMensual: cuota, concesionarioId: concesionario || null,
+      }),
+    }).catch(() => {})
+  }
+
+  // Si hay un código guardado y sigue sirviendo, no pregunta nada. Si no hay
+  // o dejó de servir, lo olvida y pide uno nuevo antes de generar.
+  async function conCodigoVendedora(accion: (codigo: string) => void) {
+    const guardado = typeof window !== 'undefined' ? localStorage.getItem(LS_KEY) : null
+    if (guardado) {
+      const ok = await verificarCodigo(guardado)
+      if (ok) { accion(guardado); return }
+      localStorage.removeItem(LS_KEY)
+    }
+    accionPendienteRef.current = accion
+    setPinInput(''); setPinError('')
+    setPidiendoCodigo(true)
+  }
+
+  async function confirmarCodigoVendedora() {
+    const cod = pinInput.trim().toUpperCase()
+    if (!/^[A-Za-z]\d{3}$/.test(cod)) { setPinError('Formato: 1 letra + 3 números (ej. K101).'); return }
+    setPinVerificando(true); setPinError('')
+    const ok = await verificarCodigo(cod)
+    setPinVerificando(false)
+    if (!ok) { setPinError('Código incorrecto o inactivo.'); return }
+    localStorage.setItem(LS_KEY, cod)
+    setPidiendoCodigo(false)
+    const accion = accionPendienteRef.current
+    accionPendienteRef.current = null
+    if (accion) accion(cod)
+  }
+
   // Payload del PDF que se comparte.
   function payloadBase() {
     return {
@@ -73,7 +136,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
   // Compone el resumen en un PDF (en el servidor) y lo comparte por el compartir
   // nativo del teléfono, o lo abre para descargar. Reemplaza la captura de
   // imagen (html2canvas) que a veces se quedaba pegada esperando el logo remoto.
-  async function compartirPdf() {
+  async function compartirPdf(codigoVendedora: string) {
     if (compartiendo) return
     setCompartiendo(true); setError('')
     try {
@@ -82,6 +145,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
       })
       if (!res.ok) throw new Error('pdf')
       const blob = await res.blob()
+      registrarRapidito(codigoVendedora)
       const fileName = `Cotizacion_${vehiculo.brand}_${vehiculo.model}`.replace(/[^\w-]+/g, '_') + '.pdf'
       const file = new File([blob], fileName, { type: 'application/pdf' })
       const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean }
@@ -114,12 +178,13 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
     return res.blob()
   }
 
-  async function imprimirRapido() {
+  async function imprimirRapido(codigoVendedora: string) {
     if (imprimiendo) return
     setImprimiendo(true); setError('')
     try {
       const blob = await generarPdfRapido()
       if (!blob) throw new Error('pdf')
+      registrarRapidito(codigoVendedora)
       imprimirPdfBlob(blob)
     } catch {
       setError('No se pudo generar el PDF. Intenta de nuevo.')
@@ -128,12 +193,13 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
     }
   }
 
-  async function descargarRapido() {
+  async function descargarRapido(codigoVendedora: string) {
     if (descargando) return
     setDescargando(true); setError('')
     try {
       const blob = await generarPdfRapido()
       if (!blob) throw new Error('pdf')
+      registrarRapidito(codigoVendedora)
       const fileName = `Cotizacion_${vehiculo.brand}_${vehiculo.model}`.replace(/[^\w-]+/g, '_') + '.pdf'
       descargarBlob(blob, fileName)
     } catch {
@@ -250,24 +316,53 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
           </div>
         </div>
 
-        {/* Compartir el resumen como PDF */}
-        <div style={{ padding: '14px 18px 18px' }}>
-          <button onClick={compartirPdf} disabled={compartiendo}
-            style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: colorPrimario, color: '#fff', fontSize: 14, fontWeight: 800, cursor: compartiendo ? 'default' : 'pointer', opacity: compartiendo ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            {compartiendo ? 'Generando PDF…' : '📄 Compartir como PDF'}
-          </button>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button onClick={imprimirRapido} disabled={imprimiendo}
-              style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1.5px solid #d1d5db', background: '#fff', color: '#111', fontSize: 13, fontWeight: 700, cursor: imprimiendo ? 'default' : 'pointer', opacity: imprimiendo ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              🖨 {imprimiendo ? 'Generando…' : 'Imprimir'}
-            </button>
-            <button onClick={descargarRapido} disabled={descargando}
-              style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1.5px solid #d1d5db', background: '#fff', color: '#111', fontSize: 13, fontWeight: 700, cursor: descargando ? 'default' : 'pointer', opacity: descargando ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              ⬇ {descargando ? 'Generando…' : 'Descargar'}
-            </button>
+        {/* Pedir código de vendedora al generar (no al abrir la herramienta) */}
+        {pidiendoCodigo ? (
+          <div style={{ padding: '18px' }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: '#111', marginBottom: 4 }}>Tu código de vendedora</p>
+            <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>Para dejar registrado quién generó esta cotización.</p>
+            <input
+              type="text" inputMode="text" autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck={false}
+              maxLength={4} value={pinInput}
+              onChange={e => { setPinInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)); setPinError('') }}
+              onKeyDown={e => e.key === 'Enter' && confirmarCodigoVendedora()}
+              placeholder="X000" autoFocus
+              style={{ width: '100%', padding: '12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 22, textAlign: 'center', letterSpacing: 10, fontWeight: 800, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 10 }}
+            />
+            {pinError && <p style={{ fontSize: 12, color: '#C41E3A', marginBottom: 10 }}>{pinError}</p>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setPidiendoCodigo(false)} disabled={pinVerificando}
+                style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1.5px solid #d1d5db', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancelar
+              </button>
+              <button onClick={confirmarCodigoVendedora} disabled={pinVerificando || pinInput.length !== 4}
+                style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: pinInput.length === 4 ? colorPrimario : '#d1d5db', color: '#fff', fontSize: 13, fontWeight: 800, cursor: pinInput.length === 4 ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                {pinVerificando ? 'Verificando…' : 'Continuar →'}
+              </button>
+            </div>
           </div>
-          {error && <p style={{ fontSize: 12, color: '#C41E3A', textAlign: 'center', margin: '8px 0 0' }}>{error}</p>}
-        </div>
+        ) : (
+          <>
+            {/* Compartir el resumen como PDF */}
+            <div style={{ padding: '14px 18px 18px' }}>
+              <button onClick={() => conCodigoVendedora(compartirPdf)} disabled={compartiendo}
+                style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: colorPrimario, color: '#fff', fontSize: 14, fontWeight: 800, cursor: compartiendo ? 'default' : 'pointer', opacity: compartiendo ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {compartiendo ? 'Generando PDF…' : '📄 Compartir como PDF'}
+              </button>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button onClick={() => conCodigoVendedora(imprimirRapido)} disabled={imprimiendo}
+                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1.5px solid #d1d5db', background: '#fff', color: '#111', fontSize: 13, fontWeight: 700, cursor: imprimiendo ? 'default' : 'pointer', opacity: imprimiendo ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  🖨 {imprimiendo ? 'Generando…' : 'Imprimir'}
+                </button>
+                <button onClick={() => conCodigoVendedora(descargarRapido)} disabled={descargando}
+                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1.5px solid #d1d5db', background: '#fff', color: '#111', fontSize: 13, fontWeight: 700, cursor: descargando ? 'default' : 'pointer', opacity: descargando ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  ⬇ {descargando ? 'Generando…' : 'Descargar'}
+                </button>
+              </div>
+              {error && <p style={{ fontSize: 12, color: '#C41E3A', textAlign: 'center', margin: '8px 0 0' }}>{error}</p>}
+            </div>
+          </>
+        )}
 
       </div>
     </div>

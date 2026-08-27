@@ -37,6 +37,10 @@ export async function middleware(request: NextRequest) {
     '/api/vendedoras/panel',
     // PDF del "rapidito" (resumen de cotización) compartible desde el link.
     '/api/cotizacion-rapida/pdf',
+    // Registro del "rapidito" al generarlo: valida el código de vendedora y
+    // deja rastro en cotizaciones_rapidas, sin sesión (mismo modelo que el
+    // resto del link público). No bloquea la entrega del PDF si falla.
+    '/api/cotizaciones-rapidas',
     // Búsqueda de clientes desde el link de vendedores (validada por código de
     // vendedor(a) dentro del handler; no expone la base sin código válido).
     '/api/cotizaciones/clientes-buscar',

@@ -19,6 +19,8 @@ interface Cliente {
   activo: boolean
   created_at: string
   vehiculos: VehiculoComprado[]
+  // Solo en vista de socio: quién(es) lo vendieron.
+  trabajadoPor?: string[]
 }
 
 interface Lead {
@@ -29,6 +31,32 @@ interface Lead {
   cotizaciones: number
   contexto: string | null
   fecha: string
+  // Solo en vista de socio: a quién se le resolvió el campo `vendedor` (texto
+  // libre) de la captación. null si es ambiguo o no coincide con nadie.
+  vendedorResuelto?: { codigo: string; nombre: string } | null
+}
+
+interface Rapidito {
+  id: string
+  vendedora_codigo?: string
+  vendedora_nombre?: string
+  marca: string | null
+  modelo: string | null
+  precio_base: number | null
+  cuota_mensual: number | null
+  created_at: string
+}
+
+interface EquipoRow {
+  codigo: string
+  nombre: string
+  rol: string
+  leads: number
+  rapiditos: number
+  cotizaciones: number
+  enviadas: number
+  proformas: number
+  conversionPct: number
 }
 
 interface Cotizacion {
@@ -52,6 +80,9 @@ interface Cotizacion {
   cliente_telefono: string | null
   vendedoras: { codigo: string; nombre: string }[]
   compartidaCon: string[]
+  // Solo en vista de socio: nombres de todos los que la trabajaron (incluida
+  // la propia vendedora, a diferencia de compartidaCon que la excluye).
+  trabajadaPor?: string[]
 }
 
 interface Proforma {
@@ -65,11 +96,15 @@ interface Proforma {
 }
 
 interface PanelData {
-  vendedora: { codigo: string; nombre: string }
+  vendedora: { codigo: string; nombre: string; rol: 'vendedor' | 'socio' }
   leads: Lead[]
   clientes: Cliente[]
   cotizaciones: Cotizacion[]
   proformas: Proforma[]
+  rapiditos: Rapidito[]
+  // Solo en vista de socio:
+  sede?: { codigo: string; nombre: string }[]
+  equipo?: EquipoRow[]
 }
 
 const ESTADO_LABEL: Record<string, { label: string; bg: string; fg: string }> = {
@@ -118,7 +153,7 @@ function mailtoLink(correo: string, asunto: string, cuerpo: string) {
 }
 
 type Periodo = '7d' | 'mes' | 'todo'
-type Tab = 'resumen' | 'leads' | 'clientes' | 'cotizaciones'
+type Tab = 'resumen' | 'leads' | 'clientes' | 'cotizaciones' | 'rapiditos' | 'equipo'
 
 export default function PanelVendedoraPage() {
   const [codigo, setCodigo] = useState<string | null>(null)
@@ -228,7 +263,24 @@ function PanelScreen({
   clienteAbiertoId: string | null; setClienteAbiertoId: (id: string | null) => void
   salir: () => void
 }) {
+  const esSocio = data.vendedora.rol === 'socio'
+  const [filtroVendedor, setFiltroVendedor] = useState('')
   const proformaIds = useMemo(() => new Set(data.proformas.map(p => p.cotizacion_id)), [data.proformas])
+
+  const leadsFiltrados = useMemo(() => {
+    if (!esSocio || !filtroVendedor) return data.leads
+    return data.leads.filter(l => l.vendedorResuelto?.codigo === filtroVendedor)
+  }, [data.leads, esSocio, filtroVendedor])
+
+  const cotizacionesFiltradas = useMemo(() => {
+    if (!esSocio || !filtroVendedor) return data.cotizaciones
+    return data.cotizaciones.filter(c => (c.vendedoras ?? []).some(v => v.codigo === filtroVendedor))
+  }, [data.cotizaciones, esSocio, filtroVendedor])
+
+  const rapiditosFiltrados = useMemo(() => {
+    if (!esSocio || !filtroVendedor) return data.rapiditos
+    return data.rapiditos.filter(r => r.vendedora_codigo === filtroVendedor)
+  }, [data.rapiditos, esSocio, filtroVendedor])
 
   const cotizacionesPeriodo = useMemo(() => {
     const cut = cutoffFecha(periodo)
@@ -272,21 +324,55 @@ function PanelScreen({
       <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.5px' }}>Mi panel</p>
+            <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.5px' }}>{esSocio ? 'Panel de socio' : 'Mi panel'}</p>
             <p style={{ fontSize: 16, fontWeight: 900, color: '#111827' }}>{data.vendedora.nombre}</p>
           </div>
           <button onClick={salir} style={{ fontSize: 12.5, fontWeight: 700, color: '#6b7280', background: 'none', border: '1px solid #d1d5db', borderRadius: 10, padding: '8px 14px', cursor: 'pointer' }}>
             Salir
           </button>
         </div>
+
+        {/* Aviso de vista de socio: para que no se lea como cartera propia */}
+        {esSocio && (
+          <div style={{ maxWidth: 640, margin: '0 auto 12px', padding: '0 18px' }}>
+            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 15 }}>👥</span>
+              <p style={{ fontSize: 12, color: '#92400e', fontWeight: 700, margin: 0 }}>
+                Estás viendo TODA la sede — no tu cartera individual.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 18px 12px', display: 'flex', gap: 6, overflowX: 'auto' }}>
-          {([['resumen', 'Resumen'], ['leads', `Leads (${data.leads.length})`], ['clientes', `Clientes (${data.clientes.length})`], ['cotizaciones', 'Cotizaciones']] as [Tab, string][]).map(([k, label]) => (
+          {([
+            ['resumen', 'Resumen'],
+            ['leads', `Leads (${data.leads.length})`],
+            ['clientes', `Clientes (${data.clientes.length})`],
+            ['cotizaciones', 'Cotizaciones'],
+            ['rapiditos', `Rapiditos (${data.rapiditos.length})`],
+            ...(esSocio ? [['equipo', 'Equipo'] as [Tab, string]] : []),
+          ] as [Tab, string][]).map(([k, label]) => (
             <button key={k} onClick={() => { setTab(k); setClienteAbiertoId(null) }} className={`f-btn${tab === k ? ' on' : ''}`} style={{ flex: '1 0 auto', whiteSpace: 'nowrap' }}>
               {label}
             </button>
           ))}
         </div>
+
+        {/* Filtro por vendedor: solo en vista de socio, sobre Leads/Cotizaciones/Rapiditos */}
+        {esSocio && (tab === 'leads' || tab === 'cotizaciones' || tab === 'rapiditos') && (
+          <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 18px 12px' }}>
+            <select
+              value={filtroVendedor}
+              onChange={e => setFiltroVendedor(e.target.value)}
+              style={{ width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #d1d5db', borderRadius: 10, background: '#fff', fontWeight: 700, color: '#374151' }}
+            >
+              <option value="">Toda la sede</option>
+              {(data.sede ?? []).map(v => <option key={v.codigo} value={v.codigo}>{v.nombre} ({v.codigo})</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '18px' }}>
@@ -294,16 +380,22 @@ function PanelScreen({
           <ResumenTab metricas={metricas} periodo={periodo} setPeriodo={setPeriodo} />
         )}
         {tab === 'leads' && (
-          <LeadsTab leads={data.leads} vendedoraNombre={data.vendedora.nombre} />
+          <LeadsTab leads={leadsFiltrados} vendedoraNombre={data.vendedora.nombre} mostrarVendedor={esSocio} />
         )}
         {tab === 'clientes' && !clienteAbierto && (
-          <ClientesTab clientes={data.clientes} buscar={buscarCliente} setBuscar={setBuscarCliente} onAbrir={setClienteAbiertoId} />
+          <ClientesTab clientes={data.clientes} buscar={buscarCliente} setBuscar={setBuscarCliente} onAbrir={setClienteAbiertoId} mostrarVendedor={esSocio} />
         )}
         {tab === 'clientes' && clienteAbierto && (
           <FichaCliente cliente={clienteAbierto} cotizaciones={data.cotizaciones} proformaIds={proformaIds} vendedoraNombre={data.vendedora.nombre} onVolver={() => setClienteAbiertoId(null)} />
         )}
         {tab === 'cotizaciones' && (
-          <CotizacionesTab cotizaciones={data.cotizaciones} proformaIds={proformaIds} vendedoraNombre={data.vendedora.nombre} />
+          <CotizacionesTab cotizaciones={cotizacionesFiltradas} proformaIds={proformaIds} vendedoraNombre={data.vendedora.nombre} mostrarVendedor={esSocio} />
+        )}
+        {tab === 'rapiditos' && (
+          <RapiditosTab rapiditos={rapiditosFiltrados} mostrarVendedor={esSocio} />
+        )}
+        {tab === 'equipo' && esSocio && (
+          <EquipoTab equipo={data.equipo ?? []} />
         )}
       </div>
     </div>
@@ -346,7 +438,7 @@ function MetricCard({ label, valor, nota }: { label: string; valor: string; nota
   )
 }
 
-function LeadsTab({ leads, vendedoraNombre }: { leads: Lead[]; vendedoraNombre: string }) {
+function LeadsTab({ leads, vendedoraNombre, mostrarVendedor = false }: { leads: Lead[]; vendedoraNombre: string; mostrarVendedor?: boolean }) {
   const [buscar, setBuscar] = useState('')
   const q = buscar.trim().toLowerCase()
   const filtrados = q ? leads.filter(l => l.nombre.toLowerCase().includes(q)) : leads
@@ -374,6 +466,11 @@ function LeadsTab({ leads, vendedoraNombre }: { leads: Lead[]; vendedoraNombre: 
                   <p style={{ fontSize: 14.5, fontWeight: 800, color: '#111827' }}>{l.nombre}</p>
                   {l.contexto && <p style={{ fontSize: 12.5, color: '#6b7280', marginTop: 2 }}>{l.contexto}</p>}
                   <p style={{ fontSize: 11.5, color: '#9ca3af', marginTop: 2 }}>{fmtFecha(l.fecha)}{l.cotizaciones > 0 ? ` · ${l.cotizaciones} ${l.cotizaciones > 1 ? 'cotizaciones' : 'cotización'}` : ''}</p>
+                  {mostrarVendedor && (
+                    <p style={{ fontSize: 11, fontWeight: 700, color: l.vendedorResuelto ? '#a16207' : '#9ca3af', marginTop: 2 }}>
+                      {l.vendedorResuelto ? `Vendedor(a): ${l.vendedorResuelto.nombre}` : 'Sin vendedor(a) asignado'}
+                    </p>
+                  )}
                 </div>
                 <span style={{ background: fuente.bg, color: fuente.fg, fontSize: 10, fontWeight: 800, padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap' }}>{fuente.label}</span>
               </div>
@@ -399,7 +496,7 @@ function LeadsTab({ leads, vendedoraNombre }: { leads: Lead[]; vendedoraNombre: 
   )
 }
 
-function ClientesTab({ clientes, buscar, setBuscar, onAbrir }: { clientes: Cliente[]; buscar: string; setBuscar: (s: string) => void; onAbrir: (id: string) => void }) {
+function ClientesTab({ clientes, buscar, setBuscar, onAbrir, mostrarVendedor = false }: { clientes: Cliente[]; buscar: string; setBuscar: (s: string) => void; onAbrir: (id: string) => void; mostrarVendedor?: boolean }) {
   const q = buscar.trim().toLowerCase()
   const filtrados = q
     ? clientes.filter(c => c.nombre.toLowerCase().includes(q) || c.cedula_rif.toLowerCase().includes(q))
@@ -424,6 +521,11 @@ function ClientesTab({ clientes, buscar, setBuscar, onAbrir }: { clientes: Clien
             {c.vehiculos.length > 0 && (
               <p style={{ fontSize: 11.5, color: '#15803d', marginTop: 4, fontWeight: 700 }}>
                 {c.vehiculos.map(v => `${v.marca} ${v.modelo}`).join(', ')}
+              </p>
+            )}
+            {mostrarVendedor && c.trabajadoPor && c.trabajadoPor.length > 0 && (
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#a16207', marginTop: 4 }}>
+                Vendido por: {c.trabajadoPor.join(', ')}
               </p>
             )}
           </button>
@@ -492,16 +594,16 @@ function FichaCliente({ cliente, cotizaciones, proformaIds, vendedoraNombre, onV
   )
 }
 
-function CotizacionesTab({ cotizaciones, proformaIds, vendedoraNombre }: { cotizaciones: Cotizacion[]; proformaIds: Set<string>; vendedoraNombre: string }) {
+function CotizacionesTab({ cotizaciones, proformaIds, vendedoraNombre, mostrarVendedor = false }: { cotizaciones: Cotizacion[]; proformaIds: Set<string>; vendedoraNombre: string; mostrarVendedor?: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {cotizaciones.length === 0 && <p style={{ textAlign: 'center', color: '#9ca3af', padding: '40px 0', fontSize: 13.5 }}>Todavía no has hecho cotizaciones.</p>}
-      {cotizaciones.map(c => <CotizacionRow key={c.id} c={c} tieneProforma={proformaIds.has(c.id)} vendedoraNombre={vendedoraNombre} />)}
+      {cotizaciones.map(c => <CotizacionRow key={c.id} c={c} tieneProforma={proformaIds.has(c.id)} vendedoraNombre={vendedoraNombre} mostrarVendedor={mostrarVendedor} />)}
     </div>
   )
 }
 
-function CotizacionRow({ c, tieneProforma, compacta = false, vendedoraNombre = '' }: { c: Cotizacion; tieneProforma: boolean; compacta?: boolean; vendedoraNombre?: string }) {
+function CotizacionRow({ c, tieneProforma, compacta = false, vendedoraNombre = '', mostrarVendedor = false }: { c: Cotizacion; tieneProforma: boolean; compacta?: boolean; vendedoraNombre?: string; mostrarVendedor?: boolean }) {
   const est = ESTADO_LABEL[c.estado] ?? ESTADO_LABEL.sin_respuesta
   const tel = c.cliente_telefono
   const msg = `Hola ${primerNombre(c.cliente_nombre)}, te contacto de parte de JETPLUS sobre tu cotización N° ${c.numero} (${c.marca} ${c.modelo}). ¿Tienes alguna duda o quieres que avancemos?`
@@ -520,7 +622,8 @@ function CotizacionRow({ c, tieneProforma, compacta = false, vendedoraNombre = '
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
         <span className="lo-badge lo-badge-meta">{fmtMoney(c.total_inicial ?? c.costo_total)}</span>
         {tieneProforma && <span className="lo-badge lo-badge-stock">Pasó a proforma</span>}
-        {c.compartidaCon?.length > 0 && <span className="lo-badge lo-badge-meta">Compartida con {c.compartidaCon.join(', ')}</span>}
+        {!mostrarVendedor && c.compartidaCon?.length > 0 && <span className="lo-badge lo-badge-meta">Compartida con {c.compartidaCon.join(', ')}</span>}
+        {mostrarVendedor && c.trabajadaPor && c.trabajadaPor.length > 0 && <span className="lo-badge lo-badge-meta">Vendedor(a): {c.trabajadaPor.join(', ')}</span>}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -538,6 +641,72 @@ function CotizacionRow({ c, tieneProforma, compacta = false, vendedoraNombre = '
           </a>
         )}
       </div>
+    </div>
+  )
+}
+
+function RapiditosTab({ rapiditos, mostrarVendedor = false }: { rapiditos: Rapidito[]; mostrarVendedor?: boolean }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {rapiditos.length === 0 && (
+        <p style={{ textAlign: 'center', color: '#9ca3af', padding: '40px 0', fontSize: 13.5 }}>
+          Todavía no hay rapiditos generados.
+        </p>
+      )}
+      {rapiditos.map(r => (
+        <div key={r.id} className="lo-info-box">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 800, color: '#111827' }}>{[r.marca, r.modelo].filter(Boolean).join(' ') || 'Vehículo'}</p>
+              <p style={{ fontSize: 11.5, color: '#9ca3af', marginTop: 2 }}>{fmtFecha(r.created_at)}</p>
+              {mostrarVendedor && r.vendedora_nombre && (
+                <p style={{ fontSize: 11, fontWeight: 700, color: '#a16207', marginTop: 2 }}>Vendedor(a): {r.vendedora_nombre}</p>
+              )}
+            </div>
+            {r.precio_base != null && (
+              <span className="lo-badge lo-badge-meta">{fmtMoney(r.precio_base)}</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function EquipoTab({ equipo }: { equipo: EquipoRow[] }) {
+  const ordenado = [...equipo].sort((a, b) => b.cotizaciones - a.cotizaciones)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {ordenado.length === 0 && (
+        <p style={{ textAlign: 'center', color: '#9ca3af', padding: '40px 0', fontSize: 13.5 }}>Sin datos del equipo todavía.</p>
+      )}
+      {ordenado.map(v => (
+        <div key={v.codigo} className="lo-info-box">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <p style={{ fontSize: 14.5, fontWeight: 800, color: '#111827' }}>{v.nombre}</p>
+            <span style={{ fontSize: 10, fontWeight: 800, color: '#a16207', background: '#fef3c7', padding: '2px 8px', borderRadius: 999 }}>{v.codigo}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 8 }}>
+            <MiniStat label="Leads" valor={v.leads} />
+            <MiniStat label="Rapiditos" valor={v.rapiditos} />
+            <MiniStat label="Cotiz." valor={v.cotizaciones} />
+            <MiniStat label="Enviadas" valor={v.enviadas} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px solid #f3f4f6' }}>
+            <span style={{ fontSize: 12, color: '#6b7280' }}>{v.proformas} proforma{v.proformas !== 1 ? 's' : ''}</span>
+            <span style={{ fontSize: 13, fontWeight: 900, color: v.conversionPct > 0 ? '#15803d' : '#9ca3af' }}>{v.conversionPct}% conversión</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function MiniStat({ label, valor }: { label: string; valor: number }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <p style={{ fontSize: 16, fontWeight: 900, color: '#111827' }}>{valor}</p>
+      <p style={{ fontSize: 9.5, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.3px' }}>{label}</p>
     </div>
   )
 }
