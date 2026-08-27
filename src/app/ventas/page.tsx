@@ -11,7 +11,21 @@ const MG_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/med
 const MX_LOGO = 'https://storage.googleapis.com/msgsndr/XZDJ4aSOAL1crWRCXyY6/media/69920e646bac2400279a352f.png'
 export const revalidate = 60
 
-export default async function VentasPage({ searchParams }: { searchParams: Promise<{ evento?: string }> }) {
+// Link de vendedores personalizado (tarjeta NFC / QR impreso): mismo catálogo
+// y cotizador de siempre, con una intro de presentación arriba. Se activa con
+// ?asesor=<clave> — agregar aquí a cualquier otro asesor que necesite su
+// propia tarjeta, sin duplicar la página.
+const ASESORES: Record<string, { nombre: string; cargo: string; telefono: string; correo: string; direccion: string }> = {
+  gabriel: {
+    nombre: 'Gabriel Briceño Armas',
+    cargo: 'C.E.O',
+    telefono: '+58 414 7027395',
+    correo: 'gabrielbriceno7@gmail.com',
+    direccion: 'Av. Rómulo Betancourt, sector Sabana Mar, Jetplus Edificio Sede Porlamar, Estado Nueva Esparta 6301, Venezuela',
+  },
+}
+
+export default async function VentasPage({ searchParams }: { searchParams: Promise<{ evento?: string; asesor?: string }> }) {
   const supabase = await createClient()
   // El branding (concesionarios) y las claves públicas de config tienen política
   // de lectura pública, así que se leen con el cliente anónimo. Esto asegura que
@@ -19,6 +33,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   // bien configurado (antes, si fallaba, el branding caía a Jetplus).
   const sp = await searchParams
   const evento = String(sp?.evento ?? '').slice(0, 80)
+  const asesor = ASESORES[String(sp?.asesor ?? '').toLowerCase()] ?? null
 
   const [{ data: catalogo }, { data: ac500 }, { data: promoVehiculos }, { data: promoData }, { data: tasasCfg }, { data: conc }] = await Promise.all([
     supabase.from('catalogo_ventas').select('*').eq('disponible', true).order('orden'),
@@ -116,6 +131,32 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           </div>
         </div>
       </div>
+
+      {/* ── PRESENTACIÓN PERSONAL (tarjeta NFC / QR de un asesor) ──────────── */}
+      {asesor && (
+        <div style={{ background: brand.colorSecundario, padding: '28px 20px' }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ width: 60, height: 60, borderRadius: '50%', background: brand.colorPrimario, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flexShrink: 0 }}>
+              {asesor.nombre.split(' ').slice(0, 2).map(p => p[0]).join('')}
+            </div>
+            <div style={{ flex: '1 1 260px' }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.55)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 2 }}>{asesor.cargo} · {brand.nombre}</p>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: 0 }}>{asesor.nombre}</h2>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <a href={`https://wa.me/${asesor.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 999, background: '#16a34a', color: '#fff', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>
+                📱 {asesor.telefono}
+              </a>
+              <a href={`mailto:${asesor.correo}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 999, background: 'rgba(255,255,255,.12)', color: '#fff', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>
+                ✉️ {asesor.correo}
+              </a>
+            </div>
+          </div>
+          <p style={{ maxWidth: 1100, margin: '10px auto 0', fontSize: 11.5, color: 'rgba(255,255,255,.45)' }}>{asesor.direccion}</p>
+        </div>
+      )}
 
       {/* ── HERO (dos columnas) ───────────────────────────────────────────── */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 24px' }}>
