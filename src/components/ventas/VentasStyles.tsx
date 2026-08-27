@@ -94,6 +94,13 @@ export default function VentasStyles() {
         .lo-btn-gold, .lo-btn-glass, .lo-btn-wa{ flex:1 1 100%; }
       }
 
+      /* ── Encabezado de asesor (tarjeta NFC/QR personalizada) ── */
+      @media (max-width:640px){
+        .lo-asesor-header{ flex-direction:column !important; text-align:center !important; justify-content:center !important; }
+        .lo-asesor-header > div{ justify-content:center !important; text-align:center !important; }
+        .lo-asesor-direccion{ text-align:center !important; }
+      }
+
       /* ── Tabs internos (aliados) ── */
       .lo-tab { padding:10px 18px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:rgba(255,255,255,.75); transition:all .2s; font-family:inherit; white-space:nowrap; }
       .lo-tab:hover { background:rgba(255,255,255,.12); }

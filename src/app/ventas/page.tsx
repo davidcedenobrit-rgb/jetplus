@@ -15,13 +15,14 @@ export const revalidate = 60
 // y cotizador de siempre, con una intro de presentación arriba. Se activa con
 // ?asesor=<clave> — agregar aquí a cualquier otro asesor que necesite su
 // propia tarjeta, sin duplicar la página.
-const ASESORES: Record<string, { nombre: string; cargo: string; telefono: string; correo: string; direccion: string }> = {
+const ASESORES: Record<string, { nombre: string; cargo: string; telefono: string; correo: string; direccion: string; foto?: string }> = {
   gabriel: {
     nombre: 'Gabriel Briceño Armas',
     cargo: 'C.E.O',
     telefono: '+58 414 7027395',
     correo: 'gabrielbriceno7@gmail.com',
     direccion: 'Av. Rómulo Betancourt, sector Sabana Mar, Jetplus Edificio Sede Porlamar, Estado Nueva Esparta 6301, Venezuela',
+    foto: '/gabriel.jpg',
   },
 }
 
@@ -135,16 +136,20 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
       {/* ── PRESENTACIÓN PERSONAL (tarjeta NFC / QR de un asesor) ──────────── */}
       {asesor && (
         <div style={{ background: brand.colorSecundario, padding: '28px 20px' }}>
-          <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
-            <div style={{ width: 60, height: 60, borderRadius: '50%', background: brand.colorPrimario, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flexShrink: 0 }}>
-              {asesor.nombre.split(' ').slice(0, 2).map(p => p[0]).join('')}
-            </div>
+          <div className="lo-asesor-header" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+            {asesor.foto ? (
+              <img src={asesor.foto} alt={asesor.nombre} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${brand.colorPrimario}` }} />
+            ) : (
+              <div style={{ width: 60, height: 60, borderRadius: '50%', background: brand.colorPrimario, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flexShrink: 0 }}>
+                {asesor.nombre.split(' ').slice(0, 2).map(p => p[0]).join('')}
+              </div>
+            )}
             <div style={{ flex: '1 1 260px' }}>
               <p style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.55)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 2 }}>{asesor.cargo} · {brand.nombre}</p>
               <h2 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: 0 }}>{asesor.nombre}</h2>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <a href={`https://wa.me/${asesor.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+              <a href={`https://wa.me/${asesor.telefono.replace(/\D/g, '')}?text=${encodeURIComponent('He dado click en tu website, guardaré tu número, mi nombre es...')}`} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 999, background: '#16a34a', color: '#fff', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>
                 📱 {asesor.telefono}
               </a>
@@ -154,7 +159,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
               </a>
             </div>
           </div>
-          <p style={{ maxWidth: 1100, margin: '10px auto 0', fontSize: 11.5, color: 'rgba(255,255,255,.45)' }}>{asesor.direccion}</p>
+          <p className="lo-asesor-direccion" style={{ maxWidth: 1100, margin: '10px auto 0', fontSize: 11.5, color: 'rgba(255,255,255,.45)' }}>{asesor.direccion}</p>
         </div>
       )}
 
