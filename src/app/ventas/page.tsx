@@ -19,7 +19,7 @@ const ASESORES: Record<string, { nombre: string; cargo: string; telefono: string
   gabriel: {
     nombre: 'Gabriel Briceño Armas',
     cargo: 'C.E.O',
-    telefono: '+58 414 7027395',
+    telefono: '+58 414 7927395',
     correo: 'gabrielbriceno7@gmail.com',
     direccion: 'Av. Rómulo Betancourt, sector Sabana Mar, Jetplus Edificio Sede Porlamar, Estado Nueva Esparta 6301, Venezuela',
     foto: '/gabriel.jpg',

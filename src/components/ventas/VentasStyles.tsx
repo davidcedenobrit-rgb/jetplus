@@ -96,8 +96,8 @@ export default function VentasStyles() {
 
       /* ── Encabezado de asesor (tarjeta NFC/QR personalizada) ── */
       @media (max-width:640px){
-        .lo-asesor-header{ flex-direction:column !important; text-align:center !important; justify-content:center !important; }
-        .lo-asesor-header > div{ justify-content:center !important; text-align:center !important; }
+        .lo-asesor-header{ flex-direction:column !important; text-align:center !important; justify-content:center !important; gap:10px !important; }
+        .lo-asesor-header > div{ justify-content:center !important; text-align:center !important; flex:0 0 auto !important; width:100% !important; }
         .lo-asesor-direccion{ text-align:center !important; }
       }
 
