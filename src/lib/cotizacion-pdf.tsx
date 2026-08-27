@@ -199,6 +199,10 @@ export interface CotizacionPDFData {
     cargoGastosAdmin: boolean
     cargoPlaca: boolean
   }
+  // Páginas de la ficha técnica del vehículo, ya preparadas (base64, resueltas
+  // con prepararImagenPdf antes de renderizar) — se anexan después de la
+  // última hoja del presupuesto, con el mismo encabezado y numeración corrida.
+  fichaTecnica?: string[]
 }
 
 export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
@@ -704,6 +708,39 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
         </View>
       </Page>
+
+      {/* ── Ficha técnica (una página por hoja del fabricante) ──
+          Mismo encabezado y numeración corrida — es la razón de traerla como
+          páginas del MISMO Document en vez de un PDF aparte. */}
+      {(data.fichaTecnica ?? []).map((img, i) => (
+        <Page key={`ficha-${i}`} size="A4" style={s.page}>
+          <View style={s.header}>
+            <View style={s.logoWrap}>
+              {data.logoSrc
+                ? <Image src={data.logoSrc} style={s.logo} />
+                : <Text style={{ fontSize: 18, fontFamily: 'Helvetica-Bold', color: DARK }}>{empNombre}</Text>}
+            </View>
+            <View style={s.companyBlock}>
+              <Text style={s.companyName}>{empNombre}</Text>
+              {empRif ? <Text style={s.companyRif}>RIF: {empRif}</Text> : null}
+              {empDireccionLineas.map((linea, li) => (
+                <Text key={li} style={s.companyLine}>{linea}</Text>
+              ))}
+              {empContacto ? <Text style={s.companyLine}>{empContacto}</Text> : null}
+            </View>
+          </View>
+          <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: DARK, textTransform: 'uppercase', paddingHorizontal: 28, paddingBottom: 8 }}>
+            Ficha técnica · {data.modelo}
+          </Text>
+          <View style={{ paddingHorizontal: 14, paddingBottom: 14 }}>
+            <Image src={img} style={{ width: '100%' }} />
+          </View>
+          <View style={s.footer} fixed>
+            <Text style={s.footerText}>{empNombre} · MG &amp; MAXUS</Text>
+            <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
+          </View>
+        </Page>
+      ))}
 
     </Document>
   )

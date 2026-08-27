@@ -63,9 +63,11 @@ export async function middleware(request: NextRequest) {
   // La URL lleva un UUID no adivinable, mismo modelo que el token del correo.
   const esPdfCotizacionPublico = /^\/api\/cotizaciones\/[^/]+\/pdf$/.test(pathname)
 
-  // PDF de la ficha técnica de un vehículo del catálogo: público, se muestra
-  // y comparte desde el link de ventas (/ventas) sin sesión.
-  const esPdfFichaTecnicaPublico = /^\/api\/catalogo\/[^/]+\/ficha-tecnica\/pdf$/.test(pathname)
+  // PDF de la ficha técnica de un vehículo del catálogo: público, se compone
+  // al pedirlo y se muestra/comparte desde el link de ventas (/ventas) sin
+  // sesión. Solo el GET — cargar/borrar páginas (ficha-tecnica/subir) exige
+  // sesión y por eso NO se libera aquí.
+  const esPdfFichaTecnicaPublico = /^\/api\/catalogo\/[^/]+\/ficha$/.test(pathname) && request.method === 'GET'
 
   // Crear cotización desde el link público /ventas (POST exacto a /api/cotizaciones).
   // El propio handler valida el código de vendedor(a); el GET (listado) sigue

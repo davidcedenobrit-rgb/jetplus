@@ -4,6 +4,7 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Check, X, RefreshCw, Pencil, ChevronUp, Zap, Send } from 'lucide-react'
+import FichaTecnicaEditor from './FichaTecnicaEditor'
 
 type ShowroomItem = { marca: string; modelo: string; unidades: number }
 
@@ -96,6 +97,7 @@ interface Vehiculo {
   tasa_vhm_pct: number | null
   cuotas_vhm: number | null
   inicial_pct: number | null
+  ficha_tecnica_paginas: { url: string; orden: number }[] | null
 }
 
 const CMAP: Record<string, string> = {
@@ -183,6 +185,7 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   diferencial_pct: 30, tasa_banco_pct: 16, cuotas_banco: 24,
   tasa_vhm_pct: null, cuotas_vhm: 24,
   inicial_pct: 40,
+  ficha_tecnica_paginas: [],
 }
 
 export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas }: { initialVehiculos: Vehiculo[]; showroomStock: ShowroomItem[]; tasas: { bcv: number; usdt: number } }) {
@@ -406,6 +409,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       cuotas_banco: v.cuotas_banco ?? 24,
       tasa_vhm_pct: v.tasa_vhm_pct, cuotas_vhm: v.cuotas_vhm ?? 24,
       inicial_pct: v.inicial_pct ?? 40,
+      ficha_tecnica_paginas: v.ficha_tecnica_paginas ?? [],
       updated_at: new Date().toISOString(),
     }).eq('id', id)
     setSaving(prev => ({ ...prev, [id]: false }))
@@ -1117,6 +1121,15 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  {/* Ficha técnica */}
+                  <div>
+                    <FichaTecnicaEditor
+                      vehiculoId={v.id}
+                      paginas={v.ficha_tecnica_paginas ?? []}
+                      onChange={paginas => update(v.id, 'ficha_tecnica_paginas', paginas)}
+                    />
                   </div>
 
                   {/* Guardar */}

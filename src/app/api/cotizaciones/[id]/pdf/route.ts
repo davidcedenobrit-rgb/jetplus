@@ -6,6 +6,7 @@ import { CotizacionPDF } from '@/lib/cotizacion-pdf'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 import { resolverCotizacionDB } from '@/lib/cotizacion-federada'
+import { prepararImagenPdf } from '@/lib/pdf-image'
 
 function fmtDate(s: string) {
   try { return new Date(s + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
@@ -34,6 +35,26 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       monto,
     }))
     ac500Schedule = { reserva: Number(cot.total_inicial), meses, modelo: cot.modelo, cuotas, total: Number(cot.costo_total) }
+  }
+
+  // Ficha técnica del vehículo (si tiene páginas cargadas): se anexa después
+  // de la última hoja del presupuesto, con el mismo membrete y numeración
+  // corrida. Best-effort: una sede federada sin esa columna no rompe el PDF.
+  let fichaTecnicaImgs: string[] = []
+  if (cot.vehiculo_id) {
+    try {
+      const { data: veh } = await supabase
+        .from('catalogo_ventas')
+        .select('ficha_tecnica_paginas')
+        .eq('id', cot.vehiculo_id)
+        .maybeSingle()
+      const paginas = (veh?.ficha_tecnica_paginas ?? []) as { url: string; orden: number }[]
+      if (paginas.length) {
+        fichaTecnicaImgs = (await Promise.all(
+          [...paginas].sort((a, b) => a.orden - b.orden).map(p => prepararImagenPdf(p.url, { maxWidth: 1600, quality: 86 }))
+        )).filter((img): img is string => !!img)
+      }
+    } catch { /* sede federada sin ficha_tecnica_paginas: se omite */ }
   }
 
   const pdfData: CotizacionPDFData = {
@@ -76,6 +97,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     condicionesPersonalizadas: cot.condiciones_personalizadas ?? null,
     bnVehimotors: cot.bn_vehimotors ?? null,
     ac500Schedule,
+    fichaTecnica: fichaTecnicaImgs,
   }
 
   const buffer = await renderToBuffer(

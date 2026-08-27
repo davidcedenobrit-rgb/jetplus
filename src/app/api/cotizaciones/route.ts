@@ -8,6 +8,7 @@ import { sedesExternas } from '@/lib/cotizacion-federada'
 import { enviarCotizacionCliente, enviarNotificacionRojas } from '@/lib/email-cotizaciones'
 import { CotizacionPDF } from '@/lib/cotizacion-pdf'
 import type { CotizacionPDFData, AC500ScheduleData, AC500CuotaItem } from '@/lib/cotizacion-pdf'
+import { prepararImagenPdf } from '@/lib/pdf-image'
 import { getConcesionarioIdentity } from '@/lib/concesionario'
 import { permitido } from '@/lib/rate-limit'
 import { calcularTotalesCotizacion, calcularPresupuestoJetplus } from '@/lib/cotizacion-calc'
@@ -264,7 +265,7 @@ export async function POST(req: Request) {
     } else {
       const { data: v } = await supabase
         .from('catalogo_ventas')
-        .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, transporte_banco, accesorios_banco, igtf_banco, diferencial_pct, tasa_banco_pct, cuotas_banco, diferencial_c_activo, diferencial_cr_activo, diferencial_banco_activo')
+        .select('brand, model, cash, gc, gcr, tasa_credito, placa_monto, poliza_vehiculo_banco, poliza_vida_banco, honorarios_banco, gastos_internos_banco, alfombras_banco, transporte_banco, accesorios_banco, igtf_banco, diferencial_pct, tasa_banco_pct, cuotas_banco, diferencial_c_activo, diferencial_cr_activo, diferencial_banco_activo, ficha_tecnica_paginas')
         .eq('id', vehiculoId)
         .single()
       if (!v) {
@@ -272,6 +273,17 @@ export async function POST(req: Request) {
       }
       vehiculo = v
     }
+
+    // Ficha técnica del vehículo (si tiene páginas cargadas): se prepara UNA
+    // vez aquí (recortada/aplanada/comprimida) y se reutiliza tanto en la
+    // vista previa como en el PDF final — va después de la última hoja del
+    // presupuesto, con el mismo membrete y numeración corrida.
+    const fichaPaginasRaw = (vehiculo as { ficha_tecnica_paginas?: { url: string; orden: number }[] }).ficha_tecnica_paginas ?? []
+    const fichaTecnicaImgs = fichaPaginasRaw.length
+      ? (await Promise.all(
+          [...fichaPaginasRaw].sort((a, b) => a.orden - b.orden).map(p => prepararImagenPdf(p.url, { maxWidth: 1600, quality: 86 }))
+        )).filter((img): img is string => !!img)
+      : []
 
     // Precio base: normalmente del catálogo; Rojas Personalizada puede sobreescribirlo.
     const precioBase = (precioOverride != null && precioOverride > 0) ? precioOverride : (Number(vehiculo.cash) || 0)
@@ -538,6 +550,7 @@ export async function POST(req: Request) {
           financiadoraNombre: presupuestoFinanciadoraNombre,
           cargoGastosAdmin: presupuestoCargoGastosAdmin, cargoPlaca: presupuestoCargoPlaca,
         } : undefined,
+        fichaTecnica: fichaTecnicaImgs,
       }
       const previewBuf = await renderToBuffer(
         React.createElement(CotizacionPDF, { data: previewData }) as React.ReactElement<any>
@@ -734,6 +747,7 @@ export async function POST(req: Request) {
         financiadoraNombre: presupuestoFinanciadoraNombre,
         cargoGastosAdmin: presupuestoCargoGastosAdmin, cargoPlaca: presupuestoCargoPlaca,
       } : undefined,
+      fichaTecnica: fichaTecnicaImgs,
     }
 
     // Enviar emails (ambos en paralelo, errores no bloqueantes).

@@ -20,7 +20,7 @@ export interface Vehiculo {
   colores: string | null
   transmision: string | null
   ano: number | null
-  ficha_tecnica_url?: string | null
+  ficha_tecnica_paginas?: { url: string; orden: number }[] | null
   placa_monto?: number | null
   poliza_vehiculo_banco?: number | null
   poliza_vida_banco?: number | null
@@ -72,8 +72,8 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
       {fichaVehiculo && (
         <FichaTecnicaModal
           titulo={`${fichaVehiculo.brand} ${fichaVehiculo.model}`}
-          imagenUrl={fichaVehiculo.ficha_tecnica_url!}
-          pdfUrl={`/api/catalogo/${fichaVehiculo.id}/ficha-tecnica/pdf`}
+          imagenUrl={[...(fichaVehiculo.ficha_tecnica_paginas ?? [])].sort((a, b) => a.orden - b.orden)[0]?.url ?? ''}
+          pdfUrl={`/api/catalogo/${fichaVehiculo.id}/ficha`}
           onClose={() => setFichaVehiculo(null)}
         />
       )}
@@ -195,7 +195,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
                     )}
                   </div>
                 )}
-                {modo === 'vendedor' && v.ficha_tecnica_url && (
+                {(modo === 'vendedor' || modo === 'aliado') && (v.ficha_tecnica_paginas?.length ?? 0) > 0 && (
                   <button onClick={() => { trackEvento('ficha_tecnica_click', v.brand, v.model); setFichaVehiculo(v) }} className="lo-cbtn-out" style={{ marginTop: 10, width: '100%' }}>
                     📋 Ficha técnica
                   </button>
