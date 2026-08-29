@@ -5,6 +5,7 @@ import { waCotizacionUrl } from '@/lib/whatsapp-cotizacion'
 import { AC500Vehiculo, Mode, activeModes, schedule, planTotal } from './AC500Filtro'
 
 type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
+type LeadMio = { id: string; nombre: string; telefono: string; correo: string | null; marca: string | null; modelo: string | null; created_at: string }
 type Step = 'pin' | 'form' | 'sending' | 'success'
 
 function fmt(n: number | null | undefined) {
@@ -50,6 +51,15 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
   const [cliBuscando, setCliBuscando] = useState(false)
   const [cliOpen, setCliOpen] = useState(false)
 
+  // Clientes que la propia vendedora registró como lead (se cargan al validar
+  // el código), para seleccionarlos sin volver a teclear sus datos.
+  const [misLeads, setMisLeads] = useState<LeadMio[]>([])
+
+  function seleccionarLead(l: LeadMio) {
+    setForm(p => ({ ...p, clienteNombre: l.nombre || '', clienteCorreo: l.correo || '', clienteTelefono: l.telefono || '' }))
+    setErrorMsg('')
+  }
+
   useEffect(() => {
     const q = cliQuery.trim()
     if (q.length < 2) { setCliResultados([]); setCliBuscando(false); return }
@@ -86,7 +96,14 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
         body: JSON.stringify({ codigo: pin }),
       })
       const json = await r.json()
-      if (json.valida) { setVendedoraNombre(json.nombre); setStep('form') }
+      if (json.valida) {
+        setVendedoraNombre(json.nombre)
+        setStep('form')
+        fetch(`/api/leads/mios?codigo=${encodeURIComponent(pin)}`)
+          .then(r => r.json())
+          .then(d => { if (Array.isArray(d)) setMisLeads(d) })
+          .catch(() => {})
+      }
       else setPinError('Código incorrecto. Intenta de nuevo.')
     } catch {
       setPinError('Error de conexión. Intenta de nuevo.')
@@ -300,6 +317,22 @@ export default function CotizacionAC500Modal({ plan, defaultMode, defaultColor =
 
               {/* Datos del cliente */}
               <p style={{ fontSize: 12, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>Datos del cliente</p>
+
+              {misLeads.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <label style={label}>📋 Clientes que registraste</label>
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, maxHeight: 190, overflowY: 'auto' }}>
+                    {misLeads.map(l => (
+                      <button key={l.id} type="button" onClick={() => seleccionarLead(l)}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: '#fff', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#111' }}>{l.nombre || '—'}</span>
+                        <span style={{ display: 'block', fontSize: 11, color: '#6b7280' }}>{[l.telefono, l.modelo].filter(Boolean).join(' · ')}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 4, marginBottom: 0 }}>Selecciona uno y se llenan sus datos abajo.</p>
+                </div>
+              )}
 
               <div style={{ position: 'relative', marginBottom: 14 }}>
                 <label style={label}>🔍 Buscar cliente existente</label>

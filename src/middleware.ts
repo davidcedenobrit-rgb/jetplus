@@ -44,6 +44,9 @@ export async function middleware(request: NextRequest) {
     // Búsqueda de clientes desde el link de vendedores (validada por código de
     // vendedor(a) dentro del handler; no expone la base sin código válido).
     '/api/cotizaciones/clientes-buscar',
+    // Clientes que la propia vendedora registró como lead, para seleccionarlos
+    // al cotizar (gated por código de vendedora dentro del handler).
+    '/api/leads/mios',
     // Lista de financiadoras (PIVCA/Vehimotors) para armar el presupuesto
     // desde el link público. El GET es publico por diseño (sin datos
     // sensibles); el PATCH (editar tasa) valida sesion+rol dentro del propio
