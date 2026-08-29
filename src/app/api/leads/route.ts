@@ -27,6 +27,8 @@ export async function POST(req: Request) {
     nombre,
     telefono,
     correo: clip(b.correo, 120) || null,
+    ci_rif: clip(b.ciRif, 30) || null,
+    direccion: clip(b.direccion, 200) || null,
     marca: clip(b.marca, 60) || null,
     modelo: clip(b.modelo, 120) || null,
     presupuesto: clip(b.presupuesto, 60) || null,

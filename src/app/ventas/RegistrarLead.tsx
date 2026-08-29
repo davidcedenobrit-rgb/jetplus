@@ -9,6 +9,8 @@ export default function RegistrarLead({ evento = '', concesionario = '' }: { eve
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [correo, setCorreo] = useState('')
+  const [ciRif, setCiRif] = useState('')
+  const [direccion, setDireccion] = useState('')
   const [interes, setInteres] = useState('')
   const [presupuesto, setPresupuesto] = useState('')
   const [captacionSel, setCaptacionSel] = useState('')
@@ -33,14 +35,14 @@ export default function RegistrarLead({ evento = '', concesionario = '' }: { eve
       const r = await fetch('/api/leads', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nombre, telefono, correo, presupuesto, modelo: interes,
+          nombre, telefono, correo, ciRif, direccion, presupuesto, modelo: interes,
           vendedor, evento, concesionario, origen: 'vendedor_lead',
           origenCaptacion: captacionFinal,
         }),
       })
       if (!r.ok) { setError((await r.json().catch(() => ({}))).error ?? 'No se pudo registrar'); setEnviando(false); return }
       setOk(true); setEnviando(false)
-      setNombre(''); setTelefono(''); setCorreo(''); setInteres(''); setPresupuesto(''); setCaptacionSel(''); setCaptacionOtro('')
+      setNombre(''); setTelefono(''); setCorreo(''); setCiRif(''); setDireccion(''); setInteres(''); setPresupuesto(''); setCaptacionSel(''); setCaptacionOtro('')
       setTimeout(() => setOk(false), 4000)
     } catch { setError('Error de conexión'); setEnviando(false) }
   }
@@ -57,6 +59,8 @@ export default function RegistrarLead({ evento = '', concesionario = '' }: { eve
         <input style={inp} placeholder="Nombre y apellido *" value={nombre} onChange={e => setNombre(e.target.value)} />
         <input style={inp} placeholder="Teléfono / WhatsApp *" inputMode="tel" value={telefono} onChange={e => setTelefono(e.target.value)} />
         <input style={inp} placeholder="Correo (opcional)" value={correo} onChange={e => setCorreo(e.target.value)} />
+        <input style={inp} placeholder="C.I./RIF (opcional)" value={ciRif} onChange={e => setCiRif(e.target.value)} />
+        <input style={inp} placeholder="Dirección (opcional)" value={direccion} onChange={e => setDireccion(e.target.value)} />
         <input style={inp} placeholder="Vehículo de interés" value={interes} onChange={e => setInteres(e.target.value)} />
         <input style={inp} placeholder="Presupuesto aprox. (opcional)" value={presupuesto} onChange={e => setPresupuesto(e.target.value)} />
         {vendedores.length > 0 ? (

@@ -6,7 +6,7 @@ import { calcularPresupuestoJetplus } from '@/lib/cotizacion-calc'
 import { imprimirPdfDesdeUrl } from '@/lib/pdf-print'
 
 type ClienteBuscado = { nombre: string; ci_rif: string; correo: string; telefono: string; direccion: string; ciudad_estado: string; codigo_postal: string; fuente: string }
-type LeadMio = { id: string; nombre: string; telefono: string; correo: string | null; marca: string | null; modelo: string | null; created_at: string }
+type LeadMio = { id: string; nombre: string; telefono: string; correo: string | null; ci_rif: string | null; direccion: string | null; marca: string | null; modelo: string | null; created_at: string }
 
 const CONCES_CORTO: Record<string, string> = {
   'la-oriental': 'Jetplus', 'autosurca': 'Autosurca', 'capital-motors': 'Capital Motors', 'kiauto': 'Ki Auto',
@@ -95,7 +95,11 @@ export default function CotizacionModal({ vehiculo, tasas, onClose, esPromo = fa
   const [misLeads, setMisLeads] = useState<LeadMio[]>([])
 
   function seleccionarLead(l: LeadMio) {
-    setForm(p => ({ ...p, clienteNombre: l.nombre || '', clienteCorreo: l.correo || '', clienteTelefono: l.telefono || '' }))
+    setForm(p => ({
+      ...p,
+      clienteNombre: l.nombre || '', clienteCorreo: l.correo || '', clienteTelefono: l.telefono || '',
+      clienteCiRif: l.ci_rif || '', clienteDireccion: l.direccion || '',
+    }))
     setErrorMsg('')
   }
 

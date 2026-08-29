@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from('leads_captacion')
-    .select('id, nombre, telefono, correo, marca, modelo, created_at')
+    .select('id, nombre, telefono, correo, ci_rif, direccion, marca, modelo, created_at')
     .eq('origen', 'vendedor_lead')
     .order('created_at', { ascending: false })
     .limit(30)
