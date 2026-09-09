@@ -286,8 +286,8 @@ export default function NuevoCreditoPage() {
   // Cálculo plan 40/60
   const calc4060 = useMemo(() => {
     if (precioCalc.total <= 0) return null
-    const inicial = precioCalc.total * 0.40
-    const saldo = precioCalc.total * 0.60
+    const inicial = precioCalc.total * 0.50
+    const saldo = precioCalc.total * 0.50
     const cuota = saldo / 24
     return { inicial, saldo, numCuotas: 24, cuota }
   }, [precioCalc.total])
@@ -753,7 +753,7 @@ export default function NuevoCreditoPage() {
               {calc4060 && (
                 <div className="bg-oriental-black rounded-xl p-5 grid grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Inicial (40%)</p>
+                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Inicial (50%)</p>
                     <p className="text-white font-extrabold text-xl">{formatUSD(calc4060.inicial)}</p>
                   </div>
                   <div className="text-center border-x border-gray-700">
@@ -762,7 +762,7 @@ export default function NuevoCreditoPage() {
                     <p className="text-gray-500 text-xs mt-0.5">24 cuotas</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Saldo (60%)</p>
+                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Saldo (50%)</p>
                     <p className="text-white font-extrabold text-xl">{formatUSD(calc4060.saldo)}</p>
                   </div>
                 </div>

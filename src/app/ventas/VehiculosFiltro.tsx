@@ -103,7 +103,7 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
       {/* Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
         {lista.map(v => {
-          const init = v.cash ? v.cash * 0.4 : 0
+          const init = v.cash ? v.cash * 0.5 : 0
           const imagen = imagenVehiculo(v.model, v.img_url, v.transmision)
           return (
             <div key={v.id} id={`car-${v.id}`} className="lo-card">
@@ -150,10 +150,10 @@ export default function VehiculosFiltro({ vehiculos, tasas, evento = '', waCorp 
                 ) : (
                   (init > 0 || (v.tasa_credito && v.tasa_credito > 0)) && (
                     <div className="lo-credit-box" style={{ marginTop: 14 }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, color: '#a16207', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 8 }}>Plan 40% inicial + cuotas</p>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#a16207', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 8 }}>Plan 50% inicial + cuotas</p>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                         <div>
-                          <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Inicial (40%)</p>
+                          <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>Inicial (50%)</p>
                           <p style={{ fontSize: 17, fontWeight: 800, color: '#111' }}>${fm(init)}</p>
                         </div>
                         {v.tasa_credito != null && v.tasa_credito > 0 && (

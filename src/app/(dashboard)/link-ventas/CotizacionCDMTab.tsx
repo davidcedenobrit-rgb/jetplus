@@ -108,8 +108,8 @@ function calcResumen(v: Vehiculo, modalidad: Modalidad, plan: Plan, tasas: { bcv
     return { label: 'TOTAL INICIAL A PAGAR', total: inicial + gastos, cuota, financiamiento: fin }
   }
   const gastos = v.gcr ?? 0
-  const inicial = precio * 0.4 + iva + gastos
-  return { label: 'INICIAL A PAGAR', total: inicial, cuota: v.tasa_credito ?? 0, financiamiento: precio * 0.6 }
+  const inicial = precio * 0.5 + iva + gastos
+  return { label: 'INICIAL A PAGAR', total: inicial, cuota: v.tasa_credito ?? 0, financiamiento: precio * 0.5 }
 }
 
 function buildCuotasPreview(p: PlanAC500): { label: string; monto: number }[] {
@@ -1257,12 +1257,12 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
           labelInicial = 'TOTAL INICIAL A PAGAR'
         } else {
           const gastos = prev.gcr ?? 0
-          const inicial40 = precioBase * 0.4
+          const inicial40 = precioBase * 0.5
           totalInicial = inicial40 + iva + gastos
-          financiamiento = precioBase * 0.6
+          financiamiento = precioBase * 0.5
           cuotaMensual = prev.tasa_credito ?? 0
           costoTotal = totalInicial + (cuotaMensual ?? 0) * 24
-          rows = [['40% Precio Base', inicial40], ['I.V.A. 16%', iva], ['Gastos (traslado, póliza, notaría)', gastos]]
+          rows = [['50% Precio Base', inicial40], ['I.V.A. 16%', iva], ['Gastos (traslado, póliza, notaría)', gastos]]
           labelInicial = 'INICIAL A PAGAR'
         }
 
@@ -1342,7 +1342,7 @@ export default function CotizacionCDMTab({ catalogo, showroomStock = [], tasas, 
                     {financiamiento != null && cuotaMensual != null && (
                       <>
                         <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
-                          <span className="text-xs text-gray-500">{rojasMode ? 'Financiamiento' : plan === 'banco_100' ? 'Financiamiento 70%' : 'Financiamiento 60%'}</span>
+                          <span className="text-xs text-gray-500">{rojasMode ? 'Financiamiento' : plan === 'banco_100' ? 'Financiamiento 70%' : 'Financiamiento 50%'}</span>
                           <span className="text-xs font-semibold text-oriental-black">${fmt(financiamiento)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">

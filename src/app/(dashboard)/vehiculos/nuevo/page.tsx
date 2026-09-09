@@ -234,7 +234,7 @@ export default function NuevoVehiculoPage() {
   const [calcIvaPct, setCalcIvaPct] = useState('16')
   const [calcGastosContado, setCalcGastosContado] = useState('')
   const [calcGastosCredito, setCalcGastosCredito] = useState('')
-  const [calcPctInicial, setCalcPctInicial] = useState('40')
+  const [calcPctInicial, setCalcPctInicial] = useState('50')
   const [calcTasaAnual, setCalcTasaAnual] = useState('24')
   const [calcNumCuotasVh, setCalcNumCuotasVh] = useState('24')
 
@@ -456,8 +456,8 @@ export default function NuevoVehiculoPage() {
 
   const calc4060 = useMemo(() => {
     if (precioCalc.total <= 0) return null
-    const inicial = precioCalc.total * 0.40
-    const saldo = precioCalc.total * 0.60
+    const inicial = precioCalc.total * 0.50
+    const saldo = precioCalc.total * 0.50
     return { inicial, saldo, numCuotas: 24, cuota: saldo / 24 }
   }, [precioCalc.total])
 
@@ -632,7 +632,7 @@ export default function NuevoVehiculoPage() {
     if (base <= 0) return null
     const ivaPct = parseFloat(calcIvaPct) || 16
     const iva = base * ivaPct / 100
-    const pctInicial = (parseFloat(calcPctInicial) || 40) / 100
+    const pctInicial = (parseFloat(calcPctInicial) || 50) / 100
     const gastosContado = parseFloat(calcGastosContado) || 0
     const gastosCredito = parseFloat(calcGastosCredito) || 0
 
@@ -640,9 +640,9 @@ export default function NuevoVehiculoPage() {
     const contadoTotal = base + iva + gastosContado
 
     // Modalidad crédito
-    const inicialBase = base * pctInicial            // ej: 40% precio base
+    const inicialBase = base * pctInicial            // ej: 50% precio base
     const totalInicialLaOriental = inicialBase + iva + gastosCredito  // total inicial a pagar
-    const financiamientoVh = base * (1 - pctInicial) // 60% precio base → Vehimotors
+    const financiamientoVh = base * (1 - pctInicial) // 50% precio base → Vehimotors
     const n = parseInt(calcNumCuotasVh) || 24
     const tasaAnual = parseFloat(calcTasaAnual) || 0
     let cuotaVh: number
@@ -1776,7 +1776,7 @@ export default function NuevoVehiculoPage() {
                         onChange={e => setVh4060Inicial(e.target.value)}
                       />
                       {calc4060 && !vh4060Inicial && (
-                        <p className="text-gray-500 text-[10px] mt-1">Auto: 40% = {formatUSD(calc4060.inicial)}</p>
+                        <p className="text-gray-500 text-[10px] mt-1">Auto: 50% = {formatUSD(calc4060.inicial)}</p>
                       )}
                     </div>
                     <div>
@@ -1812,7 +1812,7 @@ export default function NuevoVehiculoPage() {
                         </p>
                       </div>
                       {calc4060 && (
-                        <p className="text-gray-500 text-[10px] mt-1">Auto: 60% = {formatUSD(calc4060.saldo)}</p>
+                        <p className="text-gray-500 text-[10px] mt-1">Auto: 50% = {formatUSD(calc4060.saldo)}</p>
                       )}
                     </div>
                   </div>
@@ -1909,7 +1909,7 @@ export default function NuevoVehiculoPage() {
                       <div>
                         <label className="label">% Inicial (Jetplus)</label>
                         <input type="number" step="1" min="1" max="99" className="input"
-                          placeholder="40" value={calcPctInicial} onChange={e => setCalcPctInicial(e.target.value)} />
+                          placeholder="50" value={calcPctInicial} onChange={e => setCalcPctInicial(e.target.value)} />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

@@ -222,7 +222,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
   const porUnidadSuffix = cantidad > 1 ? ' (POR UNIDAD)' : ''
   const mesesBanco = Math.max(1, Math.round(data.mesesBanco ?? 24))
   // Plan Personalizado: inicial, meses y % financiado dinámicos
-  const persIniFrac = data.inicialPct != null ? data.inicialPct : 0.4
+  const persIniFrac = data.inicialPct != null ? data.inicialPct : 0.5
   const persIniPctLabel = Math.round(persIniFrac * 100)
   const persFinPctLabel = Math.round((1 - persIniFrac) * 100)
   const persMeses = Math.max(1, Math.round(data.mesesCredito ?? 24))
@@ -254,7 +254,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
             ? `CRÉDITO BANCARIO ${mesesBanco} MESES (30% INICIAL)`
             : esPersonalizado
               ? `CRÉDITO ${persMeses} MESES (${persIniPctLabel}% INICIAL)`
-              : 'CRÉDITO 24 MESES (40% INICIAL)')
+              : 'CRÉDITO 24 MESES (50% INICIAL)')
         : esBancaNacional ? 'BANCA NACIONAL' : 'CONTADO'
 
   return (
@@ -496,8 +496,8 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                 ) : es24 ? (
                   <>
                     <View style={s.calcRow}>
-                      <Text style={s.calcLabel}>{esPersonalizado ? `${persIniPctLabel}% Precio Base` : '40% Precio Base'}</Text>
-                      <Text style={s.calcVal}>{fmt(data.precioBase * (esPersonalizado ? persIniFrac : 0.4))}</Text>
+                      <Text style={s.calcLabel}>{esPersonalizado ? `${persIniPctLabel}% Precio Base` : '50% Precio Base'}</Text>
+                      <Text style={s.calcVal}>{fmt(data.precioBase * (esPersonalizado ? persIniFrac : 0.5))}</Text>
                     </View>
                     <View style={s.calcRow}>
                       <Text style={s.calcLabel}>I.V.A. (exonerado)</Text>
@@ -588,7 +588,7 @@ export function CotizacionPDF({ data }: { data: CotizacionPDFData }) {
                   <Text style={s.finHeaderText}>PLAN DE FINANCIAMIENTO</Text>
                 </View>
                 <View style={s.finRow}>
-                  <Text style={s.finLabel}>{esBanco ? 'Financiamiento 70%' : esPersonalizado ? `Financiamiento ${persFinPctLabel}%` : 'Financiamiento 60%'}</Text>
+                  <Text style={s.finLabel}>{esBanco ? 'Financiamiento 70%' : esPersonalizado ? `Financiamiento ${persFinPctLabel}%` : 'Financiamiento 50%'}</Text>
                   <Text style={s.finVal}>${fmt(data.financiamientoMonto)}</Text>
                 </View>
                 <View style={s.finRow}>

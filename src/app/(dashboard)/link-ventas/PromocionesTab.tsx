@@ -319,13 +319,13 @@ function VehiculoEditor({
           </div>
           {precio > 0 && (
             <div className="bg-gray-800 mx-3 mb-3 rounded-xl p-3 space-y-1.5 text-xs">
-              <div className="flex justify-between text-gray-300"><span>40% Precio base</span><span className="font-mono">${fmt(precio * 0.4)}</span></div>
+              <div className="flex justify-between text-gray-300"><span>50% Precio base</span><span className="font-mono">${fmt(precio * 0.5)}</span></div>
               <div className="flex justify-between text-gray-300"><span>IVA 16%</span><span className="font-mono">${fmt(iva)}</span></div>
               <div className="flex justify-between text-gray-400"><span>Gastos</span><span className="font-mono">${fmt(gcCr)}</span></div>
               <div className="flex justify-between text-emerald-400 font-bold border-t border-gray-600 pt-1.5">
-                <span>TOTAL INICIAL</span><span className="font-mono">${fmt(precio * 0.4 + iva + gcCr)}</span>
+                <span>TOTAL INICIAL</span><span className="font-mono">${fmt(precio * 0.5 + iva + gcCr)}</span>
               </div>
-              <div className="flex justify-between text-gray-400"><span>Financiamiento 60%</span><span className="font-mono">${fmt(precio * 0.6)}</span></div>
+              <div className="flex justify-between text-gray-400"><span>Financiamiento 50%</span><span className="font-mono">${fmt(precio * 0.5)}</span></div>
               {f.cuota_mensual > 0 && (
                 <div className="flex justify-between text-red-400 font-bold border-t border-gray-600 pt-1.5">
                   <span>Cuota × {nCuotas}</span><span className="font-mono">${fmt(f.cuota_mensual)}/mes</span>

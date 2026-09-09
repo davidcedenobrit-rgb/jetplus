@@ -44,7 +44,7 @@ export function CotizacionRapidaPDF({ data }: { data: CotizacionRapidaData }) {
     gastosAdminMonto: data.gastosContado, placaMonto: data.placaMonto,
   })
   const credito = calcularPresupuestoJetplus({
-    precioLista: precio, inicialPct: 40, cargoGastosAdmin: true, cargoPlaca: true,
+    precioLista: precio, inicialPct: 50, cargoGastosAdmin: true, cargoPlaca: true,
     gastosAdminMonto: data.gastosCredito, placaMonto: data.placaMonto,
   })
 
@@ -115,8 +115,8 @@ export function CotizacionRapidaPDF({ data }: { data: CotizacionRapidaData }) {
               <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#92400e' }}>${fmt(contado.totalInicialAPagar)}</Text>
             </View>
 
-            <Text style={[s.secHdr, { backgroundColor: '#064e3b', color: '#6ee7b7', marginTop: 4 }]}>CRÉDITO 24 MESES (40% INICIAL)</Text>
-            <View style={s.row}><Text style={s.lbl}>40% Precio Base:</Text><Text style={s.val}>${fmt(credito.inicialVehiculo)}</Text></View>
+            <Text style={[s.secHdr, { backgroundColor: '#064e3b', color: '#6ee7b7', marginTop: 4 }]}>CRÉDITO 24 MESES (50% INICIAL)</Text>
+            <View style={s.row}><Text style={s.lbl}>50% Precio Base:</Text><Text style={s.val}>${fmt(credito.inicialVehiculo)}</Text></View>
             <View style={s.row}><Text style={s.lbl}>I.V.A. (exonerado):</Text><Text style={s.val}>$0</Text></View>
             <View style={s.row}><Text style={s.lbl}>IGTF 3% (sobre precio base):</Text><Text style={s.val}>${fmt(credito.igtf)}</Text></View>
             <View style={s.row}><Text style={s.lbl}>Gastos Administrativos:</Text><Text style={s.val}>${fmt(data.gastosCredito ?? 500)}</Text></View>
@@ -125,7 +125,7 @@ export function CotizacionRapidaPDF({ data }: { data: CotizacionRapidaData }) {
               <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#065f46' }}>TOTAL INICIAL A PAGAR:</Text>
               <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#065f46' }}>${fmt(credito.totalInicialAPagar)}</Text>
             </View>
-            <View style={[s.row, { backgroundColor: '#f0fdf4' }]}><Text style={s.lbl}>Financiamiento 60%:</Text><Text style={s.val}>${fmt(credito.saldoFinanciar)}</Text></View>
+            <View style={[s.row, { backgroundColor: '#f0fdf4' }]}><Text style={s.lbl}>Financiamiento 50%:</Text><Text style={s.val}>${fmt(credito.saldoFinanciar)}</Text></View>
             {cuota > 0 ? (
               <View style={[s.totalRow, { backgroundColor: '#fff1f2' }]}>
                 <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: primario }}>24 Cuotas Mensuales:</Text>

@@ -182,7 +182,7 @@ export async function POST(req: Request) {
     }
     const gastos = gastosBase + diferencial
 
-    const iniPct = (Number(vehiculo.inicial_pct) || 40) / 100
+    const iniPct = (Number(vehiculo.inicial_pct) || 50) / 100
 
     // Motor de cálculo único (mismo que crear y editar)
     const totalesR = calcularTotalesCotizacion({

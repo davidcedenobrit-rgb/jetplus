@@ -55,7 +55,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
     gastosAdminMonto: vehiculo.gc, placaMonto: vehiculo.placa_monto,
   })
   const credito  = calcularPresupuestoJetplus({
-    precioLista: precio, inicialPct: 40, cargoGastosAdmin: true, cargoPlaca: true,
+    precioLista: precio, inicialPct: 50, cargoGastosAdmin: true, cargoPlaca: true,
     gastosAdminMonto: vehiculo.gcr, placaMonto: vehiculo.placa_monto,
   })
 
@@ -287,8 +287,8 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
           <span style={{ fontSize: 17, fontWeight: 900, color: '#92400e', fontFamily: 'monospace' }}>${fmt(contado.totalInicialAPagar)}</span>
         </div>
 
-        <div style={{ ...hdr('#064e3b', '#6ee7b7'), marginTop: 6 }}>Modalidad Crédito 24 Meses (40% Inicial)</div>
-        <div style={row}><span style={lbl}>40% Precio Base:</span><span style={val}>${fmt(credito.inicialVehiculo)}</span></div>
+        <div style={{ ...hdr('#064e3b', '#6ee7b7'), marginTop: 6 }}>Modalidad Crédito 24 Meses (50% Inicial)</div>
+        <div style={row}><span style={lbl}>50% Precio Base:</span><span style={val}>${fmt(credito.inicialVehiculo)}</span></div>
         <div style={row}><span style={lbl}>I.V.A. (exonerado):</span><span style={val}>$0</span></div>
         <div style={row}><span style={lbl}>IGTF 3% (sobre precio base):</span><span style={val}>${fmt(credito.igtf)}</span></div>
         <div style={row}><span style={lbl}>Gastos Administrativos:</span><span style={val}>${fmt(vehiculo.gcr ?? 500)}</span></div>
@@ -298,7 +298,7 @@ export default function CotizacionRapidaModal({ vehiculo, onClose, concesionario
           <span style={{ fontSize: 17, fontWeight: 900, color: '#065f46', fontFamily: 'monospace' }}>${fmt(credito.totalInicialAPagar)}</span>
         </div>
         <div style={{ ...row, background: '#f0fdf4' }}>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>Financiamiento 60% —</span>
+          <span style={{ fontSize: 12, color: '#6b7280' }}>Financiamiento 50% —</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: 'monospace' }}>${fmt(credito.saldoFinanciar)}</span>
         </div>
         {cuota > 0 && (

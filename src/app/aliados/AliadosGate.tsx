@@ -302,7 +302,7 @@ const OBJECIONES = [
   },
   {
     q: '"No tengo el dinero completo de contado"',
-    r: 'Existen planes de financiamiento con 40% de inicial y cuotas mensuales, además del Plan Asegúrate $500 con cronograma de cuotas. Muéstrale al cliente la cotización rápida para que vea el número exacto de su cuota antes de comprometerse a nada.',
+    r: 'Existen planes de financiamiento con 50% de inicial y cuotas mensuales, además del Plan Asegúrate $500 con cronograma de cuotas. Muéstrale al cliente la cotización rápida para que vea el número exacto de su cuota antes de comprometerse a nada.',
   },
   {
     q: '"¿Por qué comprar a través de ti y no directo?"',

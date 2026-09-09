@@ -184,7 +184,7 @@ const EMPTY_VEHICULO: Omit<Vehiculo, 'id'> = {
   transporte_banco: null, accesorios_banco: null, igtf_banco: null, diferencial_banco_activo: true,
   diferencial_pct: 30, tasa_banco_pct: 16, cuotas_banco: 24,
   tasa_vhm_pct: null, cuotas_vhm: 24,
-  inicial_pct: 40,
+  inicial_pct: 50,
   ficha_tecnica_paginas: [],
 }
 
@@ -320,7 +320,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
   // basándose en precio, inicial_pct, cuotas_vhm y tasa_vhm_pct.
   function recalcularCreditoVhm(v: Partial<Vehiculo> & { id: string }, mostrarToast = false) {
     const precio = Number(v.cash ?? 0)
-    const iniPct = Number(v.inicial_pct ?? 40) / 100
+    const iniPct = Number(v.inicial_pct ?? 50) / 100
     const nCuotas = Number(v.cuotas_vhm ?? 24)
     const tasaAnual = Number(v.tasa_vhm_pct ?? 0) / 100
 
@@ -408,7 +408,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
       diferencial_pct: v.diferencial_pct, tasa_banco_pct: v.tasa_banco_pct,
       cuotas_banco: v.cuotas_banco ?? 24,
       tasa_vhm_pct: v.tasa_vhm_pct, cuotas_vhm: v.cuotas_vhm ?? 24,
-      inicial_pct: v.inicial_pct ?? 40,
+      inicial_pct: v.inicial_pct ?? 50,
       ficha_tecnica_paginas: v.ficha_tecnica_paginas ?? [],
       updated_at: new Date().toISOString(),
     }).eq('id', id)
@@ -759,9 +759,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                           recalcularCreditoVhm({ ...v, cuotas_vhm: nInt })
                         }} />
                       </Field>
-                      <Field label={`% Inicial Vehimotors (hoy ${v.inicial_pct ?? 40}%)`}>
-                        <NumField className={inputCls} value={v.inicial_pct} placeholder="40" onCommit={n => {
-                          const iniN = n ?? 40
+                      <Field label={`% Inicial Vehimotors (hoy ${v.inicial_pct ?? 50}%)`}>
+                        <NumField className={inputCls} value={v.inicial_pct} placeholder="50" onCommit={n => {
+                          const iniN = n ?? 50
                           update(v.id, 'inicial_pct', iniN)
                           recalcularCreditoVhm({ ...v, inicial_pct: iniN })
                         }} />
@@ -771,14 +771,14 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                           className={`${inputCls} bg-gray-100 cursor-not-allowed`}
                           type="text"
                           readOnly
-                          value={`${(100 - (v.inicial_pct ?? 40)).toFixed(0)}%`}
+                          value={`${(100 - (v.inicial_pct ?? 50)).toFixed(0)}%`}
                         />
                       </Field>
                     </div>
 
                     {/* Resumen del financiamiento en vivo */}
                     {(v.cash ?? 0) > 0 && (() => {
-                      const finPct = (100 - (v.inicial_pct ?? 40)) / 100
+                      const finPct = (100 - (v.inicial_pct ?? 50)) / 100
                       const financiado = (v.cash ?? 0) * finPct
                       const gastosVhmCalc = financiado * 0.07
                       return (
@@ -788,8 +788,8 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                             <p className="font-mono font-bold text-emerald-900">${financiado.toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs(financiado)*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Inicial ({v.inicial_pct ?? 40}%)</p>
-                            <p className="font-mono font-bold text-emerald-900">${((v.cash ?? 0) * ((v.inicial_pct ?? 40) / 100)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs((v.cash ?? 0) * ((v.inicial_pct ?? 40) / 100))*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Inicial ({v.inicial_pct ?? 50}%)</p>
+                            <p className="font-mono font-bold text-emerald-900">${((v.cash ?? 0) * ((v.inicial_pct ?? 50) / 100)).toLocaleString('es-VE', { minimumFractionDigits: Math.round(Math.abs((v.cash ?? 0) * ((v.inicial_pct ?? 50) / 100))*100)%100===0?0:2, maximumFractionDigits: 2 })}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Gastos VM (7% auto)</p>
@@ -906,7 +906,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                           {/* ── Crédito 24m ── */}
                           <div className="border border-gray-200 rounded-xl overflow-hidden">
                             <div className="bg-emerald-900 px-4 py-2">
-                              <p className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">Crédito {v.cuotas_vhm ?? 24}m ({v.inicial_pct ?? 40}% Inicial) — Gastos</p>
+                              <p className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">Crédito {v.cuotas_vhm ?? 24}m ({v.inicial_pct ?? 50}% Inicial) — Gastos</p>
                             </div>
                             <div className="p-3 space-y-2">
                               <div className="grid grid-cols-2 gap-2 items-center">
@@ -967,7 +967,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                             </div>
 
                             {precio > 0 && (() => {
-                              const iniPct = (v.inicial_pct ?? 40) / 100
+                              const iniPct = (v.inicial_pct ?? 50) / 100
                               const finPct = 1 - iniPct
                               return (
                               <div className="bg-gray-800 mx-3 mb-3 rounded-xl p-3 space-y-1.5 text-xs">
@@ -1201,9 +1201,9 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
         const difCr          = (quickV.diferencial_cr_activo && difGlobalPct > 0) ? precio * difGlobalPct : 0
         const gcCr           = placa_cr + poliza_veh_cr + poliza_vida_cr + gvhm_cr + hon_cr + gint_cr + alfom_cr + transp_cr + acces_cr + igtf_cr
         const gcr            = (gcCr > 0 ? gcCr : (quickV.gcr ?? 0)) + difCr
-        const ini40          = precio * 0.4
+        const ini40          = precio * 0.5
         const totalI         = ini40 + iva + gcr
-        const fin60          = precio * 0.6
+        const fin60          = precio * 0.5
 
         const fmtQ   = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: Math.round(Math.abs(n)*100)%100===0?0:2, maximumFractionDigits: 2 })
 
@@ -1263,8 +1263,8 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                     </div>
 
                     {/* Crédito 24m */}
-                    <div style={{ background: '#064e3b', padding: '7px 18px', fontSize: 11, fontWeight: 800, color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: 1, marginTop: 6 }}>Modalidad Crédito 24 Meses (40% Inicial)</div>
-                    <div style={row}><span style={lbl}>40% Precio Base:</span><span style={val}>${fmtQ(ini40)}</span></div>
+                    <div style={{ background: '#064e3b', padding: '7px 18px', fontSize: 11, fontWeight: 800, color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: 1, marginTop: 6 }}>Modalidad Crédito 24 Meses (50% Inicial)</div>
+                    <div style={row}><span style={lbl}>50% Precio Base:</span><span style={val}>${fmtQ(ini40)}</span></div>
                     <div style={row}><span style={lbl}>I.V.A. (16%):</span><span style={val}>${fmtQ(iva)}</span></div>
                     {gcCr > 0 ? (
                       <>
@@ -1295,7 +1295,7 @@ export default function VehiculosEditor({ initialVehiculos, showroomStock, tasas
                       <span style={{ fontSize: 17, fontWeight: 900, color: '#065f46', fontFamily: 'monospace' }}>${fmtQ(totalI)}</span>
                     </div>
                     <div style={{ ...row, background: '#f0fdf4' }}>
-                      <span style={{ fontSize: 12, color: '#6b7280' }}>Financiamiento 60% —</span>
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>Financiamiento 50% —</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: 'monospace' }}>${fmtQ(fin60)}</span>
                     </div>
                     {cuota > 0 && (

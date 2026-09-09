@@ -36,7 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // Sembrar desde el catálogo del vehículo.
   const vacio = { placa: 0, poliza_vehiculo: 0, poliza_vida: 0, gastos_vhm: 0, honorarios: 0, gastos_int: 0, alfombras: 0, transporte: 0, accesorios: 0, igtf: 0, diferencial: Number(cot.diferencial_monto ?? 0) }
   let lineas = { ...vacio }
-  let inicialPct = modalidad === 'contado' ? 100 : 40
+  let inicialPct = modalidad === 'contado' ? 100 : 50
   let tasaPct = 0
   let meses = modalidad === 'contado' ? 0 : 24
   let cuotaCatalogo = 0
@@ -72,7 +72,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           alfombras: n(v.alfombras_cr), transporte: n(v.transporte_cr), accesorios: n(v.accesorios_cr),
           igtf: n(v.igtf_cr), diferencial: Number(cot.diferencial_monto ?? 0),
         }
-        inicialPct = Number(cot.personalizado_inicial_pct) || 40
+        inicialPct = Number(cot.personalizado_inicial_pct) || 50
         tasaPct = Number(cot.personalizado_tasa_pct) || 0
         meses = Number(cot.personalizado_meses) || 24
       } else {
@@ -83,7 +83,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           alfombras: n(v.alfombras_cr), transporte: n(v.transporte_cr), accesorios: n(v.accesorios_cr),
           igtf: n(v.igtf_cr), diferencial: Number(cot.diferencial_monto ?? 0),
         }
-        inicialPct = n(v.inicial_pct) || 40; tasaPct = n(v.tasa_vhm_pct) || 0; meses = n(v.cuotas_vhm) || 24
+        inicialPct = n(v.inicial_pct) || 50; tasaPct = n(v.tasa_vhm_pct) || 0; meses = n(v.cuotas_vhm) || 24
         // Un crédito Vehimotors sin cuota guardada hereda la del catálogo.
         if (plan === 'vehimotors' && !(Number(cot.cuota_mensual) > 0) && n(v.tasa_credito) > 0) {
           cuotaCatalogo = n(v.tasa_credito)

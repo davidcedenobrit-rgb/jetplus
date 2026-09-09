@@ -64,13 +64,13 @@ export default function TutorialVendedoresPage() {
             <div className="step-num">2</div>
             <div className="step-title">
               <h2>Explora el catálogo de vehículos</h2>
-              <p>Filtra por marca y muestra precio de contado y el plan de crédito 40% inicial a tu cliente.</p>
+              <p>Filtra por marca y muestra precio de contado y el plan de crédito 50% inicial a tu cliente.</p>
             </div>
           </div>
           <div className="step-body">
             <ul className="instructions">
               <li><span className="bullet">1</span> Usa los filtros <b>Todos / MG / MAXUS</b> para acotar la búsqueda.</li>
-              <li><span className="bullet">2</span> Cada carta muestra disponibilidad, precio de contado e inicial del 40%.</li>
+              <li><span className="bullet">2</span> Cada carta muestra disponibilidad, precio de contado e inicial del 50%.</li>
               <li><span className="bullet">3</span> Baja hasta el vehículo que le interesa a tu cliente.</li>
             </ul>
             <div className="mock">
