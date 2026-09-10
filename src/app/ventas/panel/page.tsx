@@ -27,6 +27,9 @@ interface Lead {
   nombre: string
   telefono: string | null
   correo: string | null
+  ci_rif?: string | null
+  direccion?: string | null
+  origen_captacion?: string | null
   fuente: 'registrado' | 'cotizado' | 'registrado_cotizado'
   cotizaciones: number
   contexto: string | null
@@ -438,10 +441,73 @@ function MetricCard({ label, valor, nota }: { label: string; valor: string; nota
   )
 }
 
+function LeadCard({ l, vendedoraNombre, mostrarVendedor }: { l: Lead; vendedoraNombre: string; mostrarVendedor: boolean }) {
+  const fuente = FUENTE_LEAD_LABEL[l.fuente]
+  const tel = l.telefono
+  const msg = `Hola ${primerNombre(l.nombre)}, te contacto de parte de JETPLUS (${vendedoraNombre}). ¿Cómo va tu interés en el ${l.contexto ?? 'vehículo MG o MAXUS'}? Cualquier duda, aquí estoy.`
+  return (
+    <div className="lo-info-box">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <div>
+          <p style={{ fontSize: 14.5, fontWeight: 800, color: '#111827' }}>{l.nombre}</p>
+          {l.contexto && <p style={{ fontSize: 12.5, color: '#6b7280', marginTop: 2 }}>{l.contexto}</p>}
+          {l.ci_rif && <p style={{ fontSize: 12, color: '#374151', marginTop: 2 }}>C.I./RIF: {l.ci_rif}</p>}
+          {l.direccion && <p style={{ fontSize: 12, color: '#374151', marginTop: 2 }}>Dirección: {l.direccion}</p>}
+          <p style={{ fontSize: 11.5, color: '#9ca3af', marginTop: 2 }}>{fmtFecha(l.fecha)}{l.cotizaciones > 0 ? ` · ${l.cotizaciones} ${l.cotizaciones > 1 ? 'cotizaciones' : 'cotización'}` : ''}</p>
+          {mostrarVendedor && (
+            <p style={{ fontSize: 11, fontWeight: 700, color: l.vendedorResuelto ? '#a16207' : '#9ca3af', marginTop: 2 }}>
+              {l.vendedorResuelto ? `Vendedor(a): ${l.vendedorResuelto.nombre}` : 'Sin vendedor(a) asignado'}
+            </p>
+          )}
+        </div>
+        <span style={{ background: fuente.bg, color: fuente.fg, fontSize: 10, fontWeight: 800, padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap' }}>{fuente.label}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        {tel ? (
+          <a href={waLink(tel, msg)} target="_blank" rel="noopener noreferrer" className="lo-cbtn-dark" style={{ flex: 1, background: '#22c55e', fontSize: 12.5, padding: '9px 10px' }}>
+            WhatsApp
+          </a>
+        ) : (
+          <span className="lo-cbtn-out" style={{ flex: 1, fontSize: 12.5, padding: '9px 10px', opacity: .5, cursor: 'not-allowed' }}>WhatsApp</span>
+        )}
+        {l.correo && (
+          <a href={mailtoLink(l.correo, 'JETPLUS — Seguimiento', msg)} className="lo-cbtn-out" style={{ flex: 1, fontSize: 12.5, padding: '9px 10px' }}>
+            Correo
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Orden fijo de las secciones — "Concesionario" y "Sambil" primero porque son
+// las que más volumen mueven; lo que no tenga origen registrado va al final.
+const ORDEN_ORIGEN = ['Concesionario', 'Sambil', 'Fuera de concesionario']
+
 function LeadsTab({ leads, vendedoraNombre, mostrarVendedor = false }: { leads: Lead[]; vendedoraNombre: string; mostrarVendedor?: boolean }) {
   const [buscar, setBuscar] = useState('')
   const q = buscar.trim().toLowerCase()
   const filtrados = q ? leads.filter(l => l.nombre.toLowerCase().includes(q)) : leads
+
+  // Los socios ven una sección separada por dónde se captó al cliente
+  // (Concesionario, Sambil, etc.) para no mezclar el origen de cada lead.
+  const secciones = useMemo(() => {
+    if (!mostrarVendedor) return null
+    const grupos = new Map<string, Lead[]>()
+    for (const l of filtrados) {
+      const key = l.origen_captacion?.trim() || 'Sin origen registrado'
+      if (!grupos.has(key)) grupos.set(key, [])
+      grupos.get(key)!.push(l)
+    }
+    const claves = [...grupos.keys()].sort((a, b) => {
+      const ia = ORDEN_ORIGEN.indexOf(a), ib = ORDEN_ORIGEN.indexOf(b)
+      if (ia === -1 && ib === -1) return a.localeCompare(b)
+      if (ia === -1) return 1
+      if (ib === -1) return -1
+      return ia - ib
+    })
+    return claves.map(k => ({ origen: k, leads: grupos.get(k)! }))
+  }, [filtrados, mostrarVendedor])
 
   return (
     <div>
@@ -454,44 +520,28 @@ function LeadsTab({ leads, vendedoraNombre, mostrarVendedor = false }: { leads: 
           {leads.length === 0 ? 'Todavía no tienes leads (personas que aún no compran).' : 'Sin resultados.'}
         </p>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {filtrados.map((l, i) => {
-          const fuente = FUENTE_LEAD_LABEL[l.fuente]
-          const tel = l.telefono
-          const msg = `Hola ${primerNombre(l.nombre)}, te contacto de parte de JETPLUS (${vendedoraNombre}). ¿Cómo va tu interés en el ${l.contexto ?? 'vehículo MG o MAXUS'}? Cualquier duda, aquí estoy.`
-          return (
-            <div key={`${l.nombre}-${i}`} className="lo-info-box">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                <div>
-                  <p style={{ fontSize: 14.5, fontWeight: 800, color: '#111827' }}>{l.nombre}</p>
-                  {l.contexto && <p style={{ fontSize: 12.5, color: '#6b7280', marginTop: 2 }}>{l.contexto}</p>}
-                  <p style={{ fontSize: 11.5, color: '#9ca3af', marginTop: 2 }}>{fmtFecha(l.fecha)}{l.cotizaciones > 0 ? ` · ${l.cotizaciones} ${l.cotizaciones > 1 ? 'cotizaciones' : 'cotización'}` : ''}</p>
-                  {mostrarVendedor && (
-                    <p style={{ fontSize: 11, fontWeight: 700, color: l.vendedorResuelto ? '#a16207' : '#9ca3af', marginTop: 2 }}>
-                      {l.vendedorResuelto ? `Vendedor(a): ${l.vendedorResuelto.nombre}` : 'Sin vendedor(a) asignado'}
-                    </p>
-                  )}
-                </div>
-                <span style={{ background: fuente.bg, color: fuente.fg, fontSize: 10, fontWeight: 800, padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap' }}>{fuente.label}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                {tel ? (
-                  <a href={waLink(tel, msg)} target="_blank" rel="noopener noreferrer" className="lo-cbtn-dark" style={{ flex: 1, background: '#22c55e', fontSize: 12.5, padding: '9px 10px' }}>
-                    WhatsApp
-                  </a>
-                ) : (
-                  <span className="lo-cbtn-out" style={{ flex: 1, fontSize: 12.5, padding: '9px 10px', opacity: .5, cursor: 'not-allowed' }}>WhatsApp</span>
-                )}
-                {l.correo && (
-                  <a href={mailtoLink(l.correo, 'JETPLUS — Seguimiento', msg)} className="lo-cbtn-out" style={{ flex: 1, fontSize: 12.5, padding: '9px 10px' }}>
-                    Correo
-                  </a>
-                )}
+      {secciones ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          {secciones.map(({ origen, leads: leadsDeOrigen }) => (
+            <div key={origen}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#a16207', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>
+                {origen} ({leadsDeOrigen.length})
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {leadsDeOrigen.map((l, i) => (
+                  <LeadCard key={`${l.nombre}-${i}`} l={l} vendedoraNombre={vendedoraNombre} mostrarVendedor={mostrarVendedor} />
+                ))}
               </div>
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {filtrados.map((l, i) => (
+            <LeadCard key={`${l.nombre}-${i}`} l={l} vendedoraNombre={vendedoraNombre} mostrarVendedor={mostrarVendedor} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

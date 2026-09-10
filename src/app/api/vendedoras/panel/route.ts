@@ -185,7 +185,7 @@ export async function POST(req: Request) {
       if (l?.id) leadsCaptacionMap.set(l.id as string, l)
     }
 
-    interface EntradaLead { clave: string; nombre: string; telefono: string | null; correo: string | null; fuente: 'registrado' | 'cotizado'; fecha: string; contexto: string | null }
+    interface EntradaLead { clave: string; nombre: string; telefono: string | null; correo: string | null; ciRif: string | null; direccion: string | null; origenCaptacion: string | null; fuente: 'registrado' | 'cotizado'; fecha: string; contexto: string | null }
     const entradas: EntradaLead[] = []
     for (const l of leadsCaptacionMap.values()) {
       entradas.push({
@@ -193,6 +193,9 @@ export async function POST(req: Request) {
         nombre: (l.nombre as string) ?? '(sin nombre)',
         telefono: l.telefono as string | null,
         correo: l.correo as string | null,
+        ciRif: (l.ci_rif as string | null) ?? null,
+        direccion: (l.direccion as string | null) ?? null,
+        origenCaptacion: (l.origen_captacion as string | null) ?? null,
         fuente: 'registrado',
         fecha: l.created_at as string,
         contexto: [l.marca, l.modelo].filter(Boolean).join(' ') || null,
@@ -204,23 +207,29 @@ export async function POST(req: Request) {
         nombre: c.cliente_nombre ?? '(sin nombre)',
         telefono: c.cliente_telefono,
         correo: c.cliente_correo,
+        ciRif: c.cliente_ci_rif ?? null,
+        direccion: c.cliente_direccion ?? null,
+        origenCaptacion: c.origen_captacion ?? null,
         fuente: 'cotizado',
         fecha: c.created_at,
         contexto: [c.marca, c.modelo].filter(Boolean).join(' ') || null,
       })
     }
 
-    interface GrupoLead { clave: string; nombre: string; telefono: string | null; correo: string | null; fuentes: Set<string>; cotizaciones: number; fecha: string; contexto: string | null }
+    interface GrupoLead { clave: string; nombre: string; telefono: string | null; correo: string | null; ciRif: string | null; direccion: string | null; origenCaptacion: string | null; fuentes: Set<string>; cotizaciones: number; fecha: string; contexto: string | null }
     const grupos = new Map<string, GrupoLead>()
     for (const e of entradas) {
       if (!grupos.has(e.clave)) {
-        grupos.set(e.clave, { clave: e.clave, nombre: e.nombre, telefono: e.telefono, correo: e.correo, fuentes: new Set(), cotizaciones: 0, fecha: e.fecha, contexto: e.contexto })
+        grupos.set(e.clave, { clave: e.clave, nombre: e.nombre, telefono: e.telefono, correo: e.correo, ciRif: e.ciRif, direccion: e.direccion, origenCaptacion: e.origenCaptacion, fuentes: new Set(), cotizaciones: 0, fecha: e.fecha, contexto: e.contexto })
       }
       const g = grupos.get(e.clave)!
       g.fuentes.add(e.fuente)
       if (e.fuente === 'cotizado') g.cotizaciones++
       if (!g.telefono && e.telefono) g.telefono = e.telefono
       if (!g.correo && e.correo) g.correo = e.correo
+      if (!g.ciRif && e.ciRif) g.ciRif = e.ciRif
+      if (!g.direccion && e.direccion) g.direccion = e.direccion
+      if (!g.origenCaptacion && e.origenCaptacion) g.origenCaptacion = e.origenCaptacion
       if (e.fecha > g.fecha) { g.fecha = e.fecha; g.contexto = e.contexto ?? g.contexto }
     }
 
@@ -228,6 +237,7 @@ export async function POST(req: Request) {
       .filter(g => !clavesCompradores.has(g.clave))
       .map(g => ({
         nombre: g.nombre, telefono: g.telefono, correo: g.correo,
+        ci_rif: g.ciRif, direccion: g.direccion, origen_captacion: g.origenCaptacion,
         fuente: (g.fuentes.has('registrado') && g.fuentes.has('cotizado')) ? 'registrado_cotizado' : g.fuentes.has('registrado') ? 'registrado' : 'cotizado',
         cotizaciones: g.cotizaciones,
         contexto: g.contexto,
