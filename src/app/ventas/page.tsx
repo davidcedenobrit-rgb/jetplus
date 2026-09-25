@@ -179,7 +179,8 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="#registro" className="lo-btn-gold">👤 Registrar cliente →</a>
-              {(acListaPL.length > 0 || acListaNac.length > 0) && <a href="#ac500" className="lo-btn-glass">🛡️ Plan $500 ↓</a>}
+              {acListaPL.length > 0 && <a href="#ac500" className="lo-btn-glass">🛡️ Plan $500 Puerto Libre ↓</a>}
+              {acListaNac.length > 0 && <a href="#ac500-nacionales" className="lo-btn-glass">🛡️ Plan $500 Nacional ↓</a>}
               {promoActiva && promoVehiculosList.length > 0 && <a href="#promociones" className="lo-btn-glass">🏷️ Promociones ↓</a>}
               <a href="#vehiculos" className="lo-btn-glass">Ver vehículos ↓</a>
             </div>

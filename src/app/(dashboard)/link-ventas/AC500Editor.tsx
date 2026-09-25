@@ -39,6 +39,7 @@ function NumInput({ value, onCommit, className, placeholder }: {
 interface AC500 {
   id: string
   brand: 'MG' | 'MAXUS'
+  regimen?: 'puerto_libre' | 'nacional' | null
   model: string
   img_url: string | null
   colores: string | null
@@ -84,7 +85,7 @@ const P12_FIELDS: (keyof AC500)[] = ['p12_c1','p12_c2','p12_c3','p12_c4','p12_c5
 const P12_LABELS = ['Cuota 1 (Día 0)', 'Cuota 2 (Día 30)', 'Cuota 3 (Día 60)', 'Cuota 4 (Día 90)', 'Cuota 5 (Día 120)', 'Cuota 6 (Día 150)', 'Cuota 7 (Día 180)', 'Cuota 8 (Día 210)', 'Cuota 9 (Día 240)', 'Cuota 10 (Día 270)', 'Cuota 11 (Día 300)', 'Cuota 12 (Entrega)']
 
 const EMPTY: Omit<AC500, 'id'> = {
-  brand: 'MG', model: '', img_url: '', colores: 'plata,gris,negro,blanco', orden: 99, disponible: true, reserva: 500,
+  brand: 'MG', regimen: 'puerto_libre', model: '', img_url: '', colores: 'plata,gris,negro,blanco', orden: 99, disponible: true, reserva: 500,
   p6_activo: false, p6_c1: null, p6_c2: null, p6_c3: null, p6_c4: null, p6_c5: null, p6_c6: null, p6_total: null,
   p9_activo: false, p9_c1: null, p9_c2: null, p9_c3: null, p9_c4: null, p9_c5: null, p9_c6: null, p9_c7: null, p9_c8: null, p9_c9: null, p9_total: null,
   p12_activo: false, p12_c1: null, p12_c2: null, p12_c3: null, p12_c4: null, p12_c5: null, p12_c6: null, p12_c7: null, p12_c8: null, p12_c9: null, p12_c10: null, p12_c11: null, p12_c12: null, p12_total: null,
@@ -103,6 +104,7 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [regimenTab, setRegimenTab] = useState<'puerto_libre' | 'nacional'>('puerto_libre')
   const [newV, setNewV] = useState<{ id: string } & typeof EMPTY>({ id: '', ...EMPTY })
   const [savingNew, setSavingNew] = useState(false)
   const supabase = createClient()
@@ -175,7 +177,7 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
     setSavingNew(true)
     const { error } = await supabase.from('ac500_vehiculos').insert([{
       id: newV.id.trim().toLowerCase().replace(/\s+/g, '-'),
-      brand: newV.brand, model: newV.model, img_url: newV.img_url || null,
+      brand: newV.brand, regimen: newV.regimen ?? regimenTab, model: newV.model, img_url: newV.img_url || null,
       colores: newV.colores || 'plata,gris,negro,blanco', orden: newV.orden ?? 99,
       disponible: true, reserva: newV.reserva ?? 500,
       p6_activo: false, p9_activo: false,
@@ -206,6 +208,13 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
     )
   }
 
+  const REGIMENES: { key: 'puerto_libre' | 'nacional'; label: string }[] = [
+    { key: 'puerto_libre', label: 'Puerto Libre' },
+    { key: 'nacional', label: 'Nacional' },
+  ]
+  const regimenDe = (v: AC500) => v.regimen ?? 'puerto_libre'
+  const itemsVista = items.filter(v => regimenDe(v) === regimenTab)
+
   return (
     <>
       {toast && <Toast msg={toast.msg} ok={toast.ok} />}
@@ -215,13 +224,32 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
           Planes Asegúrate con $500
           <span className="ml-2 text-xs font-normal text-oriental-gray">({items.length} vehículos)</span>
         </h2>
-        <button onClick={() => setShowModal(true)} className="flex items-center gap-1.5 px-3 py-2 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors">
+        <button onClick={() => { setNewV(p => ({ ...p, regimen: regimenTab })); setShowModal(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-oriental-black text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors">
           <Plus size={14} /> Agregar vehículo AC500
         </button>
       </div>
 
+      <div className="flex gap-2 mb-4">
+        {REGIMENES.map(r => {
+          const total = items.filter(v => regimenDe(v) === r.key).length
+          const visibles = items.filter(v => regimenDe(v) === r.key && v.disponible).length
+          return (
+            <button
+              key={r.key}
+              onClick={() => setRegimenTab(r.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                regimenTab === r.key ? 'bg-oriental-black text-white border-oriental-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              {r.label}
+              <span className={`ml-2 text-xs font-normal ${regimenTab === r.key ? 'text-gray-300' : 'text-gray-400'}`}>{visibles}/{total} visibles</span>
+            </button>
+          )
+        })}
+      </div>
+
       <div className="space-y-3">
-        {items.map(v => {
+        {itemsVista.map(v => {
           const isDirty = dirty[v.id], isSaving = saving[v.id], isSaved = saved[v.id], open = expanded[v.id]
           const live6 = v.p6_activo ? sumPlan(v, P6_FIELDS) : null
           const live9 = v.p9_activo ? sumPlan(v, P9_FIELDS) : null
@@ -371,6 +399,13 @@ export default function AC500Editor({ initial }: { initial: AC500[] }) {
                   <select className={modalInputCls} value={newV.brand} onChange={e => setNewV(p => ({ ...p, brand: e.target.value as 'MG' | 'MAXUS' }))}>
                     <option value="MG">MG</option>
                     <option value="MAXUS">MAXUS</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Sección *</label>
+                  <select className={modalInputCls} value={newV.regimen ?? regimenTab} onChange={e => setNewV(p => ({ ...p, regimen: e.target.value as 'puerto_libre' | 'nacional' }))}>
+                    <option value="puerto_libre">Puerto Libre</option>
+                    <option value="nacional">Nacional</option>
                   </select>
                 </div>
                 <div>
