@@ -1,5 +1,5 @@
 const IMAGENES_MODELO: Array<[RegExp, string]> = [
-  [/\bMG\s*3\b(?=.*\b(?:MT|MANUAL|SINCRONICA|STD)\b)/i, '/vehiculos/mg3-mt.webp'],
+  [/\bMG\s*3\b(?=.*\b(?:MT|MANUAL|SINCRONICA|STD)\b)/i, '/vehiculos/mg3-mt-jetplus.webp'],
   [/\bMG\s*3\b/i, '/vehiculos/mg3.png'],
   [/\bMG\s*5\b/i, '/vehiculos/mg5.png'],
   [/\bMG\s*GT\b/i, '/vehiculos/mg-gt.webp'],
